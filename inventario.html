@@ -19,11 +19,13 @@
       --shadow:0 6px 20px rgba(0,0,0,.08);
       --shadow-hover:0 8px 24px rgba(0,0,0,.12);
       --transition:.3s ease;
+      --highlight:#fef08a;
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
+    mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
     /* Resumen */
     .summary-cards{
       display:grid;
@@ -108,6 +110,9 @@
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+    /* Icono copiar */
+    .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
+    .copy-barcode:hover{color:var(--accent-hover)}
   </style>
 </head>
 <body>
@@ -146,6 +151,7 @@
        ========================================================= */
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let filtered   = [...inventory];
+    let searchTerm = '';
 
     /* =========================================================
           CÁLCULOS
@@ -160,6 +166,20 @@
     }
     function stockTotal(list){
       return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+    }
+
+    /* =========================================================
+          UTILIDADES RESALTADO / COPIAR
+       ========================================================= */
+    function highlight(text, query){
+      if(!query) return text;
+      const re = new RegExp(`(${query})`, 'gi');
+      return text.replace(re, '<mark>$1</mark>');
+    }
+    function copyToClipboard(text){
+      navigator.clipboard.writeText(text).then(()=>{
+        alert('Código de barras copiado: ' + text);
+      });
     }
 
     /* =========================================================
@@ -181,11 +201,14 @@
       list.innerHTML = filtered.map((item,idx)=>`
         <div class="line-item">
           <img id="invImg${idx}" src="" alt="${item.name}"/>
-          <h3>${item.name}</h3>
-          <p>Código: ${item.code}</p>
+          <h3>${highlight(item.name, searchTerm)}</h3>
+          <p>Código: ${highlight(item.code, searchTerm)}</p>
           <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
           <p>Precio: $${item.price}</p>
-          <p>Categoría: ${item.category}</p>
+          <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+          <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
+            <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+          </p>
           <div class="actions">
             <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
             <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
@@ -224,15 +247,15 @@
           FILTRO
        ========================================================= */
     function doFilter(){
-      const q = document.getElementById('searchInput').value.trim().toLowerCase();
-      if(!q){
+      searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+      if(!searchTerm){
         filtered = [...inventory];
       }else{
         filtered = inventory.filter(p=>
-          p.name.toLowerCase().includes(q) ||
-          p.code.toLowerCase().includes(q) ||
-          p.barcode.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q)
+          p.name.toLowerCase().includes(searchTerm) ||
+          p.code.toLowerCase().includes(searchTerm) ||
+          p.barcode.toLowerCase().includes(searchTerm) ||
+          p.category.toLowerCase().includes(searchTerm)
         );
       }
       renderTable();

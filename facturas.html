@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Factura - KLOHESV - IndexedDB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: "Courier New", monospace;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .ticket {
+      width: 320px;
+      background: #fff;
+      padding: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
+    }
+    .center {
+      text-align: center;
+    }
+    .info, .footer {
+      font-size: 13px;
+      margin-top: 10px;
+      border-top: 1px dashed #999;
+      padding-top: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    th, td {
+      text-align: left;
+      padding: 5px 0;
+    }
+    th {
+      border-bottom: 1px dashed #999;
+    }
+    .total {
+      border-top: 1px dashed #999;
+      text-align: right;
+      font-weight: bold;
+      margin-top: 10px;
+      padding-top: 5px;
+    }
+    button {
+      margin-top: 10px;
+      width: 100%;
+      background: black;
+      color: white;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #333;
+    }
+    @media print {
+      button {
+        display: none;
+      }
+    }
+    .social {
+      font-size: 12px;
+      margin-top: 5px;
+      text-align: center;
+      color: #555;
+    }
+    .policy {
+      font-size: 11px;
+      margin-top: 8px;
+      color: #444;
+      text-align: center;
+    }
+    /* TEMA */
+    body[data-theme="dark"] {
+      background-color: #121212;
+      color: #f0f0f0;
+    }
+    body[data-theme="dark"] .ticket {
+      background: #1e1e1e;
+      color: #f0f0f0;
+    }
+  </style>
+</head>
+<body data-theme="light">
+
+<div class="ticket" id="invoice">
+  <h2>KLOHESV</h2>
+  <div class="center">
+    <p>San Salvador, El Salvador</p>
+    <p>Correo: industriastobias@gmail.com</p>
+  </div>
+
+  <div class="social">
+    <p>Instagram: @Klohesv</p>
+  </div>
+
+  <div class="info">
+    <p><strong>Factura N°:</strong> <span contenteditable="true" id="facturaNum">00015</span></p>
+    <p><strong>Fecha:</strong> <span contenteditable="true" id="fecha"></span></p>
+    <p><strong>Cliente:</strong> <span contenteditable="true" id="cliente">Consumidor Final</span></p>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Cant</th>
+        <th>Precio</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="productos">
+      <tr>
+        <td contenteditable="true">Collar</td>
+        <td contenteditable="true" class="cantidad">1</td>
+        <td contenteditable="true" class="precio">10.00</td>
+        <td class="subtotal">10.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <button onclick="agregarFila()">Agregar producto</button>
+  <button onclick="calcularTotal()">Actualizar total</button>
+
+  <div class="total">
+    TOTAL: $<span id="total">10.00</span>
+  </div>
+
+  <div class="footer center">
+    <p>¡Gracias por su compra!</p>
+    <p class="policy">
+      No se aceptan cambios ni devoluciones, a menos que el producto esté dañado.
+      Se aceptará dentro de los 15 días posteriores a la fecha de compra.
+    </p>
+  </div>
+
+  <button onclick="descargarPDF()">Descargar PDF</button>
+  <button onclick="imprimirFactura()">Imprimir Factura</button>
+</div>
+
+<script>
+  /* ---------- IndexedDB ---------- */
+  const DB_NAME = 'facturasDB';
+  const STORE_PRODUCTOS = 'factura'; // solo la factura actual
+  const STORE_THEME = 'theme';
+  let db;
+
+  async function openDB() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onerror = () => rej(req.error);
+      req.onsuccess = () => res(db = req.result);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_PRODUCTOS))
+          db.createObjectStore(STORE_PRODUCTOS, { keyPath: 'id', autoIncrement: true });
+        if (!db.objectStoreNames.contains(STORE_THEME))
+          db.createObjectStore(STORE_THEME);
+      };
+    });
+  }
+  async function getProductos() {
+    const tx = db.transaction([STORE_PRODUCTOS], 'readonly');
+    return tx.objectStore(STORE_PRODUCTOS).getAll();
+  }
+  async function setProducto(item) {
+    const tx = db.transaction([STORE_PRODUCTOS], 'readwrite');
+    return item.id ? tx.objectStore(STORE_PRODUCTOS).put(item) : tx.objectStore(STORE_PRODUCTOS).add(item);
+  }
+  async function deleteProducto(id) {
+    const tx = db.transaction([STORE_PRODUCTOS], 'readwrite');
+    tx.objectStore(STORE_PRODUCTOS).delete(id);
+  }
+  async function vaciarProductos() {
+    const tx = db.transaction([STORE_PRODUCTOS], 'readwrite');
+    tx.objectStore(STORE_PRODUCTOS).clear();
+  }
+  async function getTheme() {
+    const tx = db.transaction([STORE_THEME], 'readonly');
+    return tx.objectStore(STORE_THEME).get('current');
+  }
+  async function setTheme(value) {
+    const tx = db.transaction([STORE_THEME], 'readwrite');
+    tx.objectStore(STORE_THEME).put(value, 'current');
+  }
+
+  /* ---------- Funciones auxiliares ---------- */
+  function obtenerFechaActual() {
+    const fecha = new Date();
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const año = fecha.getFullYear();
+    return `${dia}/${mes}/${año}`;
+  }
+
+  window.onload = async () => {
+    await openDB();
+    const savedTheme = (await getTheme()) || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    document.getElementById("fecha").innerText = obtenerFechaActual();
+    await cargarFactura();
+  };
+
+  /* ---------- CRUD de filas ---------- */
+  async function agregarFila() {
+    const tabla = document.getElementById("productos");
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td contenteditable="true">Nuevo producto</td>
+      <td contenteditable="true" class="cantidad">1</td>
+      <td contenteditable="true" class="precio">0.00</td>
+      <td class="subtotal">0.00</td>
+    `;
+    tabla.appendChild(fila);
+    // guardar en DB
+    await setProducto({
+      nombre: 'Nuevo producto',
+      cantidad: 1,
+      precio: 0,
+      subtotal: 0
+    });
+  }
+
+  async function calcularTotal() {
+    let total = 0;
+    const filas = document.querySelectorAll("#productos tr");
+    for (const fila of filas) {
+      const cantidad = parseFloat(fila.querySelector(".cantidad").innerText) || 0;
+      const precio = parseFloat(fila.querySelector(".precio").innerText) || 0;
+      const subtotal = cantidad * precio;
+      fila.querySelector(".subtotal").innerText = subtotal.toFixed(2);
+      total += subtotal;
+      // actualizar en DB
+      const id = fila.dataset.id;
+      if (id) {
+        await setProducto({
+          id: Number(id),
+          nombre: fila.cells[0].innerText,
+          cantidad,
+          precio,
+          subtotal
+        });
+      }
+    }
+    document.getElementById("total").innerText = total.toFixed(2);
+  }
+
+  async function cargarFactura() {
+    const productos = await getProductos();
+    const tabla = document.getElementById("productos");
+    tabla.innerHTML = '';
+    for (const p of productos) {
+      const fila = document.createElement("tr");
+      fila.dataset.id = p.id;
+      fila.innerHTML = `
+        <td contenteditable="true">${p.nombre}</td>
+        <td contenteditable="true" class="cantidad">${p.cantidad}</td>
+        <td contenteditable="true" class="precio">${p.precio.toFixed(2)}</td>
+        <td class="subtotal">${p.subtotal.toFixed(2)}</td>
+      `;
+      tabla.appendChild(fila);
+    }
+    calcularTotal();
+  }
+
+  /* ---------- Eventos en línea ---------- */
+  document.getElementById("productos").addEventListener('input', calcularTotal);
+
+  /* ---------- PDF / Impresión ---------- */
+  function descargarPDF() {
+    const invoice = document.getElementById("invoice");
+    const botones = invoice.querySelectorAll("button");
+    botones.forEach(btn => btn.style.display = "none");
+
+    html2canvas(invoice).then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", [140, 200]); // ticket
+      const imgWidth = 130;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 5, 5, imgWidth, imgHeight);
+      pdf.save("factura_KLOHESV.pdf");
+      botones.forEach(btn => btn.style.display = "block");
+    });
+  }
+
+  function imprimirFactura() {
+    const botones = document.querySelectorAll("button");
+    botones.forEach(btn => btn.style.display = "none");
+    window.print();
+    botones.forEach(btn => btn.style.display = "block");
+  }
+</script>
+
+</body>
+</html>

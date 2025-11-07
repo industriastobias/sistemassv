@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SISTEMA DE DESCUENTOS</title>
+  <style>
+    :root {
+      --primary: #0077ff;
+      --secondary: #f5f7fa;
+      --text: #333;
+      --green: #28a745;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--secondary);
+      color: var(--text);
+    }
+
+    .header {
+      background-color: white;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .controls input, .controls button {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .controls button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background-color: #005fd1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: var(--shadow);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .highlight {
+      background-color: var(--green) !important;
+      color: white;
+    }
+
+    .line-info {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .summary-box {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 14px;
+      width: 200px;
+      z-index: 999;
+    }
+
+    .summary-box div {
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">SISTEMA DE DESCUENTOS</div>
+
+<div class="container">
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Buscar por nombre, código, categoría..." />
+    <input type="number" id="globalDiscount" placeholder="Descuento global %" min="0" max="100" />
+    <button onclick="applyGlobalDiscount()">Aplicar Descuento</button>
+    <button onclick="removeGlobalDiscount()">Quitar Descuento</button>
+    <input type="number" id="goToLine" placeholder="Ir a línea #" min="1" />
+    <button onclick="goToLine()">Ir</button>
+  </div>
+
+  <div class="line-info" id="lineInfo"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th># Línea</th>
+        <th>Nombre</th>
+        <th>Código</th>
+        <th>Precio</th>
+        <th>Descuento %</th>
+        <th>Precio Final</th>
+        <th>Categoría</th>
+        <th>Stock</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="discountList"></tbody>
+  </table>
+</div>
+
+<div class="summary-box">
+  <div>Precio Total Normal: $<span id="totalNormal">0.00</span></div>
+  <div>Precio Total con Descuento: $<span id="totalDescuento">0.00</span></div>
+</div>
+
+<script>
+  const tbody = document.getElementById('discountList');
+  const searchInput = document.getElementById('searchInput');
+  const lineInfo = document.getElementById('lineInfo');
+  let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+
+  function renderTable(data = inventory) {
+    tbody.innerHTML = '';
+    data.forEach((item, idx) => {
+      const row = document.createElement('tr');
+      row.dataset.line = idx + 1;
+      row.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${item.name}</td>
+        <td>${item.code}</td>
+        <td>$${item.price}</td>
+        <td><input type="number" value="${item.discount || 0}" min="0" max="100" onchange="updateDiscount('${item.code}', this.value)" /></td>
+        <td>$${(item.price - (item.price * (item.discount || 0) / 100)).toFixed(2)}</td>
+        <td>${item.category}</td>
+        <td>${item.quantity}</td>
+        <td><button onclick="removeDiscount('${item.code}')">Quitar Descuento</button></td>
+      `;
+      tbody.appendChild(row);
+    });
+    updateTotals();
+  }
+
+  function updateDiscount(code, value) {
+    const item = inventory.find(i => i.code === code);
+    if (item) {
+      item.discount = parseFloat(value) || 0;
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      renderTable(inventory);
+    }
+  }
+
+  function removeDiscount(code) {
+    updateDiscount(code, 0);
+  }
+
+  function applyGlobalDiscount() {
+    const discount = parseFloat(document.getElementById('globalDiscount').value);
+    if (isNaN(discount) || discount < 0 || discount > 100) return alert('Descuento inválido');
+    inventory.forEach(item => item.discount = discount);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    renderTable(inventory);
+  }
+
+  function removeGlobalDiscount() {
+    inventory.forEach(item => item.discount = 0);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    renderTable(inventory);
+  }
+
+  function goToLine() {
+    const line = parseInt(document.getElementById('goToLine').value);
+    if (isNaN(line) || line < 1 || line > inventory.length) {
+      lineInfo.textContent = 'Línea fuera de rango.';
+      return;
+    }
+    renderTable(inventory);
+    const target = tbody.querySelector(`tr[data-line="${line}"]`);
+    if (target) {
+      target.classList.add('highlight');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      lineInfo.textContent = `Producto encontrado en la línea ${line} de ${inventory.length}.`;
+    }
+  }
+
+  function updateTotals() {
+    let totalNormal = 0;
+    let totalDescuento = 0;
+
+    inventory.forEach(item => {
+      const precio = parseFloat(item.price) || 0;
+      const cantidad = parseInt(item.quantity) || 0;
+      const descuento = parseFloat(item.discount) || 0;
+      const precioFinal = precio - (precio * descuento / 100);
+
+      totalNormal += precio * cantidad;
+      totalDescuento += precioFinal * cantidad;
+    });
+
+    document.getElementById('totalNormal').textContent = totalNormal.toFixed(2);
+    document.getElementById('totalDescuento').textContent = totalDescuento.toFixed(2);
+  }
+
+  searchInput.addEventListener('input', () => {
+    const search = searchInput.value.trim().toLowerCase();
+    if (!search) {
+      renderTable(inventory);
+      lineInfo.textContent = '';
+      return;
+    }
+    const matchIndex = inventory.findIndex(item =>
+      item.code.toLowerCase().includes(search) ||
+      item.name.toLowerCase().includes(search) ||
+      item.category.toLowerCase().includes(search)
+    );
+    if (matchIndex === -1) {
+      tbody.innerHTML = '';
+      lineInfo.textContent = 'Producto no encontrado.';
+      return;
+    }
+    const item = inventory[matchIndex];
+    tbody.innerHTML = '';
+    const row = document.createElement('tr');
+    row.dataset.line = matchIndex + 1;
+    row.classList.add('highlight');
+    row.innerHTML = `
+      <td>${matchIndex + 1}</td>
+      <td>${item.name}</td>
+      <td>${item.code}</td>
+      <td>$${item.price}</td>
+      <td><input type="number" value="${item.discount || 0}" min="0" max="100" onchange="updateDiscount('${item.code}', this.value)" /></td>
+      <td>$${(item.price - (item.price * (item.discount || 0) / 100)).toFixed(2)}</td>
+      <td>${item.category}</td>
+      <td>${item.quantity}</td>
+      <td><button onclick="removeDiscount('${item.code}')">Quitar Descuento</button></td>
+    `;
+    tbody.appendChild(row);
+    lineInfo.textContent = `Producto encontrado en la línea ${matchIndex + 1} de ${inventory.length}.`;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  document.addEventListener('DOMContentLoaded', () => renderTable(inventory));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventario – Sincronizado con Compra</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#1f2937;
+      --accent:#3b82f6;
+      --accent-hover:#2563eb;
+      --danger:#ef4444;
+      --success:#10b981;
+      --radius:16px;
+      --shadow:0 6px 20px rgba(0,0,0,.08);
+      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
+      --transition:.3s ease;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+    h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
+    /* Resumen */
+    .summary-cards{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:1rem;
+      margin-bottom:1.5rem;
+      width:100%;
+      max-width:960px;
+    }
+    .summary-card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1rem;
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
+    .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
+    /* Buscador */
+    .search-bar{
+      width:100%;
+      max-width:960px;
+      margin-bottom:1.5rem;
+    }
+    .search-bar input{
+      width:100%;
+      padding:.75rem 1rem;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#f9fafb;
+      font-size:1rem;
+    }
+    .search-bar input:focus{
+      outline:none;
+      background:#fff;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    /* Tabla 5 columnas */
+    .table-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:1.5rem;
+      width:100%;
+      max-width:1200px;
+    }
+    /* Responsivo */
+    @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:900px){.table-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.table-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:400px){.table-grid{grid-template-columns:1fr}}
+
+    .line-item{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1rem;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      transition:transform var(--transition),box-shadow var(--transition);
+    }
+    .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
+    .line-item h3{font-size:1rem;color:var(--accent)}
+    .line-item p{margin:0;font-size:.75rem;color:#6b7280}
+    .stock-line{font-weight:600;color:var(--success)}
+    .actions{display:flex;gap:.5rem;margin-top:auto}
+    button{
+      padding:.4rem .8rem;
+      border:none;
+      border-radius:12px;
+      font-weight:600;
+      cursor:pointer;
+      transition:transform .2s,box-shadow .2s;
+      font-size:.75rem;
+    }
+    button:hover{transform:translateY(-2px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
+    /* Totales */
+    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
+    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
+    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+  </style>
+</head>
+<body>
+
+  <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compra</h1>
+
+  <!-- RESUMEN -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <h3>Total de productos</h3>
+      <p id="totalProducts">0</p>
+    </div>
+    <div class="summary-card">
+      <h3>Stock total</h3>
+      <p id="totalStock">0</p>
+    </div>
+  </div>
+
+  <!-- BUSCADOR -->
+  <div class="search-bar">
+    <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
+  </div>
+
+  <!-- TABLA 5 PRODUCTOS POR FILA -->
+  <div id="inventoryTable" class="table-grid"></div>
+
+  <!-- TOTAL USD -->
+  <div class="total-box">
+    <h2>Total en USD</h2>
+    <p id="totalAmount">$0.00</p>
+  </div>
+
+  <script>
+    /* =========================================================
+          VARIABLES
+       ========================================================= */
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let filtered   = [...inventory];
+
+    /* =========================================================
+          CÁLCULOS
+       ========================================================= */
+    function calculateTotal(list){
+      return list.reduce((sum,item)=>{
+        const price = parseFloat(item.price)||0;
+        const qty   = parseFloat(item.quantity)||0;
+        const disc  = parseFloat(item.discount)||0;
+        return sum + (price * (1 - disc/100)) * qty;
+      },0);
+    }
+    function stockTotal(list){
+      return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+    }
+
+    /* =========================================================
+          RENDER
+       ========================================================= */
+    function renderTable(){
+      const list = document.getElementById('inventoryTable');
+
+      // Resumen general
+      document.getElementById('totalProducts').textContent = inventory.length;
+      document.getElementById('totalStock').textContent = stockTotal(inventory);
+
+      if(!filtered.length){
+        list.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la búsqueda.</p>';
+        document.getElementById('totalAmount').textContent = '$0.00';
+        return;
+      }
+
+      list.innerHTML = filtered.map((item,idx)=>`
+        <div class="line-item">
+          <img id="invImg${idx}" src="" alt="${item.name}"/>
+          <h3>${item.name}</h3>
+          <p>Código: ${item.code}</p>
+          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity}</p>
+          <p>Precio: $${item.price}</p>
+          <p>Categoría: ${item.category}</p>
+          <div class="actions">
+            <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+            <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Imágenes
+      filtered.forEach((p,i)=>{
+        localforage.getItem(`img_${p.code}`).then(blob=>{
+          if(blob) document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+        });
+      });
+
+      // Total USD
+      document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
+    }
+
+    /* =========================================================
+          ACCIONES
+       ========================================================= */
+    function viewItem(index){
+      alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+    }
+    function deleteItem(index){
+      if(!confirm('¿Eliminar producto?'))return;
+      const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+      const item = inventory[realIndex];
+      localforage.removeItem(`img_${item.code}`);
+      inventory.splice(realIndex,1);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      doFilter();
+    }
+
+    /* =========================================================
+          FILTRO
+       ========================================================= */
+    function doFilter(){
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      if(!q){
+        filtered = [...inventory];
+      }else{
+        filtered = inventory.filter(p=>
+          p.name.toLowerCase().includes(q) ||
+          p.code.toLowerCase().includes(q) ||
+          p.barcode.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)
+        );
+      }
+      renderTable();
+    }
+    document.getElementById('searchInput').addEventListener('input',doFilter);
+
+    /* =========================================================
+          SINCRONIZACIÓN
+       ========================================================= */
+    window.addEventListener('storage', e => {
+      if(e.key === 'inventory'){
+        inventory = JSON.parse(e.newValue) || [];
+        doFilter();
+      }
+    });
+
+    /* =========================================================
+          INICIO
+       ========================================================= */
+    window.addEventListener('DOMContentLoaded',()=>{
+      doFilter();
+    });
+  </script>
+</body>
+</html>

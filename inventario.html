@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario – Sincronizado con Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -21,11 +21,22 @@
       --transition:.3s ease;
       --highlight:#fef08a;
     }
+    body.dark{
+      --bg:#111;
+      --card:#1e1e1e;
+      --text:#eee;
+      --highlight:#fde047;
+    }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
+    /* Toggle oscuro */
+    #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+    /* Rango precio */
+    .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
+    .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
     /* Resumen */
     .summary-cards{
       display:grid;
@@ -113,9 +124,18 @@
     /* Icono copiar */
     .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
     .copy-barcode:hover{color:var(--accent-hover)}
+    /* Etiqueta para imprimir */
+    @media print{
+      body *{visibility:hidden}
+      #printArea, #printArea *{visibility:visible}
+      #printArea{position:absolute;top:0;left:0;width:100%}
+    }
   </style>
 </head>
 <body>
+
+  <!-- BOTÓN MODO OSCURO -->
+  <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
   <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compra</h1>
 
@@ -129,6 +149,12 @@
       <h3>Stock total</h3>
       <p id="totalStock">0</p>
     </div>
+  </div>
+
+  <!-- RANGO DE PRECIO -->
+  <div class="price-range">
+    <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
+    <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
   </div>
 
   <!-- BUSCADOR -->
@@ -145,6 +171,9 @@
     <p id="totalAmount">$0.00</p>
   </div>
 
+  <!-- ÁREA DE IMPRESIÓN (OCULTA) -->
+  <div id="printArea" style="display:none;"></div>
+
   <script>
     /* =========================================================
           VARIABLES
@@ -152,6 +181,15 @@
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let filtered   = [...inventory];
     let searchTerm = '';
+
+    /* =========================================================
+          TEMA OSCURO
+       ========================================================= */
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+    });
 
     /* =========================================================
           CÁLCULOS
@@ -188,7 +226,6 @@
     function renderTable(){
       const list = document.getElementById('inventoryTable');
 
-      // Resumen general
       document.getElementById('totalProducts').textContent = inventory.length;
       document.getElementById('totalStock').textContent = stockTotal(inventory);
 
@@ -212,18 +249,17 @@
           <div class="actions">
             <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
             <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+            <button onclick="printLabel(${idx})" class="btn-primary">Etiqueta</button>
           </div>
         </div>
       `).join('');
 
-      // Imágenes
       filtered.forEach((p,i)=>{
         localforage.getItem(`img_${p.code}`).then(blob=>{
           if(blob) document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
         });
       });
 
-      // Total USD
       document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
     }
 
@@ -242,25 +278,43 @@
       localStorage.setItem('inventory', JSON.stringify(inventory));
       doFilter();
     }
+    function printLabel(index){
+      const p = filtered[index];
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = `
+        <div style="width:6cm;height:4cm;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
+          <div style="font-size:.9rem;font-weight:bold;">${p.name}</div>
+          <div style="font-size:.7rem;">Código: ${p.code}</div>
+          <div style="font-size:.7rem;">Barras: ${p.barcode}</div>
+          <div style="font-size:.8rem;">Precio: $${p.price}</div>
+        </div>
+      `;
+      window.print();
+    }
 
     /* =========================================================
           FILTRO
        ========================================================= */
     function doFilter(){
       searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-      if(!searchTerm){
-        filtered = [...inventory];
-      }else{
-        filtered = inventory.filter(p=>
+      const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+      const maxP = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+
+      filtered = inventory.filter(p=>{
+        const price = parseFloat(p.price)||0;
+        const matchText = !searchTerm ||
           p.name.toLowerCase().includes(searchTerm) ||
           p.code.toLowerCase().includes(searchTerm) ||
           p.barcode.toLowerCase().includes(searchTerm) ||
-          p.category.toLowerCase().includes(searchTerm)
-        );
-      }
+          p.category.toLowerCase().includes(searchTerm);
+        const matchPrice = price >= minP && price <= maxP;
+        return matchText && matchPrice;
+      });
       renderTable();
     }
     document.getElementById('searchInput').addEventListener('input',doFilter);
+    document.getElementById('minPrice').addEventListener('input',doFilter);
+    document.getElementById('maxPrice').addEventListener('input',doFilter);
 
     /* =========================================================
           SINCRONIZACIÓN

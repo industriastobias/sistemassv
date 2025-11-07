@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root{
@@ -28,6 +28,7 @@
     html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     h1{font-size:2rem;font-weight:700;margin-bottom:2rem;letter-spacing:-.5px}
+
     .bubble{
       background:var(--card);
       border-radius:var(--radius);
@@ -39,6 +40,7 @@
       transition:transform var(--transition),box-shadow var(--transition);
     }
     .bubble:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+
     .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
     label{font-size:.9rem;font-weight:500;margin-bottom:.25rem;display:block}
     input,select,textarea{
@@ -70,7 +72,10 @@
     .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
     .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
     .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
+
     #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
+
+    /* 4 productos por línea */
     .table-cards{
       display:grid;
       grid-template-columns:repeat(4,1fr);
@@ -91,15 +96,18 @@
     .card-item h3{font-size:1.1rem;color:var(--accent)}
     .card-item p{margin:0;font-size:.85rem;color:#6b7280}
     .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
+
     .mini-lote{
       display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;
     }
     .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
     .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
     .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
+
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+
     @media(max-width:1024px){.table-cards{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){.table-cards{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.table-cards{grid-template-columns:1fr}}
@@ -143,13 +151,10 @@
       </div>
       <div style="grid-column:1/-1" class="actions">
         <button type="submit" class="btn-primary">Guardar producto</button>
-        <button type="button" class="btn-primary" onclick="exportToExcel()">Exportar Excel</button>
+        <button type="button" class="btn-primary" onclick="exportToExcel()">Exportar ZIP</button>
         <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
-        <button type="button" class="btn-primary" onclick="document.getElementById('importFile').click()">Importar Excel</button>
-        <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(event)">
-        <button type="button" class="btn-primary" onclick="exportFullZIP()">Exportar ZIP completo</button>
-        <button type="button" class="btn-primary" onclick="document.getElementById('importZip').click()">Importar ZIP completo</button>
-        <input type="file" id="importZip" accept=".zip" style="display:none" onchange="importFullZIP(event)">
+        <button type="button" class="btn-primary" onclick="document.getElementById('importFile').click()">Importar ZIP</button>
+        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromExcel(event)">
         <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
       </div>
     </form>
@@ -297,13 +302,52 @@
     }
 
     /* =========================================================
-          IMPORTAR / EXPORTAR
+          IMPORTAR / EXPORTAR  ZIP+JSON+IMAGENES
        ========================================================= */
-    function exportToExcel(){
-      const ws = XLSX.utils.json_to_sheet(inventory.map(({imageData,...rest})=>rest));
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-      XLSX.writeFile(wb, "inventario.xlsx");
+    async function exportToExcel(){
+      const zip = new JSZip();
+      const json = JSON.stringify(inventory, null, 2);
+      zip.file('inventory.json', json);
+
+      const imgFolder = zip.folder('images');
+      for(const p of inventory){
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if(blob) imgFolder.file(`${p.code}.jpg`, blob);
+      }
+      const blobZip = await zip.generateAsync({type:'blob'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobZip);
+      a.download = 'inventario.zip';
+      a.click();
+    }
+
+    function importFromExcel(evt){
+      const file = evt.target.files[0];
+      if(!file || !file.name.endsWith('.zip')){alert('Selecciona un ZIP');return;}
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try{
+          const zip = await JSZip.loadAsync(reader.result);
+          const jsonFile = zip.file('inventory.json');
+          if(!jsonFile){alert('No se encontró inventory.json');return;}
+          const json = await jsonFile.async('string');
+          const imported = JSON.parse(json);
+
+          for(const p of imported){
+            const img = zip.file(`images/${p.code}.jpg`);
+            if(img){
+              const blob = await img.async('blob');
+              await localforage.setItem(`img_${p.code}`, blob);
+            }
+            const exist = inventory.find(x=>x.code===p.code);
+            exist ? Object.assign(exist,p) : inventory.push(p);
+          }
+          localStorage.setItem('inventory', JSON.stringify(inventory));
+          renderTable(); calculateTotal();
+          alert('Importación ZIP completada ✅');
+        }catch(e){alert('Error leyendo ZIP: '+e.message);}
+      };
+      reader.readAsArrayBuffer(file);
     }
 
     async function exportToPDF(){
@@ -343,32 +387,6 @@
           fetch(url).then(r => r.blob()).then(blob => reader.readAsDataURL(blob));
         });
       }
-    }
-
-    function importFromExcel(evt){
-      const file = evt.target.files[0];
-      if(!file)return;
-      const reader = new FileReader();
-      reader.onload = e=>{
-        const wb = XLSX.read(e.target.result,{type:'binary'});
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet);
-        const required = ['name','code','barcode','price','discount','quantity','description','category'];
-        const missing = required.filter(col=>!json[0]||!(col in json[0]));
-        if(missing.length>0){alert(`Faltan columnas: ${missing.join(', ')}`);return;}
-        const adapted = json.map(row=>({
-          name:row.name||'', code:row.code||'', barcode:row.barcode||'', price:row.price||0,
-          discount:row.discount||0, quantity:row.quantity||0, description:row.description||'', category:row.category||''
-        }));
-        adapted.forEach(newItem=>{
-          const existing = inventory.find(p=>p.code===newItem.code);
-          existing ? Object.assign(existing,newItem) : inventory.push(newItem);
-        });
-        localStorage.setItem('inventory',JSON.stringify(inventory));
-        renderTable(); calculateTotal();
-        alert('Importación completada');
-      };
-      reader.readAsBinaryString(file);
     }
 
     /* =========================================================
@@ -477,41 +495,11 @@
     }
 
     /* =========================================================
-          ZIP EXPORT / IMPORT
+          INICIO
        ========================================================= */
-    async function exportFullZIP(){
-      const zip = new JSZip();
-      const carpeta = zip.folder("imagenes");
-      const datos = inventory.map(({imageData,...rest})=>rest); // sin imageData
-      zip.file("inventario.json", JSON.stringify(datos, null, 2));
-
-      for(const p of inventory){
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if(blob) carpeta.file(`${p.code}.jpg`, blob);
-      }
-
-      const contenido = await zip.generateAsync({type:"blob"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(contenido);
-      a.download = "inventario_completo.zip";
-      a.click();
-    }
-
-    async function importFullZIP(evt){
-      const file = evt.target.files[0];
-      if(!file) return;
-      const zip = await JSZip.loadAsync(file);
-      const jsonFile = zip.file("inventario.json");
-      if(!jsonFile){alert("No se encontró inventario.json");return;}
-      const json = JSON.parse(await jsonFile.async("text"));
-
-      // Limpiar inventario actual (opcional)
-      if(confirm("¿Deseas reemplazar todo el inventario actual?")){
-        inventory.forEach(p=>localforage.removeItem(`img_${p.code}`));
-        inventory = [];
-      }
-
-      // Cargar imágenes
-      const imgFiles = zip.folder("imagenes").file(/\.(jpg|jpeg|png)$/i);
-      for(const img of imgFiles){
-        const code = img.name.replace(/\.
+    window.addEventListener('DOMContentLoaded',()=>{
+      renderTable(); calculateTotal();
+    });
+  </script>
+</body>
+</html>

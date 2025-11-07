@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -72,10 +72,8 @@
     .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
     .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
 
-    /* Vista previa imagen */
     #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
 
-    /* Inventario */
     .table-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem}
     .card-item{
       background:var(--card);
@@ -93,38 +91,13 @@
     .card-item p{margin:0;font-size:.85rem;color:#6b7280}
     .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
 
-    /* Lote */
-    .lote-block{
-      margin-top:1.5rem;
-      padding:1.5rem;
-      border:2px dashed var(--accent);
-      border-radius:var(--radius);
-      background:#f0f9ff;
-    }
-    .lote-block h3{margin-bottom:.5rem;font-size:1.1rem}
     .mini-lote{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-      gap:1rem;
-      margin-top:1rem;
-      max-height:320px;
-      overflow-y:auto;
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;
     }
-    .mini-item{
-      background:#fff;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      padding:.75rem;
-      text-align:center;
-      font-size:.75rem;
-      box-shadow:0 2px 6px rgba(0,0,0,.04);
-      transition:box-shadow .2s;
-    }
-    .mini-item:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
     .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
     .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
 
-    /* Total */
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
@@ -180,14 +153,11 @@
   <!-- Carga masiva -->
   <div class="bubble">
     <h2><i class="fa fa-images"></i> Carga imágenes</h2>
-    <p>Selecciona entre 1 y 100 imágenes. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
-
-    <!-- INPUT PARA CAMBIAR EL NÚMERO DE LOTE -->
+    <p>Selecciona entre <strong>1 y 100</strong> imágenes. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
     <div style="margin-bottom:1rem">
       <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
       <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
     </div>
-
     <input type="file" id="loteFiles" accept="image/*" multiple>
     <div class="actions">
       <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
@@ -301,8 +271,6 @@
         }
       });
       editIndex = index;
-
-      // ✅ DESPLAZAMIENTO SUAVE AL FORMULARIO
       document.getElementById('formularioBubble').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -334,48 +302,43 @@
     }
 
     async function exportToPDF(){
-      const {jsPDF} = window.jspdf;
-      const pdf = new jsPDF('p','mm','a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 10;
-      const cardWidth = (pageWidth - 2*margin)/2;
-      let x = margin, y = margin;
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 15;
+      const lineHeight = 7;
+      let y = margin;
 
-      for(let i = 0; i < inventory.length; i++){
-        const item = inventory[i];
-        const div = document.createElement('div');
-        div.style.width = cardWidth + 'mm';
-        div.style.padding = '10px';
-        div.style.background = '#fff';
-        div.style.border = '1px solid #ccc';
-        div.style.borderRadius = '12px';
-        div.style.boxSizing = 'border-box';
-        div.innerHTML = `
-          <img src="" id="pdfImg${i}" style="width:100%;height:auto;border-radius:8px;" />
-          <h3 style="margin:8px 0;font-size:14px;">${item.name}</h3>
-          <p style="margin:2px 0;font-size:12px;">Código: ${item.code}</p>
-          <p style="margin:2px 0;font-size:12px;">Precio: $${item.price}</p>
-          <p style="margin:2px 0;font-size:12px;">Stock: ${item.quantity}</p>
-        `;
-        document.body.appendChild(div);
+      pdf.setFontSize(16);
+      pdf.text('Inventario con imágenes', margin, y);
+      y += 10;
 
-        // Imagen desde IndexedDB
-        const blob = await localforage.getItem(`img_${item.code}`);
+      for (let i = 0; i < inventory.length; i++) {
+        const p = inventory[i];
+        const blob = await localforage.getItem(`img_${p.code}`);
         if (blob) {
           const url = URL.createObjectURL(blob);
-          document.getElementById(`pdfImg${i}`).src = url;
+          const imgData = await convertToBase64(url);
+          try { pdf.addImage(imgData, 'JPEG', margin, y, 40, 40); } catch (e) {}
+          URL.revokeObjectURL(url);
         }
-
-        await html2canvas(div,{scale:2}).then(canvas=>{
-          const imgData = canvas.toDataURL('image/png');
-          pdf.addImage(imgData,'PNG',x,y,cardWidth,canvas.height*cardWidth/canvas.width);
-          if(i%2===1){y+=canvas.height*cardWidth/canvas.width+10;x=margin;}
-          else{x=pageWidth/2+5;}
-          if(y>250){pdf.addPage();y=margin;x=margin;}
-        });
-        document.body.removeChild(div);
+        pdf.setFontSize(11);
+        pdf.text(`Código: ${p.code}`, 60, y + 7);
+        pdf.text(`Nombre: ${p.name}`, 60, y + 14);
+        pdf.text(`Precio: $${p.price}`, 60, y + 21);
+        pdf.text(`Stock: ${p.quantity}`, 60, y + 28);
+        y += 48;
+        if (y > 250) { pdf.addPage(); y = margin; }
       }
-      pdf.save('inventario_con_imagenes.pdf');
+      pdf.save('inventario.pdf');
+
+      function convertToBase64(url) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          fetch(url).then(r => r.blob()).then(blob => reader.readAsDataURL(blob));
+        });
+      }
     }
 
     function importFromExcel(evt){
@@ -386,35 +349,17 @@
         const wb = XLSX.read(e.target.result,{type:'binary'});
         const sheet = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
-
-        // Validación de columnas
         const required = ['name','code','barcode','price','discount','quantity','description','category'];
         const missing = required.filter(col=>!json[0]||!(col in json[0]));
         if(missing.length>0){alert(`Faltan columnas: ${missing.join(', ')}`);return;}
-
         const adapted = json.map(row=>({
-          name:row.name||'',
-          code:row.code||'',
-          barcode:row.barcode||'',
-          price:row.price||0,
-          discount:row.discount||0,
-          quantity:row.quantity||0,
-          description:row.description||'',
-          category:row.category||''
+          name:row.name||'', code:row.code||'', barcode:row.barcode||'', price:row.price||0,
+          discount:row.discount||0, quantity:row.quantity||0, description:row.description||'', category:row.category||''
         }));
-
-        // Unir con inventario y mantener imágenes si existen
         adapted.forEach(newItem=>{
           const existing = inventory.find(p=>p.code===newItem.code);
-          if(existing){
-            // Mantener imagen anterior
-            newItem.imageData = existing.imageData;
-            Object.assign(existing,newItem);
-          }else{
-            inventory.push(newItem);
-          }
+          existing ? Object.assign(existing,newItem) : inventory.push(newItem);
         });
-
         localStorage.setItem('inventory',JSON.stringify(inventory));
         renderTable(); calculateTotal();
         alert('Importación completada');
@@ -535,5 +480,4 @@
     });
   </script>
 </body>
-
 </html>

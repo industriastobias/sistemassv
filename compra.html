@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css   "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js   "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js   "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -95,6 +95,7 @@
     @media(max-width:1024px){.table-cards{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){.table-cards{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.table-cards{grid-template-columns:1fr}}
+    .lote-block{margin-top:1.5rem;padding:1.5rem;border:2px dashed var(--accent);border-radius:var(--radius);background:#f0f9ff;}
   </style>
 </head>
 <body>
@@ -143,6 +144,34 @@
     </form>
   </div>
 
+  <!-- CARGA MASIVA -->
+  <div class="bubble">
+    <h2><i class="fa fa-images"></i> Carga imágenes</h2>
+    <p>Selecciona entre 10 y 100 imágenes. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
+
+    <div style="margin-bottom:1rem">
+      <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
+      <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
+    </div>
+
+    <input type="file" id="loteFiles" accept="image/*" multiple>
+    <div class="actions">
+      <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
+      <button class="btn-danger" onclick="vaciarLote()">Vaciar lote actual</button>
+    </div>
+    <div id="loteStatus"></div>
+    <div class="mini-lote" id="lotePreview"></div>
+  </div>
+
+  <!-- EDITOR DE LOTE -->
+  <div class="bubble" id="editLoteBubble" style="display:none">
+    <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
+    <div class="table-cards" id="editLoteGrid"></div>
+    <div class="actions">
+      <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
+    </div>
+  </div>
+
   <div class="bubble">
     <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
     <div class="table-cards" id="inventoryList"></div>
@@ -157,6 +186,7 @@
   // GLOBAL
   let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
   let editIndex = -1;
+  let loteTemporal = [];
 
   // RENDER + TOTAL
   function calculateTotal(){
@@ -186,7 +216,6 @@
         </div>
       </div>
     `).join('');
-    // Cargar imágenes desde localforage
     inventory.forEach((p,i)=>{
       localforage.getItem(`img_${p.code}`).then(blob=>{
         if(blob && document.getElementById(`invImg${i}`)){
@@ -233,11 +262,9 @@
       category: form.get('category') || ''
     };
     if(editIndex === -1){
-      // evitar duplicados de código
       const exists = inventory.find(i=>i.code === item.code);
       if(exists){
         if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
-          // crear igualmente con sufijo
           item.code = `${item.code}_${Date.now()}`;
         } else {
           exists.quantity = Number(exists.quantity) + Number(item.quantity);
@@ -254,8 +281,6 @@
       editIndex = -1;
     }
     localStorage.setItem('inventory', JSON.stringify(inventory));
-
-    // Guardar imagen después de tener el código definitivo
     const imgFile = document.getElementById('imageFile').files[0];
     if(imgFile){
       new Compressor(imgFile,{quality:0.6,maxWidth:800,maxHeight:800,
@@ -264,13 +289,11 @@
         }
       });
     }
-
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
     renderTable(); calculateTotal();
   });
 
-  // VACIAR INVENTARIO
   function vaciarInventario(){
     if(!confirm('¿Vaciar todo el inventario?')) return;
     inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(()=>{}));
@@ -279,7 +302,6 @@
     renderTable(); calculateTotal();
   }
 
-  // EXPORTAR ZIP (inventory.json + images/)
   async function exportToZip(){
     try{
       const zip = new JSZip();
@@ -289,7 +311,7 @@
         try{
           const blob = await localforage.getItem(`img_${p.code}`);
           if(blob) imgFolder.file(`${p.code}.jpg`, blob);
-        }catch(e){ /* skip */ }
+        }catch(e){}
       }
       const blobZip = await zip.generateAsync({type:'blob'});
       const a = document.createElement('a');
@@ -301,7 +323,6 @@
     }
   }
 
-  // IMPORTAR ZIP (fusiona correctamente)
   async function importFromZip(evt){
     const file = evt.target.files[0];
     if(!file){ return; }
@@ -315,33 +336,26 @@
       let imported = JSON.parse(jsonText);
       if(!Array.isArray(imported)) imported = [];
 
-      // Merge: existing inventory is in variable 'inventory'
-      // For each imported product: save image if exists, then merge by code (sum quantity)
       for(const p of imported){
-        // ensure types
         p.price = Number(p.price) || 0;
         p.quantity = Number(p.quantity) || 0;
         p.discount = Number(p.discount) || 0;
-        // save image if present
         const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
         if(imgEntry){
           try{
             const blob = await imgEntry.async('blob');
             await localforage.setItem(`img_${p.code}`, blob);
-          }catch(e){ console.warn('No se pudo guardar imagen para', p.code); }
+          }catch(e){}
         }
         const idx = inventory.findIndex(x => x.code === p.code);
         if(idx > -1){
-          // sumar stock, y actualizar datos no vacíos
           inventory[idx].quantity = Number(inventory[idx].quantity || 0) + Number(p.quantity || 0);
-          // actualizamos otros campos sólo si el import trae valor y el actual está vacío o es 0
           if(!inventory[idx].name && p.name) inventory[idx].name = p.name;
           if(!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
           if((!inventory[idx].price || inventory[idx].price===0) && p.price) inventory[idx].price = p.price;
           if(!inventory[idx].description && p.description) inventory[idx].description = p.description;
           if(!inventory[idx].category && p.category) inventory[idx].category = p.category;
         } else {
-          // nuevo producto: asegurarse de campos típicos
           const nuevo = {
             name: p.name || p.code,
             code: p.code,
@@ -355,8 +369,7 @@
           inventory.push(nuevo);
         }
       }
-      // guardar y actualizar UI
-      localStorage.setItem('inventory', JSON.stringify(inventory));
+      localStorage.setItem('inventory',JSON.stringify(inventory));
       renderTable(); calculateTotal();
       alert('Importación ZIP completada y fusionada correctamente ✅');
     }catch(e){
@@ -373,7 +386,6 @@
     inp.click();
   }
 
-  // EXPORTAR A PDF con imágenes (usa localforage para recuperar blobs)
   async function exportToPDF(){
     try{
       const { jsPDF } = window.jspdf;
@@ -387,17 +399,13 @@
 
       for(let i=0;i<inventory.length;i++){
         const p = inventory[i];
-        // obtener imagen blob si existe
         let blob = null;
         try{ blob = await localforage.getItem(`img_${p.code}`); }catch(e){ blob = null; }
         if(blob){
-          // convertir blob a dataURL
           const dataUrl = await blobToDataURL(blob);
           try {
             pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40);
-          } catch(e){
-            // fallback: ignorar imagen si hay problemas
-          }
+          } catch(e){}
         }
         pdf.setFontSize(11);
         pdf.text(`Código: ${p.code}`, 60, y + 7);
@@ -434,14 +442,12 @@
     document.getElementById('description').value = p.description;
     document.getElementById('category').value = p.category;
     editIndex = idx;
-    // mostrar imagen si existe
     localforage.getItem(`img_${p.code}`).then(blob=>{
       if(blob){
         document.getElementById('imagePreview').src = URL.createObjectURL(blob);
         document.getElementById('imagePreview').style.display = 'block';
       }
     }).catch(()=>{});
-    // scroll suave al formulario
     document.getElementById('formularioBubble').scrollIntoView({behavior:'smooth'});
   }
 
@@ -453,6 +459,110 @@
     localforage.removeItem(`img_${code}`).catch(()=>{});
     renderTable(); calculateTotal();
   }
+
+  /* =========  CARGA MASIVA  ========= */
+  async function procesarLote(){
+    const files = document.getElementById('loteFiles').files;
+    if(!files.length){ alert('Selecciona imágenes'); return; }
+    if(files.length < 10 || files.length > 100){ alert('Elige entre 10 y 100 imágenes'); return; }
+    const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
+    loteTemporal = [];
+    const preview = document.getElementById('lotePreview');
+    preview.innerHTML = '';
+    document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const codigo = `${prefix}${Date.now()}${i}`;
+      await new Promise(res => {
+        new Compressor(file,{ quality:0.6, maxWidth:800, maxHeight:800,
+          success(result){
+            const reader = new FileReader();
+            reader.onload = e => {
+              const mini = document.createElement('div');
+              mini.className = 'mini-item';
+              mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+              preview.appendChild(mini);
+              localforage.setItem(`img_${codigo}`, result);
+              loteTemporal.push({name:'',code:codigo,barcode:'',price:0,discount:0,quantity:0,description:'',category:''});
+              res();
+            };
+            reader.readAsDataURL(result);
+          },
+          error(err){ console.error(err); res(); }
+        });
+      });
+    }
+    document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+    mostrarEditorLote();
+  }
+
+  function vaciarLote(){
+    if(!confirm('¿Vaciar lote actual?')) return;
+    loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(()=>{}));
+    loteTemporal = [];
+    document.getElementById('lotePreview').innerHTML = '';
+    document.getElementById('loteStatus').textContent = '';
+    document.getElementById('editLoteBubble').style.display = 'none';
+  }
+
+  function mostrarEditorLote(){
+    const grid = document.getElementById('editLoteGrid');
+    grid.innerHTML = '';
+    document.getElementById('editLoteBubble').style.display = 'block';
+    loteTemporal.forEach((p,i)=>{
+      const card = document.createElement('div');
+      card.className = 'card-item';
+      card.innerHTML = `
+        <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
+        <h3>${p.code}</h3>
+        <input placeholder="Nombre" id="loteName${i}" value="${escapeHtml(p.name)}">
+        <input placeholder="Barras" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
+        <input placeholder="Precio" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
+        <input placeholder="Desc(%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
+        <input placeholder="Stock" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
+        <input placeholder="Descripción" id="loteDescription${i}" value="${escapeHtml(p.description)}">
+        <select id="loteCategory${i}">
+          <option value="">-- Categoría --</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Otros">Otros</option>
+        </select>
+      `;
+      grid.appendChild(card);
+      localforage.getItem(`img_${p.code}`).then(blob=>{
+        if(blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
+      }).catch(()=>{});
+    });
+  }
+
+  function guardarLoteCompleto(){
+    if(!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+    loteTemporal.forEach((p,i)=>{
+      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
+      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
+      p.description = document.getElementById(`loteDescription${i}`).value.trim();
+      p.category = document.getElementById(`loteCategory${i}`).value;
+    });
+    inventory = inventory.concat(loteTemporal);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    alert('Lote guardado ✅');
+    loteTemporal = [];
+    document.getElementById('editLoteBubble').style.display = 'none';
+    renderTable(); calculateTotal();
+  }
+  /* =========  FIN CARGA MASIVA  ========= */
 
   window.addEventListener('DOMContentLoaded',()=>{
     renderTable(); calculateTotal();

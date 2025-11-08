@@ -1,197 +1,337 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Inventario con Búsqueda de Imágenes</title>
-  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventario – Sincronizado con Compra</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
-    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
-    h1 { text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-    th { background: #eee; }
-    input, button { margin: 5px; padding: 5px; }
-    img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#1f2937;
+      --accent:#3b82f6;
+      --accent-hover:#2563eb;
+      --danger:#ef4444;
+      --success:#10b981;
+      --radius:16px;
+      --shadow:0 6px 20px rgba(0,0,0,.08);
+      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
+      --transition:.3s ease;
+      --highlight:#fef08a;
+    }
+    body.dark{
+      --bg:#111;
+      --card:#1e1e1e;
+      --text:#eee;
+      --highlight:#fde047;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+    h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
+    mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
+    /* Toggle oscuro */
+    #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+    /* Rango precio */
+    .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
+    .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
+    /* Resumen */
+    .summary-cards{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:1rem;
+      margin-bottom:1.5rem;
+      width:100%;
+      max-width:960px;
+    }
+    .summary-card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1rem;
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
+    .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
+    /* Buscador */
+    .search-bar{
+      width:100%;
+      max-width:960px;
+      margin-bottom:1.5rem;
+    }
+    .search-bar input{
+      width:100%;
+      padding:.75rem 1rem;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#f9fafb;
+      font-size:1rem;
+    }
+    .search-bar input:focus{
+      outline:none;
+      background:#fff;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    /* Tabla 5 columnas */
+    .table-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:1.5rem;
+      width:100%;
+      max-width:1200px;
+    }
+    /* Responsivo */
+    @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:900px){.table-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.table-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:400px){.table-grid{grid-template-columns:1fr}}
+
+    .line-item{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1rem;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      transition:transform var(--transition),box-shadow var(--transition);
+    }
+    .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
+    .line-item h3{font-size:1rem;color:var(--accent)}
+    .line-item p{margin:0;font-size:.75rem;color:#6b7280}
+    .stock-line{font-weight:600;color:var(--success)}
+    .actions{display:flex;gap:.5rem;margin-top:auto}
+    button{
+      padding:.4rem .8rem;
+      border:none;
+      border-radius:12px;
+      font-weight:600;
+      cursor:pointer;
+      transition:transform .2s,box-shadow .2s;
+      font-size:.75rem;
+    }
+    button:hover{transform:translateY(-2px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
+    /* Totales */
+    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
+    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
+    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+    /* Icono copiar */
+    .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
+    .copy-barcode:hover{color:var(--accent-hover)}
+    /* Etiqueta para imprimir */
+    @media print{
+      body *{visibility:hidden}
+      #printArea, #printArea *{visibility:visible}
+      #printArea{position:absolute;top:0;left:0;width:100%}
+    }
   </style>
 </head>
 <body>
-  <h1>📦 Inventario con Imágenes</h1>
 
-  <div>
-    <input type="text" id="code" placeholder="Código">
-    <input type="text" id="name" placeholder="Nombre">
-    <input type="number" id="price" placeholder="Precio">
-    <input type="file" id="image" accept="image/*">
-    <button onclick="addProduct()">Agregar producto</button>
-    <button onclick="exportarZIP()">Exportar ZIP</button>
-    <input type="file" id="zipImport" accept=".zip" onchange="importarZIP(this)">
+  <!-- BOTÓN MODO OSCURO -->
+  <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
+
+  <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compra</h1>
+
+  <!-- RESUMEN -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <h3>Total de productos</h3>
+      <p id="totalProducts">0</p>
+    </div>
+    <div class="summary-card">
+      <h3>Stock total</h3>
+      <p id="totalStock">0</p>
+    </div>
   </div>
 
-  <div>
-    <input type="text" id="search" placeholder="Buscar por nombre o código" oninput="buscar(this.value)">
-    <input type="file" id="imgSearch" accept="image/*" onchange="buscarIgualQueImagen(this.files[0])">
-    <label for="imgSearch" style="background:#0b79d0;color:white;padding:6px;border-radius:5px;cursor:pointer;">🔍 Buscar imagen exacta</label>
+  <!-- RANGO DE PRECIO -->
+  <div class="price-range">
+    <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
+    <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
   </div>
 
-  <table id="table">
-    <thead>
-      <tr>
-        <th>Código</th>
-        <th>Nombre</th>
-        <th>Precio</th>
-        <th>Imagen</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <!-- BUSCADOR -->
+  <div class="search-bar">
+    <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
+  </div>
+
+  <!-- TABLA 5 PRODUCTOS POR FILA -->
+  <div id="inventoryTable" class="table-grid"></div>
+
+  <!-- TOTAL USD -->
+  <div class="total-box">
+    <h2>Total en USD</h2>
+    <p id="totalAmount">$0.00</p>
+  </div>
+
+  <!-- ÁREA DE IMPRESIÓN (OCULTA) -->
+  <div id="printArea" style="display:none;"></div>
 
   <script>
-    let inventory = [];
-    let filtered = [];
+    /* =========================================================
+          VARIABLES
+       ========================================================= */
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let filtered   = [...inventory];
+    let searchTerm = '';
 
-    async function loadInventory(){
-      const data = await localforage.getItem("inventory");
-      inventory = data || [];
-      filtered = inventory;
-      await renderTable();
+    /* =========================================================
+          TEMA OSCURO
+       ========================================================= */
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+    });
+
+    /* =========================================================
+          CÁLCULOS
+       ========================================================= */
+    function calculateTotal(list){
+      return list.reduce((sum,item)=>{
+        const price = parseFloat(item.price)||0;
+        const qty   = parseFloat(item.quantity)||0;
+        const disc  = parseFloat(item.discount)||0;
+        return sum + (price * (1 - disc/100)) * qty;
+      },0);
+    }
+    function stockTotal(list){
+      return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
     }
 
-    async function saveInventory(){
-      await localforage.setItem("inventory", inventory);
+    /* =========================================================
+          UTILIDADES RESALTADO / COPIAR
+       ========================================================= */
+    function highlight(text, query){
+      if(!query) return text;
+      const re = new RegExp(`(${query})`, 'gi');
+      return text.replace(re, '<mark>$1</mark>');
     }
-
-    async function addProduct(){
-      const code = codeInput.value.trim();
-      const name = nameInput.value.trim();
-      const price = parseFloat(priceInput.value || 0);
-      const file = image.files[0];
-      if(!code || !name || !file) return alert("Completa todos los campos");
-
-      const imgBlob = await fileToBlob(file);
-      inventory.push({ code, name, price });
-      await localforage.setItem(`img_${code}`, imgBlob);
-      await saveInventory();
-      filtered = inventory;
-      renderTable();
-      codeInput.value = nameInput.value = priceInput.value = "";
-      image.value = "";
-    }
-
-    async function renderTable(){
-      const tbody = document.querySelector("#table tbody");
-      tbody.innerHTML = "";
-      for(const p of filtered){
-        const tr = document.createElement("tr");
-        const blob = await localforage.getItem(`img_${p.code}`);
-        const url = blob ? URL.createObjectURL(blob) : "";
-        tr.innerHTML = `
-          <td>${p.code}</td>
-          <td>${p.name}</td>
-          <td>$${p.price.toFixed(2)}</td>
-          <td>${url ? `<img src="${url}">` : ""}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    function buscar(valor){
-      valor = valor.toLowerCase();
-      filtered = inventory.filter(p =>
-        p.name.toLowerCase().includes(valor) ||
-        p.code.toLowerCase().includes(valor)
-      );
-      renderTable();
-    }
-
-    async function fileToBlob(file){
-      const buffer = await file.arrayBuffer();
-      return new Blob([buffer], {type:file.type});
-    }
-
-    // ----------- NUEVA FUNCIÓN MEJORADA: Buscar por imagen visual -----------
-
-    async function buscarIgualQueImagen(file){
-      const hashBuscado = await getImageHash(file);
-      const coincidencias = [];
-      for(const p of inventory){
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if(blob){
-          const hash = await getImageHash(blob);
-          // Si el hash visual es idéntico o muy parecido
-          if(Math.abs(hash - hashBuscado) < 5000) coincidencias.push(p);
-        }
-      }
-      filtered = coincidencias;
-      await renderTable();
-    }
-
-    async function getImageHash(file){
-      return new Promise(resolve=>{
-        const img = new Image();
-        img.onload = ()=>{
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const size = 16;
-          canvas.width = size;
-          canvas.height = size;
-          ctx.drawImage(img, 0, 0, size, size);
-          const data = ctx.getImageData(0, 0, size, size).data;
-          let hash = 0;
-          for(let i=0; i<data.length; i++) hash = (hash + data[i]) % 1e9;
-          resolve(hash);
-        };
-        img.src = URL.createObjectURL(file);
+    function copyToClipboard(text){
+      navigator.clipboard.writeText(text).then(()=>{
+        alert('Código de barras copiado: ' + text);
       });
     }
 
-    // ---------------- ZIP export / import ----------------
+    /* =========================================================
+          RENDER
+       ========================================================= */
+    function renderTable(){
+      const list = document.getElementById('inventoryTable');
 
-    async function exportarZIP(){
-      const zip = new JSZip();
-      const meta = [];
-      for(const p of inventory){
-        meta.push(p);
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if(blob) zip.file(`imagenes/${p.code}.jpg`, blob);
+      document.getElementById('totalProducts').textContent = inventory.length;
+      document.getElementById('totalStock').textContent = stockTotal(inventory);
+
+      if(!filtered.length){
+        list.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la búsqueda.</p>';
+        document.getElementById('totalAmount').textContent = '$0.00';
+        return;
       }
-      zip.file("data.json", JSON.stringify(meta));
-      const content = await zip.generateAsync({type:"blob"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(content);
-      a.download = "inventario.zip";
-      a.click();
+
+      list.innerHTML = filtered.map((item,idx)=>`
+        <div class="line-item">
+          <img id="invImg${idx}" src="" alt="${item.name}"/>
+          <h3>${highlight(item.name, searchTerm)}</h3>
+          <p>Código: ${highlight(item.code, searchTerm)}</p>
+          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
+          <p>Precio: $${item.price}</p>
+          <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+          <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
+            <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+          </p>
+          <div class="actions">
+            <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+            <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+            <button onclick="printLabel(${idx})" class="btn-primary">Etiqueta</button>
+          </div>
+        </div>
+      `).join('');
+
+      filtered.forEach((p,i)=>{
+        localforage.getItem(`img_${p.code}`).then(blob=>{
+          if(blob) document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+        });
+      });
+
+      document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
     }
 
-    async function importarZIP(input){
-      const file = input.files[0];
-      if(!file) return;
-      const zip = await JSZip.loadAsync(file);
-      const jsonText = await zip.file("data.json").async("string");
-      const nuevos = JSON.parse(jsonText);
-      for(const p of nuevos){
-        const blobFile = zip.file(`imagenes/${p.code}.jpg`);
-        const blob = blobFile ? await blobFile.async("blob") : null;
-        const index = inventory.findIndex(x => x.code === p.code);
-        if(index >= 0) inventory[index] = p;
-        else inventory.push(p);
-        if(blob) await localforage.setItem(`img_${p.code}`, blob);
-      }
-      await saveInventory();
-      filtered = inventory;
-      await renderTable();
-      alert("ZIP importado correctamente");
-      input.value = "";
+    /* =========================================================
+          ACCIONES
+       ========================================================= */
+    function viewItem(index){
+      alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+    }
+    function deleteItem(index){
+      if(!confirm('¿Eliminar producto?'))return;
+      const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+      const item = inventory[realIndex];
+      localforage.removeItem(`img_${item.code}`);
+      inventory.splice(realIndex,1);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      doFilter();
+    }
+    function printLabel(index){
+      const p = filtered[index];
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = `
+        <div style="width:6cm;height:4cm;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
+          <div style="font-size:.9rem;font-weight:bold;">${p.name}</div>
+          <div style="font-size:.7rem;">Código: ${p.code}</div>
+          <div style="font-size:.7rem;">Barras: ${p.barcode}</div>
+          <div style="font-size:.8rem;">Precio: $${p.price}</div>
+        </div>
+      `;
+      window.print();
     }
 
-    window.addEventListener("load", loadInventory);
+    /* =========================================================
+          FILTRO
+       ========================================================= */
+    function doFilter(){
+      searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+      const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+      const maxP = parseFloat(document.getElementById('maxPrice').value) || Infinity;
 
-    // Elementos de formulario
-    const codeInput = document.getElementById("code");
-    const nameInput = document.getElementById("name");
-    const priceInput = document.getElementById("price");
-    const image = document.getElementById("image");
+      filtered = inventory.filter(p=>{
+        const price = parseFloat(p.price)||0;
+        const matchText = !searchTerm ||
+          p.name.toLowerCase().includes(searchTerm) ||
+          p.code.toLowerCase().includes(searchTerm) ||
+          p.barcode.toLowerCase().includes(searchTerm) ||
+          p.category.toLowerCase().includes(searchTerm);
+        const matchPrice = price >= minP && price <= maxP;
+        return matchText && matchPrice;
+      });
+      renderTable();
+    }
+    document.getElementById('searchInput').addEventListener('input',doFilter);
+    document.getElementById('minPrice').addEventListener('input',doFilter);
+    document.getElementById('maxPrice').addEventListener('input',doFilter);
+
+    /* =========================================================
+          SINCRONIZACIÓN
+       ========================================================= */
+    window.addEventListener('storage', e => {
+      if(e.key === 'inventory'){
+        inventory = JSON.parse(e.newValue) || [];
+        doFilter();
+      }
+    });
+
+    /* =========================================================
+          INICIO
+       ========================================================= */
+    window.addEventListener('DOMContentLoaded',()=>{
+      doFilter();
+    });
   </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </body>
 </html>

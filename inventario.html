@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario – Buscar por código de barras en foto</title>
+  <title>Inventario – Buscar IGUAL que la foto</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -117,7 +116,7 @@
 
   <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
-  <h1><i class="fa fa-boxes"></i> Inventario – Buscar por código en foto</h1>
+  <h1><i class="fa fa-boxes"></i> Inventario – Buscar IGUAL que la foto</h1>
 
   <div class="summary-cards">
     <div class="summary-card">
@@ -134,7 +133,7 @@
     <button id="btnVerTodo"><i class="fa fa-list"></i> Ver todo</button>
     <label for="imageUpload" style="cursor:pointer;">
       <input id="imageUpload" type="file" accept="image/*" style="display:none;"/>
-      <span class="btn-primary"><i class="fa fa-camera"></i> Buscar por foto (código barras)</span>
+      <span class="btn-primary"><i class="fa fa-image"></i> Buscar IGUAL que la foto</span>
     </label>
   </div>
 
@@ -241,29 +240,25 @@
       window.print();
     }
 
-    /* ---------- leer código de barras en imagen ---------- */
-    function leerBarcodeDeImagen(file){
-      return new Promise((resolve)=>{
-        const url = URL.createObjectURL(file);
-        Quagga.decodeSingle({
-          src: url,
-          numOfWorkers: 0,
-          decoder: { readers: ['code_128_reader', 'ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader'] },
-          locate: true,
-          locator: { halfSample: true, patchSize: 'medium' }
-        }, result=>{
-          URL.revokeObjectURL(url);
-          resolve(result?.codeResult?.code || null);
-        });
-      });
-    }
-
-    /* ---------- filtrar por barcode leído ---------- */
-    async function aplicarFiltroPorBarcode(file){
-      const barcode = await leerBarcodeDeImagen(file);
-      if(!barcode){ alert('No pude leer el código de barras en la foto.'); return; }
-      filtered = inventory.filter(p => p.barcode === barcode);
+    /* ---------- comparación byte-a-byte ---------- */
+    async function buscarIgualQueImagen(file){
+      const bufferBuscado = await file.arrayBuffer();
+      const coincidencias = [];
+      for(const p of inventory){
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if(blob){
+          const buffer = await blob.arrayBuffer();
+          if(bufEquals(buffer,bufferBuscado)) coincidencias.push(p);
+        }
+      }
+      filtered = coincidencias;
       await renderTable();
+    }
+    function bufEquals(a,b){
+      if(a.byteLength!==b.byteLength) return false;
+      const ua=new Uint8Array(a), ub=new Uint8Array(b);
+      for(let i=0;i<ua.length;i++) if(ua[i]!==ub[i]) return false;
+      return true;
     }
 
     /* ---------- controles ---------- */
@@ -273,7 +268,7 @@
       if(!file) return;
       document.getElementById('imgPreview').src = URL.createObjectURL(file);
       document.getElementById('imgPreview').style.display = 'block';
-      await aplicarFiltroPorBarcode(file);
+      await buscarIgualQueImagen(file);
     });
 
     /* ---------- reset / inicio ---------- */

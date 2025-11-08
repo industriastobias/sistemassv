@@ -31,7 +31,6 @@
     html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
-    h2.section-title{width:100%;max-width:1200px;margin:1.5rem 0 .5rem;font-size:1.2rem;color:var(--accent)}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
     #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
     .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
@@ -144,8 +143,9 @@
 
   <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
-  <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compra</h1>
+  <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
 
+  <!-- Resumen -->
   <div class="summary-cards">
     <div class="summary-card">
       <h3>Total de productos</h3>
@@ -157,26 +157,31 @@
     </div>
   </div>
 
+  <!-- Rango de precio -->
   <div class="price-range">
     <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
     <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
   </div>
 
+  <!-- Buscador -->
   <div class="search-bar">
     <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
   </div>
 
-  <div id="inventoryTable"></div>
+  <!-- Tabla 5 columnas -->
+  <div id="inventoryTable" class="table-grid"></div>
 
+  <!-- Total USD -->
   <div class="total-box">
     <h2>Total en USD</h2>
     <p id="totalAmount">$0.00</p>
   </div>
 
+  <!-- Área de impresión (oculta) -->
   <div id="printArea" style="display:none;"></div>
 
   <script>
-    /* ===== CONFIGURACIÓN DE ORDEN DE CATEGORÍAS ===== */
+    /* ===== ORDEN FIJADO DE CATEGORÍAS ===== */
     const CATEGORY_ORDER = [
       "Carteras",
       "Aritos",
@@ -228,7 +233,7 @@
       });
     }
 
-    /* ===== UTILIDADES ===== */
+    /* ===== UTILIDADES RESALTADO / COPIAR ===== */
     function highlight(text, query){
       if(!query) return text;
       const re = new RegExp(`(${query})`, 'gi');
@@ -255,36 +260,24 @@
         return;
       }
 
-      let html = '';
-      let currentCat = '';
-
-      filtered.forEach((item, idx)=>{
-        const cat = item.category || 'Otros';
-        if(cat !== currentCat){
-          html += `<h2 class="section-title">${cat}</h2>`;
-          currentCat = cat;
-        }
-        html += `
-          <div class="line-item" id="card-${idx}">
-            <img id="invImg${idx}" src="" alt="${item.name}"/>
-            <h3>${highlight(item.name, searchTerm)}</h3>
-            <p>Código: ${highlight(item.code, searchTerm)}</p>
-            <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
-            <p>Precio: $${item.price}</p>
-            <p>Categoría: ${highlight(item.category, searchTerm)}</p>
-            <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
-              <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
-            </p>
-            <div class="actions">
-              <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
-              <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
-              <button onclick="editItem(${idx})" class="btn-primary">Editar</button>
-            </div>
+      container.innerHTML = filtered.map((item,idx)=>`
+        <div class="line-item" id="card-${idx}">
+          <img id="invImg${idx}" src="" alt="${item.name}"/>
+          <h3>${highlight(item.name, searchTerm)}</h3>
+          <p>Código: ${highlight(item.code, searchTerm)}</p>
+          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
+          <p>Precio: $${item.price}</p>
+          <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+          <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
+            <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+          </p>
+          <div class="actions">
+            <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+            <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+            <button onclick="editItem(${idx})" class="btn-primary">Editar</button>
           </div>
-        `;
-      });
-
-      container.innerHTML = html;
+        </div>
+      `).join('');
 
       filtered.forEach((p,i)=>{
         localforage.getItem(`img_${p.code}`).then(blob=>{
@@ -309,7 +302,9 @@
       doFilter();
     }
 
-    /* ===== EDICIÓN ===== */
+    /* ---------------------------------------------------------
+          EDICIÓN
+       --------------------------------------------------------- */
     function editItem(index){
       const card = document.getElementById(`card-${index}`);
       const p    = filtered[index];

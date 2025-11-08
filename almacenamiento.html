@@ -1,233 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inventario — sincronizado</title>
+
+  <!-- Iconos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <!-- localForage para blobs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+
+  <!-- JSZip y FileSaver para import/export ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-    :root {
+
+    :root{
       --crema: #f7f3e9;
-      --rosado: #DBB8BC;
+      --rosa: #DBB8BC;
       --texto: #2e2e2e;
       --borde: #e0e0e0;
       --resaltado: #fffaf0;
-      --peligro: #e63946;
       --blanco: #ffffff;
-      --sombra: rgba(0, 0, 0, 0.1);
+      --danger: #e63946;
+      --sombra: rgba(0,0,0,0.08);
     }
+    *{box-sizing:border-box;font-family:Poppins,system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{background:var(--crema);color:var(--texto);margin:0;padding:18px;display:flex;align-items:center;flex-direction:column;min-height:100vh;}
+    header{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    h1{color:var(--rosa);margin:0;font-size:1.6rem;display:flex;gap:.6rem;align-items:center}
+    .top-actions{display:flex;gap:8px;align-items:center}
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
+    .container{width:100%;max-width:1200px;background:var(--blanco);border-radius:12px;padding:18px;box-shadow:0 10px 30px var(--sombra)}
+    .search-block{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+    label{font-weight:600;font-size:.9rem}
+    select,input[type=text],input[type=number]{padding:.55rem .7rem;border:1px solid var(--borde);border-radius:8px;font-size:.95rem}
+    button.btn{background:var(--rosa);color:#fff;border:none;padding:.6rem .9rem;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid var(--borde);padding:.5rem .7rem;border-radius:8px;cursor:pointer}
 
-    body {
-      background: var(--crema);
-      color: var(--texto);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 1rem;
-    }
+    .tools-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 98%;
-      max-width: 1400px;
-      margin-bottom: 1rem;
-    }
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:960px}
+    thead th{background:var(--rosa);color:#fff;padding:10px;text-align:left;font-weight:600}
+    th,td{padding:10px;border:1px solid var(--borde);vertical-align:middle}
+    tbody tr:nth-child(odd){background:var(--resaltado)}
+    tbody tr:hover{background:#fdeff1}
+    img.thumb{height:48px;width:48px;object-fit:cover;border-radius:6px;cursor:pointer}
 
-    h1 {
-      color: var(--rosado);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 1.8rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+    .no-results{color:var(--danger);font-weight:700;text-align:center;margin-top:10px}
+    .result-message{text-align:center;color:var(--texto);margin-top:8px;font-weight:700}
 
-    .historial-btn {
-      background: var(--rosado);
-      color: var(--blanco);
-      border: none;
-      border-radius: 8px;
-      padding: 0.6rem 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.3s;
-    }
+    /* modales */
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);align-items:center;justify-content:center;z-index:120}
+    .modal .panel{background:var(--blanco);padding:18px;border-radius:12px;max-width:760px;width:92%;max-height:86vh;overflow:auto;box-shadow:0 14px 40px var(--sombra)}
+    .close{float:right;cursor:pointer;color:#666;font-size:20px}
+    #modalImage{width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:10px}
 
-    .historial-btn:hover {
-      background: #c79da1;
-      transform: translateY(-2px);
-    }
+    .highlight{outline:2px solid var(--rosa)}
+    .no-desc{color:#777;font-style:italic}
 
-    .container {
-      background: var(--blanco);
-      border-radius: 16px;
-      box-shadow: 0 6px 25px var(--sombra);
-      width: 98vw;
-      max-width: 1400px;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .search-block {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      align-items: flex-end;
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    input, select {
-      padding: 0.55rem 0.7rem;
-      border: 1px solid var(--borde);
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
-    button.stamp {
-      padding: 0.6rem 1.1rem;
-      background: var(--rosado);
-      color: var(--blanco);
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      font-size: 0.85rem;
-      letter-spacing: 0.5px;
-    }
-
-    button.stamp:hover {
-      background: #c79da1;
-      transform: translateY(-2px);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.6rem;
-      font-size: 0.9rem;
-    }
-
-    thead {
-      background: var(--rosado);
-      color: var(--blanco);
-    }
-
-    th, td {
-      padding: 0.6rem;
-      border: 1px solid var(--borde);
-      text-align: left;
-    }
-
-    tbody tr:nth-child(odd) {
-      background: var(--resaltado);
-    }
-
-    tbody tr:hover {
-      background: #fbe8eb;
-    }
-
-    td img {
-      max-height: 48px;
-      border-radius: 6px;
-      cursor: pointer;
-      object-fit: cover;
-    }
-
-    .no-results {
-      color: var(--peligro);
-      font-weight: 600;
-      text-align: center;
-      margin-top: 1rem;
-    }
-
-    .result-message {
-      text-align: center;
-      color: var(--texto);
-      margin-top: 0.5rem;
-      font-weight: 600;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 100;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(5px);
-    }
-
-    .modal-content {
-      background: var(--blanco);
-      margin: 5vh auto;
-      padding: 2rem;
-      border-radius: 16px;
-      width: 90vw;
-      max-width: 600px;
-      box-shadow: 0 10px 40px var(--sombra);
-      position: relative;
-    }
-
-    .close {
-      position: absolute;
-      top: 12px;
-      right: 16px;
-      font-size: 24px;
-      color: #555;
-      cursor: pointer;
-    }
-
-    .close:hover {
-      color: var(--rosado);
-    }
-
-    #modalImage {
-      width: 100%;
-      max-height: 70vh;
-      object-fit: contain;
-      border-radius: 12px;
-      margin-top: 1rem;
-    }
-
-    tr.highlight {
-      outline: 2px solid var(--rosado);
-      background: #fdeff1;
+    .flex{display:flex;gap:8px;align-items:center}
+    .right{margin-left:auto}
+    .small{font-size:.85rem}
+    @media (max-width:880px){
+      table{min-width:700px}
     }
   </style>
 </head>
 <body>
+
   <header>
     <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario</h1>
-    <button class="historial-btn" onclick="openSalesHistory()"><i class="fa-solid fa-clock-rotate-left"></i> Historial (Ventas)</button>
+    <div class="top-actions">
+      <button class="btn" onclick="openSalesHistory()"><i class="fa-solid fa-clock-rotate-left"></i> Historial (Ventas)</button>
+      <button class="ghost" onclick="exportJSON()">Exportar JSON</button>
+      <button class="ghost" onclick="exportZip()">Exportar ZIP</button>
+      <label class="ghost" style="cursor:pointer;padding:.4rem .6rem;border-radius:8px">
+        Importar ZIP <input id="importZipInput" type="file" accept=".zip" style="display:none" onchange="handleImportZip(event)">
+      </label>
+      <label class="ghost" style="cursor:pointer;padding:.4rem .6rem;border-radius:8px">
+        Importar JSON <input id="importJsonInput" type="file" accept=".json" style="display:none" onchange="handleImportJson(event)">
+      </label>
+    </div>
   </header>
 
   <div class="container">
+
     <div class="search-block">
       <div>
-        <label for="searchCategory">Categoría:</label>
+        <label for="searchCategory">Filtrar por categoría</label><br>
         <select id="searchCategory">
-          <option value="">Todas</option>
+          <option value="">Todas las categorías</option>
           <option value="Aritos">Aritos</option>
           <option value="Billeteras">Billeteras</option>
           <option value="Carteras">Carteras</option>
@@ -243,32 +110,38 @@
       </div>
 
       <div>
-        <label for="searchCode">Código de barras:</label>
-        <input type="text" id="searchCode" placeholder="Ej: 123456789">
+        <label for="searchCode">Buscar (nombre / código / barcode)</label><br>
+        <input id="searchText" type="text" placeholder="Ej: arito / AR-001 / 0001001">
       </div>
 
-      <button class="stamp" onclick="filterInventory()">Buscar</button>
-      <button class="stamp" onclick="clearFilters()">Limpiar</button>
+      <div class="flex" style="align-self:flex-end">
+        <button class="btn" onclick="filterInventory()">Buscar</button>
+        <button class="ghost" onclick="clearFilters()">Limpiar</button>
+      </div>
     </div>
 
-    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap: wrap;">
-      <label for="goToRow">Ir a fila:</label>
-      <input type="number" id="goToRow" min="1" style="width:80px;">
-      <button class="stamp" onclick="goToRow()">Ir</button>
+    <div class="tools-row">
+      <div class="flex">
+        <label for="goToRow">Ir a fila</label>
+        <input id="goToRow" type="number" min="1" style="width:90px;padding:.45rem;border-radius:6px;border:1px solid var(--borde)">
+        <button class="btn" onclick="goToRow()">Ir</button>
+      </div>
+      <div class="right small">Offline • datos en local (LocalStorage) y blobs en LocalForage</div>
     </div>
 
-    <div style="flex:1; overflow:auto; margin-top:.6rem;">
-      <table>
+    <div class="table-wrap">
+      <table aria-describedby="descTable">
+        <caption id="descTable" style="text-align:left;font-size:.85rem;color:#666;margin-bottom:8px">Haz clic sobre la imagen para verla grande. Usa icono de caja registradora para registrar venta.</caption>
         <thead>
           <tr>
             <th>#</th>
             <th>Imagen</th>
             <th>Nombre</th>
             <th>Código</th>
-            <th>Código de Barras</th>
+            <th>Barcode</th>
             <th>Precio</th>
             <th>Desc(%)</th>
-            <th>Precio Final</th>
+            <th>Precio final</th>
             <th>Descripción</th>
             <th>Categoría</th>
             <th>Stock</th>
@@ -277,239 +150,422 @@
         </thead>
         <tbody id="inventoryList"></tbody>
       </table>
-      <div id="noResultsMessage" class="no-results" style="display:none;">No se encontraron productos.</div>
-      <div id="resultMessage" class="result-message" style="display:none;"></div>
+
+      <div id="noResults" class="no-results" style="display:none">No se encontraron productos.</div>
+      <div id="resultMessage" class="result-message" style="display:none"></div>
     </div>
   </div>
 
-  <!-- Modal de venta -->
-  <div id="soldModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeSoldModal()">&times;</span>
-      <h2>Registrar Venta</h2>
-      <label for="soldQuantity">Cantidad vendida:</label>
-      <input type="number" id="soldQuantity" min="1">
-      <label for="soldPrice" style="margin-top:1rem;">Precio unidad:</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1000">
-      <button class="stamp" onclick="processSale()" style="margin-top:1rem;">Registrar</button>
-      <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
+  <!-- SELL MODAL -->
+  <div id="sellModal" class="modal" role="dialog" aria-modal="true">
+    <div class="panel">
+      <span class="close" onclick="closeSellModal()">&times;</span>
+      <h3>Registrar Venta</h3>
+      <div id="sellInfo" style="margin:.6rem 0;color:#444"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:.5rem">
+        <label>Cantidad</label>
+        <input id="sellQty" type="number" min="1" value="1" style="width:100px;padding:.45rem;border-radius:6px;border:1px solid var(--borde)">
+        <label>Precio U.</label>
+        <input id="sellPrice" type="number" min="0" step="0.01" style="width:140px;padding:.45rem;border-radius:6px;border:1px solid var(--borde)">
+        <div style="margin-left:auto"><button class="btn" onclick="confirmSell()"><i class="fa-solid fa-cash-register"></i> Registrar</button></div>
+      </div>
+      <div id="sellMsg" style="margin-top:.6rem;color:#666"></div>
     </div>
   </div>
 
-  <!-- Modal imagen -->
-  <div id="imageModal" class="modal">
-    <div class="modal-content">
+  <!-- IMAGE MODAL -->
+  <div id="imageModal" class="modal" role="dialog" aria-modal="true">
+    <div class="panel">
       <span class="close" onclick="closeImageModal()">&times;</span>
-      <img id="modalImage" src="" alt="Imagen del producto">
+      <img id="modalImage" src="" alt="Imagen grande">
     </div>
   </div>
 
-  <!-- Modal historial -->
-  <div id="historyModal" class="modal">
-    <div class="modal-content">
+  <!-- HISTORY MODAL -->
+  <div id="historyModal" class="modal" role="dialog" aria-modal="true">
+    <div class="panel">
       <span class="close" onclick="closeSalesHistory()">&times;</span>
-      <h2>Historial de Ventas</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Código</th>
-            <th>Cantidad</th>
-            <th>Precio U.</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody id="salesHistoryList"></tbody>
-      </table>
+      <h3>Historial de Ventas</h3>
+      <div style="margin-top:8px;overflow:auto;max-height:55vh">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--rosa);color:#fff">
+            <th>Fecha</th><th>Producto</th><th>Código</th><th>Cantidad</th><th>Precio U.</th><th>Total</th>
+          </tr></thead>
+          <tbody id="salesHistoryList"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" onclick="clearSalesHistory()">Limpiar historial</button>
+        <button class="ghost right" onclick="closeSalesHistory()">Cerrar</button>
+      </div>
     </div>
   </div>
 
-  <script>
-    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let currentSoldIndex = -1;
+<script>
+/* ========== Config y utilidades ========== */
+localforage.config({name:'inventario_app', storeName:'images'});
 
-    function loadInventory(filteredInventory = inventory) {
-      const list = document.getElementById('inventoryList');
-      const noResults = document.getElementById('noResultsMessage');
-      const resultMsg = document.getElementById('resultMessage');
+function safeLoad(key, fallback){
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e){ console.error('safeLoad', e); return fallback; }
+}
+function safeSave(key, data){
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e){ console.error('safeSave', e); }
+}
 
-      if (filteredInventory.length === 0) {
-        list.innerHTML = '';
-        noResults.style.display = 'block';
-        resultMsg.style.display = 'none';
+let inventory = safeLoad('inventory', []); // array de productos
+let sales = safeLoad('soldInventory', []);  // historial ventas
+
+// map de objectURLs para revocar despues
+const urlMap = new Map();
+
+/* ================== Helpers UI ================== */
+const $ = id => document.getElementById(id);
+function formatMoney(n){
+  if (n === undefined || n === null) return '';
+  return Number(n).toLocaleString('es-ES',{style:'currency',currency:'USD',maximumFractionDigits:2});
+}
+
+/* Ordena: productos con quantity === 0 van al final */
+function orderByStock(arr){
+  return [...arr].sort((a,b)=>{
+    if ((a.quantity||0) === 0 && (b.quantity||0) !== 0) return 1;
+    if ((b.quantity||0) === 0 && (a.quantity||0) !== 0) return -1;
+    return 0;
+  });
+}
+
+/* Render: tabla principal */
+function renderTable(list){
+  const tbody = $('inventoryList');
+  const ordered = orderByStock(list);
+  if(!ordered.length){
+    tbody.innerHTML = '';
+    $('noResults').style.display = 'block';
+    $('resultMessage').style.display = 'none';
+    return;
+  }
+  $('noResults').style.display = 'none';
+  $('resultMessage').style.display = 'none';
+
+  tbody.innerHTML = ordered.map((p, i) => {
+    const desc = (p.description && p.description.toString().trim()) ? escapeHtml(p.description) : '<span class="no-desc">---</span>';
+    const price = Number(p.price || 0);
+    const discount = Number(p.discount || 0);
+    const final = (price * (1 - discount/100)).toFixed(2);
+    // Use data-code attribute so we can load image blob by code
+    return `<tr data-index="${i}" id="row-${i}">
+      <td>${i+1}</td>
+      <td><img class="thumb" id="img-${i}" data-code="${escapeHtml(p.code)}" alt="${escapeHtml(p.name)}" onclick="openImageByCode('${escapeHtml(p.code)}')"></td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.code)}</td>
+      <td>${escapeHtml(p.barcode || '')}</td>
+      <td>${price.toFixed(2)}</td>
+      <td>${discount}</td>
+      <td>${Number(final).toFixed(2)}</td>
+      <td>${desc}</td>
+      <td>${escapeHtml(p.category || '')}</td>
+      <td>${Number(p.quantity || 0)}</td>
+      <td><button class="btn" onclick="openSellModalByIndex(${i})" title="Vender"><i class="fa-solid fa-cash-register"></i></button></td>
+    </tr>`;
+  }).join('');
+
+  // load images from localforage; if not present, show placeholder
+  ordered.forEach((p, idx)=>{
+    const imgEl = document.getElementById(`img-${idx}`);
+    if(!imgEl) return;
+    imgEl.src = ''; // reset while loading
+    const key = `img_${p.code}`;
+    localforage.getItem(key).then(blob=>{
+      if(blob){
+        const url = URL.createObjectURL(blob);
+        imgEl.src = url;
+        // revoke prev if existed
+        if(urlMap.has(imgEl.id)){ try{ URL.revokeObjectURL(urlMap.get(imgEl.id)); } catch(e){} }
+        urlMap.set(imgEl.id, url);
       } else {
-        noResults.style.display = 'none';
-        list.innerHTML = filteredInventory.map((item, index) => {
-          const desc = item.description?.trim() || '---';
-          const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-          return `
-            <tr id="product-${index}">
-              <td>${index + 1}</td>
-              <td><img id="img-${index}" onclick="openImageModal(this.src)" alt="Producto"></td>
-              <td>${item.name}</td>
-              <td>${item.code}</td>
-              <td>${item.barcode}</td>
-              <td>${item.price}</td>
-              <td>${item.discount}</td>
-              <td>${priceWithDiscount}</td>
-              <td>${desc}</td>
-              <td>${item.category}</td>
-              <td>${item.quantity}</td>
-              <td><button class="stamp" onclick="markSold(${index})"><i class="fa-solid fa-cash-register"></i></button></td>
-            </tr>
-          `;
-        }).join('');
-
-        setTimeout(() => {
-          filteredInventory.forEach((item, idx) => {
-            localforage.getItem(`img_${item.code}`).then(blob => {
-              if (blob) {
-                const url = URL.createObjectURL(blob);
-                const img = document.getElementById(`img-${idx}`);
-                if (img) img.src = url;
-              }
-            });
-          });
-        }, 100);
+        imgEl.src = placeholderDataURL(p.name || p.code);
       }
+    }).catch(err=>{
+      console.error('error loading image', err);
+      imgEl.src = placeholderDataURL(p.name || p.code);
+    });
+  });
+}
+
+/* Placeholder SVG dataURL when no image present */
+function placeholderDataURL(text){
+  const label = String(text || '').slice(0,10);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>
+    <rect width='100%' height='100%' fill='#f0e5e6'/>
+    <text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='20' fill='#b08b8f'>${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+/* escape HTML simple */
+function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* ================== Buscar / Filtrar / Navegar ================== */
+function filterInventory(){
+  const cat = $('searchCategory').value.trim().toLowerCase();
+  const q = $('searchText').value.trim().toLowerCase();
+
+  const filtered = inventory.filter(p=>{
+    const catOk = !cat || (String(p.category||'').toLowerCase() === cat);
+    const qOk = !q || (String(p.name||'').toLowerCase().includes(q) || String(p.code||'').toLowerCase() === q || String(p.barcode||'').toLowerCase() === q);
+    return catOk && qOk;
+  });
+  renderTable(filtered);
+}
+
+/* go to row (index based on current table) */
+function goToRow(){
+  const r = Number($('goToRow').value);
+  const rows = document.querySelectorAll('#inventoryList tr');
+  rows.forEach(tr => tr.classList.remove('highlight'));
+  if(!r || r < 1 || r > rows.length){ alert('Fila fuera de rango'); return; }
+  const tr = rows[r-1];
+  tr.scrollIntoView({behavior:'smooth', block:'center'});
+  tr.classList.add('highlight');
+}
+
+/* limpiar filtros */
+function clearFilters(){
+  $('searchCategory').value = '';
+  $('searchText').value = '';
+  $('goToRow').value = '';
+  renderTable(inventory);
+}
+
+/* ================== Vender / Historial ================== */
+let currentSellIdx = null;
+function openSellModalByIndex(idx){
+  currentSellIdx = idx;
+  const p = orderByStock(inventory)[idx]; // because table shows ordered list
+  if(!p){ alert('Producto no encontrado'); return; }
+  $('sellInfo').textContent = `${p.name} — stock: ${p.quantity || 0}`;
+  $('sellQty').value = 1;
+  $('sellPrice').value = (Number(p.price) || 0).toFixed(2);
+  $('sellMsg').textContent = '';
+  $('sellModal').style.display = 'flex';
+}
+
+/* confirmar venta */
+function confirmSell(){
+  const qty = Number($('sellQty').value);
+  const price = Number($('sellPrice').value);
+  if(isNaN(qty) || qty <= 0){ $('sellMsg').textContent = 'Cantidad inválida'; return; }
+  if(isNaN(price) || price < 0){ $('sellMsg').textContent = 'Precio inválido'; return; }
+
+  // Find product object in inventory by code because table is ordered view
+  const ordered = orderByStock(inventory);
+  const p = ordered[currentSellIdx];
+  if(!p){ $('sellMsg').textContent = 'Producto no encontrado'; return; }
+  if(qty > (p.quantity || 0)){ $('sellMsg').textContent = 'Stock insuficiente'; return; }
+
+  // Mutate original inventory: locate index by unique code
+  const origIndex = inventory.findIndex(x => String(x.code) === String(p.code));
+  if(origIndex === -1){ $('sellMsg').textContent = 'Producto no encontrado en inventario'; return; }
+
+  inventory[origIndex].quantity = Number(inventory[origIndex].quantity || 0) - qty;
+  safeSave('inventory', inventory);
+
+  const sale = { date: new Date().toISOString(), name: p.name, code: p.code, quantity: qty, price: price, total: qty*price };
+  sales.push(sale);
+  safeSave('soldInventory', sales);
+
+  // actualizar vista
+  renderTable(inventory);
+  $('sellMsg').textContent = 'Venta registrada';
+  setTimeout(()=>{ $('sellModal').style.display = 'none'; $('sellMsg').textContent = ''; }, 700);
+}
+
+/* abrir historial */
+function openSalesHistory(){
+  const tbody = $('salesHistoryList');
+  const saved = safeLoad('soldInventory', []);
+  if(!saved.length){
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:12px;color:#666">No hay ventas registradas.</td></tr>';
+  } else {
+    tbody.innerHTML = saved.map(s=>{
+      const dt = new Date(s.date).toLocaleString();
+      return `<tr>
+        <td style="padding:8px;border:1px solid var(--borde)">${escapeHtml(dt)}</td>
+        <td style="padding:8px;border:1px solid var(--borde)">${escapeHtml(s.name)}</td>
+        <td style="padding:8px;border:1px solid var(--borde)">${escapeHtml(s.code)}</td>
+        <td style="padding:8px;border:1px solid var(--borde)">${s.quantity}</td>
+        <td style="padding:8px;border:1px solid var(--borde)">${Number(s.price).toFixed(2)}</td>
+        <td style="padding:8px;border:1px solid var(--borde)">${Number(s.total).toFixed(2)}</td>
+      </tr>`;
+    }).join('');
+  }
+  $('historyModal').style.display = 'flex';
+}
+function closeSalesHistory(){ $('historyModal').style.display = 'none'; }
+function clearSalesHistory(){
+  if(!confirm('¿Eliminar todo el historial de ventas?')) return;
+  sales = [];
+  safeSave('soldInventory', sales);
+  openSalesHistory();
+}
+
+/* ================== Imagenes modal ================== */
+function openImageByCode(code){
+  const key = `img_${code}`;
+  localforage.getItem(key).then(blob=>{
+    if(blob){
+      const url = URL.createObjectURL(blob);
+      if(urlMap.has('modal')){ try{ URL.revokeObjectURL(urlMap.get('modal')) }catch(e){} }
+      urlMap.set('modal', url);
+      $('modalImage').src = url;
+    } else {
+      $('modalImage').src = placeholderDataURL(code);
     }
+    $('imageModal').style.display = 'flex';
+  }).catch(err=>{
+    console.error('openImageByCode', err);
+    $('modalImage').src = placeholderDataURL(code);
+    $('imageModal').style.display = 'flex';
+  });
+}
+function closeImageModal(){
+  $('imageModal').style.display = 'none';
+  if(urlMap.has('modal')){ try{ URL.revokeObjectURL(urlMap.get('modal')); }catch(e){} urlMap.delete('modal'); }
+}
 
-    function markSold(index) {
-      currentSoldIndex = index;
-      document.getElementById('soldModal').style.display = 'block';
-    }
+/* cerrar sell modal */
+function closeSellModal(){ $('sellModal').style.display = 'none'; }
 
-    function closeSoldModal() {
-      document.getElementById('soldModal').style.display = 'none';
-      document.getElementById('confirmationMessage').style.display = 'none';
-    }
+/* cerrar modales al click fuera */
+window.addEventListener('click', (e)=>{
+  if(e.target === $('imageModal')) closeImageModal();
+  if(e.target === $('sellModal')) closeSellModal();
+  if(e.target === $('historyModal')) closeSalesHistory();
+});
 
-    function processSale() {
-      const soldQty = parseInt(document.getElementById('soldQuantity').value);
-      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
+/* escape Enter key for search */
+$('searchText').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') filterInventory(); });
 
-      if (isNaN(soldQty) || soldQty <= 0) return alert('Cantidad inválida');
-      if (isNaN(soldPrice) || soldPrice <= 0) return alert('Precio inválido');
+/* ================== Import / Export ================== */
 
-      const item = inventory[currentSoldIndex];
-      if (soldQty > item.quantity) return alert('Stock insuficiente');
+/* Export JSON (simple) */
+function exportJSON(){
+  const dataStr = JSON.stringify(inventory, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  saveAs(blob, 'inventory.json');
+}
 
-      item.quantity -= soldQty;
-      localStorage.setItem('inventory', JSON.stringify(inventory));
-
-      let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      soldInventory.push({
-        name: item.name,
-        code: item.code,
-        price: soldPrice,
-        quantity: soldQty,
-        total: soldQty * soldPrice
-      });
-      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-
-      filterInventory();
-      closeSoldModal();
-      const msg = document.getElementById('resultMessage');
-      msg.textContent = '¡Venta registrada!';
-      msg.style.display = 'block';
-      setTimeout(() => msg.style.display = 'none', 3000);
-    }
-
-    function openSalesHistory() {
-      const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      const list = document.getElementById('salesHistoryList');
-      list.innerHTML = sales.length
-        ? sales.map(s => `
-          <tr>
-            <td>${s.name}</td>
-            <td>${s.code}</td>
-            <td>${s.quantity}</td>
-            <td>${s.price}</td>
-            <td>${s.total}</td>
-          </tr>
-        `).join('')
-        : '<tr><td colspan="5" style="text-align:center;">No hay ventas registradas.</td></tr>';
-      document.getElementById('historyModal').style.display = 'block';
-    }
-
-    function closeSalesHistory() {
-      document.getElementById('historyModal').style.display = 'none';
-    }
-
-    function filterInventory() {
-      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
-      const code = document.getElementById('searchCode').value.trim().toLowerCase();
-
-      if (code) {
-        const foundIndex = inventory.findIndex(item => item.barcode.trim().toLowerCase() === code);
-        if (foundIndex === -1) {
-          document.getElementById('inventoryList').innerHTML = '';
-          document.getElementById('noResultsMessage').style.display = 'block';
-          return;
+/* Export ZIP: inventory.json + images/ */
+async function exportZip(){
+  try{
+    const zip = new JSZip();
+    zip.file('inventory.json', JSON.stringify(inventory, null, 2));
+    // gather images keys from inventory
+    const promises = inventory.map(async p=>{
+      const key = `img_${p.code}`;
+      const blob = await localforage.getItem(key);
+      if(blob){
+        // put in folder images as img_<code> with original type if possible
+        let ext = 'png';
+        if (blob.type){
+          const m = blob.type.split('/')[1];
+          if(m) ext = m.split('+')[0];
         }
-        const item = inventory[foundIndex];
-        const desc = item.description?.trim() || '---';
-        const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-        document.getElementById('inventoryList').innerHTML = `
-          <tr id="product-${foundIndex}" class="highlight">
-            <td>${foundIndex + 1}</td>
-            <td><img id="img-${foundIndex}" onclick="openImageModal(this.src)" alt=""></td>
-            <td>${item.name}</td>
-            <td>${item.code}</td>
-            <td>${item.barcode}</td>
-            <td>${item.price}</td>
-            <td>${item.discount}</td>
-            <td>${priceWithDiscount}</td>
-            <td>${desc}</td>
-            <td>${item.category}</td>
-            <td>${item.quantity}</td>
-            <td><button class="stamp" onclick="markSold(${foundIndex})"><i class="fa-solid fa-cash-register"></i></button></td>
-          </tr>
-        `;
-        setTimeout(() => {
-          localforage.getItem(`img_${item.code}`).then(blob => {
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              document.getElementById(`img-${foundIndex}`).src = url;
-            }
-          });
-        }, 100);
-        document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${foundIndex + 1}.`;
-        document.getElementById('resultMessage').style.display = 'block';
-        return;
+        zip.file(`images/img_${p.code}.${ext}`, blob);
       }
+    });
+    await Promise.all(promises);
+    const content = await zip.generateAsync({type:'blob'});
+    saveAs(content, 'inventory_export.zip');
+  } catch(err){
+    console.error('exportZip', err);
+    alert('Error al exportar ZIP. Revisa la consola.');
+  }
+}
 
-      const filtered = inventory.filter(i => (!category || i.category.trim().toLowerCase() === category));
-      loadInventory(filtered);
+/* Handle import JSON */
+function handleImportJson(evt){
+  const f = evt.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('Formato inválido: se esperaba array');
+      inventory = data;
+      safeSave('inventory', inventory);
+      renderTable(inventory);
+      alert('Inventario importado correctamente (JSON).');
+    } catch(err){
+      alert('JSON inválido: ' + err.message);
     }
+  };
+  reader.readAsText(f);
+  evt.target.value = '';
+}
 
-    function goToRow() {
-      const row = parseInt(document.getElementById('goToRow').value);
-      const rows = document.querySelectorAll('#inventoryList tr');
-      rows.forEach(r => r.classList.remove('highlight'));
-      if (row >= 1 && row <= rows.length) {
-        rows[row - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        rows[row - 1].classList.add('highlight');
+/* Handle import ZIP */
+async function handleImportZip(evt){
+  const f = evt.target.files[0];
+  if(!f) return;
+  try{
+    const zip = await JSZip.loadAsync(f);
+    // read inventory.json
+    const invFile = zip.file('inventory.json');
+    if(!invFile){ alert('ZIP inválido: falta inventory.json en la raíz'); evt.target.value = ''; return; }
+    const invText = await invFile.async('string');
+    const data = JSON.parse(invText);
+    if(!Array.isArray(data)) throw new Error('inventory.json debe ser un array de productos');
+
+    // store inventory
+    inventory = data;
+    safeSave('inventory', inventory);
+
+    // import images folder if exists
+    const imageFiles = Object.keys(zip.files).filter(name => name.startsWith('images/'));
+    await Promise.all(imageFiles.map(async name=>{
+      const file = zip.files[name];
+      if(!file.dir){
+        const blob = await file.async('blob');
+        // derive code from filename: images/img_<code>.<ext>
+        const base = name.split('/').pop();
+        // remove img_ prefix and extension
+        const match = base.match(/^img_(.+?)\.[^.]+$/);
+        if(match){
+          const code = match[1];
+          await localforage.setItem(`img_${code}`, blob);
+        }
       }
-    }
+    }));
 
-    function clearFilters() {
-      document.getElementById('searchCategory').value = '';
-      document.getElementById('searchCode').value = '';
-      loadInventory();
-    }
+    renderTable(inventory);
+    alert('Importación ZIP completada.');
+  } catch(err){
+    console.error('handleImportZip', err);
+    alert('Error al importar ZIP: ' + (err.message || err));
+  } finally {
+    evt.target.value = '';
+  }
+}
 
-    function openImageModal(src) {
-      const modal = document.getElementById('imageModal');
-      document.getElementById('modalImage').src = src;
-      modal.style.display = 'block';
-    }
+/* Provide file pick for import when label clicked */
+$('importZipInput').addEventListener('click', ()=>{}); // just to ensure element exists
+$('importJsonInput').addEventListener('click', ()=>{});
 
-    function closeImageModal() {
-      document.getElementById('imageModal').style.display = 'none';
-    }
+/* ================== Init / load ================== */
+function initialLoad(){
+  // create sample structure if empty? DO NOT auto-add real demo data to avoid overwriting user's dataset.
+  renderTable(inventory);
+}
 
-    window.onload = loadInventory;
-  </script>
+/* page load */
+window.addEventListener('load', ()=>{ initialLoad(); });
+
+/* beforeunload revoke objectURLs */
+window.addEventListener('beforeunload', ()=>{
+  urlMap.forEach(u=>{ try{ URL.revokeObjectURL(u); }catch(e){} });
+});
+</script>
 </body>
 </html>

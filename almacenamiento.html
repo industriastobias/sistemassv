@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400  ;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
       --bg: #f9fafb;
       --text: #1f2937;
@@ -37,6 +37,12 @@
     .no-results, .result-message { font-weight: 700; text-align: center; margin-top: .6rem; font-size: .9rem; }
     .no-results { color: var(--danger); }
     .result-message { color: var(--text); }
+
+    /* Resaltado persistente */
+    tr.highlight td {
+      background: #fef08a !important;
+      color: #1f2937 !important;
+    }
 
     /* ===== MODALES REDISEÑADOS ===== */
     .modal {
@@ -76,7 +82,6 @@
     }
     .close:hover { color: #111827; }
 
-    /* Imagen dentro del modal */
     #modalImage {
       width: 100%;
       height: auto;
@@ -122,8 +127,6 @@
       <input type="number" id="goToRow" min="1" style="width:80px;">
       <button class="stamp" onclick="goToRow()">Ir</button>
       <button class="stamp" onclick="clearFilters()" style="margin-left:auto;">Limpiar filtros</button>
-      <!-- Agregado botón Historial (Ventas) junto a “Limpiar filtros” -->
-      <button class="stamp" onclick="window.location.href='historial.html'">Historial (Ventas)</button>
     </div>
 
     <div style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
@@ -151,7 +154,7 @@
     </div>
   </div>
 
-  <!-- Modal para registrar venta -->
+  <!-- Modal registrar venta -->
   <div id="soldModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeSoldModal()">&times;</span>
@@ -182,18 +185,13 @@
       const noResults = document.getElementById('noResultsMessage');
       const resultMsg = document.getElementById('resultMessage');
 
-      // Separar productos con stock 0 al final
-      const withStock = filteredInventory.filter(p => p.quantity > 0);
-      const withoutStock = filteredInventory.filter(p => p.quantity === 0);
-      const ordered = withStock.concat(withoutStock);
-
-      if (ordered.length === 0) {
+      if (filteredInventory.length === 0) {
         list.innerHTML = '';
         noResults.style.display = 'block';
         resultMsg.style.display = 'none';
       } else {
         noResults.style.display = 'none';
-        list.innerHTML = ordered.map((item, index) => {
+        list.innerHTML = filteredInventory.map((item, index) => {
           const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
           return `
             <tr id="product-${index}">
@@ -205,16 +203,16 @@
               <td>${item.price}</td>
               <td>${item.discount}</td>
               <td>${priceWithDiscount}</td>
-              <td>${item.description || '---'}</td>
+              <td>${item.description}</td>
               <td>${item.category}</td>
               <td>${item.quantity}</td>
-              <td><button class="stamp" onclick="markSold(${index})">🧾 Vender</button></td>
+              <td><button class="stamp" onclick="markSold(${index})">Vender</button></td>
             </tr>
           `;
         }).join('');
 
         setTimeout(() => {
-          ordered.forEach((item, idx) => {
+          filteredInventory.forEach((item, idx) => {
             localforage.getItem(`img_${item.code}`).then(blob => {
               if (blob) {
                 const url = URL.createObjectURL(blob);
@@ -298,10 +296,10 @@
             <td>${item.price}</td>
             <td>${item.discount}</td>
             <td>${priceWithDiscount}</td>
-            <td>${item.description || '---'}</td>
+            <td>${item.description}</td>
             <td>${item.category}</td>
             <td>${item.quantity}</td>
-            <td><button class="stamp" onclick="markSold(${foundIndex})">🧾 Vender</button></td>
+            <td><button class="stamp" onclick="markSold(${foundIndex})">Vender</button></td>
           </tr>
         `;
 
@@ -328,7 +326,7 @@
 
       const filtered = inventory.filter(item => {
         const catOk = !category || item.category.trim().toLowerCase() === category;
-        return catOk;
+        return catOk && item.quantity > 0;
       });
 
       loadInventory(filtered);
@@ -339,8 +337,9 @@
       const rows = document.querySelectorAll('#inventoryList tr');
       rows.forEach(r => r.classList.remove('highlight'));
       if (row >= 1 && row <= rows.length) {
-        rows[row - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        rows[row - 1].classList.add('highlight');
+        const target = rows[row - 1];
+        target.classList.add('highlight');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else alert('Fila fuera de rango.');
     }
 
@@ -348,6 +347,7 @@
       document.getElementById('searchCategory').value = '';
       document.getElementById('searchCode').value = '';
       document.getElementById('goToRow').value = '';
+      document.querySelectorAll('#inventoryList tr').forEach(r => r.classList.remove('highlight'));
       loadInventory();
       document.getElementById('resultMessage').style.display = 'none';
     }

@@ -34,8 +34,6 @@
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
     #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
-    .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
-    .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
     .summary-cards{
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
@@ -140,15 +138,6 @@
     </div>
   </div>
 
-  <div class="price-range">
-    <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
-    <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
-  </div>
-
-  <div class="search-bar">
-    <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
-  </div>
-
   <div class="search-bar">
     <input id="imageUpload" type="file" accept="image/*" />
   </div>
@@ -165,7 +154,6 @@
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let filtered = [...inventory];
-    let searchTerm = '';
     let uploadedEmbedding = null;
     let model;
 
@@ -193,16 +181,6 @@
     function stockTotal(list){
       return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
     }
-    function highlight(text, query){
-      if(!query) return text;
-      const re = new RegExp(`(${query})`, 'gi');
-      return text.replace(re, '<mark>$1</mark>');
-    }
-    function copyToClipboard(text){
-      navigator.clipboard.writeText(text).then(()=>{
-        alert('Código de barras copiado: ' + text);
-      });
-    }
 
     /* ========= RENDER ========= */
     async function renderTable(){
@@ -211,7 +189,7 @@
       document.getElementById('totalStock').textContent = stockTotal(inventory);
 
       if(!filtered.length){
-        list.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan.</p>';
+        list.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la imagen.</p>';
         document.getElementById('totalAmount').textContent = '$0.00';
         return;
       }
@@ -219,13 +197,13 @@
       list.innerHTML = filtered.map((item,idx)=>`
         <div class="line-item">
           <img id="invImg${idx}" src="" alt="${item.name}"/>
-          <h3>${highlight(item.name, searchTerm)}</h3>
-          <p>Código: ${highlight(item.code, searchTerm)}</p>
+          <h3>${item.name}</h3>
+          <p>Código: ${item.code}</p>
           <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
           <p>Precio: $${item.price}</p>
-          <p>Categoría: ${highlight(item.category, searchTerm)}</p>
-          <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
-            <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+          <p>Categoría: ${item.category}</p>
+          <p style="font-size:.7rem;">Barras: ${item.barcode}
+            <i class="fa fa-copy copy-barcode" onclick="navigator.clipboard.writeText('${item.barcode}')" title="Copiar código"></i>
           </p>
           <div class="actions">
             <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
@@ -256,7 +234,7 @@
       localforage.removeItem(`img_${item.code}`);
       inventory.splice(realIndex,1);
       localStorage.setItem('inventory', JSON.stringify(inventory));
-      doFilter();
+      resetAndRender();
     }
     function printLabel(index){
       const p = filtered[index];
@@ -282,48 +260,28 @@
       return dot / (normA * normB);
     }
 
-    /* ========= FILTRO ========= */
-    async function doFilter(){
-      searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
-      const minP = parseFloat(document.getElementById('minPrice').value) || 0;
-      const maxP = parseFloat(document.getElementById('maxPrice').value) || Infinity;
-
-      filtered = [];
-
-      for (const p of inventory) {
-        const price = parseFloat(p.price)||0;
-        const matchText = !searchTerm ||
-          p.name.toLowerCase().includes(searchTerm) ||
-          p.code.toLowerCase().includes(searchTerm) ||
-          p.barcode.toLowerCase().includes(searchTerm) ||
-          p.category.toLowerCase().includes(searchTerm);
-        const matchPrice = price >= minP && price <= maxP;
-
-        let matchImage = true;
-        if (uploadedEmbedding && model) {
-          const img = document.getElementById(`invImg${inventory.indexOf(p)}`);
-          if (img && img.src) {
-            const embedding = model.infer(img, true);
-            const similarity = cosineSimilarity(uploadedEmbedding, embedding);
-            matchImage = similarity > 0.7;
-          } else {
-            matchImage = false;
-          }
-        }
-
-        if (matchText && matchPrice && matchImage) {
-          filtered.push(p);
-        }
+    /* ========= FILTRO POR IMAGEN ========= */
+    async function applyImageFilter(){
+      if (!uploadedEmbedding || !model) {
+        filtered = [...inventory];
+        await renderTable();
+        return;
       }
 
-      renderTable();
+      const temp = [];
+      for (const p of inventory) {
+        const img = document.getElementById(`invImg${inventory.indexOf(p)}`);
+        if (img && img.src) {
+          const embedding = model.infer(img, true);
+          const similarity = cosineSimilarity(uploadedEmbedding, embedding);
+          if (similarity > 0.7) temp.push(p);
+        }
+      }
+      filtered = temp;
+      await renderTable();
     }
 
-    document.getElementById('searchInput').addEventListener('input',doFilter);
-    document.getElementById('minPrice').addEventListener('input',doFilter);
-    document.getElementById('maxPrice').addEventListener('input',doFilter);
-
-    /* ========= IMAGEN SUBIDA ========= */
+    /* ========= INPUT IMAGEN ========= */
     document.getElementById('imageUpload').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -332,22 +290,28 @@
       img.src = URL.createObjectURL(file);
       img.onload = async () => {
         uploadedEmbedding = model.infer(img, true);
-        doFilter();
+        await applyImageFilter();
       };
     });
 
-    /* ========= STORAGE SYNC ========= */
+    /* ========= RESET / INICIO ========= */
+    async function resetAndRender(){
+      filtered = [...inventory];
+      uploadedEmbedding = null;
+      document.getElementById('imageUpload').value = '';
+      await renderTable();
+    }
+
     window.addEventListener('storage', e => {
       if(e.key === 'inventory'){
         inventory = JSON.parse(e.newValue) || [];
-        doFilter();
+        resetAndRender();
       }
     });
 
-    /* ========= INICIO ========= */
     window.addEventListener('DOMContentLoaded',async ()=>{
       await loadModel();
-      doFilter();
+      await resetAndRender();
     });
   </script>
 </body>

@@ -10,7 +10,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
     :root {
       --crema: #f7f3e9;
-      --dorado: #d4af37;
+      --rosado: #DBB8BC;
       --texto: #2e2e2e;
       --borde: #e0e0e0;
       --resaltado: #fffaf0;
@@ -36,12 +36,39 @@
       padding: 1rem;
     }
 
-    h1 {
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 98%;
+      max-width: 1400px;
       margin-bottom: 1rem;
-      color: var(--dorado);
+    }
+
+    h1 {
+      color: var(--rosado);
       text-transform: uppercase;
       letter-spacing: 1px;
-      text-align: center;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .historial-btn {
+      background: var(--rosado);
+      color: var(--blanco);
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .historial-btn:hover {
+      background: #c79da1;
+      transform: translateY(-2px);
     }
 
     .container {
@@ -77,7 +104,7 @@
 
     button.stamp {
       padding: 0.6rem 1.1rem;
-      background: var(--dorado);
+      background: var(--rosado);
       color: var(--blanco);
       border: none;
       border-radius: 8px;
@@ -90,7 +117,7 @@
     }
 
     button.stamp:hover {
-      background: #c59d2d;
+      background: #c79da1;
       transform: translateY(-2px);
     }
 
@@ -102,7 +129,7 @@
     }
 
     thead {
-      background: var(--dorado);
+      background: var(--rosado);
       color: var(--blanco);
     }
 
@@ -117,7 +144,7 @@
     }
 
     tbody tr:hover {
-      background: #fff6d5;
+      background: #fbe8eb;
     }
 
     td img {
@@ -141,7 +168,6 @@
       font-weight: 600;
     }
 
-    /* ===== MODALES ===== */
     .modal {
       display: none;
       position: fixed;
@@ -173,7 +199,7 @@
     }
 
     .close:hover {
-      color: var(--dorado);
+      color: var(--rosado);
     }
 
     #modalImage {
@@ -185,13 +211,16 @@
     }
 
     tr.highlight {
-      outline: 2px solid var(--dorado);
-      background: #fff9e5;
+      outline: 2px solid var(--rosado);
+      background: #fdeff1;
     }
   </style>
 </head>
 <body>
-  <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario</h1>
+  <header>
+    <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario</h1>
+    <button class="historial-btn" onclick="openSalesHistory()"><i class="fa-solid fa-clock-rotate-left"></i> Historial (Ventas)</button>
+  </header>
 
   <div class="container">
     <div class="search-block">
@@ -275,6 +304,26 @@
     </div>
   </div>
 
+  <!-- Modal historial -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeSalesHistory()">&times;</span>
+      <h2>Historial de Ventas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Código</th>
+            <th>Cantidad</th>
+            <th>Precio U.</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="salesHistoryList"></tbody>
+      </table>
+    </div>
+  </div>
+
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let currentSoldIndex = -1;
@@ -291,6 +340,7 @@
       } else {
         noResults.style.display = 'none';
         list.innerHTML = filteredInventory.map((item, index) => {
+          const desc = item.description?.trim() || '---';
           const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
           return `
             <tr id="product-${index}">
@@ -302,10 +352,10 @@
               <td>${item.price}</td>
               <td>${item.discount}</td>
               <td>${priceWithDiscount}</td>
-              <td>${item.description}</td>
+              <td>${desc}</td>
               <td>${item.category}</td>
               <td>${item.quantity}</td>
-              <td><button class="stamp" onclick="markSold(${index})">Vender</button></td>
+              <td><button class="stamp" onclick="markSold(${index})"><i class="fa-solid fa-cash-register"></i></button></td>
             </tr>
           `;
         }).join('');
@@ -365,6 +415,27 @@
       setTimeout(() => msg.style.display = 'none', 3000);
     }
 
+    function openSalesHistory() {
+      const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      const list = document.getElementById('salesHistoryList');
+      list.innerHTML = sales.length
+        ? sales.map(s => `
+          <tr>
+            <td>${s.name}</td>
+            <td>${s.code}</td>
+            <td>${s.quantity}</td>
+            <td>${s.price}</td>
+            <td>${s.total}</td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="5" style="text-align:center;">No hay ventas registradas.</td></tr>';
+      document.getElementById('historyModal').style.display = 'block';
+    }
+
+    function closeSalesHistory() {
+      document.getElementById('historyModal').style.display = 'none';
+    }
+
     function filterInventory() {
       const category = document.getElementById('searchCategory').value.trim().toLowerCase();
       const code = document.getElementById('searchCode').value.trim().toLowerCase();
@@ -377,6 +448,7 @@
           return;
         }
         const item = inventory[foundIndex];
+        const desc = item.description?.trim() || '---';
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         document.getElementById('inventoryList').innerHTML = `
           <tr id="product-${foundIndex}" class="highlight">
@@ -388,10 +460,10 @@
             <td>${item.price}</td>
             <td>${item.discount}</td>
             <td>${priceWithDiscount}</td>
-            <td>${item.description}</td>
+            <td>${desc}</td>
             <td>${item.category}</td>
             <td>${item.quantity}</td>
-            <td><button class="stamp" onclick="markSold(${foundIndex})">Vender</button></td>
+            <td><button class="stamp" onclick="markSold(${foundIndex})"><i class="fa-solid fa-cash-register"></i></button></td>
           </tr>
         `;
         setTimeout(() => {
@@ -418,27 +490,26 @@
       if (row >= 1 && row <= rows.length) {
         rows[row - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
         rows[row - 1].classList.add('highlight');
-      } else alert('Fila fuera de rango');
+      }
     }
 
     function clearFilters() {
       document.getElementById('searchCategory').value = '';
       document.getElementById('searchCode').value = '';
-      document.getElementById('goToRow').value = '';
       loadInventory();
-      document.getElementById('resultMessage').style.display = 'none';
     }
 
     function openImageModal(src) {
+      const modal = document.getElementById('imageModal');
       document.getElementById('modalImage').src = src;
-      document.getElementById('imageModal').style.display = 'block';
+      modal.style.display = 'block';
     }
 
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
     }
 
-    loadInventory();
+    window.onload = loadInventory;
   </script>
 </body>
 </html>

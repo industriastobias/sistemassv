@@ -38,13 +38,11 @@
     .no-results { color: var(--danger); }
     .result-message { color: var(--text); }
 
-    /* Resaltado persistente */
     tr.highlight td {
       background: #fef08a !important;
       color: #1f2937 !important;
     }
 
-    /* ===== MODALES REDISEÑADOS ===== */
     .modal {
       display: none;
       position: fixed;
@@ -117,7 +115,7 @@
       </div>
       <div>
         <label for="searchCode">Buscar por código de barras:</label>
-        <input type="text" id="searchCode">
+        <input type="text" id="searchCode" placeholder="Ej: 123456">
       </div>
       <button class="stamp" onclick="filterInventory()">Buscar</button>
     </div>
@@ -189,40 +187,48 @@
         list.innerHTML = '';
         noResults.style.display = 'block';
         resultMsg.style.display = 'none';
-      } else {
-        noResults.style.display = 'none';
-        list.innerHTML = filteredInventory.map((item, index) => {
-          const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-          return `
-            <tr id="product-${index}">
-              <td>${index + 1}</td>
-              <td><img id="img-${index}" style="max-height:48px; border-radius:4px; cursor:pointer;" onclick="openImageModal(this.src)" /></td>
-              <td>${item.name}</td>
-              <td>${item.code}</td>
-              <td>${item.barcode}</td>
-              <td>${item.price}</td>
-              <td>${item.discount}</td>
-              <td>${priceWithDiscount}</td>
-              <td>${item.description}</td>
-              <td>${item.category}</td>
-              <td>${item.quantity}</td>
-              <td><button class="stamp" onclick="markSold(${index})">Vender</button></td>
-            </tr>
-          `;
-        }).join('');
-
-        setTimeout(() => {
-          filteredInventory.forEach((item, idx) => {
-            localforage.getItem(`img_${item.code}`).then(blob => {
-              if (blob) {
-                const url = URL.createObjectURL(blob);
-                const img = document.getElementById(`img-${idx}`);
-                if (img) img.src = url;
-              }
-            });
-          });
-        }, 100);
+        return;
       }
+
+      noResults.style.display = 'none';
+
+      // Separar con y sin stock
+      const withStock = filteredInventory.filter(item => item.quantity > 0);
+      const withoutStock = filteredInventory.filter(item => item.quantity === 0);
+      const sorted = withStock.concat(withoutStock);
+
+      list.innerHTML = sorted.map((item, idx) => {
+        const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
+        const desc = item.description?.trim() || '---';
+        return `
+          <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
+            <td>${idx + 1}</td>
+            <td><img id="img-${idx}" style="max-height:48px; border-radius:4px; cursor:pointer;" onclick="openImageModal(this.src)" /></td>
+            <td>${item.name}</td>
+            <td>${item.code}</td>
+            <td>${item.barcode}</td>
+            <td>${item.price}</td>
+            <td>${item.discount}</td>
+            <td>${priceWithDiscount}</td>
+            <td>${desc}</td>
+            <td>${item.category}</td>
+            <td>${item.quantity}</td>
+            <td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">🧾 Vender</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      setTimeout(() => {
+        sorted.forEach((item, idx) => {
+          localforage.getItem(`img_${item.code}`).then(blob => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const img = document.getElementById(`img-${idx}`);
+              if (img) img.src = url;
+            }
+          });
+        });
+      }, 100);
     }
 
     function markSold(index) {
@@ -271,65 +277,46 @@
       const category = document.getElementById('searchCategory').value.trim().toLowerCase();
       const code = document.getElementById('searchCode').value.trim().toLowerCase();
 
+      let filtered = inventory;
+
       if (code) {
-        const foundIndex = inventory.findIndex(item =>
-          item.barcode.trim().toLowerCase() === code
+        filtered = inventory.filter(item =>
+          item.barcode.trim().toLowerCase().includes(code)
         );
 
-        if (foundIndex === -1) {
+        if (filtered.length === 0) {
           document.getElementById('inventoryList').innerHTML = '';
           document.getElementById('noResultsMessage').style.display = 'block';
           document.getElementById('resultMessage').style.display = 'none';
           return;
         }
 
-        const item = inventory[foundIndex];
-        const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-
-        document.getElementById('inventoryList').innerHTML = `
-          <tr id="product-${foundIndex}" class="highlight">
-            <td>${foundIndex + 1}</td>
-            <td><img id="img-${foundIndex}" style="max-height:48px; border-radius:4px; cursor:pointer;" onclick="openImageModal(this.src)" /></td>
-            <td>${item.name}</td>
-            <td>${item.code}</td>
-            <td>${item.barcode}</td>
-            <td>${item.price}</td>
-            <td>${item.discount}</td>
-            <td>${priceWithDiscount}</td>
-            <td>${item.description}</td>
-            <td>${item.category}</td>
-            <td>${item.quantity}</td>
-            <td><button class="stamp" onclick="markSold(${foundIndex})">Vender</button></td>
-          </tr>
-        `;
-
-        setTimeout(() => {
-          localforage.getItem(`img_${item.code}`).then(blob => {
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              const img = document.getElementById(`img-${foundIndex}`);
-              if (img) img.src = url;
-            }
-          });
-        }, 100);
-
+        // Mostrar solo coincidencias
+        loadInventory(filtered);
         document.getElementById('noResultsMessage').style.display = 'none';
+        document.getElementById('resultMessage').textContent = `Producto encontrado (${filtered.length} coincidencia(s)).`;
         document.getElementById('resultMessage').style.display = 'block';
-        document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${foundIndex + 1} de ${inventory.length}.`;
 
-        document.getElementById(`product-${foundIndex}`).scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
+        // Resaltar primera coincidencia
+        setTimeout(() => {
+          const first = document.querySelector('#inventoryList tr');
+          if (first) {
+            first.classList.add('highlight');
+            first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 150);
         return;
       }
 
-      const filtered = inventory.filter(item => {
-        const catOk = !category || item.category.trim().toLowerCase() === category;
-        return catOk && item.quantity > 0;
-      });
+      // Filtrar por categoría
+      if (category) {
+        filtered = inventory.filter(item =>
+          item.category.trim().toLowerCase() === category
+        );
+      }
 
       loadInventory(filtered);
+      document.getElementById('resultMessage').style.display = 'none';
     }
 
     function goToRow() {
@@ -361,15 +348,15 @@
       document.getElementById('imageModal').style.display = 'none';
     }
 
-    function debounce(fn, d) {
-      let t;
+    function debounce(fn, delay) {
+      let timer;
       return function (...args) {
-        clearTimeout(t);
-        t = setTimeout(() => fn.apply(this, args), d);
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
       };
     }
 
-    document.getElementById('searchCategory').addEventListener('change', debounce(filterInventory, 300));
+    document.getElementById('searchCategory').addEventListener('change', filterInventory);
     document.getElementById('searchCode').addEventListener('input', debounce(filterInventory, 300));
 
     loadInventory();

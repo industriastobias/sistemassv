@@ -512,5 +512,42 @@
       renderTable(); calculateTotal();
     });
   </script>
+
+  <!-- =========================================================
+       SOBRE-ESCRITURA / DUPLICADO DE STOCK AL IMPORTAR
+       Se ejecuta SIEMPRE después del importFromExcel original
+       ========================================================= -->
+  <script>
+  (function(){
+    const original = window.importFromExcel;
+    window.importFromExcel = function(evt){
+      original.call(this, evt);
+      setTimeout(()=>{
+        const imported = JSON.parse(localStorage.getItem('inventory'))||[];
+        const current  = JSON.parse(localStorage.getItem('inventory'))||[];
+        const merged   = [];
+        const map      = new Map();
+
+        current.forEach(item=> map.set(item.code, {...item}));
+        imported.forEach(item=>{
+          if(map.has(item.code)){
+            const exist = map.get(item.code);
+            exist.quantity = String(Number(exist.quantity) + Number(item.quantity));
+            map.set(item.code, exist);
+          }else{
+            map.set(item.code, item);
+          }
+        });
+
+        map.forEach(v=>merged.push(v));
+        localStorage.setItem('inventory', JSON.stringify(merged));
+        window.inventory = merged;
+        window.renderTable();
+        window.calculateTotal();
+      }, 150);
+    };
+  })();
+  </script>
+
 </body>
 </html>

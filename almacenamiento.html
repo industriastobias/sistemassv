@@ -42,7 +42,7 @@
     .result-message { color: var(--text); }
     tr.highlight td { background: #fef08a !important; color: #1f2937 !important; }
 
-    /* TARJETAS (nueva vista) */
+    /* TARJETAS */
     .cards-view { display: none; flex-wrap: wrap; gap: 1rem; overflow-y: auto; padding-right: .4rem; margin-top: .6rem; }
     .card {
       background: var(--white);
@@ -58,6 +58,7 @@
     .card img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; cursor: pointer; }
     .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
     .card-footer span { font-weight: 700; }
+    .card.highlight { background: #fef08a !important; }
 
     /* MODALES */
     .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
@@ -105,7 +106,7 @@
       <button class="stamp" onclick="clearFilters()">Limpiar filtros</button>
     </div>
 
-    <!-- Vista Tabla (original) -->
+    <!-- Vista Tabla -->
     <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
       <table>
         <thead>
@@ -130,7 +131,7 @@
       <div id="resultMessage" class="result-message" style="display:none;"></div>
     </div>
 
-    <!-- Vista Tarjetas (nueva) -->
+    <!-- Vista Tarjetas -->
     <div id="cardsView" class="cards-view"></div>
   </div>
 
@@ -159,7 +160,7 @@
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let currentSoldIndex = -1;
-    let currentView = 'table'; // 'table' o 'cards'
+    let currentView = 'table';
 
     /* ---------- RENDERIZADO ---------- */
     function loadInventory(filteredInventory = inventory) {
@@ -178,12 +179,11 @@
 
       noResults.style.display = 'none';
 
-      // Separar con y sin stock
       const withStock = filteredInventory.filter(item => item.quantity > 0);
       const withoutStock = filteredInventory.filter(item => item.quantity === 0);
       const sorted = withStock.concat(withoutStock);
 
-      // ---------- Vista Tabla ----------
+      /* ---- Vista Tabla ---- */
       list.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         const desc = item.description?.trim() || '---';
@@ -205,7 +205,7 @@
         `;
       }).join('');
 
-      // ---------- Vista Tarjetas ----------
+      /* ---- Vista Tarjetas ---- */
       cards.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         const desc = item.description?.trim() || '---';
@@ -225,7 +225,7 @@
         `;
       }).join('');
 
-      // Cargar imágenes
+      /* ---- Cargar imágenes ---- */
       setTimeout(() => {
         sorted.forEach((item, idx) => {
           localforage.getItem(`img_${item.code}`).then(blob => {
@@ -324,17 +324,18 @@
 
         loadInventory(filtered);
         document.getElementById('noResultsMessage').style.display = 'none';
-        const filaNum = document.querySelector('#inventoryList tr')?.querySelector('td')?.textContent || '';
-        document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${filaNum}.`;
-        document.getElementById('resultMessage').style.display = 'block';
 
+        // ✅ Mensaje de fila/tarjeta visible
         setTimeout(() => {
-          const first = document.querySelector('#inventoryList tr') || document.querySelector('.card');
-          if (first) {
-            first.classList.add('highlight');
-            first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const firstRow = document.querySelector('#inventoryList tr') || document.querySelector('.card');
+          if (firstRow) {
+            const filaNum = firstRow.querySelector('td')?.textContent || firstRow.querySelector('div')?.textContent || '1';
+            document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${filaNum}.`;
+            document.getElementById('resultMessage').style.display = 'block';
+            firstRow.classList.add('highlight');
+            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        }, 150);
+        }, 100);
         return;
       }
 

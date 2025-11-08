@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario – Buscar igual que la foto</title>
+  <title>Inventario – Buscar por código de barras en foto</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -82,7 +83,6 @@
       flex-direction:column;
       gap:.5rem;
       transition:transform var(--transition),box-shadow var(--transition);
-      cursor:pointer;
     }
     .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
     .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
@@ -105,6 +105,7 @@
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+    #imgPreview{max-width:200px;margin-top:1rem;display:none;border-radius:12px;box-shadow:var(--shadow);}
     @media print{
       body *{visibility:hidden}
       #printArea, #printArea *{visibility:visible}
@@ -116,7 +117,7 @@
 
   <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
-  <h1><i class="fa fa-boxes"></i> Inventario – Buscar igual que la foto</h1>
+  <h1><i class="fa fa-boxes"></i> Inventario – Buscar por código en foto</h1>
 
   <div class="summary-cards">
     <div class="summary-card">
@@ -133,9 +134,11 @@
     <button id="btnVerTodo"><i class="fa fa-list"></i> Ver todo</button>
     <label for="imageUpload" style="cursor:pointer;">
       <input id="imageUpload" type="file" accept="image/*" style="display:none;"/>
-      <span class="btn-primary"><i class="fa fa-image"></i> Buscar igual que la foto</span>
+      <span class="btn-primary"><i class="fa fa-camera"></i> Buscar por foto (código barras)</span>
     </label>
   </div>
+
+  <img id="imgPreview" alt="vista previa"/>
 
   <div id="inventoryTable" class="table-grid"></div>
 
@@ -201,7 +204,6 @@
         </div>
       `).join('');
 
-      /* cargar imágenes */
       for(let i=0;i<filtered.length;i++){
         const p = filtered[i];
         const blob = await localforage.getItem(`img_${p.code}`);
@@ -239,49 +241,46 @@
       window.print();
     }
 
-    /* ---------- búsqueda exacta por imagen ---------- */
-    async function buscarIgualQueImagen(file){
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const hashBuscado = await hashBlob(file);
-        filtered = [];
-        for(const p of inventory){
-          const blob = await localforage.getItem(`img_${p.code}`);
-          if(blob && (await hashBlob(blob)) === hashBuscado) filtered.push(p);
-        }
-        await renderTable();
-      };
-      reader.readAsArrayBuffer(file);
+    /* ---------- leer código de barras en imagen ---------- */
+    function leerBarcodeDeImagen(file){
+      return new Promise((resolve)=>{
+        const url = URL.createObjectURL(file);
+        Quagga.decodeSingle({
+          src: url,
+          numOfWorkers: 0,
+          decoder: { readers: ['code_128_reader', 'ean_reader', 'ean_8_reader', 'upc_reader', 'upc_e_reader'] },
+          locate: true,
+          locator: { halfSample: true, patchSize: 'medium' }
+        }, result=>{
+          URL.revokeObjectURL(url);
+          resolve(result?.codeResult?.code || null);
+        });
+      });
     }
 
-    /* ---------- hash simple (crc32) ---------- */
-    async function hashBlob(blob){
-      const buf = await blob.arrayBuffer();
-      const data = new Uint8Array(buf);
-      let crc = 0 ^ (-1);
-      for(let i=0;i<data.length;i++){
-        crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
-      }
-      return (crc ^ (-1)) >>> 0;
-    }
-    const table = new Uint32Array(256);
-    for(let i=0;i<256;i++){
-      let c = i;
-      for(let j=0;j<8;j++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
-      table[i] = c;
+    /* ---------- filtrar por barcode leído ---------- */
+    async function aplicarFiltroPorBarcode(file){
+      const barcode = await leerBarcodeDeImagen(file);
+      if(!barcode){ alert('No pude leer el código de barras en la foto.'); return; }
+      filtered = inventory.filter(p => p.barcode === barcode);
+      await renderTable();
     }
 
     /* ---------- controles ---------- */
     document.getElementById('btnVerTodo').addEventListener('click', resetAndRender);
-    document.getElementById('imageUpload').addEventListener('change', e=>{
+    document.getElementById('imageUpload').addEventListener('change', async (e)=>{
       const file = e.target.files[0];
-      if(file) buscarIgualQueImagen(file);
+      if(!file) return;
+      document.getElementById('imgPreview').src = URL.createObjectURL(file);
+      document.getElementById('imgPreview').style.display = 'block';
+      await aplicarFiltroPorBarcode(file);
     });
 
     /* ---------- reset / inicio ---------- */
     async function resetAndRender(){
       filtered = [...inventory];
       document.getElementById('imageUpload').value = '';
+      document.getElementById('imgPreview').style.display = 'none';
       await renderTable();
     }
 

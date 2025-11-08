@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Factura - KLOHESV - IndexedDB</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
   <style>
     body {
       font-family: "Courier New", monospace;
@@ -85,6 +85,7 @@
       color: #444;
       text-align: center;
     }
+    /* TEMA */
     body[data-theme="dark"] {
       background-color: #121212;
       color: #f0f0f0;
@@ -103,6 +104,7 @@
     <p>San Salvador, El Salvador</p>
     <p>Correo: industriastobias@gmail.com</p>
   </div>
+
   <div class="social">
     <p>Instagram: @Klohesv</p>
   </div>
@@ -154,7 +156,7 @@
 <script>
   /* ---------- IndexedDB ---------- */
   const DB_NAME = 'facturasDB';
-  const STORE_PRODUCTOS = 'factura';
+  const STORE_PRODUCTOS = 'factura'; // solo la factura actual
   const STORE_THEME = 'theme';
   let db;
 
@@ -197,9 +199,13 @@
     tx.objectStore(STORE_THEME).put(value, 'current');
   }
 
+  /* ---------- Funciones auxiliares ---------- */
   function obtenerFechaActual() {
-    const f = new Date();
-    return `${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
+    const fecha = new Date();
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const año = fecha.getFullYear();
+    return `${dia}/${mes}/${año}`;
   }
 
   window.onload = async () => {
@@ -210,6 +216,7 @@
     await cargarFactura();
   };
 
+  /* ---------- CRUD de filas ---------- */
   async function agregarFila() {
     const tabla = document.getElementById("productos");
     const fila = document.createElement("tr");
@@ -220,20 +227,35 @@
       <td class="subtotal">0.00</td>
     `;
     tabla.appendChild(fila);
-    await setProducto({ nombre: 'Nuevo producto', cantidad: 1, precio: 0, subtotal: 0 });
+    // guardar en DB
+    await setProducto({
+      nombre: 'Nuevo producto',
+      cantidad: 1,
+      precio: 0,
+      subtotal: 0
+    });
   }
 
   async function calcularTotal() {
     let total = 0;
     const filas = document.querySelectorAll("#productos tr");
     for (const fila of filas) {
-      const cant = parseFloat(fila.querySelector(".cantidad").innerText) || 0;
+      const cantidad = parseFloat(fila.querySelector(".cantidad").innerText) || 0;
       const precio = parseFloat(fila.querySelector(".precio").innerText) || 0;
-      const sub = cant * precio;
-      fila.querySelector(".subtotal").innerText = sub.toFixed(2);
-      total += sub;
+      const subtotal = cantidad * precio;
+      fila.querySelector(".subtotal").innerText = subtotal.toFixed(2);
+      total += subtotal;
+      // actualizar en DB
       const id = fila.dataset.id;
-      if (id) await setProducto({ id: Number(id), nombre: fila.cells[0].innerText, cantidad: cant, precio, subtotal: sub });
+      if (id) {
+        await setProducto({
+          id: Number(id),
+          nombre: fila.cells[0].innerText,
+          cantidad,
+          precio,
+          subtotal
+        });
+      }
     }
     document.getElementById("total").innerText = total.toFixed(2);
   }
@@ -256,42 +278,34 @@
     calcularTotal();
   }
 
+  /* ---------- Eventos en línea ---------- */
   document.getElementById("productos").addEventListener('input', calcularTotal);
 
-  /* ---------- PDF optimizado para Android ---------- */
-  async function descargarPDF() {
-    const ticket = document.getElementById('invoice');
-    const btns = [...ticket.querySelectorAll('button')];
-    btns.forEach(b => b.style.display = 'none');
-    await new Promise(r => setTimeout(r, 150));
+  /* ---------- PDF / Impresión ---------- */
+  function descargarPDF() {
+    const invoice = document.getElementById("invoice");
+    const botones = invoice.querySelectorAll("button");
+    botones.forEach(btn => btn.style.display = "none");
 
-    try {
-      const canvas = await html2canvas(ticket, {
-        scale: 1.8,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: null
-      });
+    html2canvas(invoice).then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [80, 297] });
-      const imgW = 80;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      const img = canvas.toDataURL('image/jpeg', 0.92);
-      pdf.addImage(img, 'JPEG', 0, 0, imgW, imgH);
-      pdf.save('factura_KLOHESV.pdf');
-    } catch (err) {
-      alert('No se pudo crear el PDF: ' + err);
-    } finally {
-      btns.forEach(b => b.style.display = 'block');
-    }
+      const pdf = new jsPDF("p", "mm", [140, 200]); // ticket
+      const imgWidth = 130;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 5, 5, imgWidth, imgHeight);
+      pdf.save("factura_KLOHESV.pdf");
+      botones.forEach(btn => btn.style.display = "block");
+    });
   }
 
   function imprimirFactura() {
-    const btns = document.querySelectorAll('button');
-    btns.forEach(b => b.style.display = 'none');
+    const botones = document.querySelectorAll("button");
+    botones.forEach(btn => btn.style.display = "none");
     window.print();
-    btns.forEach(b => b.style.display = 'block');
+    botones.forEach(btn => btn.style.display = "block");
   }
 </script>
+
 </body>
 </html>

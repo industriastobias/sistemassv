@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Catálogo - Klohe</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -70,21 +71,27 @@
   <script>
     const catalogo = document.getElementById('catalogo');
 
-    function renderCatalogo() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || []; // ← cambio clave
+    async function renderCatalogo() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       catalogo.innerHTML = '';
-      lista.forEach(prod => {
+
+      for (const prod of lista) {
         const div = document.createElement('div');
         div.className = 'producto';
+
+        // leer imagen desde localforage (misma clave que usa compra.html)
+        const blob = await localforage.getItem(`img_${prod.code}`);
+        const imgSrc = blob ? URL.createObjectURL(blob) : '';
+
         div.innerHTML = `
-          <img src="${prod.imagen || ''}" alt="${prod.name}" onclick="window.open('${prod.imagen || ''}', '_blank')">
+          <img src="${imgSrc}" alt="${prod.name}" onclick="window.open('${imgSrc}', '_blank')">
           <h3>${prod.name}</h3>
           <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
           <p><strong>Categoría:</strong> ${prod.category}</p>
           <p><strong>Código de barras:</strong> ${prod.barcode}</p>
         `;
         catalogo.appendChild(div);
-      });
+      }
     }
 
     // primer render
@@ -92,7 +99,7 @@
 
     // escuchar cambios externos
     window.addEventListener('storage', e => {
-      if (e.key === 'inventory') renderCatalogo(); // ← cambio clave
+      if (e.key === 'inventory') renderCatalogo();
     });
   </script>
 

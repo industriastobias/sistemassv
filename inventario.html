@@ -1,374 +1,197 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario – Buscar imagen exacta</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Inventario con Búsqueda de Imágenes</title>
+  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
   <style>
-    :root{
-      --bg:#f5f7fa;
-      --card:#ffffff;
-      --text:#1f2937;
-      --accent:#3b82f6;
-      --accent-hover:#2563eb;
-      --danger:#ef4444;
-      --success:#10b981;
-      --radius:16px;
-      --shadow:0 6px 20px rgba(0,0,0,.08);
-      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
-      --transition:.3s ease;
-    }
-    body.dark{
-      --bg:#111;
-      --card:#1e1e1e;
-      --text:#eee;
-    }
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
-    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
-    h1{font-size:2rem;font-weight:700;margin-bottom:1rem}
-    #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
-    .summary-cards{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-      gap:1rem;
-      margin-bottom:1.5rem;
-      width:100%;
-      max-width:960px;
-    }
-    .summary-card{
-      background:var(--card);
-      border-radius:var(--radius);
-      padding:1rem;
-      box-shadow:var(--shadow);
-      text-align:center;
-    }
-    .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
-    .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
-    .controls{
-      width:100%;
-      max-width:960px;
-      margin-bottom:1.5rem;
-      display:flex;gap:1rem;flex-wrap:wrap;
-    }
-    .controls button{
-      padding:.6rem 1.2rem;
-      border:none;
-      border-radius:12px;
-      background:var(--accent);
-      color:#fff;
-      font-weight:600;
-      cursor:pointer;
-      box-shadow:var(--shadow);
-    }
-    /* ---------- alta rápida ---------- */
-    .alta-rapida{
-      width:100%;
-      max-width:600px;
-      background:var(--card);
-      border-radius:var(--radius);
-      padding:1.5rem;
-      margin-bottom:1.5rem;
-      box-shadow:var(--shadow);
-    }
-    .alta-rapida h2{font-size:1.2rem;margin-bottom:1rem;color:var(--accent)}
-    .alta-rapida input{
-      width:100%;
-      padding:.6rem .8rem;
-      margin-bottom:.8rem;
-      border:1px solid #e5e7eb;
-      border-radius:8px;
-      background:#f9fafb;
-      font-size:.9rem;
-    }
-    .alta-rapida .drop-area{
-      border:2px dashed #cbd5e1;
-      border-radius:12px;
-      padding:2rem;
-      text-align:center;
-      cursor:pointer;
-      transition:border-color .2s;
-    }
-    .alta-rapida .drop-area.dragover{border-color:var(--accent)}
-    .table-grid{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:1.5rem;
-      width:100%;
-      max-width:1200px;
-    }
-    @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
-    @media(max-width:900px){.table-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:600px){.table-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:400px){.table-grid{grid-template-columns:1fr}}
-    .line-item{
-      background:var(--card);
-      border-radius:var(--radius);
-      padding:1rem;
-      box-shadow:var(--shadow);
-      display:flex;
-      flex-direction:column;
-      gap:.5rem;
-      transition:transform var(--transition),box-shadow var(--transition);
-    }
-    .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
-    .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
-    .line-item h3{font-size:1rem;color:var(--accent)}
-    .line-item p{margin:0;font-size:.75rem;color:#6b7280}
-    .stock-line{font-weight:600;color:var(--success)}
-    .actions{display:flex;gap:.5rem;margin-top:auto}
-    button{
-      padding:.4rem .8rem;
-      border:none;
-      border-radius:12px;
-      font-weight:600;
-      cursor:pointer;
-      transition:transform .2s,box-shadow .2s;
-      font-size:.75rem;
-    }
-    button:hover{transform:translateY(-2px)}
-    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
-    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
-    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
-    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
-    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
-    #imgPreview{max-width:200px;margin-top:1rem;display:none;border-radius:12px;box-shadow:var(--shadow);}
-    @media print{
-      body *{visibility:hidden}
-      #printArea, #printArea *{visibility:visible}
-      #printArea{position:absolute;top:0;left:0;width:100%}
-    }
+    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+    th { background: #eee; }
+    input, button { margin: 5px; padding: 5px; }
+    img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
   </style>
 </head>
 <body>
+  <h1>📦 Inventario con Imágenes</h1>
 
-  <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
-
-  <h1><i class="fa fa-boxes"></i> Inventario – Buscar imagen exacta</h1>
-
-  <div class="summary-cards">
-    <div class="summary-card">
-      <h3>Total de productos</h3>
-      <p id="totalProducts">0</p>
-    </div>
-    <div class="summary-card">
-      <h3>Stock total</h3>
-      <p id="totalStock">0</p>
-    </div>
+  <div>
+    <input type="text" id="code" placeholder="Código">
+    <input type="text" id="name" placeholder="Nombre">
+    <input type="number" id="price" placeholder="Precio">
+    <input type="file" id="image" accept="image/*">
+    <button onclick="addProduct()">Agregar producto</button>
+    <button onclick="exportarZIP()">Exportar ZIP</button>
+    <input type="file" id="zipImport" accept=".zip" onchange="importarZIP(this)">
   </div>
 
-  <div class="controls">
-    <button id="btnVerTodo"><i class="fa fa-list"></i> Ver todo</button>
-    <label for="imageUpload" style="cursor:pointer;">
-      <input id="imageUpload" type="file" accept="image/*" style="display:none;"/>
-      <span class="btn-primary"><i class="fa fa-image"></i> Buscar imagen exacta</span>
-    </label>
+  <div>
+    <input type="text" id="search" placeholder="Buscar por nombre o código" oninput="buscar(this.value)">
+    <input type="file" id="imgSearch" accept="image/*" onchange="buscarIgualQueImagen(this.files[0])">
+    <label for="imgSearch" style="background:#0b79d0;color:white;padding:6px;border-radius:5px;cursor:pointer;">🔍 Buscar imagen exacta</label>
   </div>
 
-  <!-- ---------- alta rápida arrastrar foto ---------- -->
-  <div class="alta-rapida">
-    <h2><i class="fa fa-plus-circle"></i> Alta rápida (arrastra foto)</h2>
-    <input id="altaNombre" type="text" placeholder="Nombre del producto"/>
-    <input id="altaCodigo" type="text" placeholder="Código interno"/>
-    <input id="altaBarcode" type="text" placeholder="Código de barras"/>
-    <input id="altaPrecio" type="number" step="0.01" placeholder="Precio"/>
-    <input id="altaCantidad" type="number" placeholder="Cantidad"/>
-    <input id="altaCategoria" type="text" placeholder="Categoría"/>
-    <div class="drop-area" id="dropArea">
-      <p><i class="fa fa-cloud-upload-alt"></i> Arrastra aquí la foto del producto</p>
-    </div>
-    <button id="btnAlta" class="btn-primary" style="width:100%;margin-top:1rem;">Dar de alta</button>
-  </div>
-
-  <img id="imgPreview" alt="vista previa"/>
-
-  <div id="inventoryTable" class="table-grid"></div>
-
-  <div class="total-box">
-    <h2>Total en USD</h2>
-    <p id="totalAmount">$0.00</p>
-  </div>
-
-  <div id="printArea" style="display:none;"></div>
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Precio</th>
+        <th>Imagen</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let filtered  = [...inventory];
-    let altaFile  = null;
+    let inventory = [];
+    let filtered = [];
 
-    /* ---------- tema oscuro ---------- */
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-    });
-
-    /* ---------- utilidades ---------- */
-    function calculateTotal(list){
-      return list.reduce((sum,it)=>{
-        const price = parseFloat(it.price)||0;
-        const qty   = parseFloat(it.quantity)||0;
-        const disc  = parseFloat(it.discount)||0;
-        return sum + (price*(1-disc/100))*qty;
-      },0);
-    }
-    function stockTotal(list){
-      return list.reduce((sum,it)=> sum + (parseInt(it.quantity)||0),0);
+    async function loadInventory(){
+      const data = await localforage.getItem("inventory");
+      inventory = data || [];
+      filtered = inventory;
+      await renderTable();
     }
 
-    /* ---------- render ---------- */
+    async function saveInventory(){
+      await localforage.setItem("inventory", inventory);
+    }
+
+    async function addProduct(){
+      const code = codeInput.value.trim();
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value || 0);
+      const file = image.files[0];
+      if(!code || !name || !file) return alert("Completa todos los campos");
+
+      const imgBlob = await fileToBlob(file);
+      inventory.push({ code, name, price });
+      await localforage.setItem(`img_${code}`, imgBlob);
+      await saveInventory();
+      filtered = inventory;
+      renderTable();
+      codeInput.value = nameInput.value = priceInput.value = "";
+      image.value = "";
+    }
+
     async function renderTable(){
-      const listEl = document.getElementById('inventoryTable');
-      document.getElementById('totalProducts').textContent = inventory.length;
-      document.getElementById('totalStock').textContent = stockTotal(inventory);
-
-      if(!filtered.length){
-        listEl.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6b7280;">No hay coincidencias.</p>';
-        document.getElementById('totalAmount').textContent = '$0.00';
-        return;
-      }
-
-      listEl.innerHTML = filtered.map((p,idx)=>`
-        <div class="line-item" data-code="${p.code}">
-          <img id="img${idx}" src="" alt="${p.name}">
-          <h3>${p.name}</h3>
-          <p>Código: ${p.code}</p>
-          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${p.quantity} u.</p>
-          <p>Precio: $${p.price}</p>
-          <p>Categoría: ${p.category}</p>
-          <p style="font-size:.7rem;">Barras: ${p.barcode}
-            <i class="fa fa-copy copy-barcode" onclick="navigator.clipboard.writeText('${p.barcode}')" title="Copiar código"></i>
-          </p>
-          <div class="actions">
-            <button onclick="viewItem('${p.code}')" class="btn-primary">Ver</button>
-            <button onclick="deleteItem('${p.code}')" class="btn-danger">Eliminar</button>
-            <button onclick="printLabel('${p.code}')" class="btn-primary">Etiqueta</button>
-          </div>
-        </div>
-      `).join('');
-
-      for(let i=0;i<filtered.length;i++){
-        const p = filtered[i];
+      const tbody = document.querySelector("#table tbody");
+      tbody.innerHTML = "";
+      for(const p of filtered){
+        const tr = document.createElement("tr");
         const blob = await localforage.getItem(`img_${p.code}`);
-        if(blob) document.getElementById(`img${i}`).src = URL.createObjectURL(blob);
+        const url = blob ? URL.createObjectURL(blob) : "";
+        tr.innerHTML = `
+          <td>${p.code}</td>
+          <td>${p.name}</td>
+          <td>$${p.price.toFixed(2)}</td>
+          <td>${url ? `<img src="${url}">` : ""}</td>
+        `;
+        tbody.appendChild(tr);
       }
-
-      document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
     }
 
-    /* ---------- acciones ---------- */
-    function viewItem(code){
-      const p = inventory.find(x=>x.code===code);
-      alert(`Detalles:\n\n${JSON.stringify(p,null,2)}`);
-    }
-    function deleteItem(code){
-      if(!confirm('¿Eliminar producto?')) return;
-      const idx = inventory.findIndex(x=>x.code===code);
-      const item = inventory[idx];
-      localforage.removeItem(`img_${item.code}`);
-      inventory.splice(idx,1);
-      localStorage.setItem('inventory',JSON.stringify(inventory));
-      resetAndRender();
-    }
-    function printLabel(code){
-      const p = inventory.find(x=>x.code===code);
-      const printArea = document.getElementById('printArea');
-      printArea.innerHTML = `
-        <div style="width:6cm;height:4cm;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
-          <div style="font-size:.9rem;font-weight:bold;">${p.name}</div>
-          <div style="font-size:.7rem;">Código: ${p.code}</div>
-          <div style="font-size:.7rem;">Barras: ${p.barcode}</div>
-          <div style="font-size:.8rem;">Precio: $${p.price}</div>
-        </div>
-      `;
-      window.print();
+    function buscar(valor){
+      valor = valor.toLowerCase();
+      filtered = inventory.filter(p =>
+        p.name.toLowerCase().includes(valor) ||
+        p.code.toLowerCase().includes(valor)
+      );
+      renderTable();
     }
 
-    /* ---------- comparación byte-a-byte ---------- */
+    async function fileToBlob(file){
+      const buffer = await file.arrayBuffer();
+      return new Blob([buffer], {type:file.type});
+    }
+
+    // ----------- NUEVA FUNCIÓN MEJORADA: Buscar por imagen visual -----------
+
     async function buscarIgualQueImagen(file){
-      const bufferBuscado = await file.arrayBuffer();
+      const hashBuscado = await getImageHash(file);
       const coincidencias = [];
       for(const p of inventory){
         const blob = await localforage.getItem(`img_${p.code}`);
         if(blob){
-          const buffer = await blob.arrayBuffer();
-          if(bufEquals(buffer,bufferBuscado)) coincidencias.push(p);
+          const hash = await getImageHash(blob);
+          // Si el hash visual es idéntico o muy parecido
+          if(Math.abs(hash - hashBuscado) < 5000) coincidencias.push(p);
         }
       }
       filtered = coincidencias;
       await renderTable();
     }
-    function bufEquals(a,b){
-      if(a.byteLength!==b.byteLength) return false;
-      const ua=new Uint8Array(a), ub=new Uint8Array(b);
-      for(let i=0;i<ua.length;i++) if(ua[i]!==ub[i]) return false;
-      return true;
-    }
 
-    /* ---------- alta rápida arrastrar ---------- */
-    const dropArea = document.getElementById('dropArea');
-    ['dragenter','dragover','dragleave','drop'].forEach(evName=>{
-      dropArea.addEventListener(evName, e=>{
-        e.preventDefault(); e.stopPropagation();
+    async function getImageHash(file){
+      return new Promise(resolve=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const size = 16;
+          canvas.width = size;
+          canvas.height = size;
+          ctx.drawImage(img, 0, 0, size, size);
+          const data = ctx.getImageData(0, 0, size, size).data;
+          let hash = 0;
+          for(let i=0; i<data.length; i++) hash = (hash + data[i]) % 1e9;
+          resolve(hash);
+        };
+        img.src = URL.createObjectURL(file);
       });
-    });
-    ['dragenter','dragover'].forEach(evName=>{
-      dropArea.addEventListener(evName, ()=> dropArea.classList.add('dragover'));
-    });
-    ['dragleave','drop'].forEach(evName=>{
-      dropArea.addEventListener(evName, ()=> dropArea.classList.remove('dragover'));
-    });
-    dropArea.addEventListener('drop', e=>{
-      const files = e.dataTransfer.files;
-      if(files.length) altaFile = files[0];
-      dropArea.innerHTML = `<p><i class="fa fa-check-circle"></i> Foto lista: ${altaFile.name}</p>`;
-    });
-    document.getElementById('btnAlta').addEventListener('click', async ()=>{
-      const nombre   = document.getElementById('altaNombre').value.trim();
-      const codigo   = document.getElementById('altaCodigo').value.trim();
-      const barcode  = document.getElementById('altaBarcode').value.trim();
-      const precio   = parseFloat(document.getElementById('altaPrecio').value)||0;
-      const cantidad = parseInt(document.getElementById('altaCantidad').value)||0;
-      const categoria= document.getElementById('altaCategoria').value.trim();
-      if(!nombre||!codigo||!altaFile){ alert('Rellena nombre, código y arrastra foto.'); return; }
-      const nuevo = {code:codigo,name:nombre,quantity:cantidad,price:precio,category:categoria,barcode:barcode,discount:0};
-      inventory.push(nuevo);
-      await localforage.setItem(`img_${codigo}`, altaFile);
-      localStorage.setItem('inventory',JSON.stringify(inventory));
-      // reset form
-      ['altaNombre','altaCodigo','altaBarcode','altaPrecio','altaCantidad','altaCategoria'].forEach(id=>document.getElementById(id).value='');
-      dropArea.innerHTML = '<p><i class="fa fa-cloud-upload-alt"></i> Arrastra aquí la foto del producto</p>';
-      altaFile = null;
-      resetAndRender();
-    });
-
-    /* ---------- controles ---------- */
-    document.getElementById('btnVerTodo').addEventListener('click', resetAndRender);
-    document.getElementById('imageUpload').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      document.getElementById('imgPreview').src = URL.createObjectURL(file);
-      document.getElementById('imgPreview').style.display = 'block';
-      await buscarIgualQueImagen(file);
-    });
-
-    /* ---------- reset / inicio ---------- */
-    async function resetAndRender(){
-      filtered = [...inventory];
-      document.getElementById('imageUpload').value = '';
-      document.getElementById('imgPreview').style.display = 'none';
-      await renderTable();
     }
 
-    window.addEventListener('storage', e=>{
-      if(e.key==='inventory'){
-        inventory = JSON.parse(e.newValue)||[];
-        resetAndRender();
-      }
-    });
+    // ---------------- ZIP export / import ----------------
 
-    window.addEventListener('DOMContentLoaded',()=>resetAndRender());
+    async function exportarZIP(){
+      const zip = new JSZip();
+      const meta = [];
+      for(const p of inventory){
+        meta.push(p);
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if(blob) zip.file(`imagenes/${p.code}.jpg`, blob);
+      }
+      zip.file("data.json", JSON.stringify(meta));
+      const content = await zip.generateAsync({type:"blob"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(content);
+      a.download = "inventario.zip";
+      a.click();
+    }
+
+    async function importarZIP(input){
+      const file = input.files[0];
+      if(!file) return;
+      const zip = await JSZip.loadAsync(file);
+      const jsonText = await zip.file("data.json").async("string");
+      const nuevos = JSON.parse(jsonText);
+      for(const p of nuevos){
+        const blobFile = zip.file(`imagenes/${p.code}.jpg`);
+        const blob = blobFile ? await blobFile.async("blob") : null;
+        const index = inventory.findIndex(x => x.code === p.code);
+        if(index >= 0) inventory[index] = p;
+        else inventory.push(p);
+        if(blob) await localforage.setItem(`img_${p.code}`, blob);
+      }
+      await saveInventory();
+      filtered = inventory;
+      await renderTable();
+      alert("ZIP importado correctamente");
+      input.value = "";
+    }
+
+    window.addEventListener("load", loadInventory);
+
+    // Elementos de formulario
+    const codeInput = document.getElementById("code");
+    const nameInput = document.getElementById("name");
+    const priceInput = document.getElementById("price");
+    const image = document.getElementById("image");
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </body>
 </html>

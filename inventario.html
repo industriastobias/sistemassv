@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario – Búsqueda por Imagen</title>
+  <title>Inventario – Buscar igual que la foto</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -21,18 +19,15 @@
       --shadow:0 6px 20px rgba(0,0,0,.08);
       --shadow-hover:0 8px 24px rgba(0,0,0,.12);
       --transition:.3s ease;
-      --highlight:#fef08a;
     }
     body.dark{
       --bg:#111;
       --card:#1e1e1e;
       --text:#eee;
-      --highlight:#fde047;
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
-    h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
-    mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
+    h1{font-size:2rem;font-weight:700;margin-bottom:1rem}
     #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
     .summary-cards{
       display:grid;
@@ -51,24 +46,21 @@
     }
     .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
     .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
-    .search-bar{
+    .controls{
       width:100%;
       max-width:960px;
       margin-bottom:1.5rem;
+      display:flex;gap:1rem;flex-wrap:wrap;
     }
-    .search-bar input, .search-bar input[type=file]{
-      width:100%;
-      padding:.75rem 1rem;
-      border:1px solid #e5e7eb;
+    .controls button{
+      padding:.6rem 1.2rem;
+      border:none;
       border-radius:12px;
-      background:#f9fafb;
-      font-size:1rem;
-    }
-    .search-bar input:focus{
-      outline:none;
-      background:#fff;
-      border-color:var(--accent);
-      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+      background:var(--accent);
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow:var(--shadow);
     }
     .table-grid{
       display:grid;
@@ -90,6 +82,7 @@
       flex-direction:column;
       gap:.5rem;
       transition:transform var(--transition),box-shadow var(--transition);
+      cursor:pointer;
     }
     .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
     .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px}
@@ -112,8 +105,6 @@
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
-    .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
-    .copy-barcode:hover{color:var(--accent-hover)}
     @media print{
       body *{visibility:hidden}
       #printArea, #printArea *{visibility:visible}
@@ -125,7 +116,7 @@
 
   <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
-  <h1><i class="fa fa-boxes"></i> Inventario – Búsqueda por Imagen</h1>
+  <h1><i class="fa fa-boxes"></i> Inventario – Buscar igual que la foto</h1>
 
   <div class="summary-cards">
     <div class="summary-card">
@@ -138,8 +129,12 @@
     </div>
   </div>
 
-  <div class="search-bar">
-    <input id="imageUpload" type="file" accept="image/*" />
+  <div class="controls">
+    <button id="btnVerTodo"><i class="fa fa-list"></i> Ver todo</button>
+    <label for="imageUpload" style="cursor:pointer;">
+      <input id="imageUpload" type="file" accept="image/*" style="display:none;"/>
+      <span class="btn-primary"><i class="fa fa-image"></i> Buscar igual que la foto</span>
+    </label>
   </div>
 
   <div id="inventoryTable" class="table-grid"></div>
@@ -153,91 +148,85 @@
 
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let filtered = [...inventory];
-    let uploadedEmbedding = null;
-    let model;
+    let filtered  = [...inventory];
 
-    /* ========= TEMA OSCURO ========= */
+    /* ---------- tema oscuro ---------- */
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.addEventListener('click', () => {
       document.body.classList.toggle('dark');
       themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
     });
 
-    /* ========= CARGAR MODELO ========= */
-    async function loadModel() {
-      model = await mobilenet.load();
-    }
-
-    /* ========= UTILIDADES ========= */
+    /* ---------- utilidades ---------- */
     function calculateTotal(list){
-      return list.reduce((sum,item)=>{
-        const price = parseFloat(item.price)||0;
-        const qty   = parseFloat(item.quantity)||0;
-        const disc  = parseFloat(item.discount)||0;
-        return sum + (price * (1 - disc/100)) * qty;
+      return list.reduce((sum,it)=>{
+        const price = parseFloat(it.price)||0;
+        const qty   = parseFloat(it.quantity)||0;
+        const disc  = parseFloat(it.discount)||0;
+        return sum + (price*(1-disc/100))*qty;
       },0);
     }
     function stockTotal(list){
-      return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+      return list.reduce((sum,it)=> sum + (parseInt(it.quantity)||0),0);
     }
 
-    /* ========= RENDER ========= */
+    /* ---------- render ---------- */
     async function renderTable(){
-      const list = document.getElementById('inventoryTable');
+      const listEl = document.getElementById('inventoryTable');
       document.getElementById('totalProducts').textContent = inventory.length;
       document.getElementById('totalStock').textContent = stockTotal(inventory);
 
       if(!filtered.length){
-        list.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la imagen.</p>';
+        listEl.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#6b7280;">No hay coincidencias.</p>';
         document.getElementById('totalAmount').textContent = '$0.00';
         return;
       }
 
-      list.innerHTML = filtered.map((item,idx)=>`
-        <div class="line-item">
-          <img id="invImg${idx}" src="" alt="${item.name}"/>
-          <h3>${item.name}</h3>
-          <p>Código: ${item.code}</p>
-          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
-          <p>Precio: $${item.price}</p>
-          <p>Categoría: ${item.category}</p>
-          <p style="font-size:.7rem;">Barras: ${item.barcode}
-            <i class="fa fa-copy copy-barcode" onclick="navigator.clipboard.writeText('${item.barcode}')" title="Copiar código"></i>
+      listEl.innerHTML = filtered.map((p,idx)=>`
+        <div class="line-item" data-code="${p.code}">
+          <img id="img${idx}" src="" alt="${p.name}">
+          <h3>${p.name}</h3>
+          <p>Código: ${p.code}</p>
+          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${p.quantity} u.</p>
+          <p>Precio: $${p.price}</p>
+          <p>Categoría: ${p.category}</p>
+          <p style="font-size:.7rem;">Barras: ${p.barcode}
+            <i class="fa fa-copy copy-barcode" onclick="navigator.clipboard.writeText('${p.barcode}')" title="Copiar código"></i>
           </p>
           <div class="actions">
-            <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
-            <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
-            <button onclick="printLabel(${idx})" class="btn-primary">Etiqueta</button>
+            <button onclick="viewItem('${p.code}')" class="btn-primary">Ver</button>
+            <button onclick="deleteItem('${p.code}')" class="btn-danger">Eliminar</button>
+            <button onclick="printLabel('${p.code}')" class="btn-primary">Etiqueta</button>
           </div>
         </div>
       `).join('');
 
-      for (let i = 0; i < filtered.length; i++) {
+      /* cargar imágenes */
+      for(let i=0;i<filtered.length;i++){
         const p = filtered[i];
-        const img = document.getElementById(`invImg${i}`);
         const blob = await localforage.getItem(`img_${p.code}`);
-        if (blob) img.src = URL.createObjectURL(blob);
+        if(blob) document.getElementById(`img${i}`).src = URL.createObjectURL(blob);
       }
 
       document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
     }
 
-    /* ========= ACCIONES ========= */
-    function viewItem(index){
-      alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+    /* ---------- acciones ---------- */
+    function viewItem(code){
+      const p = inventory.find(x=>x.code===code);
+      alert(`Detalles:\n\n${JSON.stringify(p,null,2)}`);
     }
-    function deleteItem(index){
-      if(!confirm('¿Eliminar producto?'))return;
-      const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
-      const item = inventory[realIndex];
+    function deleteItem(code){
+      if(!confirm('¿Eliminar producto?')) return;
+      const idx = inventory.findIndex(x=>x.code===code);
+      const item = inventory[idx];
       localforage.removeItem(`img_${item.code}`);
-      inventory.splice(realIndex,1);
-      localStorage.setItem('inventory', JSON.stringify(inventory));
+      inventory.splice(idx,1);
+      localStorage.setItem('inventory',JSON.stringify(inventory));
       resetAndRender();
     }
-    function printLabel(index){
-      const p = filtered[index];
+    function printLabel(code){
+      const p = inventory.find(x=>x.code===code);
       const printArea = document.getElementById('printArea');
       printArea.innerHTML = `
         <div style="width:6cm;height:4cm;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
@@ -250,69 +239,60 @@
       window.print();
     }
 
-    /* ========= SIMILITUD COSENO ========= */
-    function cosineSimilarity(a, b) {
-      const aData = a.dataSync();
-      const bData = b.dataSync();
-      const dot = aData.reduce((sum, val, i) => sum + val * bData[i], 0);
-      const normA = Math.sqrt(aData.reduce((sum, val) => sum + val * val, 0));
-      const normB = Math.sqrt(bData.reduce((sum, val) => sum + val * val, 0));
-      return dot / (normA * normB);
-    }
-
-    /* ========= FILTRO POR IMAGEN ========= */
-    async function applyImageFilter(){
-      if (!uploadedEmbedding || !model) {
-        filtered = [...inventory];
-        await renderTable();
-        return;
-      }
-
-      const temp = [];
-      for (const p of inventory) {
-        const img = document.getElementById(`invImg${inventory.indexOf(p)}`);
-        if (img && img.src) {
-          const embedding = model.infer(img, true);
-          const similarity = cosineSimilarity(uploadedEmbedding, embedding);
-          if (similarity > 0.7) temp.push(p);
+    /* ---------- búsqueda exacta por imagen ---------- */
+    async function buscarIgualQueImagen(file){
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const hashBuscado = await hashBlob(file);
+        filtered = [];
+        for(const p of inventory){
+          const blob = await localforage.getItem(`img_${p.code}`);
+          if(blob && (await hashBlob(blob)) === hashBuscado) filtered.push(p);
         }
-      }
-      filtered = temp;
-      await renderTable();
+        await renderTable();
+      };
+      reader.readAsArrayBuffer(file);
     }
 
-    /* ========= INPUT IMAGEN ========= */
-    document.getElementById('imageUpload').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    /* ---------- hash simple (crc32) ---------- */
+    async function hashBlob(blob){
+      const buf = await blob.arrayBuffer();
+      const data = new Uint8Array(buf);
+      let crc = 0 ^ (-1);
+      for(let i=0;i<data.length;i++){
+        crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xFF];
+      }
+      return (crc ^ (-1)) >>> 0;
+    }
+    const table = new Uint32Array(256);
+    for(let i=0;i<256;i++){
+      let c = i;
+      for(let j=0;j<8;j++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      table[i] = c;
+    }
 
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = async () => {
-        uploadedEmbedding = model.infer(img, true);
-        await applyImageFilter();
-      };
+    /* ---------- controles ---------- */
+    document.getElementById('btnVerTodo').addEventListener('click', resetAndRender);
+    document.getElementById('imageUpload').addEventListener('change', e=>{
+      const file = e.target.files[0];
+      if(file) buscarIgualQueImagen(file);
     });
 
-    /* ========= RESET / INICIO ========= */
+    /* ---------- reset / inicio ---------- */
     async function resetAndRender(){
       filtered = [...inventory];
-      uploadedEmbedding = null;
       document.getElementById('imageUpload').value = '';
       await renderTable();
     }
 
-    window.addEventListener('storage', e => {
-      if(e.key === 'inventory'){
-        inventory = JSON.parse(e.newValue) || [];
+    window.addEventListener('storage', e=>{
+      if(e.key==='inventory'){
+        inventory = JSON.parse(e.newValue)||[];
         resetAndRender();
       }
     });
 
-    window.addEventListener('DOMContentLoaded',async ()=>{
-      await loadModel();
-      await resetAndRender();
-    });
+    window.addEventListener('DOMContentLoaded',()=>resetAndRender());
   </script>
 </body>
 </html>

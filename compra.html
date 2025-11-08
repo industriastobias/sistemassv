@@ -7,9 +7,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -27,7 +26,6 @@
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     h1{font-size:2rem;font-weight:700;margin-bottom:2rem;letter-spacing:-.5px}
-
     .bubble{
       background:var(--card);
       border-radius:var(--radius);
@@ -71,7 +69,6 @@
     .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
     .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
     #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
-
     .table-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;}
     .card-item{
       background:var(--card);
@@ -88,10 +85,7 @@
     .card-item h3{font-size:1.1rem;color:var(--accent)}
     .card-item p{margin:0;font-size:.85rem;color:#6b7280}
     .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
-
-    .mini-lote{
-      display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;
-    }
+    .mini-lote{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;}
     .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
     .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
     .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
@@ -107,7 +101,6 @@
 
   <h1>Compra</h1>
 
-  <!-- =================== FORMULARIO =================== -->
   <div class="bubble" id="formularioBubble">
     <h2><i class="fa fa-edit"></i> rápida de producto</h2>
     <form id="purchaseForm" class="form-grid">
@@ -141,16 +134,15 @@
       </div>
       <div style="grid-column:1/-1" class="actions">
         <button type="submit" class="btn-primary">Guardar producto</button>
-        <button type="button" class="btn-primary" onclick="exportToExcel()">Exportar ZIP</button>
+        <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
         <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
         <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
-        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromExcel(event)">
+        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
         <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
       </div>
     </form>
   </div>
 
-  <!-- =================== INVENTARIO =================== -->
   <div class="bubble">
     <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
     <div class="table-cards" id="inventoryList"></div>
@@ -161,16 +153,17 @@
     <p id="totalAmount">$0.00</p>
   </div>
 
-  <!-- =================== SCRIPT PRINCIPAL =================== -->
   <script>
+  // GLOBAL
   let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
   let editIndex = -1;
 
+  // RENDER + TOTAL
   function calculateTotal(){
     const total = inventory.reduce((sum,item)=>{
-      const price = parseFloat(item.price)||0;
-      const quantity = parseFloat(item.quantity)||0;
-      const discount = parseFloat(item.discount)||0;
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const discount = Number(item.discount) || 0;
       const finalPrice = price * (1 - discount/100);
       return sum + finalPrice * quantity;
     },0);
@@ -181,24 +174,34 @@
     const list = document.getElementById('inventoryList');
     list.innerHTML = inventory.map((item,idx)=>`
       <div class="card-item">
-        <img id="invImg${idx}" src="" alt="${item.name}"/>
-        <h3>${item.name}</h3>
-        <p>Código: ${item.code}</p>
-        <p>Cód.Barras: ${item.barcode}</p>
-        <p>Precio: $${item.price}</p>
-        <p>Stock: ${item.quantity}</p>
+        <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>Código: ${escapeHtml(item.code)}</p>
+        <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
+        <p>Precio: $${Number(item.price).toFixed(2)}</p>
+        <p>Stock: ${Number(item.quantity)}</p>
       </div>
     `).join('');
+    // Cargar imágenes desde localforage
     inventory.forEach((p,i)=>{
       localforage.getItem(`img_${p.code}`).then(blob=>{
-        if(blob) document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
-      });
+        if(blob && document.getElementById(`invImg${i}`)){
+          document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+        }
+      }).catch(()=>{});
     });
   }
 
+  function escapeHtml(text){
+    return String(text||'').replace(/[&<>"'`]/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;', '`':'&#96;'
+    })[s]);
+  }
+
+  // PREVIEW + GUARDADO INDIVIDUAL
   function previewImage(evt){
     const file = evt.target.files[0];
-    if(!file)return;
+    if(!file) return;
     new Compressor(file,{quality:0.6,maxWidth:800,maxHeight:800,
       success(result){
         const reader = new FileReader();
@@ -207,74 +210,148 @@
           document.getElementById('imagePreview').style.display = 'block';
         };
         reader.readAsDataURL(result);
-        const code = document.getElementById('code').value || 'temp';
-        localforage.setItem(`img_${code}`, result);
-      }
+        const code = document.getElementById('code').value || `temp_${Date.now()}`;
+        localforage.setItem(`img_${code}`, result).catch(()=>{});
+      },
+      error(err){ console.error(err); }
     });
   }
 
   document.getElementById('purchaseForm').addEventListener('submit',function(e){
     e.preventDefault();
-    const newItem = Object.fromEntries(new FormData(e.target).entries());
-    editIndex === -1 ? inventory.push(newItem) : (inventory[editIndex] = newItem);
+    const form = new FormData(e.target);
+    const item = {
+      name: form.get('name') || '',
+      code: form.get('code') || '',
+      barcode: form.get('barcode') || '',
+      price: Number(form.get('price')) || 0,
+      discount: Number(form.get('discount')) || 0,
+      quantity: Number(form.get('quantity')) || 0,
+      description: form.get('description') || '',
+      category: form.get('category') || ''
+    };
+    if(editIndex === -1){
+      // evitar duplicados de código
+      const exists = inventory.find(i=>i.code === item.code);
+      if(exists){
+        if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
+          // crear igualmente con sufijo
+          item.code = `${item.code}_${Date.now()}`;
+        } else {
+          exists.quantity = Number(exists.quantity) + Number(item.quantity);
+          localStorage.setItem('inventory', JSON.stringify(inventory));
+          renderTable(); calculateTotal();
+          e.target.reset();
+          document.getElementById('imagePreview').style.display = 'none';
+          return;
+        }
+      }
+      inventory.push(item);
+    } else {
+      inventory[editIndex] = item;
+      editIndex = -1;
+    }
     localStorage.setItem('inventory', JSON.stringify(inventory));
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
-    editIndex = -1;
     renderTable(); calculateTotal();
   });
 
+  // VACIAR INVENTARIO
   function vaciarInventario(){
-    if(!confirm('¿Vaciar todo el inventario?'))return;
-    inventory.forEach(p=>localforage.removeItem(`img_${p.code}`));
+    if(!confirm('¿Vaciar todo el inventario?')) return;
+    inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(()=>{}));
     inventory = [];
     localStorage.setItem('inventory', JSON.stringify(inventory));
     renderTable(); calculateTotal();
   }
 
-  async function exportToExcel(){
-    const zip = new JSZip();
-    zip.file('inventory.json', JSON.stringify(inventory, null, 2));
-    const imgFolder = zip.folder('images');
-    for(const p of inventory){
-      const blob = await localforage.getItem(`img_${p.code}`);
-      if(blob) imgFolder.file(`${p.code}.jpg`, blob);
+  // EXPORTAR ZIP (inventory.json + images/)
+  async function exportToZip(){
+    try{
+      const zip = new JSZip();
+      zip.file('inventory.json', JSON.stringify(inventory, null, 2));
+      const imgFolder = zip.folder('images');
+      for(const p of inventory){
+        try{
+          const blob = await localforage.getItem(`img_${p.code}`);
+          if(blob) imgFolder.file(`${p.code}.jpg`, blob);
+        }catch(e){ /* skip */ }
+      }
+      const blobZip = await zip.generateAsync({type:'blob'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobZip);
+      a.download = 'inventario.zip';
+      a.click();
+    }catch(e){
+      alert('Error exportando ZIP: ' + (e.message || e));
     }
-    const blobZip = await zip.generateAsync({type:'blob'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blobZip);
-    a.download = 'inventario.zip';
-    a.click();
   }
 
-  async function importFromExcel(evt){
+  // IMPORTAR ZIP (fusiona correctamente)
+  async function importFromZip(evt){
     const file = evt.target.files[0];
-    if(!file || !file.name.endsWith('.zip')){alert('Selecciona un ZIP');return;}
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try{
-        const zip = await JSZip.loadAsync(reader.result);
-        const jsonFile = zip.file('inventory.json');
-        if(!jsonFile){alert('No se encontró inventory.json');return;}
-        const json = await jsonFile.async('string');
-        const imported = JSON.parse(json);
+    if(!file){ return; }
+    if(!file.name.toLowerCase().endsWith('.zip')){ alert('Selecciona un archivo .zip'); evt.target.value=''; return; }
+    try{
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const jsonFile = zip.file('inventory.json');
+      if(!jsonFile){ alert('El ZIP no contiene inventory.json'); evt.target.value=''; return; }
+      const jsonText = await jsonFile.async('string');
+      let imported = JSON.parse(jsonText);
+      if(!Array.isArray(imported)) imported = [];
 
-        for(const p of imported){
-          const img = zip.file(`images/${p.code}.jpg`);
-          if(img){
-            const blob = await img.async('blob');
+      // Merge: existing inventory is in variable 'inventory'
+      // For each imported product: save image if exists, then merge by code (sum quantity)
+      for(const p of imported){
+        // ensure types
+        p.price = Number(p.price) || 0;
+        p.quantity = Number(p.quantity) || 0;
+        p.discount = Number(p.discount) || 0;
+        // save image if present
+        const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
+        if(imgEntry){
+          try{
+            const blob = await imgEntry.async('blob');
             await localforage.setItem(`img_${p.code}`, blob);
-          }
-          const idx = inventory.findIndex(x=>x.code===p.code);
-          idx>-1 ? inventory[idx]=p : inventory.push(p);
+          }catch(e){ console.warn('No se pudo guardar imagen para', p.code); }
         }
-        localStorage.setItem('inventory', JSON.stringify(inventory));
-        renderTable(); calculateTotal();
-        alert('Importación ZIP completada ✅');
-      }catch(e){alert('Error leyendo ZIP: '+e.message);}
-      finally{ evt.target.value = ''; }
-    };
-    reader.readAsArrayBuffer(file);
+        const idx = inventory.findIndex(x => x.code === p.code);
+        if(idx > -1){
+          // sumar stock, y actualizar datos no vacíos
+          inventory[idx].quantity = Number(inventory[idx].quantity || 0) + Number(p.quantity || 0);
+          // actualizamos otros campos sólo si el import trae valor y el actual está vacío o es 0
+          if(!inventory[idx].name && p.name) inventory[idx].name = p.name;
+          if(!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
+          if((!inventory[idx].price || inventory[idx].price===0) && p.price) inventory[idx].price = p.price;
+          if(!inventory[idx].description && p.description) inventory[idx].description = p.description;
+          if(!inventory[idx].category && p.category) inventory[idx].category = p.category;
+        } else {
+          // nuevo producto: asegurarse de campos típicos
+          const nuevo = {
+            name: p.name || p.code,
+            code: p.code,
+            barcode: p.barcode || '',
+            price: Number(p.price) || 0,
+            discount: Number(p.discount) || 0,
+            quantity: Number(p.quantity) || 0,
+            description: p.description || '',
+            category: p.category || ''
+          };
+          inventory.push(nuevo);
+        }
+      }
+      // guardar y actualizar UI
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      renderTable(); calculateTotal();
+      alert('Importación ZIP completada y fusionada correctamente ✅');
+    }catch(e){
+      console.error(e);
+      alert('Error leyendo ZIP: ' + (e.message || e));
+    } finally {
+      evt.target.value = '';
+    }
   }
 
   function resetAndOpenImport(){
@@ -283,41 +360,59 @@
     inp.click();
   }
 
-  window.addEventListener('DOMContentLoaded',()=>{renderTable();calculateTotal();});
-  </script>
+  // EXPORTAR A PDF con imágenes (usa localforage para recuperar blobs)
+  async function exportToPDF(){
+    try{
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 15;
+      let y = margin;
 
-  <!-- =================== BLOQUE CORREGIDO =================== -->
-  <script>
-  (function(){
-    const original = window.importFromExcel;
-    window.importFromExcel = async function(evt){
-      await original.call(this, evt);
-      await new Promise(res => setTimeout(res, 200));
+      pdf.setFontSize(16);
+      pdf.text('Inventario con imágenes', margin, y);
+      y += 10;
 
-      const imported = JSON.parse(localStorage.getItem('inventory')) || [];
-      const current  = JSON.parse(localStorage.getItem('inventory')) || [];
-      const merged   = [];
-      const map      = new Map();
-
-      current.forEach(item => map.set(item.code, {...item}));
-      imported.forEach(item => {
-        if (map.has(item.code)) {
-          const exist = map.get(item.code);
-          exist.quantity = String(Number(exist.quantity) + Number(item.quantity));
-          map.set(item.code, exist);
-        } else {
-          map.set(item.code, item);
+      for(let i=0;i<inventory.length;i++){
+        const p = inventory[i];
+        // obtener imagen blob si existe
+        let blob = null;
+        try{ blob = await localforage.getItem(`img_${p.code}`); }catch(e){ blob = null; }
+        if(blob){
+          // convertir blob a dataURL
+          const dataUrl = await blobToDataURL(blob);
+          try {
+            pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40);
+          } catch(e){
+            // fallback: ignorar imagen si hay problemas
+          }
         }
-      });
+        pdf.setFontSize(11);
+        pdf.text(`Código: ${p.code}`, 60, y + 7);
+        pdf.text(`Nombre: ${p.name}`, 60, y + 14);
+        pdf.text(`Precio: $${Number(p.price).toFixed(2)}`, 60, y + 21);
+        pdf.text(`Stock: ${Number(p.quantity)}`, 60, y + 28);
+        y += 48;
+        if(y > 250){ pdf.addPage(); y = margin; }
+      }
+      pdf.save('inventario.pdf');
+    }catch(e){
+      console.error(e);
+      alert('Error generando PDF: ' + (e.message || e));
+    }
+  }
 
-      map.forEach(v => merged.push(v));
-      localStorage.setItem('inventory', JSON.stringify(merged));
-      window.inventory = merged;
-      window.renderTable();
-      window.calculateTotal();
-      alert('Importación completada y fusionada correctamente ✅');
-    };
-  })();
+  function blobToDataURL(blob){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    renderTable(); calculateTotal();
+  });
   </script>
 </body>
 </html>

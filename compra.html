@@ -55,7 +55,7 @@
       box-shadow:0 0 0 3px rgba(59,130,246,.2);
     }
     button{
-      padding:.75rem 1.5rem;
+      padding:.6rem 1.1rem;
       border:none;
       border-radius:12px;
       font-weight:600;
@@ -180,6 +180,10 @@
         <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
         <p>Precio: $${Number(item.price).toFixed(2)}</p>
         <p>Stock: ${Number(item.quantity)}</p>
+        <div class="actions">
+          <button class="btn-primary" onclick="editProduct(${idx})"><i class="fa fa-edit"></i> Editar</button>
+          <button class="btn-danger" onclick="deleteProduct(${idx})"><i class="fa fa-trash"></i> Eliminar</button>
+        </div>
       </div>
     `).join('');
     // Cargar imágenes desde localforage
@@ -215,6 +219,40 @@
       },
       error(err){ console.error(err); }
     });
+  }
+
+  // EDITAR
+  async function editProduct(idx){
+    const p = inventory[idx];
+    document.getElementById('name').value = p.name;
+    document.getElementById('code').value = p.code;
+    document.getElementById('barcode').value = p.barcode;
+    document.getElementById('price').value = p.price;
+    document.getElementById('discount').value = p.discount;
+    document.getElementById('quantity').value = p.quantity;
+    document.getElementById('description').value = p.description;
+    document.getElementById('category').value = p.category;
+    // mostrar imagen si existe
+    const blob = await localforage.getItem(`img_${p.code}`);
+    if(blob){
+      const url = URL.createObjectURL(blob);
+      document.getElementById('imagePreview').src = url;
+      document.getElementById('imagePreview').style.display = 'block';
+    } else {
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+    editIndex = idx;
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  // ELIMINAR
+  function deleteProduct(idx){
+    if(!confirm('¿Eliminar este producto?')) return;
+    const p = inventory[idx];
+    localforage.removeItem(`img_${p.code}`).catch(()=>{});
+    inventory.splice(idx,1);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    renderTable(); calculateTotal();
   }
 
   document.getElementById('purchaseForm').addEventListener('submit',function(e){

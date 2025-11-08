@@ -143,6 +143,20 @@
     </form>
   </div>
 
+  <!-- Mini-lote para exportación masiva -->
+  <div class="bubble">
+    <h2><i class="fa fa-layer-group"></i> Exportación masiva de imágenes</h2>
+    <div class="mini-lote" id="miniLote"></div>
+    <div class="actions">
+      <button class="btn-success" onclick="exportSelectedImages()">
+        <i class="fa fa-download"></i> Descargar seleccionadas
+      </button>
+      <button class="btn-danger" onclick="clearSelection()">
+        <i class="fa fa-times-circle"></i> Limpiar selección
+      </button>
+    </div>
+  </div>
+
   <div class="bubble">
     <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
     <div class="table-cards" id="inventoryList"></div>
@@ -194,6 +208,7 @@
         }
       }).catch(()=>{});
     });
+    renderMiniLote();
   }
 
   function escapeHtml(text){
@@ -255,7 +270,7 @@
     renderTable(); calculateTotal();
   }
 
-  document.getElementById('purchaseForm').addEventListener('submit',function(e){
+  document.getElementById('purchaseForm').addEventListener('submit',async function(e){
     e.preventDefault();
     const form = new FormData(e.target);
     const item = {
@@ -268,12 +283,22 @@
       description: form.get('description') || '',
       category: form.get('category') || ''
     };
+
+    /* =====  CORRECCIÓN: mover imagen temporal a definitiva  ===== */
+    const tempKey = `img_temp_${Date.now()}`;
+    const realKey = `img_${item.code}`;
+    try{
+      const tempBlob = await localforage.getItem(tempKey);
+      if(tempBlob){
+        await localforage.setItem(realKey, tempBlob);
+        await localforage.removeItem(tempKey);
+      }
+    }catch(e){/* ignore */}
+
     if(editIndex === -1){
-      // evitar duplicados de código
       const exists = inventory.find(i=>i.code === item.code);
       if(exists){
         if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
-          // crear igualmente con sufijo
           item.code = `${item.code}_${Date.now()}`;
         } else {
           exists.quantity = Number(exists.quantity) + Number(item.quantity);
@@ -340,14 +365,10 @@
       let imported = JSON.parse(jsonText);
       if(!Array.isArray(imported)) imported = [];
 
-      // Merge: existing inventory is in variable 'inventory'
-      // For each imported product: save image if exists, then merge by code (sum quantity)
       for(const p of imported){
-        // ensure types
         p.price = Number(p.price) || 0;
         p.quantity = Number(p.quantity) || 0;
         p.discount = Number(p.discount) || 0;
-        // save image if present
         const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
         if(imgEntry){
           try{
@@ -357,16 +378,13 @@
         }
         const idx = inventory.findIndex(x => x.code === p.code);
         if(idx > -1){
-          // sumar stock, y actualizar datos no vacíos
           inventory[idx].quantity = Number(inventory[idx].quantity || 0) + Number(p.quantity || 0);
-          // actualizamos otros campos sólo si el import trae valor y el actual está vacío o es 0
           if(!inventory[idx].name && p.name) inventory[idx].name = p.name;
           if(!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
           if((!inventory[idx].price || inventory[idx].price===0) && p.price) inventory[idx].price = p.price;
           if(!inventory[idx].description && p.description) inventory[idx].description = p.description;
           if(!inventory[idx].category && p.category) inventory[idx].category = p.category;
         } else {
-          // nuevo producto: asegurarse de campos típicos
           const nuevo = {
             name: p.name || p.code,
             code: p.code,
@@ -380,7 +398,6 @@
           inventory.push(nuevo);
         }
       }
-      // guardar y actualizar UI
       localStorage.setItem('inventory', JSON.stringify(inventory));
       renderTable(); calculateTotal();
       alert('Importación ZIP completada y fusionada correctamente ✅');
@@ -398,31 +415,21 @@
     inp.click();
   }
 
-  // EXPORTAR A PDF con imágenes (usa localforage para recuperar blobs)
+  // EXPORTAR A PDF con imágenes
   async function exportToPDF(){
     try{
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const margin = 15;
-      let y = margin;
-
+      const margin = 15; let y = margin;
       pdf.setFontSize(16);
-      pdf.text('Inventario con imágenes', margin, y);
-      y += 10;
-
+      pdf.text('Inventario con imágenes', margin, y); y += 10;
       for(let i=0;i<inventory.length;i++){
         const p = inventory[i];
-        // obtener imagen blob si existe
         let blob = null;
         try{ blob = await localforage.getItem(`img_${p.code}`); }catch(e){ blob = null; }
         if(blob){
-          // convertir blob a dataURL
           const dataUrl = await blobToDataURL(blob);
-          try {
-            pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40);
-          } catch(e){
-            // fallback: ignorar imagen si hay problemas
-          }
+          try { pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40); } catch(e){}
         }
         pdf.setFontSize(11);
         pdf.text(`Código: ${p.code}`, 60, y + 7);
@@ -446,6 +453,57 @@
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+  }
+
+  // EXPORTACIÓN MASIVA DE IMÁGENES (mini-lote)
+  function renderMiniLote(){
+    const container = document.getElementById('miniLote');
+    container.innerHTML = inventory.map((p,idx)=>`
+      <div class="mini-item">
+        <img id="miniImg${idx}" src="" alt="${escapeHtml(p.name)}"/>
+        <label>
+          <input type="checkbox" value="${p.code}" onchange="toggleSelectImage('${p.code}')">
+          ${escapeHtml(p.name)}
+        </label>
+      </div>
+    `).join('');
+    inventory.forEach((p,i)=>{
+      localforage.getItem(`img_${p.code}`).then(blob=>{
+        if(blob && document.getElementById(`miniImg${i}`)){
+          document.getElementById(`miniImg${i}`).src = URL.createObjectURL(blob);
+        }
+      }).catch(()=>{});
+    });
+  }
+
+  const selectedImages = new Set();
+  function toggleSelectImage(code){
+    if(selectedImages.has(code)){
+      selectedImages.delete(code);
+    } else {
+      selectedImages.add(code);
+    }
+  }
+  function clearSelection(){
+    selectedImages.clear();
+    document.querySelectorAll('#miniLote input[type=checkbox]').forEach(cb=>cb.checked=false);
+  }
+  async function exportSelectedImages(){
+    if(selectedImages.size===0){ alert('Selecciona al menos una imagen'); return; }
+    try{
+      const zip = new JSZip();
+      for(const code of selectedImages){
+        const blob = await localforage.getItem(`img_${code}`);
+        if(blob) zip.file(`${code}.jpg`, blob);
+      }
+      const blobZip = await zip.generateAsync({type:'blob'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobZip);
+      a.download = 'imagenes_seleccionadas.zip';
+      a.click();
+    }catch(e){
+      alert('Error al generar ZIP de imágenes: '+(e.message||e));
+    }
   }
 
   window.addEventListener('DOMContentLoaded',()=>{

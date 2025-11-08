@@ -1,448 +1,444 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Inventario — Optimizado (offline)</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventario</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#0f172a; --card:#0b1220; --muted:#94a3b8; --accent:#06b6d4; --accent-2:#60a5fa; --glass: rgba(255,255,255,0.03);
-      --success:#10b981; --danger:#ef4444; --rounded:12px; --gap:12px; --max-width:1200px;
-      color-scheme: dark;
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+    :root {
+      --crema: #f7f3e9;
+      --dorado: #d4af37;
+      --texto: #2e2e2e;
+      --borde: #e0e0e0;
+      --resaltado: #fffaf0;
+      --peligro: #e63946;
+      --blanco: #ffffff;
+      --sombra: rgba(0, 0, 0, 0.1);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,var(--bg),#071020);color:#e6eef8}
-    .wrap{max-width:var(--max-width);margin:24px auto;padding:20px;}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
-    header h1{margin:0;font-size:1.25rem;letter-spacing:0.6px}
-    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 
-    .card{background:linear-gradient(180deg,var(--card),#07101b);border-radius:var(--rounded);padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
 
-    .search-row{display:flex;gap:10px;align-items:center}
-    select,input[type=text],input[type=number]{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:10px;border-radius:10px;color:inherit}
-    button.btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;padding:10px 14px;border-radius:10px;color:#072029;font-weight:700;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:10px;color:var(--muted);cursor:pointer}
-    .left{display:flex;gap:10px;align-items:center}
+    body {
+      background: var(--crema);
+      color: var(--texto);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
 
-    main{display:grid;grid-template-columns:1fr 420px;gap:16px;margin-top:12px}
-    @media (max-width:980px){main{grid-template-columns:1fr}}
+    h1 {
+      margin-bottom: 1rem;
+      color: var(--dorado);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+    }
 
-    /* Table */
-    .table-wrap{overflow:auto;background:transparent;border-radius:10px}
-    table{width:100%;border-collapse:collapse;min-width:900px}
-    thead th{font-weight:600;text-align:left;padding:12px;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--muted);font-size:0.85rem}
-    tbody tr{transition:background .18s ease}
-    tbody tr:hover{background:rgba(255,255,255,0.02)}
-    td{padding:10px;border-bottom:1px dashed rgba(255,255,255,0.02);vertical-align:middle}
-    td small{color:var(--muted);display:block}
-    img.thumb{height:48px;width:48px;object-fit:cover;border-radius:8px;cursor:pointer}
+    .container {
+      background: var(--blanco);
+      border-radius: 16px;
+      box-shadow: 0 6px 25px var(--sombra);
+      width: 98vw;
+      max-width: 1400px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
 
-    .right-panel{display:flex;flex-direction:column;gap:12px}
-    .box{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border:1px solid rgba(255,255,255,0.02)}
+    .search-block {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      align-items: flex-end;
+    }
 
-    .muted{color:var(--muted)}
-    .highlight{background:linear-gradient(90deg,rgba(96,165,250,0.08),rgba(6,182,212,0.04));}
+    label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
 
-    /* modal */
-    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,0.6);z-index:60}
-    .modal .panel{width:96%;max-width:720px;background:#021226;border-radius:12px;padding:18px}
-    .modal img{max-width:100%;display:block;border-radius:10px}
+    input, select {
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--borde);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
 
-    /* visual helpers */
-    .badge{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;font-weight:600}
-    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02)}
+    button.stamp {
+      padding: 0.6rem 1.1rem;
+      background: var(--dorado);
+      color: var(--blanco);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
 
-    /* small */
-    .tiny{font-size:0.82rem}
-    .center{text-align:center}
+    button.stamp:hover {
+      background: #c59d2d;
+      transform: translateY(-2px);
+    }
 
-    /* highlight row for goToRow */
-    .row-highlight{box-shadow:inset 4px 0 0 0 rgba(96,165,250,0.8)}
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.6rem;
+      font-size: 0.9rem;
+    }
 
-    /* form in modal */
-    .form-row{display:flex;gap:8px;align-items:center}
-    label{font-size:0.88rem}
+    thead {
+      background: var(--dorado);
+      color: var(--blanco);
+    }
 
+    th, td {
+      padding: 0.6rem;
+      border: 1px solid var(--borde);
+      text-align: left;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: var(--resaltado);
+    }
+
+    tbody tr:hover {
+      background: #fff6d5;
+    }
+
+    td img {
+      max-height: 48px;
+      border-radius: 6px;
+      cursor: pointer;
+      object-fit: cover;
+    }
+
+    .no-results {
+      color: var(--peligro);
+      font-weight: 600;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .result-message {
+      text-align: center;
+      color: var(--texto);
+      margin-top: 0.5rem;
+      font-weight: 600;
+    }
+
+    /* ===== MODALES ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: var(--blanco);
+      margin: 5vh auto;
+      padding: 2rem;
+      border-radius: 16px;
+      width: 90vw;
+      max-width: 600px;
+      box-shadow: 0 10px 40px var(--sombra);
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      font-size: 24px;
+      color: #555;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: var(--dorado);
+    }
+
+    #modalImage {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-top: 1rem;
+    }
+
+    tr.highlight {
+      outline: 2px solid var(--dorado);
+      background: #fff9e5;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
+  <h1><i class="fa-solid fa-boxes-stacked"></i> Inventario</h1>
+
+  <div class="container">
+    <div class="search-block">
       <div>
-        <h1>Inventario — Dashboard</h1>
-        <div class="muted tiny">Offline • LocalStorage + localForage</div>
+        <label for="searchCategory">Categoría:</label>
+        <select id="searchCategory">
+          <option value="">Todas</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Otros">Otros</option>
+        </select>
       </div>
-      <div class="controls">
-        <div class="left card">
-          <div class="search-row">
-            <select id="searchCategory" aria-label="Filtrar por categoría">
-              <option value="">Todas las categorías</option>
-              <option>Aritos</option>
-              <option>Billeteras</option>
-              <option>Carteras</option>
-              <option>Chokers</option>
-              <option>Collares</option>
-              <option>Lentes de sol</option>
-              <option>Pulseras</option>
-              <option>Relojes</option>
-              <option>Anillos</option>
-              <option>Accesorios para el cabello</option>
-              <option>Otros</option>
-            </select>
 
-            <input id="searchText" type="text" placeholder="Buscar por nombre o código" aria-label="Buscar productos">
-            <button class="btn" id="btnSearch"><i class="fa-solid fa-magnifying-glass"></i></button>
-            <button class="ghost" id="btnClear">Limpiar</button>
-          </div>
-        </div>
-        <div class="card">
-          <div style="display:flex;gap:8px;align-items:center">
-            <label for="goToRow" class="tiny muted">Ir a fila</label>
-            <input id="goToRow" type="number" min="1" style="width:86px;padding:8px;border-radius:8px;background:var(--glass);border:1px solid rgba(255,255,255,0.03)">
-            <button class="btn" id="btnGo">Ir</button>
-          </div>
-        </div>
+      <div>
+        <label for="searchCode">Código de barras:</label>
+        <input type="text" id="searchCode" placeholder="Ej: 123456789">
       </div>
-    </header>
 
-    <main>
-      <section>
-        <div class="card table-wrap">
-          <table aria-describedby="tableDesc">
-            <caption id="tableDesc" class="tiny muted">Lista de productos. Haga clic en la imagen para ver grande. Use 'Vender' para registrar ventas offline.</caption>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Imagen</th>
-                <th>Nombre</th>
-                <th>Código</th>
-                <th>Código de Barras</th>
-                <th>Precio</th>
-                <th>Desc(%)</th>
-                <th>Precio c/Desc</th>
-                <th>Categoría</th>
-                <th>Stock</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="inventoryList"></tbody>
-          </table>
-          <div id="noResults" class="center muted tiny" style="padding:12px;display:none">No se encontraron productos.</div>
-        </div>
-      </section>
+      <button class="stamp" onclick="filterInventory()">Buscar</button>
+      <button class="stamp" onclick="clearFilters()">Limpiar</button>
+    </div>
 
-      <aside class="right-panel">
-        <div class="box card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="muted tiny">Productos</div>
-              <div id="statsCount" style="font-weight:700;font-size:1.2rem">0</div>
-            </div>
-            <div>
-              <button class="ghost" id="btnAddDemo"><i class="fa-solid fa-plus"></i> Agregar demo</button>
-            </div>
-          </div>
-        </div>
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap: wrap;">
+      <label for="goToRow">Ir a fila:</label>
+      <input type="number" id="goToRow" min="1" style="width:80px;">
+      <button class="stamp" onclick="goToRow()">Ir</button>
+    </div>
 
-        <div class="box card" id="detailsBox" aria-live="polite">
-          <div class="muted tiny">Detalle</div>
-          <div id="detailsEmpty" class="tiny muted">Seleccione un producto para ver detalles</div>
-          <div id="detailsPanel" style="display:none">
-            <h3 id="dName" style="margin:6px 0"></h3>
-            <img id="dImg" class="thumb" alt="vista" style="margin-bottom:8px">
-            <div><small id="dCode"></small></div>
-            <div style="margin-top:8px"><span class="badge" id="dPrice"></span> <span class="pill" id="dStock"></span></div>
-            <div style="margin-top:10px"><button class="btn" id="btnSellSelected">Vender</button></div>
-          </div>
-        </div>
-
-        <div class="box card">
-          <div class="muted tiny">Historial (ventas)</div>
-          <div id="salesCount" class="tiny" style="font-weight:700">0 ventas</div>
-          <div style="margin-top:8px"><button class="ghost" id="btnClearSales">Limpiar ventas</button></div>
-        </div>
-      </aside>
-    </main>
-  </div>
-
-  <!-- MODALS -->
-  <div id="imageModal" class="modal" role="dialog" aria-modal="true">
-    <div class="panel card">
-      <button class="ghost" id="closeImage" style="float:right"><i class="fa-solid fa-xmark"></i></button>
-      <img id="modalImage" src="" alt="Imagen grande">
+    <div style="flex:1; overflow:auto; margin-top:.6rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Código</th>
+            <th>Código de Barras</th>
+            <th>Precio</th>
+            <th>Desc(%)</th>
+            <th>Precio Final</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryList"></tbody>
+      </table>
+      <div id="noResultsMessage" class="no-results" style="display:none;">No se encontraron productos.</div>
+      <div id="resultMessage" class="result-message" style="display:none;"></div>
     </div>
   </div>
 
-  <div id="sellModal" class="modal" role="dialog" aria-modal="true">
-    <div class="panel card">
-      <button class="ghost" id="closeSell" style="float:right"><i class="fa-solid fa-xmark"></i></button>
-      <h3>Registrar venta</h3>
-      <div id="sellName" class="muted tiny"></div>
-      <div style="margin-top:8px" class="form-row">
-        <label for="sellQty">Cantidad</label>
-        <input id="sellQty" type="number" min="1" value="1" style="width:90px">
-        <label for="sellPrice">Precio</label>
-        <input id="sellPrice" type="number" min="0" step="0.01" style="width:140px">
-        <button class="btn" id="confirmSell">Registrar</button>
-      </div>
-      <div id="sellMsg" class="tiny muted" style="margin-top:10px;display:none"></div>
+  <!-- Modal de venta -->
+  <div id="soldModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeSoldModal()">&times;</span>
+      <h2>Registrar Venta</h2>
+      <label for="soldQuantity">Cantidad vendida:</label>
+      <input type="number" id="soldQuantity" min="1">
+      <label for="soldPrice" style="margin-top:1rem;">Precio unidad:</label>
+      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1000">
+      <button class="stamp" onclick="processSale()" style="margin-top:1rem;">Registrar</button>
+      <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
+    </div>
+  </div>
+
+  <!-- Modal imagen -->
+  <div id="imageModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeImageModal()">&times;</span>
+      <img id="modalImage" src="" alt="Imagen del producto">
     </div>
   </div>
 
   <script>
-    // --------- Utilidades de almacenamiento seguro
-    function safeLoad(key, fallback){
-      try{const v = localStorage.getItem(key); return v? JSON.parse(v): fallback}catch(e){console.error('safeLoad',e);return fallback}
-    }
-    function safeSave(key,data){try{localStorage.setItem(key,JSON.stringify(data))}catch(e){console.error('safeSave',e)}}
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let currentSoldIndex = -1;
 
-    // initialize storage keys
-    let inventory = safeLoad('inventory', []);
-    let sales = safeLoad('sales', []);
+    function loadInventory(filteredInventory = inventory) {
+      const list = document.getElementById('inventoryList');
+      const noResults = document.getElementById('noResultsMessage');
+      const resultMsg = document.getElementById('resultMessage');
 
-    // keep track of created objectURLs to revoke later
-    const objectUrlMap = new Map();
+      if (filteredInventory.length === 0) {
+        list.innerHTML = '';
+        noResults.style.display = 'block';
+        resultMsg.style.display = 'none';
+      } else {
+        noResults.style.display = 'none';
+        list.innerHTML = filteredInventory.map((item, index) => {
+          const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
+          return `
+            <tr id="product-${index}">
+              <td>${index + 1}</td>
+              <td><img id="img-${index}" onclick="openImageModal(this.src)" alt="Producto"></td>
+              <td>${item.name}</td>
+              <td>${item.code}</td>
+              <td>${item.barcode}</td>
+              <td>${item.price}</td>
+              <td>${item.discount}</td>
+              <td>${priceWithDiscount}</td>
+              <td>${item.description}</td>
+              <td>${item.category}</td>
+              <td>${item.quantity}</td>
+              <td><button class="stamp" onclick="markSold(${index})">Vender</button></td>
+            </tr>
+          `;
+        }).join('');
 
-    // Setup localForage (used for storing images blobs)
-    localforage.config({name:'inventario_app',storeName:'images'});
-
-    // ---------- Helpers UI
-    const $ = id => document.getElementById(id);
-    const el = (s)=> document.createElement(s);
-
-    function formatCurrency(n){ return Number(n).toLocaleString('es-ES',{style:'currency',currency:'USD',maximumFractionDigits:2}); }
-
-    // Render single product row
-    function renderRow(product, idx){
-      const priceWithDiscount = (Number(product.price||0) * (1 - (Number(product.discount||0)/100))).toFixed(2);
-      return `
-        <tr data-index="${idx}" id="row-${idx}">
-          <td>${idx+1}</td>
-          <td><img alt="${escapeHtml(product.name)}" class="thumb" data-code="${escapeHtml(product.code)}" id="img-${idx}" loading="lazy"></td>
-          <td><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.description||'')}</small></td>
-          <td>${escapeHtml(product.code)}</td>
-          <td>${escapeHtml(product.barcode||'')}</td>
-          <td>${Number(product.price).toFixed(2)}</td>
-          <td>${Number(product.discount||0)}</td>
-          <td>${Number(priceWithDiscount).toFixed(2)}</td>
-          <td>${escapeHtml(product.category||'')}</td>
-          <td>${Number(product.quantity)}</td>
-          <td><button class="btn" data-action="sell" data-idx="${idx}"><i class="fa-solid fa-cash-register"></i></button></td>
-        </tr>
-      `;
-    }
-
-    function escapeHtml(str){ if(!str && str!==0) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-    // Load all images lazily using IntersectionObserver
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(e=>{
-        if(e.isIntersecting){
-          const img = e.target;
-          const code = img.dataset.code;
-          if(!img.src){
-            localforage.getItem('img_'+code).then(blob=>{
-              if(blob){
+        setTimeout(() => {
+          filteredInventory.forEach((item, idx) => {
+            localforage.getItem(`img_${item.code}`).then(blob => {
+              if (blob) {
                 const url = URL.createObjectURL(blob);
-                img.src = url;
-                // revoke previous if any
-                if(objectUrlMap.has(img.id)){
-                  try{URL.revokeObjectURL(objectUrlMap.get(img.id))}catch(e){}
-                }
-                objectUrlMap.set(img.id,url);
-              } else {
-                img.src = '';
-                img.style.opacity = 0.6;
+                const img = document.getElementById(`img-${idx}`);
+                if (img) img.src = url;
               }
-            }).catch(err=>{console.error('img load',err)});
-          }
-          io.unobserve(img);
-        }
-      })
-    },{rootMargin:'100px',threshold:0.1});
+            });
+          });
+        }, 100);
+      }
+    }
 
-    // Main render
-    function loadInventory(list = inventory){
-      const tbody = $('inventoryList');
-      tbody.innerHTML = list.map((p,i)=>renderRow(p,i)).join('');
+    function markSold(index) {
+      currentSoldIndex = index;
+      document.getElementById('soldModal').style.display = 'block';
+    }
 
-      // observe images
-      list.forEach((p,i)=>{
-        const img = document.getElementById('img-'+i);
-        if(img){
-          img.onclick = ()=>openImageByCode(p.code);
-          img.onerror = ()=>{ img.style.opacity = 0.6; };
-          io.observe(img);
-        }
+    function closeSoldModal() {
+      document.getElementById('soldModal').style.display = 'none';
+      document.getElementById('confirmationMessage').style.display = 'none';
+    }
+
+    function processSale() {
+      const soldQty = parseInt(document.getElementById('soldQuantity').value);
+      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
+
+      if (isNaN(soldQty) || soldQty <= 0) return alert('Cantidad inválida');
+      if (isNaN(soldPrice) || soldPrice <= 0) return alert('Precio inválido');
+
+      const item = inventory[currentSoldIndex];
+      if (soldQty > item.quantity) return alert('Stock insuficiente');
+
+      item.quantity -= soldQty;
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+
+      let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      soldInventory.push({
+        name: item.name,
+        code: item.code,
+        price: soldPrice,
+        quantity: soldQty,
+        total: soldQty * soldPrice
       });
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
 
-      $('statsCount').textContent = list.length;
-      $('noResults').style.display = list.length ? 'none' : 'block';
+      filterInventory();
+      closeSoldModal();
+      const msg = document.getElementById('resultMessage');
+      msg.textContent = '¡Venta registrada!';
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 3000);
+    }
 
-      // attach sell buttons
-      document.querySelectorAll('[data-action="sell"]').forEach(btn=>{
-        btn.onclick = (ev)=>{ const idx = Number(btn.dataset.idx); openSellModal(idx); };
-      });
+    function filterInventory() {
+      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
+      const code = document.getElementById('searchCode').value.trim().toLowerCase();
 
-      // attach row click for details
-      document.querySelectorAll('#inventoryList tr').forEach(row=>{
-        row.onclick = (e)=>{
-          // avoid triggering when clicking the sell button
-          if(e.target.closest('button')) return;
-          const idx = Number(row.dataset.index);
-          showDetails(idx);
+      if (code) {
+        const foundIndex = inventory.findIndex(item => item.barcode.trim().toLowerCase() === code);
+        if (foundIndex === -1) {
+          document.getElementById('inventoryList').innerHTML = '';
+          document.getElementById('noResultsMessage').style.display = 'block';
+          return;
         }
-      });
-    }
+        const item = inventory[foundIndex];
+        const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
+        document.getElementById('inventoryList').innerHTML = `
+          <tr id="product-${foundIndex}" class="highlight">
+            <td>${foundIndex + 1}</td>
+            <td><img id="img-${foundIndex}" onclick="openImageModal(this.src)" alt=""></td>
+            <td>${item.name}</td>
+            <td>${item.code}</td>
+            <td>${item.barcode}</td>
+            <td>${item.price}</td>
+            <td>${item.discount}</td>
+            <td>${priceWithDiscount}</td>
+            <td>${item.description}</td>
+            <td>${item.category}</td>
+            <td>${item.quantity}</td>
+            <td><button class="stamp" onclick="markSold(${foundIndex})">Vender</button></td>
+          </tr>
+        `;
+        setTimeout(() => {
+          localforage.getItem(`img_${item.code}`).then(blob => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              document.getElementById(`img-${foundIndex}`).src = url;
+            }
+          });
+        }, 100);
+        document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${foundIndex + 1}.`;
+        document.getElementById('resultMessage').style.display = 'block';
+        return;
+      }
 
-    function showDetails(idx){
-      const p = inventory[idx];
-      if(!p) return;
-      $('detailsEmpty').style.display = 'none';
-      $('detailsPanel').style.display = 'block';
-      $('dName').textContent = p.name;
-      $('dCode').textContent = p.code + ' • ' + (p.barcode||'');
-      $('dPrice').textContent = formatCurrency(p.price);
-      $('dStock').textContent = p.quantity + ' en stock';
-      // image
-      localforage.getItem('img_'+p.code).then(blob=>{
-        if(blob){
-          const url = URL.createObjectURL(blob);
-          $('dImg').src = url;
-          // revoke previous image for details if stored
-          if(objectUrlMap.has('details')){ try{URL.revokeObjectURL(objectUrlMap.get('details'))}catch(e){} }
-          objectUrlMap.set('details',url);
-        } else { $('dImg').src = ''; }
-      }).catch(()=>$('dImg').src='');
-
-      // set sell button on details
-      $('btnSellSelected').onclick = ()=> openSellModal(idx);
-    }
-
-    // Open big image modal by code
-    function openImageByCode(code){
-      localforage.getItem('img_'+code).then(blob=>{
-        if(blob){
-          const url = URL.createObjectURL(blob);
-          $('modalImage').src = url;
-          $('imageModal').style.display = 'grid';
-          // remember to revoke on close
-          objectUrlMap.set('modal',url);
-        }
-      }).catch(()=>{});
-    }
-
-    // Sell modal
-    let currentSellIndex = null;
-    function openSellModal(idx){
-      currentSellIndex = idx;
-      const p = inventory[idx];
-      if(!p) return;
-      $('sellName').textContent = p.name + ' • stock: ' + p.quantity;
-      $('sellPrice').value = Number(p.price).toFixed(2);
-      $('sellQty').value = 1;
-      $('sellMsg').style.display = 'none';
-      $('sellModal').style.display = 'grid';
-    }
-
-    function closeSell(){ $('sellModal').style.display = 'none'; currentSellIndex = null; }
-    function closeImage(){ $('imageModal').style.display = 'none'; const u=objectUrlMap.get('modal'); if(u){ try{URL.revokeObjectURL(u)}catch(e){} objectUrlMap.delete('modal'); $('modalImage').src=''; } }
-
-    $('closeSell').onclick = closeSell; $('closeImage').onclick = closeImage;
-
-    $('confirmSell').onclick = ()=>{
-      const qty = Number($('sellQty').value);
-      const price = Number($('sellPrice').value);
-      if(!currentSellIndex && currentSellIndex!==0) return;
-      const p = inventory[currentSellIndex];
-      if(isNaN(qty) || qty<=0){ $('sellMsg').textContent = 'Cantidad inválida'; $('sellMsg').style.display='block'; return; }
-      if(qty>p.quantity){ $('sellMsg').textContent = 'Stock insuficiente'; $('sellMsg').style.display='block'; return; }
-
-      p.quantity = Number(p.quantity) - qty;
-      safeSave('inventory', inventory);
-
-      const sale = { name: p.name, code: p.code, price, quantity: qty, total: price*qty, date: new Date().toISOString() };
-      sales.push(sale);
-      safeSave('sales', sales);
-      updateSalesUI();
-      loadInventory();
-      closeSell();
-    }
-
-    $('btnClear').onclick = ()=>{ $('searchCategory').value=''; $('searchText').value=''; filterInventory(); }
-    $('btnSearch').onclick = ()=> filterInventory();
-    $('btnGo').onclick = ()=> goToRow();
-
-    function filterInventory(){
-      const cat = $('searchCategory').value.trim().toLowerCase();
-      const q = $('searchText').value.trim().toLowerCase();
-
-      const filtered = inventory.filter(p=>{
-        const catOk = !cat || (p.category||'').toLowerCase()===cat;
-        const qOk = !q || (p.name||'').toLowerCase().includes(q) || (p.code||'').toLowerCase()===q || (p.barcode||'').toLowerCase()===q;
-        return catOk && qOk;
-      });
+      const filtered = inventory.filter(i => (!category || i.category.trim().toLowerCase() === category));
       loadInventory(filtered);
     }
 
-    function goToRow(){
-      const r = Number($('goToRow').value);
+    function goToRow() {
+      const row = parseInt(document.getElementById('goToRow').value);
       const rows = document.querySelectorAll('#inventoryList tr');
-      rows.forEach(x=>x.classList.remove('row-highlight'));
-      if(r>=1 && r<=rows.length){
-        const tr = rows[r-1];
-        tr.scrollIntoView({behavior:'smooth',block:'center'});
-        tr.classList.add('row-highlight');
+      rows.forEach(r => r.classList.remove('highlight'));
+      if (row >= 1 && row <= rows.length) {
+        rows[row - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        rows[row - 1].classList.add('highlight');
       } else alert('Fila fuera de rango');
     }
 
-    // Sales UI
-    function updateSalesUI(){
-      $('salesCount').textContent = sales.length + ' ventas';
-    }
-
-    $('btnClearSales').onclick = ()=>{ if(confirm('Eliminar historial de ventas?')){ sales=[]; safeSave('sales',[]); updateSalesUI(); } }
-
-    // Add demo data (helps testing offline quickly)
-    $('btnAddDemo').onclick = ()=>{
-      const demo = [
-        {name:'Arito dorado',code:'AR-001',barcode:'0001001',price:8.5,discount:0,description:'Aro pequeño',category:'Aritos',quantity:12},
-        {name:'Billetera x',code:'BI-102',barcode:'0001102',price:15.0,discount:5,description:'Cuero sintético',category:'Billeteras',quantity:6},
-        {name:'Collar perla',code:'CO-451',barcode:'0001451',price:20.0,discount:10,description:'Collar elegante',category:'Collares',quantity:4}
-      ];
-      // append and save
-      inventory = inventory.concat(demo);
-      safeSave('inventory', inventory);
-      // optionally add demo images as colored blobs (small SVGs)
-      demo.forEach((d, idx)=>{
-        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='hsl(${Math.floor(Math.random()*360)},60%,50%)'/><text x='50%' y='50%' font-size='24' text-anchor='middle' fill='white' dy='.35em'>${d.code}</text></svg>`;
-        const blob = new Blob([svg],{type:'image/svg+xml'});
-        localforage.setItem('img_'+d.code, blob).catch(e=>console.error('save demo img',e));
-      });
+    function clearFilters() {
+      document.getElementById('searchCategory').value = '';
+      document.getElementById('searchCode').value = '';
+      document.getElementById('goToRow').value = '';
       loadInventory();
+      document.getElementById('resultMessage').style.display = 'none';
     }
 
-    // Clear objectURL map on unload
-    window.addEventListener('beforeunload', ()=>{
-      objectUrlMap.forEach(u=>{ try{ URL.revokeObjectURL(u) }catch(e){} });
-    });
+    function openImageModal(src) {
+      document.getElementById('modalImage').src = src;
+      document.getElementById('imageModal').style.display = 'block';
+    }
 
-    // Image modal close by click outside
-    document.getElementById('imageModal').addEventListener('click', (e)=>{ if(e.target.id==='imageModal') closeImage(); });
-    document.getElementById('sellModal').addEventListener('click', (e)=>{ if(e.target.id==='sellModal') closeSell(); });
+    function closeImageModal() {
+      document.getElementById('imageModal').style.display = 'none';
+    }
 
-    // keyboard shortcuts
-    window.addEventListener('keydown', (e)=>{
-      if(e.key==='Escape'){ closeImage(); closeSell(); }
-      if((e.ctrlKey||e.metaKey) && e.key==='f'){ e.preventDefault(); $('searchText').focus(); }
-    });
-
-    // initial load
-    loadInventory(); updateSalesUI();
+    loadInventory();
   </script>
 </body>
 </html>

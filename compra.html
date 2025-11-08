@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Compra</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#1f2937;
+      --accent:#3b82f6;
+      --accent-hover:#2563eb;
+      --danger:#ef4444;
+      --success:#10b981;
+      --radius:16px;
+      --shadow:0 6px 20px rgba(0,0,0,.08);
+      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
+      --transition:.3s ease;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+    h1{font-size:2rem;font-weight:700;margin-bottom:2rem;letter-spacing:-.5px}
+
+    .bubble{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:2rem;
+      box-shadow:var(--shadow);
+      width:100%;
+      max-width:1200px;
+      margin-bottom:2rem;
+      transition:transform var(--transition),box-shadow var(--transition);
+    }
+    .bubble:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
+    label{font-size:.9rem;font-weight:500;margin-bottom:.25rem;display:block}
+    input,select,textarea{
+      width:100%;
+      padding:.75rem 1rem;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#f9fafb;
+      color:var(--text);
+      transition:background .3s,border-color .3s;
+    }
+    input:focus,select:focus,textarea:focus{
+      outline:none;
+      background:#fff;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    button{
+      padding:.75rem 1.5rem;
+      border:none;
+      border-radius:12px;
+      font-weight:600;
+      cursor:pointer;
+      transition:transform .2s,box-shadow .2s;
+    }
+    button:hover{transform:translateY(-2px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
+    .btn-primary:hover{background:var(--accent-hover)}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
+    .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
+    .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
+
+    #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
+
+    /* 4 productos por línea */
+    .table-cards{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:1.5rem;
+    }
+    .card-item{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1.5rem;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:.75rem;
+      transition:transform var(--transition),box-shadow var(--transition);
+    }
+    .card-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .card-item img{width:100%;height:160px;object-fit:cover;border-radius:12px}
+    .card-item h3{font-size:1.1rem;color:var(--accent)}
+    .card-item p{margin:0;font-size:.85rem;color:#6b7280}
+    .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
+
+    .mini-lote{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;
+    }
+    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+    .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
+    .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
+
+    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
+    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
+    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+
+    @media(max-width:1024px){.table-cards{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:768px){.table-cards{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.table-cards{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+  <h1>Compra</h1>
+
+  <!-- Formulario normal -->
+  <div class="bubble" id="formularioBubble">
+    <h2><i class="fa fa-edit"></i> rápida de producto</h2>
+    <form id="purchaseForm" class="form-grid">
+      <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
+      <div><label>Código *</label><input type="text" id="code" name="code" required></div>
+      <div><label>Código de Barras *</label><input type="text" id="barcode" name="barcode" required></div>
+      <div><label>Precio *</label><input type="number" id="price" name="price" step="0.01" required></div>
+      <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
+      <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
+      <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
+      <div><label>Categoría *</label>
+        <select id="category" name="category" required>
+          <option value="">-- Seleccione --</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label>Imagen del producto:</label>
+        <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
+        <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
+      </div>
+      <div style="grid-column:1/-1" class="actions">
+        <button type="submit" class="btn-primary">Guardar producto</button>
+        <button type="button" class="btn-primary" onclick="exportToExcel()">Exportar ZIP</button>
+        <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
+        <button type="button" class="btn-primary" onclick="document.getElementById('importFile').click()">Importar ZIP</button>
+        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromExcel(event)">
+        <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Carga masiva -->
+  <div class="bubble">
+    <h2><i class="fa fa-images"></i> Carga imágenes</h2>
+    <p>Selecciona entre <strong>1 y 100</strong> imágenes. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
+    <div style="margin-bottom:1rem">
+      <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
+      <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
+    </div>
+    <input type="file" id="loteFiles" accept="image/*" multiple>
+    <div class="actions">
+      <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
+      <button class="btn-danger" onclick="vaciarLote()">Vaciar lote actual</button>
+    </div>
+    <div id="loteStatus"></div>
+    <div class="mini-lote" id="lotePreview"></div>
+  </div>
+
+  <!-- Editor de lote -->
+  <div class="bubble" id="editLoteBubble" style="display:none">
+    <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
+    <div class="table-cards" id="editLoteGrid"></div>
+    <div class="actions">
+      <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
+    </div>
+  </div>
+
+  <!-- Inventario -->
+  <div class="bubble">
+    <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
+    <div class="table-cards" id="inventoryList"></div>
+  </div>
+
+  <div class="total-box">
+    <h2>Total en USD</h2>
+    <p id="totalAmount">$0.00</p>
+  </div>
+
+  <script>
+    /* =========================================================
+          VARIABLES GLOBALES
+       ========================================================= */
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let editIndex = -1;
+    let loteTemporal = [];
+
+    /* =========================================================
+          FUNCIONES ORIGINALES (FORMULARIO)
+       ========================================================= */
+    function calculateTotal(){
+      const total = inventory.reduce((sum,item)=>{
+        const price = parseFloat(item.price)||0;
+        const quantity = parseFloat(item.quantity)||0;
+        const discount = parseFloat(item.discount)||0;
+        const finalPrice = price * (1 - discount/100);
+        return sum + finalPrice * quantity;
+      },0);
+      document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function renderTable(){
+      const list = document.getElementById('inventoryList');
+      list.innerHTML = inventory.map((item,idx)=>`
+        <div class="card-item">
+          <img id="invImg${idx}" src="" alt="${item.name}"/>
+          <h3>${item.name}</h3>
+          <p>Código: ${item.code}</p>
+          <p>Cód.Barras: ${item.barcode}</p>
+          <p>Precio: $${item.price}</p>
+          <p>Stock: ${item.quantity}</p>
+          <div class="actions">
+            <button onclick="editItem(${idx})" class="btn-primary">Editar</button>
+            <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+          </div>
+        </div>
+      `).join('');
+      inventory.forEach((p,i)=>{
+        localforage.getItem(`img_${p.code}`).then(blob=>{
+          if(blob) document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+        });
+      });
+    }
+
+    function previewImage(evt){
+      const file = evt.target.files[0];
+      if(!file)return;
+      new Compressor(file,{quality:0.6,maxWidth:800,maxHeight:800,
+        success(result){
+          const reader = new FileReader();
+          reader.onload = e=>{
+            document.getElementById('imagePreview').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+          };
+          reader.readAsDataURL(result);
+          const code = document.getElementById('code').value || 'temp';
+          localforage.setItem(`img_${code}`, result);
+        }
+      });
+    }
+
+    document.getElementById('purchaseForm').addEventListener('submit',function(e){
+      e.preventDefault();
+      const newItem = Object.fromEntries(new FormData(e.target).entries());
+      delete newItem.imageData;
+      editIndex === -1 ? inventory.push(newItem) : (inventory[editIndex] = newItem);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      e.target.reset();
+      document.getElementById('imagePreview').style.display = 'none';
+      editIndex = -1;
+      renderTable(); calculateTotal();
+    });
+
+    function editItem(index){
+      const item = inventory[index];
+      Object.keys(item).forEach(k=>document.getElementById(k).value=item[k]);
+      localforage.getItem(`img_${item.code}`).then(blob=>{
+        if(blob){
+          const url = URL.createObjectURL(blob);
+          document.getElementById('imagePreview').src = url;
+          document.getElementById('imagePreview').style.display = 'block';
+        }
+      });
+      editIndex = index;
+      document.getElementById('formularioBubble').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function deleteItem(index){
+      if(!confirm('¿Eliminar producto?'))return;
+      const item = inventory[index];
+      localforage.removeItem(`img_${item.code}`);
+      inventory.splice(index,1);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      renderTable(); calculateTotal();
+    }
+
+    function vaciarInventario(){
+      if(!confirm('¿Vaciar todo el inventario?'))return;
+      inventory.forEach(p=>localforage.removeItem(`img_${p.code}`));
+      inventory = [];
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      renderTable(); calculateTotal();
+    }
+
+    /* =========================================================
+          IMPORTAR / EXPORTAR  ZIP+JSON+IMAGENES
+       ========================================================= */
+    async function exportToExcel(){
+      const zip = new JSZip();
+      const json = JSON.stringify(inventory, null, 2);
+      zip.file('inventory.json', json);
+
+      const imgFolder = zip.folder('images');
+      for(const p of inventory){
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if(blob) imgFolder.file(`${p.code}.jpg`, blob);
+      }
+      const blobZip = await zip.generateAsync({type:'blob'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobZip);
+      a.download = 'inventario.zip';
+      a.click();
+    }
+
+    function importFromExcel(evt){
+      const file = evt.target.files[0];
+      if(!file || !file.name.endsWith('.zip')){alert('Selecciona un ZIP');return;}
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try{
+          const zip = await JSZip.loadAsync(reader.result);
+          const jsonFile = zip.file('inventory.json');
+          if(!jsonFile){alert('No se encontró inventory.json');return;}
+          const json = await jsonFile.async('string');
+          const imported = JSON.parse(json);
+
+          for(const p of imported){
+            const img = zip.file(`images/${p.code}.jpg`);
+            if(img){
+              const blob = await img.async('blob');
+              await localforage.setItem(`img_${p.code}`, blob);
+            }
+            const exist = inventory.find(x=>x.code===p.code);
+            exist ? Object.assign(exist,p) : inventory.push(p);
+          }
+          localStorage.setItem('inventory', JSON.stringify(inventory));
+          renderTable(); calculateTotal();
+          alert('Importación ZIP completada ✅');
+        }catch(e){alert('Error leyendo ZIP: '+e.message);}
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function exportToPDF(){
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 15;
+      let y = margin;
+
+      pdf.setFontSize(16);
+      pdf.text('Inventario con imágenes', margin, y);
+      y += 10;
+
+      for (let i = 0; i < inventory.length; i++) {
+        const p = inventory[i];
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const imgData = await convertToBase64(url);
+          try { pdf.addImage(imgData, 'JPEG', margin, y, 40, 40); } catch (e) {}
+          URL.revokeObjectURL(url);
+        }
+        pdf.setFontSize(11);
+        pdf.text(`Código: ${p.code}`, 60, y + 7);
+        pdf.text(`Nombre: ${p.name}`, 60, y + 14);
+        pdf.text(`Precio: $${p.price}`, 60, y + 21);
+        pdf.text(`Stock: ${p.quantity}`, 60, y + 28);
+        y += 48;
+        if (y > 250) { pdf.addPage(); y = margin; }
+      }
+      pdf.save('inventario.pdf');
+
+      function convertToBase64(url) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          fetch(url).then(r => r.blob()).then(blob => reader.readAsDataURL(blob));
+        });
+      }
+    }
+
+    /* =========================================================
+          CARGA MASIVA
+       ========================================================= */
+    async function procesarLote(){
+      const files = document.getElementById('loteFiles').files;
+      if(!files.length){alert('Selecciona imágenes');return;}
+      if(files.length<1||files.length>100){alert('Elige entre 1 y 100 imágenes');return;}
+      const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
+      loteTemporal = [];
+      const preview = document.getElementById('lotePreview');
+      preview.innerHTML = '';
+      document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+
+      for(let i=0;i<files.length;i++){
+        const file = files[i];
+        const codigo = `${prefix}${Date.now()}${i}`;
+        await new Promise(res=>{
+          new Compressor(file,{quality:0.6,maxWidth:800,maxHeight:800,
+            success(result){
+              const reader = new FileReader();
+              reader.onload = e=>{
+                const mini = document.createElement('div');
+                mini.className = 'mini-item';
+                mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+                preview.appendChild(mini);
+                localforage.setItem(`img_${codigo}`, result);
+                loteTemporal.push({name:'',code:codigo,barcode:'',price:0,discount:0,quantity:0,description:'',category:''});
+                res();
+              };
+              reader.readAsDataURL(result);
+            },
+            error(err){console.error(err);res();}
+          });
+        });
+      }
+      document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+      mostrarEditorLote();
+    }
+
+    function vaciarLote(){
+      if(!confirm('¿Vaciar lote actual?'))return;
+      loteTemporal.forEach(p=>localforage.removeItem(`img_${p.code}`));
+      loteTemporal = [];
+      document.getElementById('lotePreview').innerHTML = '';
+      document.getElementById('loteStatus').textContent = '';
+      document.getElementById('editLoteBubble').style.display = 'none';
+    }
+
+    function mostrarEditorLote(){
+      const grid = document.getElementById('editLoteGrid');
+      grid.innerHTML = '';
+      document.getElementById('editLoteBubble').style.display = 'block';
+      loteTemporal.forEach((p,i)=>{
+        const card = document.createElement('div');
+        card.className = 'card-item';
+        card.innerHTML = `
+          <img id="loteImg${i}" src="" alt="img"/>
+          <h3>${p.code}</h3>
+          <input placeholder="Nombre" id="loteName${i}" value="${p.name}">
+          <input placeholder="Barras" id="loteBarcode${i}" value="${p.barcode}">
+          <input placeholder="Precio" id="lotePrice${i}" type="number" step="0.01" value="${p.price}">
+          <input placeholder="Desc(%)" id="loteDiscount${i}" type="number" step="0.01" value="${p.discount}">
+          <input placeholder="Stock" id="loteQuantity${i}" type="number" value="${p.quantity}">
+          <input placeholder="Descripción" id="loteDescription${i}" value="${p.description}">
+          <select id="loteCategory${i}">
+            <option value="">-- Categoría --</option>
+            <option value="Aritos">Aritos</option>
+            <option value="Billeteras">Billeteras</option>
+            <option value="Carteras">Carteras</option>
+            <option value="Chokers">Chokers</option>
+            <option value="Collares">Collares</option>
+            <option value="Lentes de sol">Lentes de sol</option>
+            <option value="Pulseras">Pulseras</option>
+            <option value="Relojes">Relojes</option>
+            <option value="Anillos">Anillos</option>
+            <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+            <option value="Otros">Otros</option>
+          </select>
+        `;
+        grid.appendChild(card);
+        localforage.getItem(`img_${p.code}`).then(blob=>{
+          if(blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
+        });
+      });
+    }
+
+    function guardarLoteCompleto(){
+      if(!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`))return;
+      loteTemporal.forEach((p,i)=>{
+        p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+        p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+        p.price = parseFloat(document.getElementById(`lotePrice${i}`).value)||0;
+        p.discount = parseFloat(document.getElementById(`loteDiscount${i}`).value)||0;
+        p.quantity = parseInt(document.getElementById(`loteQuantity${i}`).value)||0;
+        p.description = document.getElementById(`loteDescription${i}`).value.trim();
+        p.category = document.getElementById(`loteCategory${i}`).value;
+      });
+      inventory = inventory.concat(loteTemporal);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      alert('Lote guardado ✅');
+      loteTemporal = [];
+      document.getElementById('editLoteBubble').style.display = 'none';
+      renderTable(); calculateTotal();
+    }
+
+    /* =========================================================
+          INICIO
+       ========================================================= */
+    window.addEventListener('DOMContentLoaded',()=>{
+      renderTable(); calculateTotal();
+    });
+  </script>
+</body>
+</html>

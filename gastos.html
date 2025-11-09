@@ -19,7 +19,6 @@
       color: var(--text);
       padding: 0 1rem 2rem 1rem;
     }
-    /* Título sticky minimalista */
     .header-fixed {
       position: sticky;
       top: 0;
@@ -54,10 +53,19 @@
       align-items: center;
       text-align: center;
       transition: transform .2s, box-shadow .2s;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 0.5s forwards;
     }
     .producto:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .producto img {
       width: 100%;
@@ -76,7 +84,6 @@
       font-size: .8rem;
       color: var(--text);
     }
-    /* Modal imagen grande */
     .modal {
       display: none;
       position: fixed;
@@ -107,7 +114,7 @@
 <body>
 
   <header class="header-fixed">
-    <h1>CATALOGO KLOHE</h1>
+    <h1>CATÁLOGO KLOHE</h1>
   </header>
 
   <div class="catalogo" id="catalogo"></div>
@@ -123,25 +130,52 @@
     const modal = document.getElementById('modal');
     const modalImg = document.getElementById('modalImg');
 
+    const ordenCategorias = [
+      'Carteras',
+      'Collares',
+      'Aritos',
+      'Pulseras',
+      'Anillos',
+      'Accesorios para el cabello',
+      'Lentes de sol',
+      'Chokers',
+      'Relojes',
+      'Billeteras',
+      'Otros'
+    ];
+
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       catalogo.innerHTML = '';
 
+      const porCategoria = {};
       for (const prod of lista) {
-        const div = document.createElement('div');
-        div.className = 'producto';
+        const cat = prod.category || 'Otros';
+        if (!porCategoria[cat]) porCategoria[cat] = [];
+        porCategoria[cat].push(prod);
+      }
 
-        const blob = await localforage.getItem(`img_${prod.code}`);
-        const imgSrc = blob ? URL.createObjectURL(blob) : '';
+      let delay = 0;
+      for (const categoria of ordenCategorias) {
+        const productos = porCategoria[categoria] || [];
+        for (const prod of productos) {
+          const div = document.createElement('div');
+          div.className = 'producto';
+          div.style.animationDelay = `${delay}s`;
 
-        div.innerHTML = `
-          <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
-          <h3>${prod.name}</h3>
-          <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
-          <p><strong>Categoría:</strong> ${prod.category}</p>
-          <p><strong>Código de barras:</strong> ${prod.barcode}</p>
-        `;
-        catalogo.appendChild(div);
+          const blob = await localforage.getItem(`img_${prod.code}`);
+          const imgSrc = blob ? URL.createObjectURL(blob) : '';
+
+          div.innerHTML = `
+            <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
+            <h3>${prod.name}</h3>
+            <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
+            <p><strong>Categoría:</strong> ${prod.category}</p>
+            <p><strong>Código de barras:</strong> ${prod.barcode}</p>
+          `;
+          catalogo.appendChild(div);
+          delay += 0.05;
+        }
       }
     }
 

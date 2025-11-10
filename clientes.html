@@ -15,6 +15,7 @@
       --muted: #6b7280;
       --border: #e5e7eb;
       --radius: 12px;
+      --error: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     html, body { height: 100%; }
@@ -24,15 +25,17 @@
     .right { flex: 0 0 80%; padding: 2rem; overflow-y: auto; }
     h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
     label { font-weight: 500; margin-bottom: 0.25rem; display: block; }
-    input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; }
+    input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; transition: border-color 0.2s; }
     input:focus, select:focus { outline: none; border-color: var(--primary); }
-    button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; background: var(--primary); color: #fff; }
-    button:hover { background: var(--primary-hover); }
+    input.error { border-color: var(--error); }
+    button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; background: var(--primary); color: #fff; transition: background 0.2s; }
+    button:disabled { background: var(--muted); cursor: not-allowed; }
+    button:hover:not(:disabled) { background: var(--primary-hover); }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg); font-weight: 600; }
+    th { background: var(--bg); font-weight: 600; cursor: pointer; }
     .actions { display: flex; gap: 0.25rem; }
-    .actions button { width: 28px; height: 28px; padding: 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; }
+    .actions button { width: 28px; height: 28px; padding: 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; transition: all 0.2s; }
     .actions button:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .modal.active { opacity: 1; pointer-events: auto; }
@@ -40,13 +43,15 @@
     .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
     .notification { position: fixed; bottom: 2rem; right: 2rem; background: var(--primary); color: #fff; padding: 1rem 1.5rem; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 1000; }
     .notification.show { opacity: 1; transform: none; }
+    .history { max-height: 200px; overflow-y: auto; font-size: 0.85rem; margin-top: 1rem; }
+    .history li { margin-bottom: 0.5rem; }
     @media (max-width: 768px) { .split { flex-direction: column; } .left, .right { flex: 1 1 auto; width: 100%; } .left { border-right: none; border-bottom: 1px solid var(--border); } }
   </style>
 </head>
 <body>
   <div class="split">
     <div class="left">
-      <h1>Agregar</h1>
+      <h1>Agregar Cliente</h1>
       <form id="form-cliente">
         <label for="cliente-id">ID</label>
         <input id="cliente-id" placeholder="ABC123" required />
@@ -68,8 +73,9 @@
         <label for="cliente-telefono">Celular</label>
         <input id="cliente-telefono" type="tel" placeholder="777123456" required />
 
-        <button id="btn-guardar">Agregar Cliente</button>
+        <button id="btn-guardar" disabled>Agregar Cliente</button>
       </form>
+      <button id="btn-export" style="margin-top: 1rem; background: #10b981;">Exportar CSV</button>
     </div>
 
     <div class="right">
@@ -84,9 +90,8 @@
           <tr>
             <th>ID</th>
             <th>Correo</th>
-            <th>Tipo Correo</th>
             <th>Celular</th>
-            <th>Puntos</th>
+            <th style="cursor:pointer" id="sort-puntos">Puntos ▼</th>
             <th>Registro</th>
             <th></th>
           </tr>
@@ -96,16 +101,26 @@
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal puntos -->
   <div class="modal" id="modal-overlay">
     <div class="modal-content">
       <h2>Modificar Puntos</h2>
       <input id="input-puntos" type="number" min="1" placeholder="Cantidad" />
+      <input id="input-motivo" placeholder="Motivo (opcional)" style="margin-top: 0.5rem;" />
       <div class="modal-actions">
         <button id="btn-sumar" class="btn-primary">Sumar</button>
         <button id="btn-quitar" style="background:#f59e0b;">Quitar</button>
         <button id="btn-cerrar" style="background:var(--border);color:var(--text);">Cancelar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal historial -->
+  <div class="modal" id="modal-historial">
+    <div class="modal-content">
+      <h2>Historial de Puntos</h2>
+      <ul class="history" id="historial-lista"></ul>
+      <button id="btn-cerrar-historial" style="background:var(--border);color:var(--text);margin-top:1rem;">Cerrar</button>
     </div>
   </div>
 
@@ -170,43 +185,63 @@
           usr.required = true;
           hdn.value = usr.value.trim() + sel.value;
         }
+        validarFormulario();
       }
 
       sel.addEventListener('change', armaCorreo);
       usr.addEventListener('input', armaCorreo);
       armaCorreo();
 
+      function validarFormulario() {
+        const id = $('#cliente-id').value.trim();
+        const correo = hdn.value.trim();
+        const telefono = $('#cliente-telefono').value.trim();
+        const ok = validarId(id) && validarEmail(correo) && validarTel(telefono);
+        $('#btn-guardar').disabled = !ok;
+      }
+
+      $('#cliente-id').addEventListener('input', validarFormulario);
+      $('#cliente-telefono').addEventListener('input', validarFormulario);
+
+      let editando = null;
+      let ordenDesc = true;
+
       function render() {
         const fid   = $('#filtro-id').value.trim().toLowerCase();
         const fcor  = $('#filtro-correo').value.trim().toLowerCase();
         const ftel  = $('#filtro-telefono').value.trim().toLowerCase();
 
-        const filtrados = clientes.filter(c =>
+        let filtrados = clientes.filter(c =>
           (!fid  || c.id === fid) &&
           (!fcor || c.correo.toLowerCase().includes(fcor)) &&
           (!ftel || c.telefono === ftel)
         );
+
+        filtrados.sort((a, b) => ordenDesc ? b.puntos - a.puntos : a.puntos - b.puntos);
 
         $('#clientes-table').innerHTML = filtrados.length
           ? filtrados.map(c => `
               <tr>
                 <td>${c.id}</td>
                 <td>${c.correo}</td>
-                <td>${c.correo.split('@')[1]}</td>
                 <td>${c.telefono}</td>
                 <td>${c.puntos}</td>
                 <td>${c.fecha}</td>
                 <td class="actions">
-                  <button class="edit" data-id="${c.id}">✎</button>
-                  <button class="add" data-id="${c.id}">+</button>
-                  <button class="sub" data-id="${c.id}">−</button>
-                  <button class="del" data-id="${c.id}">×</button>
+                  <button class="history" data-id="${c.id}" title="Historial">📋</button>
+                  <button class="add" data-id="${c.id}" title="Sumar puntos">+</button>
+                  <button class="sub" data-id="${c.id}" title="Restar puntos">−</button>
+                  <button class="del" data-id="${c.id}" title="Eliminar">×</button>
                 </td>
               </tr>`).join('')
-          : `<tr><td colspan="7" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`;
+          : `<tr><td colspan="6" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`;
       }
 
-      let editando = null;
+      $('#sort-puntos').onclick = () => {
+        ordenDesc = !ordenDesc;
+        $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`;
+        render();
+      };
 
       $('#form-cliente').addEventListener('submit', e => {
         e.preventDefault();
@@ -225,7 +260,7 @@
           $('#cliente-id').disabled = false;
         } else {
           if (clientes.some(x => x.id === id)) return alert('ID duplicado');
-          clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString() });
+          clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString(), historial: [] });
           notify('Agregado');
         }
         save(); e.target.reset(); armaCorreo(); render();
@@ -237,14 +272,12 @@
         const id = b.dataset.id;
         const c = clientes.find(x => x.id === id);
         if (!c) return;
-        if (b.classList.contains('edit')) {
-          editando = id;
-          $('#cliente-id').value = c.id;
-          $('#cliente-correo').value = c.correo;
-          $('#cliente-telefono').value = c.telefono;
-          $('#cliente-id').disabled = true;
-          $('#btn-guardar').textContent = 'Actualizar Cliente';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (b.classList.contains('history')) {
+          const modal = $('#modal-historial');
+          modal.classList.add('active');
+          $('#historial-lista').innerHTML = c.historial.length
+            ? c.historial.map(h => `<li><strong>${h.tipo === 'suma' ? '+' : '-'}${h.cantidad}</strong> — ${h.motivo || 'Sin motivo'} — ${h.fecha}</li>`).join('')
+            : '<li>Sin movimientos</li>';
         }
         if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) {
           clientes = clientes.filter(x => x.id !== id);
@@ -262,24 +295,29 @@
           m.dataset.act = b.classList.contains('add') ? 'sum' : 'res';
           m.classList.add('active');
           $('#input-puntos').value = '';
+          $('#input-motivo').value = '';
           $('#input-puntos').focus();
         }
       });
 
       $('#btn-cerrar').onclick = () => $('#modal-overlay').classList.remove('active');
+      $('#btn-cerrar-historial').onclick = () => $('#modal-historial').classList.remove('active');
 
       ['#btn-sumar', '#btn-quitar'].forEach((s, i) => {
         $(s).onclick = () => {
           const cant = parseInt($('#input-puntos').value);
+          const motivo = $('#input-motivo').value.trim();
           if (isNaN(cant) || cant < 1) return alert('Cantidad inválida');
           const id = $('#modal-overlay').dataset.id;
           const c = clientes.find(x => x.id === id);
           if (i === 0) {
             c.puntos += cant;
+            c.historial.unshift({ tipo: 'suma', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
             notify(`+${cant} puntos`);
           } else {
             if (cant > c.puntos) return alert('Puntos insuficientes');
             c.puntos -= cant;
+            c.historial.unshift({ tipo: 'resta', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
             notify(`-${cant} puntos`);
           }
           save(); render();
@@ -290,6 +328,20 @@
       ['#filtro-id', '#filtro-correo', '#filtro-telefono'].forEach(id => {
         $(id).addEventListener('input', render);
       });
+
+      $('#btn-export').onclick = () => {
+        const csv = [
+          ['ID', 'Correo', 'Celular', 'Puntos', 'Registro'],
+          ...clientes.map(c => [c.id, c.correo, c.telefono, c.puntos, c.fecha])
+        ].map(row => row.map(field => `"${field}"`)).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'clientes.csv';
+        a.click();
+        notify('CSV descargado');
+      };
 
       render();
     })();

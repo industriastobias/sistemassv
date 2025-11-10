@@ -1,391 +1,218 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8"/>
   <title>Clientes — 20/80 Split</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #4f46e5; --primary-hover: #4338ca; --bg: #f5f7fa; --card: #ffffff;
-      --text: #111827; --muted: #6b7280; --border: #e5e7eb; --radius: 12px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    html, body { height: 100%; }
-    body { background: var(--bg); color: var(--text); }
-    .split { display: flex; height: 100%; }
-    .left { flex: 0 0 20%; background: var(--card); border-right: 1px solid var(--border); padding: 2rem 1.5rem; overflow-y: auto; }
-    .right { flex: 0 0 80%; padding: 2rem; overflow-y: auto; }
-    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
-    label { font-weight: 500; margin-bottom: 0.25rem; display: block; }
-    input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; }
-    input:focus, select:focus { outline: none; border-color: var(--primary); }
-    button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; background: var(--primary); color: #fff; }
-    button:hover { background: var(--primary-hover); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg); font-weight: 600; cursor: pointer; user-select: none; }
-    .actions { display: flex; gap: 0.25rem; }
-    .actions button { width: 28px; height: 28px; padding: 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; transition: all .2s; }
-    .actions button:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-    .modal.active { opacity: 1; pointer-events: auto; }
-    .modal-content { background: var(--card); padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 400px; }
-    .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
-    .notification { position: fixed; bottom: 2rem; right: 2rem; background: var(--primary); color: #fff; padding: 1rem 1.5rem; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 1000; }
-    .notification.show { opacity: 1; transform: none; }
-    .history { max-height: 200px; overflow-y: auto; font-size: 0.85rem; margin-top: 1rem; }
-    .history li { margin-bottom: 0.5rem; }
-    @media (max-width: 768px) { .split { flex-direction: column; } .left, .right { flex: 1 1 auto; width: 100%; } .left { border-right: none; border-bottom: 1px solid var(--border); } }
+    :root{--primary:#4f46e5;--primary-hover:#4338ca;--bg:#f5f7fa;--card:#ffffff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--radius:12px;--error:#ef4444}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+    html,body{height:100%}body{background:var(--bg);color:var(--text)}
+    .split{display:flex;height:100%}
+    .left{flex:0 0 20%;background:var(--card);border-right:1px solid var(--border);padding:2rem 1.5rem;overflow-y:auto}
+    .right{flex:0 0 80%;padding:2rem;overflow-y:auto}
+    h1{font-size:1.5rem;font-weight:600;margin-bottom:1.5rem}
+    label{font-weight:500;margin-bottom:.25rem;display:block}
+    input,select{width:100%;padding:.6rem .75rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem}
+    input:focus,select:focus{outline:none;border-color:var(--primary)}
+    button{width:100%;padding:.6rem;border:none;border-radius:8px;font-weight:500;cursor:pointer;background:var(--primary);color:#fff}
+    button:hover{background:var(--primary-hover)}
+    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    th,td{padding:.6rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
+    th{background:var(--bg);font-weight:600;cursor:pointer}
+    .actions{display:flex;gap:.25rem}
+    .actions button{width:28px;height:28px;padding:0;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:.9rem;transition:all .2s}
+    .actions button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+    .modal.active{opacity:1;pointer-events:auto}
+    .modal-content{background:var(--card);padding:2rem;border-radius:var(--radius);width:90%;max-width:400px}
+    .modal-actions{display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem}
+    .notification{position:fixed;bottom:2rem;right:2rem;background:var(--primary);color:#fff;padding:1rem 1.5rem;border-radius:8px;opacity:0;transform:translateY(10px);transition:all .3s;z-index:1000}
+    .notification.show{opacity:1;transform:none}
+    .history{max-height:200px;overflow-y:auto;font-size:.85rem;margin-top:1rem}
+    #btn-borrar-historial{background:var(--error);color:#fff}
   </style>
 </head>
 <body>
-  <div class="split">
-    <div class="left">
-      <h1>Agregar</h1>
-      <form id="form-cliente">
-        <label for="cliente-id">ID</label>
-        <input id="cliente-id" placeholder="ABC123" required />
-
-        <label for="cliente-correo-select">Dominio</label>
-        <select id="cliente-correo-select">
-          <option value="@gmail.com">@gmail.com</option>
-          <option value="@outlook.com">@outlook.com</option>
-          <option value="@icloud.com">@icloud.com</option>
-          <option value="@hotmail.com">@hotmail.com</option>
-          <option value="otro">Otro</option>
-        </select>
-
-        <label for="cliente-usuario">Usuario (sin @)</label>
-        <input id="cliente-usuario" placeholder="usuario" />
-        <input id="cliente-correo" type="hidden" />
-
-        <label for="cliente-telefono">Celular</label>
-        <input id="cliente-telefono" type="tel" placeholder="777123456" required />
-
-        <button id="btn-guardar">Agregar Cliente</button>
-      </form>
-      <button id="btn-export-zip" style="margin-top:.5rem;background:#3b82f6;">Exportar ZIP</button>
-      <button id="btn-import-zip" style="margin-top:.5rem;background:#8b5cf6;">Importar ZIP</button>
-      <input type="file" id="input-import-zip" accept=".zip" style="display:none;" />
+<div class="split">
+  <div class="left">
+    <h1>Agregar</h1>
+    <form id="form-cliente">
+      <label>ID</label><input id="cliente-id" placeholder="ABC123" required>
+      <label>Dominio</label>
+      <select id="cliente-correo-select">
+        <option>@gmail.com</option><option>@outlook.com</option><option>@icloud.com</option><option>@hotmail.com</option><option value="otro">Otro</option>
+      </select>
+      <label>Usuario (sin @)</label><input id="cliente-usuario" placeholder="usuario">
+      <input id="cliente-correo" type="hidden">
+      <label>Celular</label><input id="cliente-telefono" type="tel" placeholder="777123456" required>
+      <button id="btn-guardar">Agregar Cliente</button>
+    </form>
+    <button id="btn-export-zip" style="margin-top:.5rem;background:#3b82f6;">Exportar ZIP</button>
+    <button id="btn-import-zip" style="margin-top:.5rem;background:#8b5cf6;">Importar ZIP</button>
+    <input type="file" id="input-import-zip" accept=".zip" style="display:none;">
+  </div>
+  <div class="right">
+    <h1>Clientes</h1>
+    <div class="filters" style="display:flex;gap:1rem;margin-bottom:1rem;">
+      <input id="filtro-id" placeholder="ID"><input id="filtro-correo" placeholder="Correo"><input id="filtro-telefono" placeholder="Celular">
     </div>
+    <table>
+      <thead><tr><th>ID</th><th>Correo</th><th>Tipo</th><th>Celular</th><th id="sort-puntos" style="cursor:pointer">Puntos</th><th id="sort-fecha" style="cursor:pointer">Fecha ▼</th><th></th></tr></thead>
+      <tbody id="clientes-table"></tbody>
+    </table>
+  </div>
+</div>
 
-    <div class="right">
-      <h1>Clientes</h1>
-      <div class="filters" style="display:flex;gap:1rem;margin-bottom:1rem;">
-        <input id="filtro-id" placeholder="ID" />
-        <input id="filtro-correo" placeholder="Correo" />
-        <input id="filtro-telefono" placeholder="Celular" />
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Correo</th>
-            <th>Tipo Correo</th>
-            <th>Celular</th>
-            <th id="sort-puntos" style="cursor:pointer">Puntos</th>
-            <th id="sort-fecha" style="cursor:pointer">Fecha ▼</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="clientes-table"></tbody>
-      </table>
+<!-- Modal puntos -->
+<div class="modal" id="modal-overlay">
+  <div class="modal-content">
+    <h2>Modificar Puntos</h2>
+    <input id="input-puntos" type="number" min="1" placeholder="Cantidad">
+    <input id="input-motivo" placeholder="Motivo (opcional)" style="margin-top:.5rem;">
+    <div class="modal-actions">
+      <button id="btn-sumar" class="btn-primary">Sumar</button>
+      <button id="btn-quitar" style="background:#f59e0b;">Quitar</button>
+      <button id="btn-cerrar" style="background:var(--border);color:var(--text);">Cancelar</button>
     </div>
   </div>
+</div>
 
-  <!-- Modal puntos -->
-  <div class="modal" id="modal-overlay">
-    <div class="modal-content">
-      <h2>Modificar Puntos</h2>
-      <input id="input-puntos" type="number" min="1" placeholder="Cantidad" />
-      <input id="input-motivo" placeholder="Motivo (opcional)" style="margin-top:.5rem;" />
-      <div class="modal-actions">
-        <button id="btn-sumar" class="btn-primary">Sumar</button>
-        <button id="btn-quitar" style="background:#f59e0b;">Quitar</button>
-        <button id="btn-cerrar" style="background:var(--border);color:var(--text);">Cancelar</button>
-      </div>
+<!-- Modal historial -->
+<div class="modal" id="modal-historial">
+  <div class="modal-content">
+    <h2>Historial de Puntos</h2>
+    <ul class="history" id="historial-lista"></ul>
+    <div class="modal-actions">
+      <button id="btn-borrar-historial">Borrar historial</button>
+      <button id="btn-cerrar-historial" style="background:var(--border);color:var(--text);">Cerrar</button>
     </div>
   </div>
+</div>
 
-  <!-- Modal historial -->
-  <div class="modal" id="modal-historial">
-    <div class="modal-content">
-      <h2>Historial de Puntos</h2>
-      <ul class="history" id="historial-lista"></ul>
-      <div class="modal-actions">
-        <button id="btn-borrar-historial" style="background:var(--error);color:#fff;">Borrar historial</button>
-        <button id="btn-cerrar-historial" style="background:var(--border);color:var(--text);">Cerrar</button>
-      </div>
-    </div>
-  </div>
+<div class="notification" id="notification"></div>
 
-  <div class="notification" id="notification"></div>
+<script>
+(() => {
+  const key = 'clientes'; let clientes = [];
+  function load() { try { const r = localStorage.getItem(key); if (r) clientes = JSON.parse(r); } catch {} }
+  function save() { try { localStorage.setItem(key, JSON.stringify(clientes)); } catch {} }
+  load();
+  const $ = s => document.querySelector(s);
+  const notify = m => { const n = $('#notification'); n.textContent = m; n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 3000); };
+  const validarId = i => /^[a-zA-Z0-9\-]{1,20}$/.test(i);
+  const validarEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  const validarTel = t => /^\d{7,15}$/.test(t);
 
-  <script>
-    (() => {
-      const key = 'clientes';
-      let clientes = [];
+  /* correo dinámico */
+  const sel = $('#cliente-correo-select'), usr = $('#cliente-usuario'), hdn = $('#cliente-correo');
+  function armaCorreo() {
+    if (sel.value === 'otro') { hdn.type = 'email'; hdn.placeholder = 'correo@dominio.com'; hdn.disabled = false; usr.style.display = 'none'; usr.required = false; hdn.required = true; }
+    else { hdn.type = 'hidden'; hdn.disabled = true; usr.style.display = 'block'; usr.placeholder = 'usuario'; hdn.required = false; usr.required = true; hdn.value = usr.value.trim() + sel.value; }
+  }
+  sel.addEventListener('change', armaCorreo); usr.addEventListener('input', armaCorreo); armaCorreo();
 
-      function load() {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) clientes = JSON.parse(raw);
-        } catch (e) {
-          console.warn('Error al cargar clientes:', e);
-          clientes = [];
-        }
-      }
+  /* orden por fecha (default) */
+  let ordenDesc = true, ordenarPor = 'fecha';
+  $('#sort-fecha').onclick = () => { if (ordenarPor === 'fecha') ordenDesc = !ordenDesc; else { ordenarPor = 'fecha'; ordenDesc = true; } $('#sort-fecha').textContent = `Fecha ${ordenDesc ? '▼' : '▲'}`; $('#sort-puntos').textContent = 'Puntos'; render(); };
+  $('#sort-puntos').onclick = () => { if (ordenarPor === 'puntos') ordenDesc = !ordenDesc; else { ordenarPor = 'puntos'; ordenDesc = true; } $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`; $('#sort-fecha').textContent = 'Fecha'; render(); };
 
-      function save() {
-        try {
-          localStorage.setItem(key, JSON.stringify(clientes));
-        } catch (e) {
-          alert('Error al guardar: límite de almacenamiento');
-        }
-      }
+  let clienteActualHistorial = null;
 
-      load();
+  function render() {
+    const fid = $('#filtro-id').value.trim().toLowerCase();
+    const fcor = $('#filtro-correo').value.trim().toLowerCase();
+    const ftel = $('#filtro-telefono').value.trim().toLowerCase();
+    let filtrados = clientes.filter(c => (!fid || c.id === fid) && (!fcor || c.correo.toLowerCase().includes(fcor)) && (!ftel || c.telefono === ftel));
+    filtrados.sort((a, b) => { const valA = ordenarPor === 'fecha' ? new Date(a.fecha) : a.puntos; const valB = ordenarPor === 'fecha' ? new Date(b.fecha) : b.puntos; return ordenDesc ? valB - valA : valA - valB; });
+    $('#clientes-table').innerHTML = filtrados.length ? filtrados.map(c => `
+      <tr>
+        <td>${c.id}</td><td>${c.correo}</td><td>${c.correo.split('@')[1]}</td><td>${c.telefono}</td><td>${c.puntos}</td><td>${c.fecha}</td>
+        <td class="actions">
+          <button class="history" data-id="${c.id}" title="Historial">📋</button>
+          <button class="edit" data-id="${c.id}">✎</button>
+          <button class="add" data-id="${c.id}">+</button>
+          <button class="sub" data-id="${c.id}">−</button>
+          <button class="del" data-id="${c.id}">×</button>
+        </td>
+      </tr>`) : `<tr><td colspan="7" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`;
+  }
 
-      const $ = s => document.querySelector(s);
-      const notify = msg => {
-        const n = $('#notification');
-        n.textContent = msg;
-        n.classList.add('show');
-        setTimeout(() => n.classList.remove('show'), 3000);
-      };
+  let editando = null;
+  $('#form-cliente').addEventListener('submit', e => {
+    e.preventDefault();
+    const id = $('#cliente-id').value.trim(), correo = hdn.value.trim(), telefono = $('#cliente-telefono').value.trim();
+    if (!validarId(id)) return alert('ID inválido'); if (!validarEmail(correo)) return alert('Correo inválido'); if (!validarTel(telefono)) return alert('Celular inválido');
+    if (editando) { const c = clientes.find(x => x.id === editando); c.correo = correo; c.telefono = telefono; notify('Actualizado'); editando = null; $('#btn-guardar').textContent = 'Agregar Cliente'; $('#cliente-id').disabled = false; }
+    else { if (clientes.some(x => x.id === id)) return alert('ID duplicado'); clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString(), historial: [] }); notify('Agregado'); }
+    save(); e.target.reset(); armaCorreo(); render();
+  });
 
-      const validarId = i => /^[a-zA-Z0-9\-]{1,20}$/.test(i);
-      const validarEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-      const validarTel = t => /^\d{7,15}$/.test(t);
+  $('#clientes-table').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return; const id = b.dataset.id; const c = clientes.find(x => x.id === id); if (!c) return;
+    if (b.classList.contains('history')) { clienteActualHistorial = c; $('#modal-historial').classList.add('active'); actualizarHistorial(); }
+    if (b.classList.contains('edit')) { editando = id; $('#cliente-id').value = c.id; $('#cliente-correo').value = c.correo; $('#cliente-telefono').value = c.telefono; $('#cliente-id').disabled = true; $('#btn-guardar').textContent = 'Actualizar Cliente'; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) { clientes = clientes.filter(x => x.id !== id); save(); render(); if (editando === id) { editando = null; $('#form-cliente').reset(); $('#btn-guardar').textContent = 'Agregar Cliente'; $('#cliente-id').disabled = false; } }
+    if (b.classList.contains('add') || b.classList.contains('sub')) { const m = $('#modal-overlay'); m.dataset.id = id; m.dataset.act = b.classList.contains('add') ? 'sum' : 'res'; m.classList.add('active'); $('#input-puntos').value = ''; $('#input-motivo').value = ''; $('#input-puntos').focus(); }
+  });
 
-      const sel = $('#cliente-correo-select');
-      const usr = $('#cliente-usuario');
-      const hdn = $('#cliente-correo');
+  $('#btn-cerrar').onclick = () => $('#modal-overlay').classList.remove('active');
+  $('#btn-cerrar-historial').onclick = () => $('#modal-historial').classList.remove('active');
 
-      function armaCorreo() {
-        if (sel.value === 'otro') {
-          hdn.type = 'email';
-          hdn.placeholder = 'correo@dominio.com';
-          hdn.disabled = false;
-          usr.style.display = 'none';
-          usr.required = false;
-          hdn.required = true;
-        } else {
-          hdn.type = 'hidden';
-          hdn.disabled = true;
-          usr.style.display = 'block';
-          usr.placeholder = 'usuario';
-          hdn.required = false;
-          usr.required = true;
-          hdn.value = usr.value.trim() + sel.value;
-        }
-      }
+  $('#btn-borrar-historial').onclick = () => {
+    if (!clienteActualHistorial) return;
+    if (!confirm(`¿Borrar TODO el historial de ${clienteActualHistorial.id}?`)) return;
+    clienteActualHistorial.historial = [];
+    save();
+    actualizarHistorial();
+    render();
+    notify('Historial borrado');
+  };
 
-      sel.addEventListener('change', armaCorreo);
-      usr.addEventListener('input', armaCorreo);
-      armaCorreo();
+  function actualizarHistorial() {
+    if (!clienteActualHistorial) return;
+    $('#historial-lista').innerHTML = clienteActualHistorial.historial.length
+      ? clienteActualHistorial.historial.map(h => `<li><strong>${h.tipo === 'suma' ? '+' : '-'}${h.cantidad}</strong> — ${h.motivo || 'Sin motivo'} — ${h.fecha}</li>`).join('')
+      : '<li>Sin movimientos</li>';
+  }
 
-      let ordenDesc = true;   // true = más reciente primero
-      let ordenarPor = 'fecha'; // 'fecha' | 'puntos'
+  ['#btn-sumar', '#btn-quitar'].forEach((s, i) => $(s).onclick = () => {
+    const cant = parseInt($('#input-puntos').value), motivo = $('#input-motivo').value.trim();
+    if (isNaN(cant) || cant < 1) return alert('Cantidad inválida');
+    const id = $('#modal-overlay').dataset.id, c = clientes.find(x => x.id === id);
+    if (i === 0) { c.puntos += cant; c.historial.unshift({ tipo: 'suma', cantidad: cant, motivo, fecha: new Date().toLocaleString() }); notify(`+${cant} puntos`); } else { if (cant > c.puntos) return alert('Puntos insuficientes'); c.puntos -= cant; c.historial.unshift({ tipo: 'resta', cantidad: cant, motivo, fecha: new Date().toLocaleString() }); notify(`-${cant} puntos`); }
+    save(); render(); $('#modal-overlay').classList.remove('active');
+  });
 
-      $('#sort-fecha').onclick = () => {
-        if (ordenarPor === 'fecha') ordenDesc = !ordenDesc;
-        else { ordenarPor = 'fecha'; ordenDesc = true; }
-        $('#sort-fecha').textContent = `Fecha ${ordenDesc ? '▼' : '▲'}`;
-        $('#sort-puntos').textContent = 'Puntos';
-        render();
-      };
-      $('#sort-puntos').onclick = () => {
-        if (ordenarPor === 'puntos') ordenDesc = !ordenDesc;
-        else { ordenarPor = 'puntos'; ordenDesc = true; }
-        $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`;
-        $('#sort-fecha').textContent = 'Fecha';
-        render();
-      };
+  /* ---------- ZIP ---------- */
+  $('#btn-export-zip').onclick = async () => {
+    const zip = (await import('https://cdn.skypack.dev/jszip@3.10.1')).default();
+    zip.file('clientes.json', JSON.stringify(clientes));
+    const rows = [['ID', 'Correo', 'Tipo', 'Cantidad', 'Motivo', 'Fecha']];
+    clientes.forEach(c => c.historial.forEach(h => rows.push([c.id, c.correo, h.tipo, h.cantidad, h.motivo || '', h.fecha])));
+    const csv = rows.map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+    zip.file('historial_completo.csv', csv);
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clientes_historial.zip'; a.click();
+    notify('ZIP exportado');
+  };
+  $('#btn-import-zip').onclick = () => $('#input-import-zip').click();
+  $('#input-import-zip').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file || !file.name.endsWith('.zip')) return notify('Archivo no válido');
+    try {
+      const zip = await (await import('https://cdn.skypack.dev/jszip@3.10.1')).default.loadAsync(file);
+      const jsonFile = zip.file('clientes.json');
+      if (!jsonFile) return notify('No se encontró clientes.json en el ZIP');
+      const data = JSON.parse(await jsonFile.async('text'));
+      if (!Array.isArray(data)) throw new Error('Formato inválido');
+      if (confirm(`¿Importar ${data.length} clientes? Se reemplazarán los actuales.`)) { clientes = data; save(); render(); notify('ZIP importado correctamente'); }
+    } catch (err) { notify('Error al importar ZIP'); console.error(err); }
+    e.target.value = '';
+  });
 
-      let clienteActualHistorial = null; // cliente cuyo historial está abierto
-
-      function render() {
-        const fid = $('#filtro-id').value.trim().toLowerCase();
-        const fcor = $('#filtro-correo').value.trim().toLowerCase();
-        const ftel = $('#filtro-telefono').value.trim().toLowerCase();
-
-        let filtrados = clientes.filter(c =>
-          (!fid || c.id === fid) &&
-          (!fcor || c.correo.toLowerCase().includes(fcor)) &&
-          (!ftel || c.telefono === ftel)
-        );
-
-        filtrados.sort((a, b) => {
-          const valA = ordenarPor === 'fecha' ? new Date(a.fecha) : a.puntos;
-          const valB = ordenarPor === 'fecha' ? new Date(b.fecha) : b.puntos;
-          return ordenDesc ? valB - valA : valA - valB;
-        });
-
-        $('#clientes-table').innerHTML = filtrados.length
-          ? filtrados.map(c => `
-              <tr>
-                <td>${c.id}</td>
-                <td>${c.correo}</td>
-                <td>${c.correo.split('@')[1]}</td>
-                <td>${c.telefono}</td>
-                <td>${c.puntos}</td>
-                <td>${c.fecha}</td>
-                <td class="actions">
-                  <button class="history" data-id="${c.id}" title="Historial">📋</button>
-                  <button class="edit" data-id="${c.id}">✎</button>
-                  <button class="add" data-id="${c.id}">+</button>
-                  <button class="sub" data-id="${c.id}">−</button>
-                  <button class="del" data-id="${c.id}">×</button>
-                </td>
-              </tr>`).join('')
-          : `<tr><td colspan="7" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`;
-      }
-
-      let editando = null;
-
-      $('#form-cliente').addEventListener('submit', e => {
-        e.preventDefault();
-        const id = $('#cliente-id').value.trim();
-        const correo = hdn.value.trim();
-        const telefono = $('#cliente-telefono').value.trim();
-        if (!validarId(id)) return alert('ID inválido');
-        if (!validarEmail(correo)) return alert('Correo inválido');
-        if (!validarTel(telefono)) return alert('Celular inválido');
-        if (editando) {
-          const c = clientes.find(x => x.id === editando);
-          c.correo = correo; c.telefono = telefono;
-          notify('Actualizado');
-          editando = null;
-          $('#btn-guardar').textContent = 'Agregar Cliente';
-          $('#cliente-id').disabled = false;
-        } else {
-          if (clientes.some(x => x.id === id)) return alert('ID duplicado');
-          clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString(), historial: [] });
-          notify('Agregado');
-        }
-        save(); e.target.reset(); armaCorreo(); render();
-      });
-
-      $('#clientes-table').addEventListener('click', e => {
-        const b = e.target.closest('button');
-        if (!b) return;
-        const id = b.dataset.id;
-        const c = clientes.find(x => x.id === id);
-        if (!c) return;
-
-        if (b.classList.contains('history')) {
-          clienteActualHistorial = c;
-          $('#modal-historial').classList.add('active');
-          actualizarHistorial();
-        }
-        if (b.classList.contains('edit')) {
-          editando = id;
-          $('#cliente-id').value = c.id;
-          $('#cliente-correo').value = c.correo;
-          $('#cliente-telefono').value = c.telefono;
-          $('#cliente-id').disabled = true;
-          $('#btn-guardar').textContent = 'Actualizar Cliente';
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) {
-          clientes = clientes.filter(x => x.id !== id);
-          save(); render();
-          if (editando === id) {
-            editando = null;
-            $('#form-cliente').reset();
-            $('#btn-guardar').textContent = 'Agregar Cliente';
-            $('#cliente-id').disabled = false;
-          }
-        }
-        if (b.classList.contains('add') || b.classList.contains('sub')) {
-          const m = $('#modal-overlay');
-          m.dataset.id = id;
-          m.dataset.act = b.classList.contains('add') ? 'sum' : 'res';
-          m.classList.add('active');
-          $('#input-puntos').value = '';
-          $('#input-motivo').value = '';
-          $('#input-puntos').focus();
-        }
-      });
-
-      $('#btn-cerrar').onclick = () => $('#modal-overlay').classList.remove('active');
-      $('#btn-cerrar-historial').onclick = () => $('#modal-historial').classList.remove('active');
-
-      /* ---------- BORRAR HISTORIAL ---------- */
-      $('#btn-borrar-historial').onclick = () => {
-        if (!clienteActualHistorial) return;
-        if (!confirm(`¿Borrar todo el historial de ${clienteActualHistorial.id}?`)) return;
-        clienteActualHistorial.historial = [];
-        save();
-        actualizarHistorial();
-        render();
-        notify('Historial borrado');
-      };
-
-      function actualizarHistorial() {
-        if (!clienteActualHistorial) return;
-        $('#historial-lista').innerHTML = clienteActualHistorial.historial.length
-          ? clienteActualHistorial.historial.map(h => `<li><strong>${h.tipo === 'suma' ? '+' : '-'}${h.cantidad}</strong> — ${h.motivo || 'Sin motivo'} — ${h.fecha}</li>`).join('')
-          : '<li>Sin movimientos</li>';
-      }
-
-      ['#btn-sumar', '#btn-quitar'].forEach((s, i) => {
-        $(s).onclick = () => {
-          const cant = parseInt($('#input-puntos').value);
-          const motivo = $('#input-motivo').value.trim();
-          if (isNaN(cant) || cant < 1) return alert('Cantidad inválida');
-          const id = $('#modal-overlay').dataset.id;
-          const c = clientes.find(x => x.id === id);
-          if (i === 0) {
-            c.puntos += cant;
-            c.historial.unshift({ tipo: 'suma', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
-            notify(`+${cant} puntos`);
-          } else {
-            if (cant > c.puntos) return alert('Puntos insuficientes');
-            c.puntos -= cant;
-            c.historial.unshift({ tipo: 'resta', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
-            notify(`-${cant} puntos`);
-          }
-          save(); render();
-          $('#modal-overlay').classList.remove('active');
-        };
-      });
-
-      /* ---------- ZIP ---------- */
-      $('#btn-export-zip').onclick = async () => {
-        const zip = (await import('https://cdn.skypack.dev/jszip@3.10.1')).default();
-        zip.file('clientes.json', JSON.stringify(clientes));
-        const rows = [['ID', 'Correo', 'Tipo', 'Cantidad', 'Motivo', 'Fecha']];
-        clientes.forEach(c => c.historial.forEach(h => rows.push([c.id, c.correo, h.tipo, h.cantidad, h.motivo || '', h.fecha])));
-        const csv = rows.map(r => r.map(f => `"${f}"`).join(',')).join('\n');
-        zip.file('historial_completo.csv', csv);
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clientes_historial.zip'; a.click();
-        notify('ZIP exportado');
-      };
-      $('#btn-import-zip').onclick = () => $('#input-import-zip').click();
-      $('#input-import-zip').addEventListener('change', async e => {
-        const file = e.target.files[0];
-        if (!file || !file.name.endsWith('.zip')) return notify('Archivo no válido');
-        try {
-          const zip = await (await import('https://cdn.skypack.dev/jszip@3.10.1')).default.loadAsync(file);
-          const jsonFile = zip.file('clientes.json');
-          if (!jsonFile) return notify('No se encontró clientes.json en el ZIP');
-          const data = JSON.parse(await jsonFile.async('text'));
-          if (!Array.isArray(data)) throw new Error('Formato inválido');
-          if (confirm(`¿Importar ${data.length} clientes? Se reemplazarán los actuales.`)) {
-            clientes = data; save(); render(); notify('ZIP importado correctamente');
-          }
-        } catch (err) { notify('Error al importar ZIP'); console.error(err); }
-        e.target.value = '';
-      });
-
-      ['#filtro-id', '#filtro-correo', '#filtro-telefono'].forEach(id => $(id).addEventListener('input', render));
-
-      render();
-    })();
-  </script>
+  ['#filtro-id', '#filtro-correo', '#filtro-telefono'].forEach(id => $(id).addEventListener('input', render));
+  render();
+})();
+</script>
 </body>
 </html>

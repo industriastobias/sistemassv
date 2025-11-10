@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FINANZAS - IndexedDB</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --color-bg: #f4f6f8;
@@ -15,7 +15,6 @@
       --radius: 12px;
       --shadow: 0 3px 10px rgba(0,0,0,0.05);
     }
-
     body {
       font-family: "Inter", Arial, sans-serif;
       background: var(--color-bg);
@@ -23,7 +22,6 @@
       margin: 0;
       padding: 0;
     }
-
     header {
       background: var(--color-primary);
       color: white;
@@ -33,15 +31,25 @@
       font-weight: 600;
       letter-spacing: 0.5px;
       box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-
+    header button {
+      background: white;
+      color: var(--color-primary);
+      border: none;
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
     nav {
       display: flex;
       justify-content: center;
       background: white;
       border-bottom: 1px solid #ddd;
     }
-
     .tab {
       padding: 1rem 1.5rem;
       cursor: pointer;
@@ -49,41 +57,33 @@
       color: #666;
       transition: all 0.2s;
     }
-
     .tab.active {
       color: var(--color-primary);
       border-bottom: 3px solid var(--color-primary);
       background: #f9fafc;
     }
-
     main {
       padding: 2rem;
       max-width: 1200px;
       margin: auto;
     }
-
     section {
       display: none;
       animation: fadeIn 0.3s ease-in-out;
     }
-
     section.active {
       display: block;
     }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
-    /* Dashboard */
     .dashboard {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 1.5rem;
       margin-bottom: 2rem;
     }
-
     .card {
       background: var(--color-card);
       padding: 1.5rem;
@@ -92,28 +92,22 @@
       text-align: center;
       transition: transform 0.2s;
     }
-
     .card:hover { transform: translateY(-3px); }
-
     .card h3 {
       font-size: 1rem;
       color: #888;
       margin-bottom: 0.5rem;
     }
-
     .card p {
       font-size: 1.4rem;
       font-weight: 600;
       color: var(--color-secondary);
     }
-
     canvas {
       display: block;
       margin: 2rem auto;
       max-width: 350px;
     }
-
-    /* Formularios */
     form {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -124,7 +118,6 @@
       box-shadow: var(--shadow);
       margin-bottom: 1.5rem;
     }
-
     input, select, textarea {
       width: 100%;
       padding: 8px 10px;
@@ -133,9 +126,7 @@
       font-family: inherit;
       font-size: 0.9rem;
     }
-
     textarea { resize: vertical; min-height: 60px; }
-
     button {
       background: var(--color-primary);
       color: white;
@@ -146,12 +137,9 @@
       font-weight: 500;
       transition: background 0.2s;
     }
-
     button:hover {
       background: var(--color-secondary);
     }
-
-    /* Tablas */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -160,24 +148,20 @@
       border-radius: var(--radius);
       overflow: hidden;
     }
-
     th, td {
       padding: 10px;
       border-bottom: 1px solid #eee;
       text-align: left;
       font-size: 0.9rem;
     }
-
     th {
       background: #f8f9fa;
       color: #555;
       font-weight: 600;
     }
-
     tr:hover td {
       background: #f3f6fa;
     }
-
     .acciones button {
       background: none;
       border: none;
@@ -185,10 +169,8 @@
       font-size: 1rem;
       margin: 0 5px;
     }
-
     .acciones .editar { color: #1a73e8; }
     .acciones .eliminar { color: #e53935; }
-
     footer {
       text-align: center;
       padding: 1rem;
@@ -199,255 +181,344 @@
 </head>
 <body>
 
-  <header>📊FINANZAS</header>
+<header>
+  <span>📊 FINANZAS</span>
+  <div>
+    <button onclick="exportarJSON()">Exportar JSON</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
+    <button onclick="document.getElementById('importFile').click()">Importar JSON</button>
+  </div>
+</header>
 
-  <nav>
-    <div class="tab active" data-tab="dashboard">Dashboard</div>
-    <div class="tab" data-tab="ingresos">Ingresos</div>
-    <div class="tab" data-tab="gastos">Gastos</div>
-    <div class="tab" data-tab="proveedores">Proveedores</div>
-    <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
-  </nav>
+<nav>
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="ingresos">Ingresos</div>
+  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="proveedores">Proveedores</div>
+  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
+</nav>
 
-  <main>
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="active">
-      <h2>Resumen General</h2>
-      <div class="dashboard">
-        <div class="card">
-          <h3>Total Ingresos</h3>
-          <p id="totalIngresos">$0.00</p>
-        </div>
-        <div class="card">
-          <h3>Total Gastos</h3>
-          <p id="totalGastos">$0.00</p>
-        </div>
-        <div class="card">
-          <h3>Saldo Neto</h3>
-          <p id="balance">$0.00</p>
-        </div>
+<main>
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="active">
+    <h2>Resumen General</h2>
+    <div class="dashboard">
+      <div class="card">
+        <h3>Total Ingresos</h3>
+        <p id="totalIngresos">$0.00</p>
       </div>
-      <canvas id="chartResumen"></canvas>
-    </section>
+      <div class="card">
+        <h3>Total Gastos</h3>
+        <p id="totalGastos">$0.00</p>
+      </div>
+      <div class="card">
+        <h3>Saldo Neto</h3>
+        <p id="balance">$0.00</p>
+      </div>
+    </div>
+    <canvas id="chartResumen"></canvas>
+  </section>
 
-    <!-- INGRESOS -->
-    <section id="ingresos">
-      <h2>Ingresos</h2>
-      <form id="formIngreso">
-        <input name="fecha" type="date" required />
-        <input name="descripcion" placeholder="Descripción" required />
-        <input name="categoria" placeholder="Categoría" />
-        <input name="monto" type="number" step="0.01" placeholder="Monto" required />
-        <input name="metodo_pago" placeholder="Método de pago" />
-        <input name="responsable" placeholder="Responsable" />
-        <textarea name="observaciones" placeholder="Observaciones"></textarea>
-        <button type="submit">Guardar</button>
-      </form>
-      <table id="tablaIngresos">
-        <thead>
-          <tr>
-            <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- GASTOS -->
-    <section id="gastos">
-      <h2>Gastos</h2>
-      <form id="formGasto">
-        <input name="fecha" type="date" required />
-        <input name="proveedor" placeholder="Proveedor" />
-        <input name="categoria" placeholder="Categoría" />
-        <input name="descripcion" placeholder="Descripción" />
-        <input name="monto" type="number" step="0.01" placeholder="Monto" required />
-        <input name="metodo_pago" placeholder="Método de pago" />
-        <input name="responsable" placeholder="Responsable" />
-        <textarea name="observaciones" placeholder="Observaciones"></textarea>
-        <button type="submit">Guardar</button>
-      </form>
-      <table id="tablaGastos">
-        <thead>
-          <tr>
-            <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- PROVEEDORES -->
-    <section id="proveedores">
-      <h2>Proveedores</h2>
-      <form id="formProveedor">
-        <input name="nombre" placeholder="Nombre" required />
-        <input name="nit" placeholder="NIT" />
-        <input name="telefono" placeholder="Teléfono" />
-        <input name="email" type="email" placeholder="Email" />
-        <input name="direccion" placeholder="Dirección" />
-        <textarea name="observaciones" placeholder="Observaciones"></textarea>
-        <button type="submit">Guardar</button>
-      </form>
-      <table id="tablaProveedores">
-        <thead>
-          <tr>
-            <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- CUENTAS -->
-    <section id="cuentas">
-      <h2>Cuentas Pendientes</h2>
-      <form id="formCuenta">
-        <select name="tipo">
-          <option>Por cobrar</option>
-          <option>Por pagar</option>
-        </select>
-        <input name="cliente_proveedor" placeholder="Cliente / Proveedor" />
-        <input name="concepto" placeholder="Concepto" />
-        <input name="monto" type="number" step="0.01" placeholder="Monto" required />
-        <input name="fecha_vencimiento" type="date" />
-        <select name="estado">
-          <option>Pendiente</option>
-          <option>Pagado</option>
-        </select>
-        <textarea name="observaciones" placeholder="Observaciones"></textarea>
-        <button type="submit">Guardar</button>
-      </form>
-      <table id="tablaCuentas">
-        <thead>
-          <tr>
-            <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-  </main>
-
-  <footer>© 2025 Panel Financiero Empresarial</footer>
-
-  <script>
-    // Navegación entre secciones
-    const tabs = document.querySelectorAll('.tab');
-    const sections = document.querySelectorAll('section');
-    tabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-        tabs.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const id = btn.dataset.tab;
-        sections.forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-      });
-    });
-
-    // LocalStorage
-    const data = {
-      ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
-      gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
-      proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
-      cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
-    };
-
-    const saveData = () => {
-      for (let k in data) localStorage.setItem(k, JSON.stringify(data[k]));
-      actualizarDashboard();
-    };
-
-    // Gráfico
-    const ctx = document.getElementById('chartResumen').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Ingresos', 'Gastos', 'Saldo Neto'],
-        datasets: [{
-          data: [0, 0, 0],
-          backgroundColor: ['#1a73e8', '#e53935', '#43a047'],
-          hoverOffset: 10
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { position: 'bottom' } }
-      }
-    });
-
-    const actualizarDashboard = () => {
-      const totalIngresos = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
-      const totalGastos = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
-      const balance = totalIngresos - totalGastos;
-      document.getElementById('totalIngresos').textContent = '$' + totalIngresos.toFixed(2);
-      document.getElementById('totalGastos').textContent = '$' + totalGastos.toFixed(2);
-      document.getElementById('balance').textContent = '$' + balance.toFixed(2);
-      chart.data.datasets[0].data = [totalIngresos, totalGastos, Math.abs(balance)];
-      chart.update();
-    };
-
-    // Render de tablas
-    const renderTable = (id, arr, keys, keyName) => {
-      const tbody = document.querySelector(`#${id} tbody`);
-      tbody.innerHTML = arr.map((item, i) => `
+  <!-- INGRESOS -->
+  <section id="ingresos">
+    <h2>Ingresos</h2>
+    <form id="formIngreso">
+      <input name="fecha" type="date" required />
+      <input name="descripcion" placeholder="Descripción" required />
+      <input name="categoria" placeholder="Categoría" />
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required />
+      <input name="metodo_pago" placeholder="Método de pago" />
+      <input name="responsable" placeholder="Responsable" />
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <table id="tablaIngresos">
+      <thead>
         <tr>
-          ${keys.map(k => `<td>${item[k] || ''}</td>`).join('')}
-          <td class="acciones">
-            <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-            <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
-          </td>
+          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
         </tr>
-      `).join('');
-      actualizarDashboard();
-    };
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
-    const forms = [
-      { id: 'formIngreso', key: 'ingresos', table: 'tablaIngresos', fields: ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'] },
-      { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
-      { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
-      { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
-    ];
+  <!-- GASTOS -->
+  <section id="gastos">
+    <h2>Gastos</h2>
+    <form id="formGasto">
+      <input name="fecha" type="date" required />
+      <input name="proveedor" placeholder="Proveedor" />
+      <input name="categoria" placeholder="Categoría" />
+      <input name="descripcion" placeholder="Descripción" />
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required />
+      <input name="metodo_pago" placeholder="Método de pago" />
+      <input name="responsable" placeholder="Responsable" />
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <table id="tablaGastos">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
-    // Eliminar / Editar
-    document.addEventListener('click', e => {
-      if (e.target.classList.contains('eliminar')) {
-        const { key, index } = e.target.dataset;
-        if (confirm('¿Eliminar este registro?')) {
-          data[key].splice(index, 1);
-          saveData();
-          const f = forms.find(f => f.key === key);
-          renderTable(f.table, data[key], f.fields, key);
-        }
-      }
-      if (e.target.classList.contains('editar')) {
-        const { key, index } = e.target.dataset;
-        const f = forms.find(f => f.key === key);
-        const form = document.getElementById(f.id);
-        const item = data[key][index];
-        f.fields.forEach(k => form[k].value = item[k] || '');
-        data[key].splice(index, 1);
-        saveData();
-        renderTable(f.table, data[key], f.fields, key);
-      }
-    });
+  <!-- PROVEEDORES -->
+  <section id="proveedores">
+    <h2>Proveedores</h2>
+    <form id="formProveedor">
+      <input name="nombre" placeholder="Nombre" required />
+      <input name="nit" placeholder="NIT" />
+      <input name="telefono" placeholder="Teléfono" />
+      <input name="email" type="email" placeholder="Email" />
+      <input name="direccion" placeholder="Dirección" />
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <table id="tablaProveedores">
+      <thead>
+        <tr>
+          <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
-    // Guardar formularios
-    forms.forEach(f => {
-      const form = document.getElementById(f.id);
-      form.addEventListener('submit', e => {
-        e.preventDefault();
-        const item = {};
-        f.fields.forEach(k => item[k] = form[k].value);
-        data[f.key].push(item);
-        saveData();
-        renderTable(f.table, data[f.key], f.fields, f.key);
-        form.reset();
+  <!-- CUENTAS -->
+  <section id="cuentas">
+    <h2>Cuentas Pendientes</h2>
+    <form id="formCuenta">
+      <select name="tipo">
+        <option>Por cobrar</option>
+        <option>Por pagar</option>
+      </select>
+      <input name="cliente_proveedor" placeholder="Cliente / Proveedor" />
+      <input name="concepto" placeholder="Concepto" />
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required />
+      <input name="fecha_vencimiento" type="date" />
+      <select name="estado">
+        <option>Pendiente</option>
+        <option>Pagado</option>
+      </select>
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <table id="tablaCuentas">
+      <thead>
+        <tr>
+          <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<footer>© 2025 Panel Financiero Empresarial</footer>
+
+<script>
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'FinanzasDB';
+const STORE_NAMES = ['ingresos','gastos','proveedores','cuentas'];
+let db;
+const openDB = () => {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onerror = () => rej(req.error);
+    req.onsuccess = () => { db = req.result; res(db); };
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      STORE_NAMES.forEach(s => {
+        if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id', autoIncrement: true });
       });
-      renderTable(f.table, data[f.key], f.fields, f.key);
+    };
+  });
+};
+const getAll = store => {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+};
+const saveOne = (store, obj) => {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).add(obj);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+};
+const updateAll = (store, arr) => {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const st = tx.objectStore(store);
+    st.clear();
+    let c = 0;
+    arr.forEach(obj => {
+      const add = st.add(obj);
+      add.onsuccess = () => { c++; if (c === arr.length) res(); };
+      add.onerror = () => rej(add.error);
     });
+    if (!arr.length) res();
+  });
+};
+const delOne = (store, id) => {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    const req = tx.objectStore(store).delete(+id);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+};
 
-    actualizarDashboard();
-  </script>
+/* ---------- Memoria ---------- */
+const data = { ingresos:[], gastos:[], proveedores:[], cuentas:[] };
+
+/* ---------- Navegación ---------- */
+const tabs = document.querySelectorAll('.tab');
+const sections = document.querySelectorAll('section');
+tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    sections.forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  });
+});
+
+/* ---------- Gráfico ---------- */
+const ctx = document.getElementById('chartResumen').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Ingresos', 'Gastos', 'Saldo Neto'],
+    datasets: [{
+      data: [0, 0, 0],
+      backgroundColor: ['#1a73e8', '#e53935', '#43a047'],
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom' } }
+  }
+});
+const actualizarDashboard = () => {
+  const totalIngresos = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
+  const totalGastos = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  const balance = totalIngresos - totalGastos;
+  document.getElementById('totalIngresos').textContent = '$' + totalIngresos.toFixed(2);
+  document.getElementById('totalGastos').textContent = '$' + totalGastos.toFixed(2);
+  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
+  chart.data.datasets[0].data = [totalIngresos, totalGastos, Math.abs(balance)];
+  chart.update();
+};
+
+/* ---------- Tablas ---------- */
+const renderTable = (id, arr, keys, keyName) => {
+  const tbody = document.querySelector(`#${id} tbody`);
+  tbody.innerHTML = arr.map((item, idx) => `
+    <tr>
+      ${keys.map(k => `<td>${item[k] || ''}</td>`).join('')}
+      <td class="acciones">
+        <button class="editar" data-key="${keyName}" data-id="${item.id}">✏️</button>
+        <button class="eliminar" data-key="${keyName}" data-id="${item.id}">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+  actualizarDashboard();
+};
+
+/* ---------- Formularios ---------- */
+const forms = [
+  { id: 'formIngreso', key: 'ingresos', table: 'tablaIngresos', fields: ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'] },
+  { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
+  { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
+  { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
+];
+
+/* ---------- CRUD ---------- */
+document.addEventListener('click', async e => {
+  if (e.target.classList.contains('eliminar')) {
+    const { key, id } = e.target.dataset;
+    if (confirm('¿Eliminar este registro?')) {
+      await delOne(key, id);
+      data[key] = await getAll(key);
+      const f = forms.find(f => f.key === key);
+      renderTable(f.table, data[key], f.fields, key);
+    }
+  }
+  if (e.target.classList.contains('editar')) {
+    const { key, id } = e.target.dataset;
+    const f = forms.find(f => f.key === key);
+    const form = document.getElementById(f.id);
+    const item = data[key].find(x => x.id == id);
+    f.fields.forEach(k => form[k].value = item[k] || '');
+    await delOne(key, id);
+    data[key] = await getAll(key);
+    renderTable(f.table, data[key], f.fields, key);
+  }
+});
+
+forms.forEach(f => {
+  const form = document.getElementById(f.id);
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const item = {};
+    f.fields.forEach(k => item[k] = form[k].value);
+    await saveOne(f.key, item);
+    data[f.key] = await getAll(f.key);
+    renderTable(f.table, data[f.key], f.fields, f.key);
+    form.reset();
+  });
+});
+
+/* ---------- Exportar / Importar ---------- */
+const exportarJSON = async () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'respaldo_finanzas_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+const importarJSON = async evt => {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const imported = JSON.parse(text);
+    for (const k of STORE_NAMES) {
+      if (!Array.isArray(imported[k])) throw new Error('Formato inválido');
+      await updateAll(k, imported[k]);
+      data[k] = await getAll(k);
+      const f = forms.find(f => f.key === k);
+      renderTable(f.table, data[k], f.fields, k);
+    }
+    alert('Importación exitosa');
+  } catch (e) {
+    alert('Error al importar: ' + e.message);
+  }
+  evt.target.value = '';
+};
+
+/* ---------- Init ---------- */
+(async () => {
+  await openDB();
+  for (const f of forms) {
+    data[f.key] = await getAll(f.key);
+    renderTable(f.table, data[f.key], f.fields, f.key);
+  }
+  actualizarDashboard();
+})();
+</script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CONTABILIDAD A FAMILY COMPANY</title>
+  <title>FINANZAS </title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -190,10 +190,10 @@
 <body>
 
   <header>
-    <span>📊 FINANZAS</span>
+    <span>📊 LISTA FINANZAS</span>
     <div>
-      <button onclick="exportarDatos()">📥 Exportar Datos</button>
-      <button onclick="document.getElementById('inputImportar').click()">📤 Importar Datos</button>
+      <button onclick="exportarDatos()">📥 Exportar JSON</button>
+      <button onclick="document.getElementById('inputImportar').click()">📤 Importar JSON</button>
       <input type="file" id="inputImportar" accept=".json" style="display:none" onchange="importarDatos(event)" />
     </div>
   </header>
@@ -326,10 +326,69 @@
     </section>
   </main>
 
-  <footer>© 2025 Panel Financiero Empresarial</footer>
+  <footer>© 2025 Lista Financiera power by Tobias</footer>
 
   <script>
-    // Navegación entre secciones
+    // IndexedDB setup
+    const DB_NAME = 'FinanzasDB';
+    const STORE_NAME = 'registros';
+    let db;
+
+    const openDB = () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject('Error al abrir IndexedDB');
+        request.onsuccess = () => {
+          db = request.result;
+          resolve(db);
+        };
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            store.createIndex('tipo', 'tipo', { unique: false });
+          }
+        };
+      });
+    };
+
+    const guardarEnDB = async (tipo, item) => {
+      const tx = db.transaction([STORE_NAME], 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      item.tipo = tipo;
+      await store.add(item);
+    };
+
+    const obtenerDeDB = async (tipo) => {
+      const tx = db.transaction([STORE_NAME], 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const index = store.index('tipo');
+      return index.getAll(tipo);
+    };
+
+    const eliminarDeDB = async (id) => {
+      const tx = db.transaction([STORE_NAME], 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      await store.delete(id);
+    };
+
+    const actualizarDeDB = async (id, nuevoItem) => {
+      const tx = db.transaction([STORE_NAME], 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      nuevoItem.id = id;
+      await store.put(nuevoItem);
+    };
+
+    const data = { ingresos: [], gastos: [], proveedores: [], cuentas: [] };
+
+    const loadAll = async () => {
+      data.ingresos = await obtenerDeDB('ingresos');
+      data.gastos = await obtenerDeDB('gastos');
+      data.proveedores = await obtenerDeDB('proveedores');
+      data.cuentas = await obtenerDeDB('cuentas');
+    };
+
+    // UI
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('section');
     tabs.forEach(btn => {
@@ -342,20 +401,6 @@
       });
     });
 
-    // LocalStorage
-    const data = {
-      ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
-      gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
-      proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
-      cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
-    };
-
-    const saveData = () => {
-      for (let k in data) localStorage.setItem(k, JSON.stringify(data[k]));
-      actualizarDashboard();
-    };
-
-    // Gráfico
     const ctx = document.getElementById('chartResumen').getContext('2d');
     const chart = new Chart(ctx, {
       type: 'doughnut',
@@ -384,15 +429,14 @@
       chart.update();
     };
 
-    // Render de tablas
-    const renderTable = (id, arr, keys, keyName) => {
+    const renderTable = (id, arr, keys) => {
       const tbody = document.querySelector(`#${id} tbody`);
-      tbody.innerHTML = arr.map((item, i) => `
+      tbody.innerHTML = arr.map(item => `
         <tr>
           ${keys.map(k => `<td>${item[k] || ''}</td>`).join('')}
           <td class="acciones">
-            <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-            <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
+            <button class="editar" data-id="${item.id}">✏️</button>
+            <button class="eliminar" data-id="${item.id}">🗑️</button>
           </td>
         </tr>
       `).join('');
@@ -400,90 +444,95 @@
     };
 
     const forms = [
-      { id: 'formIngreso', key: 'ingresos', table: 'tablaIngresos', fields: ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'] },
-      { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
-      { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
-      { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
+      { id: 'formIngreso', tipo: 'ingresos', table: 'tablaIngresos', fields: ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'] },
+      { id: 'formGasto', tipo: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
+      { id: 'formProveedor', tipo: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
+      { id: 'formCuenta', tipo: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
     ];
 
-    // Eliminar / Editar
-    document.addEventListener('click', e => {
+    document.addEventListener('click', async (e) => {
       if (e.target.classList.contains('eliminar')) {
-        const { key, index } = e.target.dataset;
+        const id = parseInt(e.target.dataset.id);
         if (confirm('¿Eliminar este registro?')) {
-          data[key].splice(index, 1);
-          saveData();
-          const f = forms.find(f => f.key === key);
-          renderTable(f.table, data[key], f.fields, key);
+          await eliminarDeDB(id);
+          await loadAll();
+          const f = forms.find(f => f.tipo === e.target.closest('section').id.replace('tabla', '').toLowerCase() + 's');
+          renderTable(f.table, data[f.tipo], f.fields);
         }
       }
       if (e.target.classList.contains('editar')) {
-        const { key, index } = e.target.dataset;
-        const f = forms.find(f => f.key === key);
+        const id = parseInt(e.target.dataset.id);
+        const f = forms.find(f => e.target.closest('section').id.includes(f.table));
+        const item = data[f.tipo].find(x => x.id === id);
         const form = document.getElementById(f.id);
-        const item = data[key][index];
         f.fields.forEach(k => form[k].value = item[k] || '');
-        data[key].splice(index, 1);
-        saveData();
-        renderTable(f.table, data[key], f.fields, key);
+        await eliminarDeDB(id);
+        await loadAll();
+        renderTable(f.table, data[f.tipo], f.fields);
       }
     });
 
-    // Guardar formularios
     forms.forEach(f => {
       const form = document.getElementById(f.id);
-      form.addEventListener('submit', e => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const item = {};
         f.fields.forEach(k => item[k] = form[k].value);
-        data[f.key].push(item);
-        saveData();
-        renderTable(f.table, data[f.key], f.fields, f.key);
+        await guardarEnDB(f.tipo.slice(0, -1), item);
+        await loadAll();
+        renderTable(f.table, data[f.tipo], f.fields);
         form.reset();
       });
-      renderTable(f.table, data[f.key], f.fields, f.key);
     });
 
-    actualizarDashboard();
-
-    // EXPORTAR / IMPORTAR
-    function exportarDatos() {
+    const exportarDatos = async () => {
+      await loadAll();
       const datos = {
-        ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
-        gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
-        proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
-        cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
+        ingresos: data.ingresos,
+        gastos: data.gastos,
+        proveedores: data.proveedores,
+        cuentas: data.cuentas
       };
       const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'respaldo_finanzas.json';
+      a.download = 'respaldo_indexeddb.json';
       a.click();
       URL.revokeObjectURL(url);
-    }
+    };
 
-    function importarDatos(event) {
+    const importarDatos = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function (e) {
+      reader.onload = async (e) => {
         try {
           const datos = JSON.parse(e.target.result);
           if (confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
-            localStorage.setItem('ingresos', JSON.stringify(datos.ingresos || []));
-            localStorage.setItem('gastos', JSON.stringify(datos.gastos || []));
-            localStorage.setItem('proveedores', JSON.stringify(datos.proveedores || []));
-            localStorage.setItem('cuentas', JSON.stringify(datos.cuentas || []));
+            const tx = db.transaction([STORE_NAME], 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            await store.clear();
+            for (const tipo of ['ingresos', 'gastos', 'proveedores', 'cuentas']) {
+              for (const item of datos[tipo] || []) {
+                await guardarEnDB(tipo.slice(0, -1), item);
+              }
+            }
             alert('✅ Datos importados correctamente. Recargando...');
             location.reload();
           }
         } catch (err) {
-          alert('❌ Error al leer el archivo. Asegúrate de que sea un JSON válido.');
+          alert('❌ Error al leer el archivo.');
         }
       };
       reader.readAsText(file);
-    }
+    };
+
+    (async () => {
+      await openDB();
+      await loadAll();
+      forms.forEach(f => renderTable(f.table, data[f.tipo], f.fields));
+    })();
   </script>
 </body>
 </html>

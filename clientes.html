@@ -1,50 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Clientes — 20/80 Split</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/clusterize.js@0.18.0/clusterize.css">
   <style>
     :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --radius: 12px;
-      --error: #ef4444;
+      --primary: #4f46e5; --primary-hover: #4338ca; --bg: #f5f7fa; --card: #ffffff;
+      --text: #111827; --muted: #6b7280; --border: #e5e7eb; --radius: 12px; --error: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     html, body { height: 100%; }
     body { background: var(--bg); color: var(--text); }
     .split { display: flex; height: 100%; }
     .left { flex: 0 0 20%; background: var(--card); border-right: 1px solid var(--border); padding: 2rem 1.5rem; overflow-y: auto; }
-    .right { flex: 0 0 80%; padding: 2rem; overflow-y: auto; }
+    .right { flex: 0 0 80%; padding: 2rem; overflow: hidden; display: flex; flex-direction: column; }
     h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
     label { font-weight: 500; margin-bottom: 0.25rem; display: block; }
-    input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; transition: border-color 0.2s; }
+    input, select { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; transition: border-color .2s; }
     input:focus, select:focus { outline: none; border-color: var(--primary); }
     input.error { border-color: var(--error); }
-    button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; background: var(--primary); color: #fff; transition: background 0.2s; }
+    button { width: 100%; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; background: var(--primary); color: #fff; transition: background .2s; }
     button:disabled { background: var(--muted); cursor: not-allowed; }
     button:hover:not(:disabled) { background: var(--primary-hover); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .95rem; }
     th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg); font-weight: 600; cursor: pointer; }
+    th { background: var(--bg); font-weight: 600; cursor: pointer; user-select: none; }
     .actions { display: flex; gap: 0.25rem; }
-    .actions button { width: 28px; height: 28px; padding: 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; transition: all 0.2s; }
+    .actions button { width: 28px; height: 28px; padding: 0; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.9rem; transition: all .2s; }
     .actions button:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .3s; }
     .modal.active { opacity: 1; pointer-events: auto; }
     .modal-content { background: var(--card); padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 400px; }
     .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
-    .notification { position: fixed; bottom: 2rem; right: 2rem; background: var(--primary); color: #fff; padding: 1rem 1.5rem; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 1000; }
+    .notification { position: fixed; bottom: 2rem; right: 2rem; background: var(--primary); color: #fff; padding: 1rem 1.5rem; border-radius: 8px; opacity: 0; transform: translateY(10px); transition: all .3s; z-index: 1000; }
     .notification.show { opacity: 1; transform: none; }
     .history { max-height: 200px; overflow-y: auto; font-size: 0.85rem; margin-top: 1rem; }
     .history li { margin-bottom: 0.5rem; }
+    #scrollArea { flex: 1 1 auto; }
     @media (max-width: 768px) { .split { flex-direction: column; } .left, .right { flex: 1 1 auto; width: 100%; } .left { border-right: none; border-bottom: 1px solid var(--border); } }
   </style>
 </head>
@@ -67,7 +62,6 @@
 
         <label for="cliente-usuario">Usuario (sin @)</label>
         <input id="cliente-usuario" placeholder="usuario" />
-
         <input id="cliente-correo" type="hidden" />
 
         <label for="cliente-telefono">Celular</label>
@@ -75,7 +69,9 @@
 
         <button id="btn-guardar" disabled>Agregar Cliente</button>
       </form>
-      <button id="btn-export" style="margin-top: 1rem; background: #10b981;">Exportar CSV</button>
+      <button id="btn-export-zip" style="margin-top: .5rem; background: #3b82f6;">Exportar ZIP</button>
+      <button id="btn-import-zip" style="margin-top: .5rem; background: #8b5cf6;">Importar ZIP</button>
+      <input type="file" id="input-import-zip" accept=".zip" style="display:none;" />
     </div>
 
     <div class="right">
@@ -85,19 +81,21 @@
         <input id="filtro-correo" placeholder="Correo" />
         <input id="filtro-telefono" placeholder="Celular" />
       </div>
-      <table>
+      <table id="tabla-clientes">
         <thead>
           <tr>
             <th>ID</th>
             <th>Correo</th>
             <th>Celular</th>
-            <th style="cursor:pointer" id="sort-puntos">Puntos ▼</th>
+            <th id="sort-puntos" style="cursor:pointer">Puntos ▼</th>
             <th>Registro</th>
             <th></th>
           </tr>
         </thead>
-        <tbody id="clientes-table"></tbody>
       </table>
+      <div id="scrollArea">
+        <table><tbody id="clientes-table"></tbody></table>
+      </div>
     </div>
   </div>
 
@@ -106,7 +104,7 @@
     <div class="modal-content">
       <h2>Modificar Puntos</h2>
       <input id="input-puntos" type="number" min="1" placeholder="Cantidad" />
-      <input id="input-motivo" placeholder="Motivo (opcional)" style="margin-top: 0.5rem;" />
+      <input id="input-motivo" placeholder="Motivo (opcional)" style="margin-top: .5rem;" />
       <div class="modal-actions">
         <button id="btn-sumar" class="btn-primary">Sumar</button>
         <button id="btn-quitar" style="background:#f59e0b;">Quitar</button>
@@ -124,227 +122,219 @@
     </div>
   </div>
 
-  <!-- Notificación -->
   <div class="notification" id="notification"></div>
 
-  <script>
-    (() => {
-      const key = 'clientes';
-      let clientes = [];
+  <!-- Librerías externas -->
+  <script src="https://cdn.jsdelivr.net/npm/clusterize.js@0.18.0/clusterize.min.js"></script>
+  <script type="module">
+    import { get, set } from 'https://cdn.skypack.dev/idb-keyval';
+    const KEY = 'clientes';
+    let clientes = [];
+    let clusterize;
+    let ordenDesc = true;
 
-      function load() {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) clientes = JSON.parse(raw);
-        } catch (e) {
-          console.warn('Error al cargar clientes:', e);
-          clientes = [];
-        }
+    /* ---------- IndexedDB ---------- */
+    async function load() { clientes = await get(KEY) || []; }
+    async function save() { await set(KEY, clientes); }
+
+    /* ---------- Utilidades ---------- */
+    const $ = s => document.querySelector(s);
+    const notify = msg => {
+      const n = $('#notification');
+      n.textContent = msg;
+      n.classList.add('show');
+      setTimeout(() => n.classList.remove('show'), 3000);
+    };
+    const validarId = i => /^[a-zA-Z0-9\-]{1,20}$/.test(i);
+    const validarEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+    const validarTel = t => /^\d{7,15}$/.test(t);
+
+    /* ---------- Correo dinámico ---------- */
+    const sel = $('#cliente-correo-select');
+    const usr = $('#cliente-usuario');
+    const hdn = $('#cliente-correo');
+    function armaCorreo() {
+      if (sel.value === 'otro') {
+        hdn.type = 'email'; hdn.placeholder = 'correo@dominio.com'; hdn.disabled = false;
+        usr.style.display = 'none'; usr.required = false; hdn.required = true;
+      } else {
+        hdn.type = 'hidden'; hdn.disabled = true; usr.style.display = 'block'; usr.placeholder = 'usuario';
+        hdn.required = false; usr.required = true; hdn.value = usr.value.trim() + sel.value;
       }
+      validarFormulario();
+    }
+    sel.addEventListener('change', armaCorreo);
+    usr.addEventListener('input', armaCorreo);
+    armaCorreo();
 
-      function save() {
-        try {
-          localStorage.setItem(key, JSON.stringify(clientes));
-        } catch (e) {
-          alert('Error al guardar: límite de almacenamiento');
-        }
-      }
+    /* ---------- Validación formulario ---------- */
+    function validarFormulario() {
+      const id = $('#cliente-id').value.trim();
+      const correo = hdn.value.trim();
+      const telefono = $('#cliente-telefono').value.trim();
+      const ok = validarId(id) && validarEmail(correo) && validarTel(telefono);
+      $('#btn-guardar').disabled = !ok;
+    }
+    $('#cliente-id').addEventListener('input', validarFormulario);
+    $('#cliente-telefono').addEventListener('input', validarFormulario);
 
-      load();
-
-      const $ = s => document.querySelector(s);
-      const notify = msg => {
-        const n = $('#notification');
-        n.textContent = msg;
-        n.classList.add('show');
-        setTimeout(() => n.classList.remove('show'), 3000);
-      };
-
-      const validarId = i => /^[a-zA-Z0-9\-]{1,20}$/.test(i);
-      const validarEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-      const validarTel = t => /^\d{7,15}$/.test(t);
-
-      const sel = $('#cliente-correo-select');
-      const usr = $('#cliente-usuario');
-      const hdn = $('#cliente-correo');
-
-      function armaCorreo() {
-        if (sel.value === 'otro') {
-          hdn.type = 'email';
-          hdn.placeholder = 'correo@dominio.com';
-          hdn.disabled = false;
-          usr.style.display = 'none';
-          usr.required = false;
-          hdn.required = true;
-        } else {
-          hdn.type = 'hidden';
-          hdn.disabled = true;
-          usr.style.display = 'block';
-          usr.placeholder = 'usuario';
-          hdn.required = false;
-          usr.required = true;
-          hdn.value = usr.value.trim() + sel.value;
-        }
-        validarFormulario();
-      }
-
-      sel.addEventListener('change', armaCorreo);
-      usr.addEventListener('input', armaCorreo);
-      armaCorreo();
-
-      function validarFormulario() {
-        const id = $('#cliente-id').value.trim();
-        const correo = hdn.value.trim();
-        const telefono = $('#cliente-telefono').value.trim();
-        const ok = validarId(id) && validarEmail(correo) && validarTel(telefono);
-        $('#btn-guardar').disabled = !ok;
-      }
-
-      $('#cliente-id').addEventListener('input', validarFormulario);
-      $('#cliente-telefono').addEventListener('input', validarFormulario);
-
-      let editando = null;
-      let ordenDesc = true;
-
-      function render() {
-        const fid   = $('#filtro-id').value.trim().toLowerCase();
-        const fcor  = $('#filtro-correo').value.trim().toLowerCase();
-        const ftel  = $('#filtro-telefono').value.trim().toLowerCase();
-
-        let filtrados = clientes.filter(c =>
-          (!fid  || c.id === fid) &&
-          (!fcor || c.correo.toLowerCase().includes(fcor)) &&
-          (!ftel || c.telefono === ftel)
-        );
-
-        filtrados.sort((a, b) => ordenDesc ? b.puntos - a.puntos : a.puntos - b.puntos);
-
-        $('#clientes-table').innerHTML = filtrados.length
-          ? filtrados.map(c => `
-              <tr>
-                <td>${c.id}</td>
-                <td>${c.correo}</td>
-                <td>${c.telefono}</td>
-                <td>${c.puntos}</td>
-                <td>${c.fecha}</td>
-                <td class="actions">
-                  <button class="history" data-id="${c.id}" title="Historial">📋</button>
-                  <button class="add" data-id="${c.id}" title="Sumar puntos">+</button>
-                  <button class="sub" data-id="${c.id}" title="Restar puntos">−</button>
-                  <button class="del" data-id="${c.id}" title="Eliminar">×</button>
-                </td>
-              </tr>`).join('')
-          : `<tr><td colspan="6" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`;
-      }
-
-      $('#sort-puntos').onclick = () => {
-        ordenDesc = !ordenDesc;
-        $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`;
-        render();
-      };
-
-      $('#form-cliente').addEventListener('submit', e => {
-        e.preventDefault();
-        const id = $('#cliente-id').value.trim();
-        const correo = hdn.value.trim();
-        const telefono = $('#cliente-telefono').value.trim();
-        if (!validarId(id)) return alert('ID inválido');
-        if (!validarEmail(correo)) return alert('Correo inválido');
-        if (!validarTel(telefono)) return alert('Celular inválido');
-        if (editando) {
-          const c = clientes.find(x => x.id === editando);
-          c.correo = correo; c.telefono = telefono;
-          notify('Actualizado');
-          editando = null;
-          $('#btn-guardar').textContent = 'Agregar Cliente';
-          $('#cliente-id').disabled = false;
-        } else {
-          if (clientes.some(x => x.id === id)) return alert('ID duplicado');
-          clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString(), historial: [] });
-          notify('Agregado');
-        }
-        save(); e.target.reset(); armaCorreo(); render();
+    /* ---------- Paginación virtual ---------- */
+    function initClusterize(rows) {
+      if (clusterize) clusterize.destroy();
+      clusterize = new Clusterize({
+        rows: rows,
+        scrollElem: $('#scrollArea'),
+        contentElem: $('#clientes-table')
       });
+    }
 
-      $('#clientes-table').addEventListener('click', e => {
-        const b = e.target.closest('button');
-        if (!b) return;
-        const id = b.dataset.id;
+    /* ---------- Render ---------- */
+    let editando = null;
+    function render() {
+      const fid = $('#filtro-id').value.trim().toLowerCase();
+      const fcor = $('#filtro-correo').value.trim().toLowerCase();
+      const ftel = $('#filtro-telefono').value.trim().toLowerCase();
+
+      let filtrados = clientes.filter(c =>
+        (!fid || c.id === fid) &&
+        (!fcor || c.correo.toLowerCase().includes(fcor)) &&
+        (!ftel || c.telefono === ftel)
+      );
+      filtrados.sort((a, b) => ordenDesc ? b.puntos - a.puntos : a.puntos - b.puntos);
+
+      const htmlRows = filtrados.length
+        ? filtrados.map(c => `
+            <tr>
+              <td>${c.id}</td>
+              <td>${c.correo}</td>
+              <td>${c.telefono}</td>
+              <td>${c.puntos}</td>
+              <td>${c.fecha}</td>
+              <td class="actions">
+                <button class="history" data-id="${c.id}" title="Historial">📋</button>
+                <button class="add" data-id="${c.id}" title="Sumar">+</button>
+                <button class="sub" data-id="${c.id}" title="Restar">−</button>
+                <button class="del" data-id="${c.id}" title="Eliminar">×</button>
+              </td>
+            </tr>`)
+        : [`<tr><td colspan="6" style="text-align:center;color:var(--muted)">Sin coincidencias</td></tr>`];
+      initClusterize(htmlRows);
+    }
+
+    $('#sort-puntos').onclick = () => { ordenDesc = !ordenDesc; $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`; render(); };
+
+    /* ---------- Formulario alta/edición ---------- */
+    $('#form-cliente').addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = $('#cliente-id').value.trim();
+      const correo = hdn.value.trim();
+      const telefono = $('#cliente-telefono').value.trim();
+      if (!validarId(id)) return alert('ID inválido');
+      if (!validarEmail(correo)) return alert('Correo inválido');
+      if (!validarTel(telefono)) return alert('Celular inválido');
+      if (editando) {
+        const c = clientes.find(x => x.id === editando);
+        c.correo = correo; c.telefono = telefono;
+        notify('Actualizado');
+        editando = null;
+        $('#btn-guardar').textContent = 'Agregar Cliente';
+        $('#cliente-id').disabled = false;
+      } else {
+        if (clientes.some(x => x.id === id)) return alert('ID duplicado');
+        clientes.push({ id, correo, telefono, puntos: 0, fecha: new Date().toLocaleDateString(), historial: [] });
+        notify('Agregado');
+      }
+      await save(); e.target.reset(); armaCorreo(); render();
+    });
+
+    /* ---------- Tabla acciones ---------- */
+    $('#clientes-table').addEventListener('click', async e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      const id = b.dataset.id;
+      const c = clientes.find(x => x.id === id);
+      if (!c) return;
+      if (b.classList.contains('history')) {
+        $('#modal-historial').classList.add('active');
+        $('#historial-lista').innerHTML = c.historial.length
+          ? c.historial.map(h => `<li><strong>${h.tipo === 'suma' ? '+' : '-'}${h.cantidad}</strong> — ${h.motivo || 'Sin motivo'} — ${h.fecha}</li>`).join('')
+          : '<li>Sin movimientos</li>';
+      }
+      if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) {
+        clientes = clientes.filter(x => x.id !== id);
+        await save(); render();
+        if (editando === id) { editando = null; $('#form-cliente').reset(); $('#btn-guardar').textContent = 'Agregar Cliente'; $('#cliente-id').disabled = false; }
+      }
+      if (b.classList.contains('add') || b.classList.contains('sub')) {
+        const m = $('#modal-overlay');
+        m.dataset.id = id; m.dataset.act = b.classList.contains('add') ? 'sum' : 'res';
+        m.classList.add('active');
+        $('#input-puntos').value = ''; $('#input-motivo').value = '';
+        $('#input-puntos').focus();
+      }
+    });
+
+    $('#btn-cerrar').onclick = () => $('#modal-overlay').classList.remove('active');
+    $('#btn-cerrar-historial').onclick = () => $('#modal-historial').classList.remove('active');
+
+    ['#btn-sumar', '#btn-quitar'].forEach((s, i) => {
+      $(s).onclick = async () => {
+        const cant = parseInt($('#input-puntos').value);
+        const motivo = $('#input-motivo').value.trim();
+        if (isNaN(cant) || cant < 1) return alert('Cantidad inválida');
+        const id = $('#modal-overlay').dataset.id;
         const c = clientes.find(x => x.id === id);
-        if (!c) return;
-        if (b.classList.contains('history')) {
-          const modal = $('#modal-historial');
-          modal.classList.add('active');
-          $('#historial-lista').innerHTML = c.historial.length
-            ? c.historial.map(h => `<li><strong>${h.tipo === 'suma' ? '+' : '-'}${h.cantidad}</strong> — ${h.motivo || 'Sin motivo'} — ${h.fecha}</li>`).join('')
-            : '<li>Sin movimientos</li>';
+        if (i === 0) {
+          c.puntos += cant;
+          c.historial.unshift({ tipo: 'suma', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
+          notify(`+${cant} puntos`);
+        } else {
+          if (cant > c.puntos) return alert('Puntos insuficientes');
+          c.puntos -= cant;
+          c.historial.unshift({ tipo: 'resta', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
+          notify(`-${cant} puntos`);
         }
-        if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) {
-          clientes = clientes.filter(x => x.id !== id);
-          save(); render();
-          if (editando === id) {
-            editando = null;
-            $('#form-cliente').reset();
-            $('#btn-guardar').textContent = 'Agregar Cliente';
-            $('#cliente-id').disabled = false;
-          }
-        }
-        if (b.classList.contains('add') || b.classList.contains('sub')) {
-          const m = $('#modal-overlay');
-          m.dataset.id = id;
-          m.dataset.act = b.classList.contains('add') ? 'sum' : 'res';
-          m.classList.add('active');
-          $('#input-puntos').value = '';
-          $('#input-motivo').value = '';
-          $('#input-puntos').focus();
-        }
-      });
-
-      $('#btn-cerrar').onclick = () => $('#modal-overlay').classList.remove('active');
-      $('#btn-cerrar-historial').onclick = () => $('#modal-historial').classList.remove('active');
-
-      ['#btn-sumar', '#btn-quitar'].forEach((s, i) => {
-        $(s).onclick = () => {
-          const cant = parseInt($('#input-puntos').value);
-          const motivo = $('#input-motivo').value.trim();
-          if (isNaN(cant) || cant < 1) return alert('Cantidad inválida');
-          const id = $('#modal-overlay').dataset.id;
-          const c = clientes.find(x => x.id === id);
-          if (i === 0) {
-            c.puntos += cant;
-            c.historial.unshift({ tipo: 'suma', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
-            notify(`+${cant} puntos`);
-          } else {
-            if (cant > c.puntos) return alert('Puntos insuficientes');
-            c.puntos -= cant;
-            c.historial.unshift({ tipo: 'resta', cantidad: cant, motivo, fecha: new Date().toLocaleString() });
-            notify(`-${cant} puntos`);
-          }
-          save(); render();
-          $('#modal-overlay').classList.remove('active');
-        };
-      });
-
-      ['#filtro-id', '#filtro-correo', '#filtro-telefono'].forEach(id => {
-        $(id).addEventListener('input', render);
-      });
-
-      $('#btn-export').onclick = () => {
-        const csv = [
-          ['ID', 'Correo', 'Celular', 'Puntos', 'Registro'],
-          ...clientes.map(c => [c.id, c.correo, c.telefono, c.puntos, c.fecha])
-        ].map(row => row.map(field => `"${field}"`)).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'clientes.csv';
-        a.click();
-        notify('CSV descargado');
+        await save(); render();
+        $('#modal-overlay').classList.remove('active');
       };
+    });
 
-      render();
-    })();
+    ['#filtro-id', '#filtro-correo', '#filtro-telefono'].forEach(id => $(id).addEventListener('input', render));
+
+    /* ---------- ZIP export / import ---------- */
+    $('#btn-export-zip').onclick = async () => {
+      const ZIP = await import('https://cdn.skypack.dev/jszip@3.10.1');
+      const zip = new ZIP.default();
+      zip.file('clientes.json', JSON.stringify(clientes));
+      const rows = [['ID', 'Correo', 'Tipo', 'Cantidad', 'Motivo', 'Fecha']];
+      clientes.forEach(c => c.historial.forEach(h => rows.push([c.id, c.correo, h.tipo, h.cantidad, h.motivo || '', h.fecha])));
+      const csv = rows.map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+      zip.file('historial_completo.csv', csv);
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clientes_historial.zip'; a.click();
+      notify('ZIP exportado');
+    };
+
+    $('#btn-import-zip').onclick = () => $('#input-import-zip').click();
+    $('#input-import-zip').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file || !file.name.endsWith('.zip')) return notify('Archivo no válido');
+      try {
+        const ZIP = await import('https://cdn.skypack.dev/jszip@3.10.1');
+        const zip = await ZIP.default.loadAsync(file);
+        const jsonFile = zip.file('clientes.json');
+        if (!jsonFile) return notify('No se encontró clientes.json en el ZIP');
+        const data = JSON.parse(await jsonFile.async('text'));
+        if (!Array.isArray(data)) throw new Error('Formato inválido');
+        if (confirm(`¿Importar ${data.length} clientes? Se reemplazarán los actuales.`)) {
+          clientes = data; await save(); render(); notify('ZIP importado correctamente');
+        }
+      } catch (err) { notify('Error al importar ZIP'); console.error(err); }
+      e.target.value = '';
+    });
+
+    /* ---------- Init ---------- */
+    await load(); render();
   </script>
 </body>
 </html>

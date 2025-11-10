@@ -2,129 +2,97 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <title>Lista Financiera - IndexedDB</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CONTABILIDAD A FAMILY COMPANY - IndexedDB</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;margin:0;padding:1rem}
-    header{background:#1a73e8;color:#fff;padding:1rem;display:flex;justify-content:space-between;align-items:center}
-    button{cursor:pointer;padding:.4rem .8rem;border:none;border-radius:4px;background:#fff;color:#1a73e8;font-weight:600}
-    nav{display:flex;gap:1rem;background:#fff;border-bottom:1px solid #ddd;padding:.5rem 1rem}
-    .tab{cursor:pointer;padding:.5rem 1rem;border-radius:4px}
-    .tab.active{background:#1a73e8;color:#fff}
-    section{display:none}
-    section.active{display:block}
-    form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;background:#fff;padding:1rem;border-radius:6px;margin:1rem 0}
-    input,select,textarea{width:100%;padding:.4rem;font-size:.9rem}
-    table{width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden}
-    th,td{padding:.5rem;font-size:.85rem;border-bottom:1px solid #eee}
-    th{background:#f5f5f5}
-    .acciones button{background:none;border:none;font-size:1rem;margin:0 .2rem}
-    .acciones .editar{color:#1a73e8}
-    .acciones .eliminar{color:#e53935}
+    :root{--color-bg:#f4f6f8;--color-primary:#1a73e8;--color-secondary:#0d47a1;--color-text:#2c3e50;--color-card:#fff;--radius:12px;--shadow:0 3px 10px rgba(0,0,0,.05)}
+    body{font-family:"Inter",Arial,sans-serif;background:var(--color-bg);color:var(--color-text);margin:0;padding:0}
+    header{background:var(--color-primary);color:#fff;padding:1rem 2rem;text-align:center;font-size:1.5rem;font-weight:600;letter-spacing:.5px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center}
+    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd}
+    .tab{padding:1rem 1.5rem;cursor:pointer;font-weight:500;color:#666;transition:all .2s}
+    .tab.active{color:var(--color-primary);border-bottom:3px solid var(--color-primary);background:#f9fafc}
+    main{padding:2rem;max-width:1200px;margin:auto}
+    section{display:none;animation:fadeIn .3s ease-in-out}section.active{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem}
+    .card{background:var(--color-card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}.card:hover{transform:translateY(-3px)}
+    .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}.card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
+    canvas{display:block;margin:2rem auto;max-width:350px}
+    form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1.5rem}
+    input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}textarea{resize:vertical;min-height:60px}
+    button{background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-weight:500;transition:background .2s}button:hover{background:var(--color-secondary)}
+    table{width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.9rem}th{background:#f8f9fa;color:#555;font-weight:600}tr:hover td{background:#f3f6fa}
+    .acciones button{background:none;border:none;cursor:pointer;font-size:1rem;margin:0 5px}.acciones .editar{color:#1a73e8}.acciones .eliminar{color:#e53935}
+    footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
   </style>
 </head>
 <body>
 
 <header>
-  <span>📊 Lista Financiera</span>
+  📊FINANZAS - IndexedDB
   <div>
-    <button onclick="exportar()">📥 Exportar</button>
-    <button onclick="document.getElementById('inpImport').click()">📤 Importar</button>
-    <input type="file" id="inpImport" accept=".json" style="display:none" onchange="importar(event)">
+    <button onclick="exportarDatos()">📥 Exportar</button>
+    <button onclick="document.getElementById('inputImportar').click()">📤 Importar</button>
+    <input type="file" id="inputImportar" accept=".json" style="display:none" onchange="importarDatos(event)">
   </div>
 </header>
 
 <nav>
-  <div class="tab active" onclick="mostrar('dashboard')">Dashboard</div>
-  <div class="tab" onclick="mostrar('ingresos')">Ingresos</div>
-  <div class="tab" onclick="mostrar('gastos')">Gastos</div>
-  <div class="tab" onclick="mostrar('proveedores')">Proveedores</div>
-  <div class="tab" onclick="mostrar('cuentas')">Cuentas</div>
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="ingresos">Ingresos</div>
+  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="proveedores">Proveedores</div>
+  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
 </nav>
 
-<!-- DASHBOARD -->
-<section id="dashboard" class="active">
-  <h3>Resumen</h3>
-  <p><strong>Total Ingresos:</strong> <span id="tIngresos">$0.00</span></p>
-  <p><strong>Total Gastos:</strong> <span id="tGastos">$0.00</span></p>
-  <p><strong>Saldo:</strong> <span id="tSaldo">$0.00</span></p>
-</section>
+<main>
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="active">
+    <h2>Resumen General</h2>
+    <div class="dashboard">
+      <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
+      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
+      <div class="card"><h3>Saldo Neto</h3><p id="balance">$0.00</p></div>
+    </div>
+    <canvas id="chartResumen"></canvas>
+  </section>
 
-<!-- INGRESOS -->
-<section id="ingresos">
-  <h3>Ingresos</h3>
-  <form onsubmit="agregar(event,'ingreso')">
-    <input name="fecha" type="date" required>
-    <input name="descripcion" placeholder="Descripción" required>
-    <input name="categoria" placeholder="Categoría">
-    <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-    <input name="metodo_pago" placeholder="Método pago">
-    <input name="responsable" placeholder="Responsable">
-    <button>Guardar</button>
-  </form>
-  <table id="tblIngresos"><thead><tr>
-    <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método</th><th>Responsable</th><th></th>
-  </tr></thead><tbody></tbody></table>
-</section>
+  <!-- INGRESOS -->
+  <section id="ingresos">
+    <h2>Ingresos</h2>
+    <form id="formIngreso"><input name="fecha" type="date" required /><input name="descripcion" placeholder="Descripción" required /><input name="categoria" placeholder="Categoría" /><input name="monto" type="number" step="0.01" placeholder="Monto" required /><input name="metodo_pago" placeholder="Método de pago" /><input name="responsable" placeholder="Responsable" /><textarea name="observaciones" placeholder="Observaciones"></textarea><button type="submit">Guardar</button></form>
+    <table id="tablaIngresos"><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+  </section>
 
-<!-- GASTOS -->
-<section id="gastos">
-  <h3>Gastos</h3>
-  <form onsubmit="agregar(event,'gasto')">
-    <input name="fecha" type="date" required>
-    <input name="proveedor" placeholder="Proveedor">
-    <input name="categoria" placeholder="Categoría">
-    <input name="descripcion" placeholder="Descripción">
-    <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-    <input name="metodo_pago" placeholder="Método pago">
-    <input name="responsable" placeholder="Responsable">
-    <button>Guardar</button>
-  </form>
-  <table id="tblGastos"><thead><tr>
-    <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método</th><th>Responsable</th><th></th>
-  </tr></thead><tbody></tbody></table>
-</section>
+  <!-- GASTOS -->
+  <section id="gastos">
+    <h2>Gastos</h2>
+    <form id="formGasto"><input name="fecha" type="date" required /><input name="proveedor" placeholder="Proveedor" /><input name="categoria" placeholder="Categoría" /><input name="descripcion" placeholder="Descripción" /><input name="monto" type="number" step="0.01" placeholder="Monto" required /><input name="metodo_pago" placeholder="Método de pago" /><input name="responsable" placeholder="Responsable" /><textarea name="observaciones" placeholder="Observaciones"></textarea><button type="submit">Guardar</button></form>
+    <table id="tablaGastos"><thead><tr><th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+  </section>
 
-<!-- PROVEEDORES -->
-<section id="proveedores">
-  <h3>Proveedores</h3>
-  <form onsubmit="agregar(event,'proveedor')">
-    <input name="nombre" placeholder="Nombre" required>
-    <input name="nit" placeholder="NIT">
-    <input name="telefono" placeholder="Teléfono">
-    <input name="email" type="email" placeholder="Email">
-    <input name="direccion" placeholder="Dirección">
-    <button>Guardar</button>
-  </form>
-  <table id="tblProveedores"><thead><tr>
-    <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th></th>
-  </tr></thead><tbody></tbody></table>
-</section>
+  <!-- PROVEEDORES -->
+  <section id="proveedores">
+    <h2>Proveedores</h2>
+    <form id="formProveedor"><input name="nombre" placeholder="Nombre" required /><input name="nit" placeholder="NIT" /><input name="telefono" placeholder="Teléfono" /><input name="email" type="email" placeholder="Email" /><input name="direccion" placeholder="Dirección" /><textarea name="observaciones" placeholder="Observaciones"></textarea><button type="submit">Guardar</button></form>
+    <table id="tablaProveedores"><thead><tr><th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+  </section>
 
-<!-- CUENTAS -->
-<section id="cuentas">
-  <h3>Cuentas pendientes</h3>
-  <form onsubmit="agregar(event,'cuenta')">
-    <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
-    <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
-    <input name="concepto" placeholder="Concepto">
-    <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-    <input name="fecha_vencimiento" type="date">
-    <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
-    <button>Guardar</button>
-  </form>
-  <table id="tblCuentas"><thead><tr>
-    <th>Tipo</th><th>Cliente/Prov</th><th>Concepto</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th>
-  </tr></thead><tbody></tbody></table>
-</section>
+  <!-- CUENTAS -->
+  <section id="cuentas">
+    <h2>Cuentas Pendientes</h2>
+    <form id="formCuenta"><select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select><input name="cliente_proveedor" placeholder="Cliente / Proveedor" /><input name="concepto" placeholder="Concepto" /><input name="monto" type="number" step="0.01" placeholder="Monto" required /><input name="fecha_vencimiento" type="date" /><select name="estado"><option>Pendiente</option><option>Pagado</option></select><textarea name="observaciones" placeholder="Observaciones"></textarea><button type="submit">Guardar</button></form>
+    <table id="tablaCuentas"><thead><tr><th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody></tbody></table>
+  </section>
+</main>
+
+<footer>© 2025 Panel Financiero Empresarial</footer>
 
 <script>
-/* ==========  INDEXEDDB  ========== */
-const DB_NAME = 'finanzas';
-const STORE   = 'datos';
-let db;
-
-function abrirDB() {
+/* ---------- INDEXEDDB ---------- */
+const DB_NAME = 'finanzasDB', STORE = 'registros'; let db;
+async function abrirDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
     req.onerror = () => reject(req.error);
@@ -135,122 +103,126 @@ function abrirDB() {
     };
   });
 }
+async addItem(tipo, obj) { obj.tipo = tipo; const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).add(obj); await tx.done; }
+async getItems(tipo) { const tx = db.transaction(STORE, 'readonly'); return tx.objectStore(STORE).index('tipo').getAll(tipo); }
+async delItem(id) { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(id); await tx.done; }
 
-async addTipo(tipo, obj) {
-  obj.tipo = tipo;
-  const tx = db.transaction(STORE, 'readwrite');
-  tx.objectStore(STORE).add(obj);
-  await tx.done;
-}
+/* ---------- NAVEGACIÓN ---------- */
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    cargarYRenderizar();
+  });
+});
 
-async getTipo(tipo) {
-  const tx = db.transaction(STORE, 'readonly');
-  const idx = tx.objectStore(STORE).index('tipo');
-  return idx.getAll(tipo);
-}
+/* ---------- GRAFICO ---------- */
+const ctx = document.getElementById('chartResumen').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'doughnut',
+  data: { labels: ['Ingresos', 'Gastos', 'Saldo Neto'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#1a73e8', '#e53935', '#43a047'], hoverOffset: 10 }] },
+  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
 
-async delId(id) {
-  const tx = db.transaction(STORE, 'readwrite');
-  tx.objectStore(STORE).delete(id);
-  await tx.done;
-}
+/* ---------- RENDER ---------- */
+const forms = [
+  { id: 'formIngreso', key: 'ingresos', table: 'tablaIngresos', fields: ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'] },
+  { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
+  { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
+  { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
+];
 
-/* ==========  NAVEGACIÓN  ========== */
-function mostrar(pantalla) {
-  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-  document.getElementById(pantalla).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  refrescar();
-}
-
-/* ==========  ALTA / BAJA / LISTADO  ========== */
-async agregar(ev, tipo) {
-  ev.preventDefault();
-  const frm = ev.target;
-  const obj = Object.fromEntries(new FormData(frm));
-  await addTipo(tipo, obj);
-  frm.reset();
-  refrescar();
-}
-
-async borrar(id) {
-  if (confirm('¿Eliminar?')) { await delId(id); refrescar(); }
-}
-
-/* ==========  REFRESCAR TABLAS / DASHBOARD  ========== */
-async refrescar() {
-  const ing = await getTipo('ingreso');
-  const gas = await getTipo('gasto');
-  const prov= await getTipo('proveedor');
-  const cta = await getTipo('cuenta');
-
+async function cargarYRenderizar() {
+  const ing = await getItems('ingreso'), gast = await getItems('gasto'), prov = await getItems('proveedor'), cta = await getItems('cuenta');
   const sum = arr => arr.reduce((s, x) => s + (parseFloat(x.monto) || 0), 0);
-  document.getElementById('tIngresos').textContent = '$' + sum(ing).toFixed(2);
-  document.getElementById('tGastos').textContent    = '$' + sum(gas).toFixed(2);
-  document.getElementById('tSaldo').textContent     = '$' + (sum(ing) - sum(gas)).toFixed(2);
-
-  pintar('tblIngresos', ing, ['fecha','descripcion','categoria','monto','metodo_pago','responsable']);
-  pintar('tblGastos',   gas, ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable']);
-  pintar('tblProveedores', prov, ['nombre','nit','telefono','email','direccion']);
-  pintar('tblCuentas', cta, ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado']);
+  document.getElementById('totalIngresos').textContent = '$' + sum(ing).toFixed(2);
+  document.getElementById('totalGastos').textContent = '$' + sum(gast).toFixed(2);
+  document.getElementById('balance').textContent = '$' + (sum(ing) - sum(gast)).toFixed(2);
+  chart.data.datasets[0].data = [sum(ing), sum(gast), Math.abs(sum(ing) - sum(gast))]; chart.update();
+  forms.forEach(f => renderTable(f.table, f.key, f.fields));
 }
 
-function pintar(idTabla, lista, cols) {
-  const tbody = document.querySelector(`#${idTabla} tbody`);
-  tbody.innerHTML = lista.map(it =>
-    `<tr>${cols.map(c => `<td>${it[c]||''}</td>`).join('')}
-     <td class="acciones"><button onclick="borrar(${it.id})">🗑️</button></td></tr>`
-  ).join('');
+function renderTable(tableId, key, fields) {
+  getItems(key.slice(0, -1)).then(list => {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = list.map(item =>
+      `<tr>${fields.map(f => `<td>${item[f] || ''}</td>`).join('')}
+       <td class="acciones">
+         <button class="editar" onclick="editar('${key}',${item.id})">✏️</button>
+         <button class="eliminar" onclick="eliminar('${key}',${item.id})">🗑️</button>
+       </td></tr>`
+    ).join('');
+  });
 }
 
-/* ==========  EXPORTAR / IMPORTAR  ========== */
-async exportar() {
-  if (!db) await abrirDB();
+/* ---------- ALTAS / BAJAS / EDICION ---------- */
+forms.forEach(f => {
+  document.getElementById(f.id).addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const obj = Object.fromEntries(new FormData(e.target));
+    await addItem(f.key.slice(0, -1), obj);
+    e.target.reset();
+    cargarYRenderizar();
+  });
+});
+
+async function eliminar(key, id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  await delItem(id);
+  cargarYRenderizar();
+}
+async function editar(key, id) {
+  const lista = await getItems(key.slice(0, -1));
+  const item = lista.find(x => x.id === id);
+  if (!item) return;
+  const f = forms.find(x => x.key === key);
+  f.fields.forEach(field => document.querySelector(`#${f.id} [name="${field}"]`).value = item[field] || '');
+  await delItem(id);
+  cargarYRenderizar();
+}
+
+/* ---------- EXPORTAR / IMPORTAR ---------- */
+async function exportarDatos() {
   const datos = {
-    ingresos: await getTipo('ingreso'),
-    gastos:   await getTipo('gasto'),
-    proveedores: await getTipo('proveedor'),
-    cuentas:  await getTipo('cuenta')
+    ingresos: await getItems('ingreso'),
+    gastos: await getItems('gasto'),
+    proveedores: await getItems('proveedor'),
+    cuentas: await getItems('cuenta')
   };
-  const blob = new Blob([JSON.stringify(datos, null, 2)], {type: 'application/json'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'respaldo_lista.json';
-  document.body.appendChild(a);
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'respaldo_indexeddb.json';
   a.click();
-  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
-async importar(ev) {
-  const file = ev.target.files[0];
+async function importarDatos(event) {
+  const file = event.target.files[0];
   if (!file) return;
-  const txt  = await file.text();
+  const txt = await file.text();
   try {
     const datos = JSON.parse(txt);
     if (!confirm('⚠️  Reemplazará todos los datos. ¿Continuar?')) return;
-    if (!db) await abrirDB();
-    const tx  = db.transaction(STORE, 'readwrite');
-    const st  = tx.objectStore(STORE);
+    const tx = db.transaction(STORE, 'readwrite');
+    const st = tx.objectStore(STORE);
     await st.clear();
-    for (const grupo of ['ingresos','gastos','proveedores','cuentas']) {
-      for (const it of (datos[grupo]||[])) {
-        it.tipo = grupo.slice(0, -1);   // quita la "s"
+    for (const grupo of ['ingresos', 'gastos', 'proveedores', 'cuentas']) {
+      for (const it of (datos[grupo] || [])) {
+        it.tipo = grupo.slice(0, -1);
         await st.add(it);
       }
     }
-    alert('✅ Importado. Recargando...');
+    alert('✅ Importado correctamente. Recargando...');
     location.reload();
   } catch (e) { alert('❌ Archivo no válido'); }
 }
 
-/* ==========  ARRANQUE  ========== */
-(async () => {
-  await abrirDB();
-  await refrescar();
-})();
+/* ---------- INICIO ---------- */
+(async () => { await abrirDB(); cargarYRenderizar(); })();
 </script>
 </body>
 </html>

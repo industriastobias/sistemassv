@@ -87,8 +87,8 @@
             <th>ID</th>
             <th>Correo</th>
             <th>Celular</th>
-            <th id="sort-puntos" style="cursor:pointer">Puntos ▼</th>
-            <th>Registro</th>
+            <th id="sort-puntos" style="cursor:pointer">Puntos</th>
+            <th id="sort-fecha" style="cursor:pointer">Fecha ▼</th>
             <th></th>
           </tr>
         </thead>
@@ -131,7 +131,8 @@
     const KEY = 'clientes';
     let clientes = [];
     let clusterize;
-    let ordenDesc = true;
+    let ordenDesc = true;   // true → más reciente primero
+    let ordenarPor = 'fecha';
 
     /* ---------- IndexedDB ---------- */
     async function load() { clientes = await get(KEY) || []; }
@@ -200,7 +201,13 @@
         (!fcor || c.correo.toLowerCase().includes(fcor)) &&
         (!ftel || c.telefono === ftel)
       );
-      filtrados.sort((a, b) => ordenDesc ? b.puntos - a.puntos : a.puntos - b.puntos);
+
+      // orden
+      filtrados.sort((a, b) => {
+        const valA = ordenarPor === 'fecha' ? new Date(a.fecha) : a.puntos;
+        const valB = ordenarPor === 'fecha' ? new Date(b.fecha) : b.puntos;
+        return ordenDesc ? valB - valA : valA - valB;
+      });
 
       const htmlRows = filtrados.length
         ? filtrados.map(c => `
@@ -221,7 +228,21 @@
       initClusterize(htmlRows);
     }
 
-    $('#sort-puntos').onclick = () => { ordenDesc = !ordenDesc; $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`; render(); };
+    /* ---------- Clic en encabezados ---------- */
+    $('#sort-fecha').onclick = () => {
+      if (ordenarPor === 'fecha') ordenDesc = !ordenDesc;
+      else { ordenarPor = 'fecha'; ordenDesc = true; }
+      $('#sort-fecha').textContent = `Fecha ${ordenDesc ? '▼' : '▲'}`;
+      $('#sort-puntos').textContent = 'Puntos';
+      render();
+    };
+    $('#sort-puntos').onclick = () => {
+      if (ordenarPor === 'puntos') ordenDesc = !ordenDesc;
+      else { ordenarPor = 'puntos'; ordenDesc = true; }
+      $('#sort-puntos').textContent = `Puntos ${ordenDesc ? '▼' : '▲'}`;
+      $('#sort-fecha').textContent = 'Fecha';
+      render();
+    };
 
     /* ---------- Formulario alta/edición ---------- */
     $('#form-cliente').addEventListener('submit', async e => {

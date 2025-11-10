@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FINANZAS </title>
+  <title>LISTA FINANZAS - INDEXEDDB</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -190,7 +190,7 @@
 <body>
 
   <header>
-    <span>📊 LISTA FINANZAS</span>
+    <span>📊 LISTA FINANZAS - INDEXEDDB</span>
     <div>
       <button onclick="exportarDatos()">📥 Exportar JSON</button>
       <button onclick="document.getElementById('inputImportar').click()">📤 Importar JSON</button>
@@ -326,7 +326,7 @@
     </section>
   </main>
 
-  <footer>© 2025 Lista Financiera power by Tobias</footer>
+  <footer>© 2025 Lista Financiera IndexedDB</footer>
 
   <script>
     // IndexedDB setup
@@ -370,13 +370,6 @@
       const tx = db.transaction([STORE_NAME], 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       await store.delete(id);
-    };
-
-    const actualizarDeDB = async (id, nuevoItem) => {
-      const tx = db.transaction([STORE_NAME], 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      nuevoItem.id = id;
-      await store.put(nuevoItem);
     };
 
     const data = { ingresos: [], gastos: [], proveedores: [], cuentas: [] };
@@ -478,14 +471,16 @@
         e.preventDefault();
         const item = {};
         f.fields.forEach(k => item[k] = form[k].value);
-        await guardarEnDB(f.tipo.slice(0, -1), item);
+        await guardarEnDB(f.tipo.slice(0, -1), item); // "ingresos" -> "ingreso"
         await loadAll();
         renderTable(f.table, data[f.tipo], f.fields);
         form.reset();
       });
     });
 
-    const exportarDatos = async () => {
+    // GLOBALES para que onclick las encuentre
+    async function exportarDatos() {
+      if (!db) await openDB();
       await loadAll();
       const datos = {
         ingresos: data.ingresos,
@@ -498,36 +493,41 @@
       const a = document.createElement('a');
       a.href = url;
       a.download = 'respaldo_indexeddb.json';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    };
+    }
 
-    const importarDatos = async (event) => {
+    async function importarDatos(event) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const datos = JSON.parse(e.target.result);
-          if (confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
-            const tx = db.transaction([STORE_NAME], 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            await store.clear();
-            for (const tipo of ['ingresos', 'gastos', 'proveedores', 'cuentas']) {
-              for (const item of datos[tipo] || []) {
-                await guardarEnDB(tipo.slice(0, -1), item);
-              }
+          if (!confirm('⚠️  Esto reemplazará TODOS los datos actuales. ¿Continuar?')) return;
+          if (!db) await openDB();
+          const tx = db.transaction([STORE_NAME], 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          await store.clear();
+          for (const tipo of ['ingresos', 'gastos', 'proveedores', 'cuentas']) {
+            for (const item of (datos[tipo] || [])) {
+              item.tipo = tipo.slice(0, -1); // "ingresos" -> "ingreso"
+              await store.add(item);
             }
-            alert('✅ Datos importados correctamente. Recargando...');
-            location.reload();
           }
+          alert('✅ Datos importados correctamente. Recargando...');
+          location.reload();
         } catch (err) {
+          console.error(err);
           alert('❌ Error al leer el archivo.');
         }
       };
       reader.readAsText(file);
-    };
+    }
 
+    // Inicializar
     (async () => {
       await openDB();
       await loadAll();

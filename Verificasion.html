@@ -1,106 +1,147 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Verificación – KLOHE</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <title>Verificación - Klohe</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    :root{--bg:#ffffff;--panel:#ffffff;--accent:#DBB8BC;--text:#1F2937;--muted:#9CA3AF;--danger:#EF4444;--border:#DBB8BC}
-    body[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--accent:#38bdf8;--text:#e5e7eb;--muted:#6b7280;--danger:#f43f5e;--border:#30363d}
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
-    body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem}
-    h1{margin-bottom:2rem;font-weight:800;letter-spacing:-1px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem;width:100%;max-width:1200px}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 10px rgba(0,0,0,.05)}
-    .card img{width:100%;height:160px;object-fit:cover}
-    .info{padding:1rem;flex:1;display:flex;flex-direction:column;justify-content:space-between}
-    .info h3{font-size:1.1rem;margin-bottom:.5rem}
-    .info p{margin:.25rem 0;font-size:.9rem;color:var(--muted)}
-    .info button{margin-top:1rem;width:100%;padding:.6rem;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;transition:transform .2s}
-    .info button:hover{transform:scale(1.03)}
-    .empty{text-align:center;color:var(--muted);font-size:1.2rem}
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text: #222222;
+      --line: #e5e5e5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 0 1rem 2rem 1rem;
+    }
+    .header-fixed {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--line);
+      color: var(--text);
+      padding: 1rem 0;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--line);
+      text-align: center;
+      font-weight: 500;
+    }
+    .catalogo {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1200px) { .catalogo { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 400px)  { .catalogo { grid-template-columns: 1fr; } }
+
+    .producto {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 0.5s forwards;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .producto img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .producto h3 {
+      margin: .8rem 0 .3rem;
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .producto p {
+      margin: .2rem 0;
+      font-size: .8rem;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
-  <h1>Verificación de productos</h1>
-  <div id="contenedor" class="grid"></div>
+
+  <header class="header-fixed">
+    <h1>VERIFICACIÓN DE CATÁLOGO KLOHE</h1>
+  </header>
+
+  <div class="catalogo" id="catalogo"></div>
 
   <script>
-    const DB_NAME = 'menuDB';
-    const STORE_COMPRA = 'compra';
+    const catalogo = document.getElementById('catalogo');
 
-    let db;
+    const ordenCategorias = [
+      'Carteras',
+      'Collares',
+      'Aritos',
+      'Pulseras',
+      'Anillos',
+      'Accesorios para el cabello',
+      'Lentes de sol',
+      'Chokers',
+      'Relojes',
+      'Billeteras',
+      'Otros'
+    ];
 
-    async function openDB() {
-      return new Promise((res, rej) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onerror = () => rej(req.error);
-        req.onsuccess = () => res(db = req.result);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(STORE_COMPRA))
-            db.createObjectStore(STORE_COMPRA, {keyPath: 'id'});
-        };
-      });
-    }
+    async function renderCatalogo() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      catalogo.innerHTML = '';
 
-    async function obtenerNoVerificados() {
-      const tx = db.transaction([STORE_COMPRA], 'readonly');
-      const store = tx.objectStore(STORE_COMPRA);
-      const todos = await store.getAll();
-      return todos.filter(p => !p.verificado);
-    }
-
-    async function marcarVerificado(id) {
-      const tx = db.transaction([STORE_COMPRA], 'readwrite');
-      const store = tx.objectStore(STORE_COMPRA);
-      const prod = await store.get(id);
-      if (prod) {
-        prod.verificado = true;
-        store.put(prod);
+      const porCategoria = {};
+      for (const prod of lista) {
+        const cat = prod.category || 'Otros';
+        if (!porCategoria[cat]) porCategoria[cat] = [];
+        porCategoria[cat].push(prod);
       }
-      await tx.complete;
-    }
 
-    function renderizar(lista) {
-      const cont = document.getElementById('contenedor');
-      cont.innerHTML = '';
-      if (!lista.length) {
-        cont.innerHTML = '<p class="empty">No hay productos para verificar</p>';
-        return;
+      let delay = 0;
+      for (const categoria of ordenCategorias) {
+        const productos = porCategoria[categoria] || [];
+        for (const prod of productos) {
+          const div = document.createElement('div');
+          div.className = 'producto';
+          div.style.animationDelay = `${delay}s`;
+
+          const blob = await localforage.getItem(`img_${prod.code}`);
+          const imgSrc = blob ? URL.createObjectURL(blob) : '';
+
+          div.innerHTML = `
+            <img src="${imgSrc}" alt="${prod.name}">
+            <h3>${prod.name}</h3>
+            <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
+            <p><strong>Categoría:</strong> ${prod.category}</p>
+            <p><strong>Código de barras:</strong> ${prod.barcode}</p>
+          `;
+          catalogo.appendChild(div);
+          delay += 0.05;
+        }
       }
-      lista.forEach(prod => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <img src="${prod.imagen || 'https://via.placeholder.com/300x200?text=Sin+imagen'}" alt="${prod.nombre}">
-          <div class="info">
-            <div>
-              <h3>${prod.nombre}</h3>
-              <p>Precio: $${Number(prod.precio).toFixed(2)}</p>
-              <p>Código: ${prod.codigoBarras || '—'}</p>
-            </div>
-            <button onclick="verificar('${prod.id}', this)">Verificar</button>
-          </div>
-        `;
-        cont.appendChild(card);
-      });
     }
 
-    async function verificar(id, btn) {
-      await marcarVerificado(id);
-      btn.closest('.card').remove();
-      const restantes = await obtenerNoVerificados();
-      if (!restantes.length)
-        document.getElementById('contenedor').innerHTML = '<p class="empty">No hay productos para verificar</p>';
-    }
-
-    (async () => {
-      await openDB();
-      const productos = await obtenerNoVerificados();
-      renderizar(productos);
-    })();
+    renderCatalogo();
+    window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });
   </script>
+
 </body>
 </html>

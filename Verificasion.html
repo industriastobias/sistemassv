@@ -32,6 +32,25 @@
       text-align: center;
       font-weight: 500;
     }
+    /* =======  CONTADOR  ======= */
+    .contador-pill {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 2000;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: .5rem .8rem;
+      font-size: .8rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      display: flex;
+      gap: .6rem;
+    }
+    .contador-pill .verde { color: var(--verde); font-weight: 600; }
+    .contador-pill .rojo  { color: var(--rojo);  font-weight: 600; }
+    /* =========================== */
+
     .catalogo {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -46,7 +65,7 @@
 
     .producto {
       background: var(--card);
-      border: 3px solid var(--rojo);   /* por defecto rojo */
+      border: 3px solid var(--rojo);
       border-radius: 8px;
       padding: 1rem;
       display: flex;
@@ -59,8 +78,6 @@
       transition: border-color .25s;
     }
     .producto.confirmado { border-color: var(--verde); }
-    .producto.no-confirmado { border-color: var(--rojo); }
-
     @keyframes fadeIn {
       to { opacity: 1; transform: translateY(0); }
     }
@@ -101,22 +118,33 @@
     <h1>VERIFICACIÓN DE CATÁLOGO KLOHE</h1>
   </header>
 
+  <!-- =======  CONTADOR  ======= -->
+  <div class="contador-pill">
+    <span>✔️ <span id="cConfirmados" class="verde">0</span></span>
+    <span>❌ <span id="cNoConfirmados" class="rojo">0</span></span>
+  </div>
+  <!-- =========================== -->
+
   <div class="catalogo" id="catalogo"></div>
 
   <script>
     const catalogo = document.getElementById('catalogo');
-    const claveConfirmados = 'confirmados'; // clave en localStorage
+    const claveConfirmados = 'confirmados';
 
-    /* leer códigos confirmados previamente */
     function getConfirmados() {
-      try {
-        return JSON.parse(localStorage.getItem(claveConfirmados)) || [];
-      } catch {
-        return [];
-      }
+      try { return JSON.parse(localStorage.getItem(claveConfirmados)) || []; }
+      catch { return []; }
     }
     function guardarConfirmados(arr) {
       localStorage.setItem(claveConfirmados, JSON.stringify(arr));
+    }
+
+    /* Actualiza los números del pill */
+    function actualizarContadores() {
+      const total = catalogo.querySelectorAll('.producto').length;
+      const confirmados = getConfirmados().length;
+      document.getElementById('cConfirmados').textContent   = confirmados;
+      document.getElementById('cNoConfirmados').textContent = total - confirmados;
     }
 
     const ordenCategorias = [
@@ -160,7 +188,6 @@
             <button class="btn-confirmar">${esConfirmado ? 'CONFIRMADO' : 'CONFIRMAR'}</button>
           `;
 
-          /* evento del botón */
           div.querySelector('.btn-confirmar').addEventListener('click', () => {
             const arr = getConfirmados();
             const idx = arr.indexOf(prod.code);
@@ -176,16 +203,17 @@
               div.querySelector('.btn-confirmar').textContent = 'CONFIRMAR';
             }
             guardarConfirmados(arr);
+            actualizarContadores();   /* <— refresca números */
           });
 
           catalogo.appendChild(div);
           delay += 0.05;
         }
       }
+      actualizarContadores(); /* primer pintado */
     }
 
     renderCatalogo();
-    /* si se actualiza el inventario en otra pestaña, recargamos */
     window.addEventListener('storage', e => {
       if (e.key === 'inventory' || e.key === claveConfirmados) renderCatalogo();
     });

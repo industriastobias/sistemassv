@@ -10,6 +10,8 @@
       --card: #ffffff;
       --text: #222222;
       --line: #e5e5e5;
+      --verde: #28a745;
+      --rojo: #dc3545;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -44,7 +46,7 @@
 
     .producto {
       background: var(--card);
-      border: 1px solid var(--line);
+      border: 3px solid var(--rojo);   /* por defecto rojo */
       border-radius: 8px;
       padding: 1rem;
       display: flex;
@@ -54,12 +56,13 @@
       opacity: 0;
       transform: translateY(20px);
       animation: fadeIn 0.5s forwards;
+      transition: border-color .25s;
     }
+    .producto.confirmado { border-color: var(--verde); }
+    .producto.no-confirmado { border-color: var(--rojo); }
+
     @keyframes fadeIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      to { opacity: 1; transform: translateY(0); }
     }
     .producto img {
       width: 100%;
@@ -77,6 +80,19 @@
       font-size: .8rem;
       color: var(--text);
     }
+    .btn-confirmar {
+      margin-top: .6rem;
+      padding: .4rem .8rem;
+      font-size: .75rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: var(--rojo);
+      color: #fff;
+      transition: background .25s;
+    }
+    .btn-confirmar:hover { opacity: .9; }
+    .confirmado .btn-confirmar { background: var(--verde); }
   </style>
 </head>
 <body>
@@ -89,30 +105,36 @@
 
   <script>
     const catalogo = document.getElementById('catalogo');
+    const claveConfirmados = 'confirmados'; // clave en localStorage
+
+    /* leer códigos confirmados previamente */
+    function getConfirmados() {
+      try {
+        return JSON.parse(localStorage.getItem(claveConfirmados)) || [];
+      } catch {
+        return [];
+      }
+    }
+    function guardarConfirmados(arr) {
+      localStorage.setItem(claveConfirmados, JSON.stringify(arr));
+    }
 
     const ordenCategorias = [
-      'Carteras',
-      'Collares',
-      'Aritos',
-      'Pulseras',
-      'Anillos',
-      'Accesorios para el cabello',
-      'Lentes de sol',
-      'Chokers',
-      'Relojes',
-      'Billeteras',
-      'Otros'
+      'Carteras','Collares','Aritos','Pulseras','Anillos',
+      'Accesorios para el cabello','Lentes de sol','Chokers',
+      'Relojes','Billeteras','Otros'
     ];
 
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      const confirmados = getConfirmados();
       catalogo.innerHTML = '';
 
       const porCategoria = {};
-      for (const prod of lista) {
-        const cat = prod.category || 'Otros';
+      for (const p of lista) {
+        const cat = p.category || 'Otros';
         if (!porCategoria[cat]) porCategoria[cat] = [];
-        porCategoria[cat].push(prod);
+        porCategoria[cat].push(p);
       }
 
       let delay = 0;
@@ -123,6 +145,9 @@
           div.className = 'producto';
           div.style.animationDelay = `${delay}s`;
 
+          const esConfirmado = confirmados.includes(prod.code);
+          div.classList.add(esConfirmado ? 'confirmado' : 'no-confirmado');
+
           const blob = await localforage.getItem(`img_${prod.code}`);
           const imgSrc = blob ? URL.createObjectURL(blob) : '';
 
@@ -132,7 +157,27 @@
             <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
             <p><strong>Categoría:</strong> ${prod.category}</p>
             <p><strong>Código de barras:</strong> ${prod.barcode}</p>
+            <button class="btn-confirmar">${esConfirmado ? 'CONFIRMADO' : 'CONFIRMAR'}</button>
           `;
+
+          /* evento del botón */
+          div.querySelector('.btn-confirmar').addEventListener('click', () => {
+            const arr = getConfirmados();
+            const idx = arr.indexOf(prod.code);
+            if (idx === -1) {
+              arr.push(prod.code);
+              div.classList.remove('no-confirmado');
+              div.classList.add('confirmado');
+              div.querySelector('.btn-confirmar').textContent = 'CONFIRMADO';
+            } else {
+              arr.splice(idx, 1);
+              div.classList.remove('confirmado');
+              div.classList.add('no-confirmado');
+              div.querySelector('.btn-confirmar').textContent = 'CONFIRMAR';
+            }
+            guardarConfirmados(arr);
+          });
+
           catalogo.appendChild(div);
           delay += 0.05;
         }
@@ -140,7 +185,10 @@
     }
 
     renderCatalogo();
-    window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });
+    /* si se actualiza el inventario en otra pestaña, recargamos */
+    window.addEventListener('storage', e => {
+      if (e.key === 'inventory' || e.key === claveConfirmados) renderCatalogo();
+    });
   </script>
 
 </body>

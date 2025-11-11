@@ -1,106 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Verificación – KLOHE</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    :root {
-      --bg: #ffffff;
-      --panel: #ffffff;
-      --accent: #DBB8BC;
-      --text: #1F2937;
-      --muted: #9CA3AF;
-      --danger: #EF4444;
-      --border: #DBB8BC;
-    }
-    body[data-theme="dark"] {
-      --bg: #0d1117;
-      --panel: #161b22;
-      --accent: #38bdf8;
-      --text: #e5e7eb;
-      --muted: #6b7280;
-      --danger: #f43f5e;
-      --border: #30363d;
-    }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', system-ui, sans-serif;
-    }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-    }
-    h1 {
-      margin-bottom: 2rem;
-      font-weight: 800;
-      letter-spacing: -1px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1.5rem;
-      width: 100%;
-      max-width: 1200px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-    }
-    .info {
-      padding: 1rem;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .info h3 {
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-    }
-    .info p {
-      margin: 0.25rem 0;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-    .info button {
-      margin-top: 1rem;
-      width: 100%;
-      padding: 0.6rem;
-      border: none;
-      border-radius: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .info button:hover {
-      transform: scale(1.03);
-    }
-    .empty {
-      text-align: center;
-      color: var(--muted);
-      font-size: 1.2rem;
-    }
+    :root{--bg:#ffffff;--panel:#ffffff;--accent:#DBB8BC;--text:#1F2937;--muted:#9CA3AF;--danger:#EF4444;--border:#DBB8BC}
+    body[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--accent:#38bdf8;--text:#e5e7eb;--muted:#6b7280;--danger:#f43f5e;--border:#30363d}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
+    body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem}
+    h1{margin-bottom:2rem;font-weight:800;letter-spacing:-1px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem;width:100%;max-width:1200px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 10px rgba(0,0,0,.05)}
+    .card img{width:100%;height:160px;object-fit:cover}
+    .info{padding:1rem;flex:1;display:flex;flex-direction:column;justify-content:space-between}
+    .info h3{font-size:1.1rem;margin-bottom:.5rem}
+    .info p{margin:.25rem 0;font-size:.9rem;color:var(--muted)}
+    .info button{margin-top:1rem;width:100%;padding:.6rem;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;transition:transform .2s}
+    .info button:hover{transform:scale(1.03)}
+    .empty{text-align:center;color:var(--muted);font-size:1.2rem}
   </style>
 </head>
 <body>
@@ -121,21 +40,26 @@
         req.onupgradeneeded = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains(STORE_COMPRA))
-            db.createObjectStore(STORE_COMPRA, { keyPath: 'id' });
+            db.createObjectStore(STORE_COMPRA, {keyPath: 'id'});
         };
       });
     }
 
-    async function obtenerProductos() {
+    async function obtenerNoVerificados() {
       const tx = db.transaction([STORE_COMPRA], 'readonly');
       const store = tx.objectStore(STORE_COMPRA);
-      return store.getAll();
+      const todos = await store.getAll();
+      return todos.filter(p => !p.verificado);
     }
 
-    async function eliminarProducto(id) {
+    async function marcarVerificado(id) {
       const tx = db.transaction([STORE_COMPRA], 'readwrite');
       const store = tx.objectStore(STORE_COMPRA);
-      store.delete(id);
+      const prod = await store.get(id);
+      if (prod) {
+        prod.verificado = true;
+        store.put(prod);
+      }
       await tx.complete;
     }
 
@@ -165,16 +89,16 @@
     }
 
     async function verificar(id, btn) {
-      await eliminarProducto(id);
+      await marcarVerificado(id);
       btn.closest('.card').remove();
-      const restantes = await obtenerProductos();
+      const restantes = await obtenerNoVerificados();
       if (!restantes.length)
         document.getElementById('contenedor').innerHTML = '<p class="empty">No hay productos para verificar</p>';
     }
 
     (async () => {
       await openDB();
-      const productos = await obtenerProductos();
+      const productos = await obtenerNoVerificados();
       renderizar(productos);
     })();
   </script>

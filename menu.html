@@ -1,573 +1,289 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KLOHE – Dashboard Empresarial</title>
-
-  <!-- Fuentes -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-
-  <!-- Iconos -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLOHE – Dashboard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
   <style>
-    /* ================= ROOT & THEME ================= */
-    :root{
-      --bg: #fbf9f6;           /* beige suave */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+    :root {
+      --bg: #f5f7fa;
       --surface: #ffffff;
-      --muted: #7b7b7b;
-      --text: #0f1724;
-      --primary: #0b1220;      /* casi negro */
-      --accent: #bfa25a;       /* dorado/acento */
-      --glass: rgba(255,255,255,0.6);
-      --border: rgba(11,18,32,0.06);
-      --radius: 12px;
-      --shadow-1: 0 6px 20px rgba(11,18,32,0.06);
-      --font-sans: 'Inter', sans-serif;
-      --font-serif: 'Playfair Display', serif;
+      --primary: #00d4aa;      /* verde esmeralda */
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --danger: #e74c3c;
+      --border: #dfe6e9;
+      --radius: 8px;
+      --font: 'Roboto', sans-serif;
+      --font-mono: 'Roboto Mono', monospace;
     }
-    body[data-theme="dark"]{
-      --bg:#0b0f12;
-      --surface:#0f1720;
-      --muted:#98a1ad;
-      --text:#f4f6f8;
-      --primary:#e6d7a8;     /* dorado claro text */
-      --accent:#ffd88a;
-      --glass: rgba(255,255,255,0.03);
-      --border: rgba(255,255,255,0.04);
-      --shadow-1: 0 8px 30px rgba(3,5,7,0.6);
+    body[data-theme="dark"] {
+      --bg: #0a0a0a;
+      --surface: #1a1a1a;
+      --primary: #00ff88;      /* verde neón */
+      --text: #ecf0f1;
+      --muted: #95a5a6;
+      --border: #2c3e50;
     }
 
-    /* ============ GLOBAL ============ */
-    *{box-sizing: border-box; margin:0; padding:0}
-    html,body{height:100%}
-    body{
-      font-family:var(--font-sans);
-      background: linear-gradient(180deg, var(--bg) 0%, rgba(255,255,255,0.02) 100%);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
-      display:flex;
-      gap:24px;
-      padding:28px;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-areas:
+        "sidebar header"
+        "sidebar main"
+        "sidebar footer";
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto 1fr auto;
       transition: background .25s, color .25s;
-      align-items:flex-start;
     }
 
-    /* ============ LAYOUT ============ */
-    .shell{
-      width:100%;
-      max-width:1300px;
-      margin:0 auto;
-      display:grid;
-      grid-template-columns: 290px 1fr;
-      gap:24px;
-      align-items:start;
+    /* ---------- SIDEBAR (NODOS) ---------- */
+    .sidebar {
+      grid-area: sidebar;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .8rem;
+      width: 220px;
     }
-
-    /* ============ SIDEBAR ============ */
-    .sidebar{
-      background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.45));
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .8rem 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding:18px;
-      border:1px solid var(--border);
-      box-shadow: var(--shadow-1);
-      position:sticky;
-      top:28px;
-      height: calc(100vh - 56px);
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      backdrop-filter: blur(6px);
+      text-decoration: none;
+      color: var(--muted);
+      font-size: .9rem;
+      font-weight: 500;
+      transition: all .2s;
     }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-    .brand__logo{
-      font-family:var(--font-serif);
-      font-size:1.35rem;
-      color:var(--primary);
-      letter-spacing:1px;
-    }
-    .brand__sub{
-      font-size:0.78rem;
-      color:var(--muted);
-    }
+    .nav a i { font-size: 1.1rem; }
+    .nav a:hover { background: var(--primary); color: var(--surface); border-color: var(--primary); }
+    .nav a.active { background: var(--primary); color: var(--surface); border-color: var(--primary); }
 
-    .nav{
-      margin-top:8px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      flex:1;
-      overflow:auto;
-      padding-right:6px;
+    /* ---------- HEADER ---------- */
+    .header {
+      grid-area: header;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
     }
-    .nav a{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:10px 12px;
-      border-radius:10px;
-      text-decoration:none;
-      color:var(--primary);
-      border:1px solid transparent;
-      font-weight:600;
-      transition: all .18s ease;
-      background:transparent;
-    }
-    .nav a i{ width:22px; text-align:center; font-size:1.05rem; color:var(--accent) }
-    .nav a:hover{ background: linear-gradient(90deg, rgba(191,162,90,0.08), rgba(11,18,32,0.02)); transform: translateY(-2px) }
-    .nav a.active{ background: linear-gradient(90deg, rgba(191,162,90,0.12), rgba(11,18,32,0.04)); border:1px solid rgba(191,162,90,0.12) }
-
-    .sidebar__footer{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-      padding-top:6px;
-      border-top:1px dashed var(--border);
-      color:var(--muted);
-      font-size:0.85rem;
-    }
-
-    /* ============ MAIN PANEL ============ */
-    .panel{
-      background: linear-gradient(180deg, var(--surface), var(--glass));
-      border-radius: var(--radius);
-      padding:22px;
-      min-height:calc(100vh - 56px);
-      border:1px solid var(--border);
-      box-shadow: var(--shadow-1);
-      display:flex;
-      flex-direction:column;
-      gap:18px;
-    }
-
-    /* HEADER / CONTROLS INSIDE PANEL */
-    .panel__head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .searchbox{
-      flex:1;
-      display:flex;
-      align-items:center;
-      gap:12px;
-      background: rgba(255,255,255,0.6);
-      border-radius:12px;
-      padding:8px 12px;
-      border:1px solid var(--border);
-    }
-    .searchbox input{
-      border:0; outline:0; background:transparent;
-      font-size:0.95rem; color:var(--text); width:100%;
-    }
-    .actions{
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:transparent;
-      cursor:pointer;
-      font-weight:600;
-      transition:transform .12s ease, box-shadow .12s;
-    }
-    .btn:hover{ transform:translateY(-3px) }
-    .btn--primary{
-      background: linear-gradient(90deg, var(--accent), rgba(191,162,90,0.9));
+    .header__logo {
+      font-weight: 700;
+      font-size: clamp(1.3rem, 3vw, 1.8rem);
       color: var(--primary);
-      border: 1px solid rgba(0,0,0,0.03);
+      letter-spacing: .5px;
+    }
+    .header__actions { display: flex; gap: .6rem; }
+    .header__btn {
+      width: 36px; height: 36px;
+      border: none; border-radius: var(--radius);
+      color: var(--surface);
+      background: var(--primary);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .header__btn:hover { background: var(--accent); color: var(--text); }
+
+    /* ---------- MAIN ---------- */
+    .main {
+      grid-area: main;
+      place-self: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    .welcome {
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 600;
+      color: var(--primary);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
     }
 
-    .avatar{
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .avatar__img{
-      width:40px; height:40px; border-radius:10px; overflow:hidden;
-      display:inline-grid; place-items:center;
-      border:1px solid var(--border);
-      font-weight:700;
-      background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(0,0,0,0.02));
-      color:var(--primary);
-      font-family:var(--font-serif);
+    /* ---------- FOOTER ---------- */
+    .footer {
+      grid-area: footer;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 1rem;
+      text-align: center;
+      font-size: .8rem;
+      color: var(--muted);
     }
 
-    /* WELCOME & STATS */
-    .welcome{
-      display:flex;
-      gap:18px;
-      align-items:center;
-      justify-content:space-between;
-      flex-wrap:wrap;
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 768px) {
+      body {
+        grid-template-areas:
+          "header"
+          "main"
+          "sidebar"
+          "footer";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto auto;
+      }
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 1rem;
+      }
+      .nav {
+        flex-direction: row;
+        gap: .8rem;
+        min-width: max-content;
+      }
+      .nav a {
+        flex-direction: column;
+        text-align: center;
+        min-width: 70px;
+        padding: .6rem .4rem;
+        font-size: .75rem;
+      }
     }
-    .welcome__title{
-      font-family:var(--font-serif);
-      font-size:1.8rem;
-      letter-spacing:-0.6px;
-      color:var(--primary);
-    }
-    .stats{
-      display:flex;
-      gap:12px;
-      align-items:center;
-    }
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.7));
-      border-radius:12px;
-      padding:12px 14px;
-      min-width:130px;
-      border:1px solid var(--border);
-      box-shadow: 0 6px 18px rgba(11,18,32,0.04);
-      text-align:left;
-    }
-    .card small{ color:var(--muted); display:block; font-size:0.78rem }
-    .card strong{ display:block; font-size:1.1rem; margin-top:6px }
-
-    /* GRID CONTENT AREA */
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:14px;
-      margin-top:6px;
-    }
-    .panel-block{
-      background:linear-gradient(180deg, var(--surface), var(--glass));
-      border-radius:10px;
-      padding:14px;
-      border:1px solid var(--border);
-      min-height:110px;
-    }
-
-    /* FOOTER NOTE */
-    .panel__foot{
-      text-align:center;
-      color:var(--muted);
-      font-size:0.85rem;
-      margin-top:auto;
-    }
-
-    /* RESPONSIVE */
-    @media (max-width:1100px){
-      .shell{ grid-template-columns: 1fr; padding-bottom:20px }
-      .sidebar{ position:relative; height:auto; order:2 }
-      .panel{ order:1 }
-      .grid{ grid-template-columns: repeat(2,1fr) }
-    }
-    @media (max-width:640px){
-      .grid{ grid-template-columns: 1fr }
-      .brand__logo{ font-size:1.1rem }
-      body{ padding:14px }
-    }
-
   </style>
 </head>
 <body>
 
-  <div class="shell">
-
-    <!-- SIDEBAR (con navegación) -->
-    <aside class="sidebar" aria-label="Navegación principal">
-      <div class="brand">
-        <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,var(--accent),rgba(191,162,90,0.8));display:grid;place-items:center;color:var(--primary);font-weight:700;font-family:var(--font-serif)">K</div>
-        <div>
-          <div class="brand__logo">KLOHE</div>
-          <div class="brand__sub">jewelry · carteras · experiencias</div>
-        </div>
-      </div>
-
-      <nav class="nav" id="nav">
-        <!-- misma lista de enlaces que tenías (con los mismos hrefs y ids) -->
-        <a href="almacenamiento.html"><i class="fa-solid fa-warehouse"></i> Almacén</a>
-        <a href="clientes.html"><i class="fa-solid fa-users"></i> Clientes</a>
-        <a href="compra.html" id="compra-link"><i class="fa-solid fa-cart-plus"></i> Compra</a>
-        <a href="descuentos.html" id="descuentos-link"><i class="fa-solid fa-percent"></i> Descuentos</a>
-        <a href="facturas.html"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
-        <a href="gastos.html"><i class="fa-solid fa-money-check-dollar"></i> Gastos</a>
-        <a href="inventario.html"><i class="fa-solid fa-boxes-stacked"></i> Inventario</a>
-        <a href="lista.html" id="lista-link"><i class="fa-solid fa-list"></i> Lista</a>
-        <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
-        <a href="venta.html" id="venta-link"><i class="fa-solid fa-cash-register"></i> Venta</a>
-        <a href="lista_usuarios.html" id="usuarios-link"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
-        <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
-      </nav>
-
-      <div class="sidebar__footer">
-        <div>
-          <small>Versión</small>
-          <div style="font-weight:700">2025 • KLOHE</div>
-        </div>
-        <div style="text-align:right">
-          <small id="session-user" style="display:block;color:var(--muted)">—</small>
-          <button class="btn" onclick="logout()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- MAIN PANEL -->
-    <main class="panel" role="main">
-      <div class="panel__head">
-        <div class="searchbox" role="search" aria-label="Buscar">
-          <i class="fa-solid fa-magnifying-glass" style="opacity:.7"></i>
-          <input id="search-input" placeholder="Buscar producto, cliente, factura..." />
-        </div>
-
-        <div class="actions" role="toolbar" aria-label="Acciones rápidas">
-          <button class="btn" onclick="toggleTheme()" title="Cambiar tema">
-            <i id="theme-icon" class="fa-solid fa-moon"></i>
-            <span style="display:none" id="theme-label">Tema</span>
-          </button>
-          <button class="btn btn--primary" onclick="location.href='venta.html'">
-            <i class="fa-solid fa-cash-register"></i> Nueva venta
-          </button>
-
-          <div class="avatar" title="Usuario">
-            <div class="avatar__img" id="avatar-initial">KT</div>
-          </div>
-        </div>
-      </div>
-
-      <section class="welcome" aria-labelledby="welcome-title">
-        <div>
-          <div class="welcome__title" id="welcome-title">KLOHE A FAMILY COMPANY</div>
-          <div style="color:var(--muted);margin-top:6px">Panel empresarial • Bienvenido</div>
-        </div>
-
-        <div class="stats" aria-hidden="false">
-          <div class="card">
-            <small>Ventas (hoy)</small>
-            <strong id="stat-sales">$0.00</strong>
-          </div>
-          <div class="card">
-            <small>Inventario</small>
-            <strong id="stat-stock">0 ítems</strong>
-          </div>
-          <div class="card">
-            <small>Clientes</small>
-            <strong id="stat-clients">0</strong>
-          </div>
-        </div>
-      </section>
-
-      <div class="grid" aria-live="polite">
-        <div class="panel-block">
-          <h4 style="margin-bottom:8px">Resumen rápido</h4>
-          <p style="color:var(--muted);font-size:0.95rem">Accede a las secciones principales desde la barra lateral. Todas las funciones (temas, roles y sesión) están activas.</p>
-        </div>
-        <div class="panel-block">
-          <h4 style="margin-bottom:8px">Atajos</h4>
-          <p style="color:var(--muted);font-size:0.95rem">Usa los botones rápidos para crear ventas o acceder al inventario.</p>
-        </div>
-        <div class="panel-block">
-          <h4 style="margin-bottom:8px">Notificaciones</h4>
-          <p style="color:var(--muted);font-size:0.95rem">Sin novedades.</p>
-        </div>
-      </div>
-
-      <div class="panel__foot">
-        <small>© 2025 KLOHE – Sistema empresarial</small>
-      </div>
-    </main>
-
+<header class="header">
+  <div class="header__logo">KLOHE</div>
+  <div class="header__actions">
+    <button class="header__btn" onclick="toggleTheme()" title="Cambiar tema">
+      <i id="theme-icon" class="fa-solid fa-moon"></i>
+    </button>
+    <button class="header__btn" onclick="logout()" title="Cerrar sesión">
+      <i class="fa-solid fa-right-from-bracket"></i>
+    </button>
   </div>
+</header>
 
-  <!-- ================= PRESERVÉ TODO EL JS FUNCIONAL (IndexedDB, sesión, roles, tema, navegación) ================= -->
-  <script>
-    /* ---------- IndexedDB (misma estructura y nombres) ---------- */
-    const DB_NAME = 'menuDB';
-    const STORE_THEME = 'theme';
-    const STORE_SESSION = 'userSession';
-    let db;
+<aside class="sidebar">
+  <nav class="nav">
+    <a href="almacenamiento.html"><i class="fa-solid fa-warehouse"></i> Almacén</a>
+    <a href="clientes.html"><i class="fa-solid fa-users"></i> Clientes</a>
+    <a href="compra.html" id="compra-link"><i class="fa-solid fa-cart-plus"></i> Compra</a>
+    <a href="descuentos.html" id="descuentos-link"><i class="fa-solid fa-percent"></i> Descuentos</a>
+    <a href="facturas.html"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
+    <a href="gastos.html"><i class="fa-solid fa-money-check-dollar"></i> Gastos</a>
+    <a href="inventario.html"><i class="fa-solid fa-boxes-stacked"></i> Inventario</a>
+    <a href="lista.html" id="lista-link"><i class="fa-solid fa-list"></i> Lista</a>
+    <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
+    <a href="venta.html" id="venta-link"><i class="fa-solid fa-cash-register"></i> Venta</a>
+    <a href="lista_usuarios.html" id="usuarios-link"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
+    <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
+  </nav>
+</aside>
 
-    async function openDB() {
-      return new Promise((res, rej) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onerror = () => {
-          console.error('IndexedDB error', req.error);
-          rej(req.error);
-        };
-        req.onsuccess = () => {
-          db = req.result;
-          res(db);
-        };
-        req.onupgradeneeded = () => {
-          const dbu = req.result;
-          if (!dbu.objectStoreNames.contains(STORE_THEME)) dbu.createObjectStore(STORE_THEME);
-          if (!dbu.objectStoreNames.contains(STORE_SESSION)) dbu.createObjectStore(STORE_SESSION, { keyPath: 'id' });
-        };
-      });
-    }
+<main class="main">
+  <h1 class="welcome">KLOHE A FAMILY COMPANY</h1>
+</main>
 
-    async function getTheme() {
-      try {
-        const tx = db.transaction([STORE_THEME], 'readonly');
-        return await new Promise((res, rej) => {
-          const req = tx.objectStore(STORE_THEME).get('current');
-          req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
-        });
-      } catch (e) { return null; }
-    }
-    async function setTheme(value) {
-      const tx = db.transaction([STORE_THEME], 'readwrite');
-      tx.objectStore(STORE_THEME).put(value, 'current');
-      return tx.complete;
-    }
+<footer class="footer">
+  <p>© 2025 KLOHE – Sistema empresarial</p>
+</footer>
 
-    async function getSession() {
-      try {
-        const tx = db.transaction([STORE_SESSION], 'readonly');
-        return await new Promise((res, rej) => {
-          const req = tx.objectStore(STORE_SESSION).get(1);
-          req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
-        });
-      } catch (e) { return null; }
-    }
-    async function clearSession() {
-      try {
-        const tx = db.transaction([STORE_SESSION], 'readwrite');
-        tx.objectStore(STORE_SESSION).clear();
-        return tx.complete;
-      } catch (e) { console.warn(e); }
-    }
+<script>
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'menuDB';
+const STORE_THEME = 'theme';
+const STORE_SESSION = 'userSession';
+let db;
+async function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onerror = () => rej(req.error);
+    req.onsuccess = () => res(db = req.result);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_THEME)) db.createObjectStore(STORE_THEME);
+      if (!db.objectStoreNames.contains(STORE_SESSION)) db.createObjectStore(STORE_SESSION, { keyPath: 'id' });
+    };
+  });
+}
+async function getTheme() { const tx = db.transaction([STORE_THEME], 'readonly'); return tx.objectStore(STORE_THEME).get('current'); }
+async function setTheme(value) { const tx = db.transaction([STORE_THEME], 'readwrite'); tx.objectStore(STORE_THEME).put(value, 'current'); }
+async function getSession() { const tx = db.transaction([STORE_SESSION], 'readonly'); return tx.objectStore(STORE_SESSION).get(1); }
+async function clearSession() { const tx = db.transaction([STORE_SESSION], 'readwrite'); tx.objectStore(STORE_SESSION).clear(); }
 
-    /* ---------- Autenticación / sesión (igual funcionalidad) ---------- */
-    function checkAuthentication() {
-      // Nota: la lógica original dependía de sessionStorage.loggedIn
-      // Se preserva el comportamiento: si no existe, redirige al index.html
-      if (sessionStorage.getItem('loggedIn') !== 'true') {
-        // Para evitar loops en desarrollo, sólo redirigimos si no estamos ya en index.html
-        if (!window.location.pathname.endsWith('index.html')) {
-          window.location.replace('index.html');
-        }
-      }
-    }
+/* ---------- Autenticación / sesión ---------- */
+function checkAuthentication() {
+  if (sessionStorage.getItem('loggedIn') !== 'true') window.location.replace('index.html');
+}
+async function logout() {
+  await clearSession(); sessionStorage.clear(); window.location.replace('index.html');
+}
 
-    async function logout() {
-      try {
-        await clearSession();
-      } catch(e){ console.warn(e) }
-      sessionStorage.clear();
-      window.location.replace('index.html');
-    }
+/* ---------- Mostrar/ocultar enlaces según rol ---------- */
+async function configureUserLinks() {
+  const session = await getSession();
+  const userID = session ? session.userID : null;
+  const userLink = document.getElementById('usuarios-link');
+  const compraLink = document.getElementById('compra-link');
+  const ventaLink = document.getElementById('venta-link');
+  if (userID !== '2005') userLink.style.display = 'none';
+  if (userID && userID.startsWith('100')) { compraLink.style.display = 'none'; ventaLink.style.display = 'none'; }
+}
 
-    /* ---------- Mostrar/ocultar enlaces según rol (MISMO NOMBRE DE FUNCION) ---------- */
-    async function configureUserLinks() {
-      const session = await getSession();
-      const userID = session ? session.userID : null;
-      const userLink = document.getElementById('usuarios-link');
-      const compraLink = document.getElementById('compra-link');
-      const ventaLink = document.getElementById('venta-link');
+/* ---------- Tema ---------- */
+async function applyTheme(theme) {
+  const icon = document.getElementById('theme-icon');
+  if (theme === 'light') {
+    document.body.setAttribute('data-theme', 'light');
+    icon.classList.replace('fa-moon', 'fa-sun');
+  } else {
+    document.body.removeAttribute('data-theme');
+    icon.classList.replace('fa-sun', 'fa-moon');
+  }
+}
+async function toggleTheme() {
+  const current = (await getTheme()) || 'dark';
+  const newTheme = current === 'dark' ? 'light' : 'dark';
+  await setTheme(newTheme);
+  await applyTheme(newTheme);
+}
 
-      // Seguridad: chequear que los elementos existan
-      if (userLink) userLink.style.display = (userID === '2005') ? '' : 'none';
-      if (compraLink) compraLink.style.display = (userID && userID.startsWith('100')) ? 'none' : '';
-      if (ventaLink) ventaLink.style.display = (userID && userID.startsWith('100')) ? 'none' : '';
+/* ---------- Resaltar página actual ---------- */
+function highlightCurrentPage() {
+  const currentPage = window.location.pathname.split('/').pop();
+  document.querySelectorAll('.nav a').forEach(link => {
+    if (link.getAttribute('href') === currentPage) link.classList.add('active');
+  });
+}
 
-      // Mostrar usuario en footer/avtar
-      const sessionUserEl = document.getElementById('session-user');
-      const avatarEl = document.getElementById('avatar-initial');
-      if (session && session.name) {
-        if (sessionUserEl) sessionUserEl.textContent = session.name;
-        if (avatarEl) {
-          const initials = session.name.split(' ').map(s => s.charAt(0)).slice(0,2).join('').toUpperCase();
-          avatarEl.textContent = initials || 'KT';
-        }
-      } else {
-        if (sessionUserEl) sessionUserEl.textContent = 'Invitado';
-      }
-    }
-
-    /* ---------- Tema (preservé apply/toggle names) ---------- */
-    async function applyTheme(theme) {
-      const icon = document.getElementById('theme-icon');
-      if (!theme || theme === 'dark') {
-        document.body.removeAttribute('data-theme');
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
-      } else {
-        document.body.setAttribute('data-theme', 'dark');
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-      }
-    }
-    async function toggleTheme() {
-      // Lee el valor actual guardado (o 'dark' por defecto)
-      const current = (await getTheme()) || 'dark';
-      const newTheme = current === 'dark' ? 'light' : 'dark';
-      try {
-        await setTheme(newTheme);
-      } catch(e) { console.warn('No se pudo guardar theme en IndexedDB', e); }
-      await applyTheme(newTheme);
-    }
-
-    /* ---------- Resaltar página actual ---------- */
-    function highlightCurrentPage() {
-      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-      document.querySelectorAll('.nav a').forEach(link => {
-        const href = link.getAttribute('href') || '';
-        // comparar sólo el nombre del archivo
-        if (href === currentPage) link.classList.add('active');
-        else link.classList.remove('active');
-      });
-    }
-
-    /* ---------- INICIALIZACIÓN ---------- */
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        await openDB();
-      } catch(e) {
-        console.warn('No se pudo abrir IndexedDB', e);
-      }
-
-      // No romper UX: llamamos a checkAuthentication (redirige si necesario)
-      checkAuthentication();
-
-      // Configuraciones dependientes de DB/session
-      try {
-        await configureUserLinks();
-      } catch(e){ console.warn(e) }
-
-      // Resaltar la página actual en la barra
-      highlightCurrentPage();
-
-      // Aplicar el tema guardado
-      try {
-        const saved = (await getTheme()) || 'dark';
-        await applyTheme(saved);
-      } catch(e){ console.warn(e) }
-
-      // Cargar estadísticas dummy (puedes reemplazar con funciones reales)
-      document.getElementById('stat-sales').textContent = '$0.00';
-      document.getElementById('stat-stock').textContent = '— ítems';
-      document.getElementById('stat-clients').textContent = '—';
-    });
-
-    /* ---------- EXTRA: escucha global para accesibilidad (Enter en search) ---------- */
-    document.getElementById('search-input').addEventListener('keydown', function(e){
-      if (e.key === 'Enter') {
-        const q = e.target.value.trim();
-        if (!q) return;
-        // ejemplo: navegar a la página de búsqueda (si existe)
-        // no alteramos tu lógica actual: es sólo UX
-        window.location.href = `lista.html?search=${encodeURIComponent(q)}`;
-      }
-    });
-  </script>
+/* ---------- Arranque ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  checkAuthentication();
+  await openDB();
+  await configureUserLinks();
+  highlightCurrentPage();
+  const savedTheme = (await getTheme()) || 'dark';
+  await applyTheme(savedTheme);
+});
+</script>
 
 </body>
 </html>

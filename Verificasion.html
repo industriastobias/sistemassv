@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificación – KLOHE</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --accent: #DBB8BC;
+      --text: #1F2937;
+      --muted: #9CA3AF;
+      --danger: #EF4444;
+      --border: #DBB8BC;
+    }
+    body[data-theme="dark"] {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --accent: #38bdf8;
+      --text: #e5e7eb;
+      --muted: #6b7280;
+      --danger: #f43f5e;
+      --border: #30363d;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 2rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+    }
+    .info {
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .info h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .info p {
+      margin: 0.25rem 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .info button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .info button:hover {
+      transform: scale(1.03);
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Verificación de productos</h1>
+  <div id="contenedor" class="grid"></div>
+
+  <script>
+    const DB_NAME = 'menuDB';
+    const STORE_COMPRA = 'compra';
+
+    let db;
+
+    async function openDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onerror = () => rej(req.error);
+        req.onsuccess = () => res(db = req.result);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE_COMPRA))
+            db.createObjectStore(STORE_COMPRA, { keyPath: 'id' });
+        };
+      });
+    }
+
+    async function obtenerProductos() {
+      const tx = db.transaction([STORE_COMPRA], 'readonly');
+      const store = tx.objectStore(STORE_COMPRA);
+      return store.getAll();
+    }
+
+    async function eliminarProducto(id) {
+      const tx = db.transaction([STORE_COMPRA], 'readwrite');
+      const store = tx.objectStore(STORE_COMPRA);
+      store.delete(id);
+      await tx.complete;
+    }
+
+    function renderizar(lista) {
+      const cont = document.getElementById('contenedor');
+      cont.innerHTML = '';
+      if (!lista.length) {
+        cont.innerHTML = '<p class="empty">No hay productos para verificar</p>';
+        return;
+      }
+      lista.forEach(prod => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${prod.imagen || 'https://via.placeholder.com/300x200?text=Sin+imagen'}" alt="${prod.nombre}">
+          <div class="info">
+            <div>
+              <h3>${prod.nombre}</h3>
+              <p>Precio: $${Number(prod.precio).toFixed(2)}</p>
+              <p>Código: ${prod.codigoBarras || '—'}</p>
+            </div>
+            <button onclick="verificar('${prod.id}', this)">Verificar</button>
+          </div>
+        `;
+        cont.appendChild(card);
+      });
+    }
+
+    async function verificar(id, btn) {
+      await eliminarProducto(id);
+      btn.closest('.card').remove();
+      const restantes = await obtenerProductos();
+      if (!restantes.length)
+        document.getElementById('contenedor').innerHTML = '<p class="empty">No hay productos para verificar</p>';
+    }
+
+    (async () => {
+      await openDB();
+      const productos = await obtenerProductos();
+      renderizar(productos);
+    })();
+  </script>
+</body>
+</html>

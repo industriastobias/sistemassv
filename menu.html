@@ -165,14 +165,13 @@
     <a href="almacenamiento.html"><i class="fa-solid fa-warehouse"></i> Almacenamiento</a>
     <a href="clientes.html"><i class="fa-solid fa-users"></i> Clientes</a>
     <a href="compra.html" id="compra-link"><i class="fa-solid fa-cart-plus"></i> Compra</a>
-    <a href="descuentos.html"><i class="fa-solid fa-percent"></i> Descuentos</a>
+    <a href="descuentos.html" id="descuentos-link"><i class="fa-solid fa-percent"></i> Descuentos</a>
     <a href="facturas.html"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
     <a href="gastos.html"><i class="fa-solid fa-money-check-dollar"></i> Gastos</a>
     <a href="inventario.html"><i class="fa-solid fa-boxes-stacked"></i> Inventario</a>
-    <a href="lista.html"><i class="fa-solid fa-list"></i> Lista</a>
+    <a href="lista.html" id="lista-link"><i class="fa-solid fa-list"></i> Lista</a>
     <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
-    <a href="venta.html"><i class="fa-solid fa-cash-register"></i> Venta</a>
-    <a href="lista_usuarios.html"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
+    <a href="venta.html" id="venta-link"><i class="fa-solid fa-cash-register"></i> Venta</a>
     <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
   </nav>
 </aside>
@@ -180,8 +179,8 @@
 <!-- PANEL DERECHO -->
 <div class="right-panel">
   <div class="user-section">
-    <img id="userPhoto" src="user2005.jpg" alt="Usuario">
-    <div id="userName" class="user-name">ERNESTO TOBIAS</div>
+    <img src="user2005.jpg" alt="Usuario">
+    <div class="user-name">ERNESTO TOBIAS</div>
   </div>
   <button class="logout-btn" onclick="logout()">
     <i class="fa-solid fa-right-from-bracket"></i> Exit
@@ -225,43 +224,33 @@ function checkAuthentication() {
     window.location.replace('index.html');
   }
 }
-
 async function logout() {
   await clearSession();
   sessionStorage.clear();
   window.location.replace('index.html');
 }
 
-// Configurar usuario dinámicamente
-async function configureUserDisplay() {
-  const userID = sessionStorage.getItem('userID');
-  const userPhoto = document.getElementById('userPhoto');
-  const userName = document.getElementById('userName');
+async function configureUserLinks() {
+  const session = await getSession();
+  const userID = session ? session.userID : null;
+  const compraLink = document.getElementById('compra-link');
+  const ventaLink = document.getElementById('venta-link');
 
-  // valores por defecto
-  let photo = 'user2005.jpg';
-  let name = 'ERNESTO TOBIAS';
-
-  if (userID === '1001') {
-    photo = 'userpaola.jpg';
-    name = 'PAOLA PALACIOS';
+  if (userID && userID.startsWith('100')) {
+    compraLink.style.display = 'none';
+    ventaLink.style.display = 'none';
   }
-
-  userPhoto.src = photo;
-  userName.textContent = name;
 }
-
 function highlightCurrentPage() {
   const currentPage = window.location.pathname.split('/').pop();
   document.querySelectorAll('.nav a').forEach(link => {
     if (link.getAttribute('href') === currentPage) link.classList.add('active');
   });
 }
-
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuthentication();
   await openDB();
-  await configureUserDisplay();
+  await configureUserLinks();
   highlightCurrentPage();
 });
 </script>

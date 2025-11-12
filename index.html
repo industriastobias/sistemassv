@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión – TOBIAS PALACIOS COMPANY</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: white;
+      border: 1px solid #DBB8BC;
+      border-radius: 15px;
+      padding: 2rem 2.5rem;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 350px;
+    }
+    h2 {
+      color: #DBB8BC;
+      margin-bottom: 1rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border: 1px solid #DBB8BC;
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      background: #DBB8BC;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 100%;
+    }
+    button:hover { background: #cba1a5; }
+    .error {
+      color: red;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>Iniciar Sesión</h2>
+    <input type="text" id="userID" placeholder="ID de usuario">
+    <input type="password" id="password" placeholder="Clave">
+    <button onclick="login()">Entrar</button>
+    <div id="error" class="error"></div>
+  </div>
+
+  <script>
+    const DB_NAME = 'menuDB';
+    const STORE_SESSION = 'userSession';
+    let db;
+
+    async function openDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onerror = () => rej(req.error);
+        req.onsuccess = () => res(db = req.result);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE_SESSION))
+            db.createObjectStore(STORE_SESSION, { keyPath: 'id' });
+        };
+      });
+    }
+
+    async function saveSession(userID) {
+      const tx = db.transaction([STORE_SESSION], 'readwrite');
+      tx.objectStore(STORE_SESSION).put({ id: 1, userID });
+      sessionStorage.setItem('loggedIn', 'true');
+    }
+
+    async function login() {
+      const user = document.getElementById('userID').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      const errorMsg = document.getElementById('error');
+      await openDB();
+
+      // Usuarios válidos
+      const users = {
+        "2005": "admin2024",
+        "1001": "viewer2024"
+      };
+
+      if (users[user] && users[user] === pass) {
+        await saveSession(user);
+        window.location.replace("menu.html");
+      } else {
+        errorMsg.textContent = "Usuario o clave incorrectos";
+      }
+    }
+  </script>
+</body>
+</html>

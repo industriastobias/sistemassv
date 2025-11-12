@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard – TOBIAS PALACIOS COMPANY</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
@@ -24,6 +24,7 @@
       overflow: hidden;
     }
 
+    /* --- SIDEBAR --- */
     .sidebar {
       width: 260px;
       background: var(--panel);
@@ -56,6 +57,7 @@
     .nav a:hover { background: rgba(219,184,188,.15); transform: translateX(5px); }
     .nav a.active { background: var(--accent); color: #fff; }
 
+    /* --- PANEL PRINCIPAL --- */
     main {
       flex: 1;
       padding: 2rem 2.5rem;
@@ -76,6 +78,7 @@
       color: var(--muted);
     }
 
+    /* --- PANEL DERECHO --- */
     .right-panel {
       position: absolute;
       right: 1.5rem;
@@ -93,6 +96,7 @@
       border-radius: 50%;
       object-fit: cover;
       border: 3px solid var(--accent);
+      background: #fff;
     }
     .user-name {
       margin-top: .5rem;
@@ -112,12 +116,54 @@
     }
     .logout-btn i { margin-right: .5rem; }
     .logout-btn:hover { background: #DC2626; transform: scale(1.05); }
+
+    /* --- RESPONSIVE --- */
+    @media (max-width: 1024px) {
+      .sidebar { width: 220px; }
+      .nav a { font-size: .95rem; padding: .7rem .9rem; }
+      .user-section img { width: 75px; height: 75px; }
+      .welcome { font-size: 2rem; }
+    }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        justify-content: flex-start;
+      }
+      .nav {
+        flex-direction: row;
+        gap: .4rem;
+        flex-wrap: nowrap;
+      }
+      .nav a {
+        flex: 0 0 auto;
+        padding: .7rem .9rem;
+        font-size: .9rem;
+      }
+      .right-panel {
+        position: static;
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        padding: 1rem;
+      }
+      .logout-btn { margin-bottom: 0; padding: .7rem 1.2rem; }
+      .user-section img { width: 65px; height: 65px; }
+    }
   </style>
 </head>
 <body>
 
+<!-- MENU IZQUIERDO -->
 <aside class="sidebar">
-  <nav class="nav">
+  <nav class="nav" id="main-nav">
+    <a href="almacenamiento.html"><i class="fa-solid fa-warehouse"></i> Almacenamiento</a>
     <a href="clientes.html"><i class="fa-solid fa-users"></i> Clientes</a>
     <a href="compra.html" id="compra-link"><i class="fa-solid fa-cart-plus"></i> Compra</a>
     <a href="descuentos.html" id="descuentos-link"><i class="fa-solid fa-percent"></i> Descuentos</a>
@@ -127,74 +173,119 @@
     <a href="lista.html" id="lista-link"><i class="fa-solid fa-list"></i> Lista</a>
     <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
     <a href="venta.html" id="venta-link"><i class="fa-solid fa-cash-register"></i> Venta</a>
+    <a href="lista_usuarios.html" id="usuarios-link"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
     <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
   </nav>
 </aside>
 
+<!-- PANEL DERECHO -->
 <div class="right-panel">
   <div class="user-section">
-    <img id="user-foto" src="user2005.jpg" alt="Usuario">
-    <div id="user-name" class="user-name">Usuario</div>
+    <img id="userPhoto" src="user2005.jpg" alt="Usuario">
+    <div id="userName" class="user-name">ERNESTO TOBIAS</div>
   </div>
   <button class="logout-btn" onclick="logout()">
     <i class="fa-solid fa-right-from-bracket"></i> Exit
   </button>
 </div>
 
+<!-- PANEL PRINCIPAL -->
 <main>
   <h1 class="welcome">A FAMILY COMPANY</h1>
   <p class="subtitle">TOBIAS PALACIOS COMPANY</p>
 </main>
 
 <script>
-const DB_NAME = 'sessionDB';
-const STORE_NAME = 'sessions';
+/* ========== IndexedDB & sesiones ========== */
+const DB_NAME = 'menuDB';
+const STORE_SESSION = 'userSession';
 let db;
 
-async function openDB() {
+function openDB() {
   return new Promise((res, rej) => {
     const req = indexedDB.open(DB_NAME, 1);
     req.onerror = () => rej(req.error);
     req.onsuccess = () => res(db = req.result);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains(STORE_SESSION))
+        d.createObjectStore(STORE_SESSION, { keyPath: 'id', autoIncrement: true });
+    };
   });
 }
 
-async function getSession() {
-  const tx = db.transaction([STORE_NAME], 'readonly');
-  const store = tx.objectStore(STORE_NAME);
+// devuelve la última sesión guardada (si hay varias entradas usa la última)
+async function getLastSession() {
+  const tx = db.transaction([STORE_SESSION], 'readonly');
+  const store = tx.objectStore(STORE_SESSION);
   return new Promise(res => {
     const req = store.getAll();
-    req.onsuccess = () => res(req.result[req.result.length - 1]);
+    req.onsuccess = () => {
+      const all = req.result;
+      res(all && all.length ? all[all.length - 1] : null);
+    };
   });
 }
 
-async function clearSession() {
-  const tx = db.transaction([STORE_NAME], 'readwrite');
-  tx.objectStore(STORE_NAME).clear();
+async function clearSessions() {
+  const tx = db.transaction([STORE_SESSION], 'readwrite');
+  tx.objectStore(STORE_SESSION).clear();
 }
 
-function checkAuth() {
+/* ========== autenticación ========== */
+function checkAuthentication() {
   if (sessionStorage.getItem('loggedIn') !== 'true') {
     window.location.replace('index.html');
   }
 }
 
 async function logout() {
-  await clearSession();
+  await clearSessions();
   sessionStorage.clear();
   window.location.replace('index.html');
 }
 
+/* ========== UI dinámico de usuario ========== */
+async function configureUserUI() {
+  // prioriza sessionStorage (más inmediato) y si no existe usa IndexedDB
+  const storedFoto = sessionStorage.getItem('foto');
+  const storedNombre = sessionStorage.getItem('nombre');
+  let foto = storedFoto || 'user2005.jpg';
+  let nombre = storedNombre || 'Usuario';
+
+  if (!storedFoto || !storedNombre) {
+    const sess = await getLastSession();
+    if (sess) {
+      foto = sess.foto || foto;
+      nombre = sess.nombre || nombre;
+      // si sessionStorage no tiene, escribirlo para futuras navegaciones
+      if (!sessionStorage.getItem('foto') && sess.foto) sessionStorage.setItem('foto', sess.foto);
+      if (!sessionStorage.getItem('nombre') && sess.nombre) sessionStorage.setItem('nombre', sess.nombre);
+    }
+  }
+
+  // Actualiza UI
+  const imgEl = document.getElementById('userPhoto');
+  const nameEl = document.getElementById('userName');
+  if (imgEl) imgEl.src = foto;
+  if (nameEl) nameEl.textContent = nombre;
+}
+
+/* ========== Resaltar página actual ========== */
+function highlightCurrentPage() {
+  const currentPage = window.location.pathname.split('/').pop();
+  document.querySelectorAll('.nav a').forEach(link => {
+    if (link.getAttribute('href') === currentPage) link.classList.add('active');
+    else link.classList.remove('active');
+  });
+}
+
+/* ========== Arranque ========== */
 document.addEventListener('DOMContentLoaded', async () => {
-  checkAuth();
+  checkAuthentication();
   await openDB();
-
-  const user = await getSession();
-  const foto = sessionStorage.getItem('foto') || user?.foto || 'user2005.jpg';
-  const nombre = sessionStorage.getItem('nombre') || user?.nombre || 'Usuario';
-
-  document.getElementById('user-foto').src = foto;
-  document.getElementById('user-name').textContent = nombre;
+  await configureUserUI();
+  highlightCurrentPage();
 });
 </script>
 </body>

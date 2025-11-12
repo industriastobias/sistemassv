@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
   <title>Dashboard – TOBIAS PALACIOS COMPANY</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Font Awesome sin espacio final -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+        integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcgl9M+6dI7pL8r6UyVb7dCj4bOERxl4P8yPOKALqPpdUPiAaGoullRoWLm4bUGviA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+
+  <!-- Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap"
+        rel="stylesheet">
+
   <style>
     :root {
       --bg: #ffffff;
@@ -15,7 +26,7 @@
       --danger: #EF4444;
       --border: #DBB8BC;
     }
-    * {margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif;}
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
     body {
       background: var(--bg);
       color: var(--text);
@@ -67,16 +78,8 @@
       justify-content: center;
       text-align: center;
     }
-    .welcome {
-      font-size: 2.4rem;
-      font-weight: 800;
-      color: var(--accent);
-      margin-bottom: .3rem;
-    }
-    .subtitle {
-      font-size: 1.1rem;
-      color: var(--muted);
-    }
+    .welcome { font-size: 2.4rem; font-weight: 800; color: var(--accent); margin-bottom: .3rem; }
+    .subtitle { font-size: 1.1rem; color: var(--muted); }
 
     /* --- PANEL DERECHO --- */
     .right-panel {
@@ -98,11 +101,7 @@
       border: 3px solid var(--accent);
       background: #fff;
     }
-    .user-name {
-      margin-top: .5rem;
-      font-weight: 700;
-      font-size: 1rem;
-    }
+    .user-name { margin-top: .5rem; font-weight: 700; font-size: 1rem; }
     .logout-btn {
       background: var(--danger);
       color: #fff;
@@ -173,7 +172,7 @@
     <a href="lista.html" id="lista-link"><i class="fa-solid fa-list"></i> Lista</a>
     <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
     <a href="venta.html" id="venta-link"><i class="fa-solid fa-cash-register"></i> Venta</a>
-    <a href="lista_usuarios.html" id="usuarios-link"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
+    <!-- ENLACE USUARIOS ELIMINADO -->
     <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
   </nav>
 </aside>
@@ -181,10 +180,10 @@
 <!-- PANEL DERECHO -->
 <div class="right-panel">
   <div class="user-section">
-    <img id="userPhoto" src="user2005.jpg" alt="Usuario">
+    <img id="userPhoto" src="user2005.jpg" alt="Usuario" onerror="this.src='user2005.jpg'">
     <div id="userName" class="user-name">ERNESTO TOBIAS</div>
   </div>
-  <button class="logout-btn" onclick="logout()">
+  <button class="logout-btn" type="button" onclick="logout()" aria-label="Cerrar sesión">
     <i class="fa-solid fa-right-from-bracket"></i> Exit
   </button>
 </div>
@@ -201,7 +200,7 @@ const DB_NAME = 'menuDB';
 const STORE_SESSION = 'userSession';
 let db;
 
-function openDB() {
+async function openDB() {
   return new Promise((res, rej) => {
     const req = indexedDB.open(DB_NAME, 1);
     req.onerror = () => rej(req.error);
@@ -214,7 +213,6 @@ function openDB() {
   });
 }
 
-// devuelve la última sesión guardada (si hay varias entradas usa la última)
 async function getLastSession() {
   const tx = db.transaction([STORE_SESSION], 'readonly');
   const store = tx.objectStore(STORE_SESSION);
@@ -247,24 +245,23 @@ async function logout() {
 
 /* ========== UI dinámico de usuario ========== */
 async function configureUserUI() {
-  // prioriza sessionStorage (más inmediato) y si no existe usa IndexedDB
   const storedFoto = sessionStorage.getItem('foto');
   const storedNombre = sessionStorage.getItem('nombre');
   let foto = storedFoto || 'user2005.jpg';
   let nombre = storedNombre || 'Usuario';
 
   if (!storedFoto || !storedNombre) {
-    const sess = await getLastSession();
-    if (sess) {
-      foto = sess.foto || foto;
-      nombre = sess.nombre || nombre;
-      // si sessionStorage no tiene, escribirlo para futuras navegaciones
-      if (!sessionStorage.getItem('foto') && sess.foto) sessionStorage.setItem('foto', sess.foto);
-      if (!sessionStorage.getItem('nombre') && sess.nombre) sessionStorage.setItem('nombre', sess.nombre);
-    }
+    try {
+      const sess = await getLastSession();
+      if (sess) {
+        foto = sess.foto || foto;
+        nombre = sess.nombre || nombre;
+        if (!sessionStorage.getItem('foto') && sess.foto) sessionStorage.setItem('foto', sess.foto);
+        if (!sessionStorage.getItem('nombre') && sess.nombre) sessionStorage.setItem('nombre', sess.nombre);
+      }
+    } catch {}
   }
 
-  // Actualiza UI
   const imgEl = document.getElementById('userPhoto');
   const nameEl = document.getElementById('userName');
   if (imgEl) imgEl.src = foto;
@@ -275,15 +272,20 @@ async function configureUserUI() {
 function highlightCurrentPage() {
   const currentPage = window.location.pathname.split('/').pop();
   document.querySelectorAll('.nav a').forEach(link => {
-    if (link.getAttribute('href') === currentPage) link.classList.add('active');
-    else link.classList.remove('active');
+    if (link.getAttribute('href') === currentPage) {
+      link.classList.add('active');
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.classList.remove('active');
+      link.removeAttribute('aria-current');
+    }
   });
 }
 
 /* ========== Arranque ========== */
 document.addEventListener('DOMContentLoaded', async () => {
   checkAuthentication();
-  await openDB();
+  try { await openDB(); } catch {}
   await configureUserUI();
   highlightCurrentPage();
 });

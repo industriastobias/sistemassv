@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard – TOBIAS PALACIOS COMPANY</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css   ">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    /* TU CSS ORIGINAL (SIN CAMBIOS) */
     :root{--bg:#ffffff;--panel:#ffffff;--accent:#DBB8BC;--text:#1F2937;--muted:#9CA3AF;--danger:#EF4444;--border:#DBB8BC}
-    body[data-theme="dark"]{--bg:#0d1117;--panel:#161b22;--accent:#38bdf8;--text:#e5e7eb;--muted:#6b7280;--danger:#f43f5e;--border:#30363d}
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
-    body{background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background .3s,color .3s}
+    body{background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
     .sidebar{width:260px;background:var(--panel);display:flex;flex-direction:column;padding:2rem 1.5rem;gap:2rem;border-right:1px solid var(--border);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) transparent}
     .sidebar::-webkit-scrollbar{width:6px}
     .sidebar::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
@@ -18,28 +16,27 @@
     .nav{flex:1;display:flex;flex-direction:column;gap:.75rem}
     .nav a{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-radius:10px;text-decoration:none;color:var(--text);font-weight:500;transition:background .2s,transform .2s}
     .nav a:hover{background:rgba(219,184,188,.1);transform:translateX(6px)}
-    body[data-theme="dark"] .nav a:hover{background:rgba(255,255,255,.05)}
     .nav a.active{background:var(--accent);color:#fff}
-    .logout-btn-top,.theme-toggle{position:absolute;top:1.5rem;border:none;border-radius:50%;width:48px;height:48px;color:#fff;font-size:1.2rem;cursor:pointer;transition:background .2s,transform .2s;z-index:1000}
-    .logout-btn-top{right:2rem;background:var(--danger)}
-    .logout-btn-top:hover{background:#DC2626;transform:scale(1.1)}
-    .theme-toggle{right:5.5rem;background:var(--accent)}
-    .theme-toggle:hover{transform:scale(1.1)}
+    .user-card{display:flex;flex-direction:column;align-items:center;gap:.5rem;margin-bottom:1rem}
+    .user-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent)}
+    .user-name{font-weight:600;font-size:1rem;color:var(--text)}
+    .exit-btn{width:100%;margin-top:auto;padding:.75rem 1rem;border:none;border-radius:10px;background:var(--danger);color:#fff;font-weight:600;cursor:pointer;transition:background .2s}
+    .exit-btn:hover{background:#DC2626}
     main{flex:1;padding:3rem 4rem;display:flex;align-items:center;justify-content:center}
     .welcome{font-size:3rem;font-weight:800;letter-spacing:-1px;color:var(--accent)}
   </style>
 </head>
 <body>
 
-<button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
-  <i id="theme-icon" class="fa-solid fa-moon"></i>
-</button>
-<button class="logout-btn-top" onclick="logout()" title="Cerrar sesión">
-  <i class="fa-solid fa-right-from-bracket"></i>
-</button>
-
 <aside class="sidebar">
-  <div class="logo"></div>   <!-- ✅ LOGO VACÍO: “KLOHE” ELIMINADO -->
+  <div class="logo"></div>
+
+  <!-- Tarjeta de usuario -->
+  <div class="user-card">
+    <img src="user2005.jpg" alt="Avatar" class="user-avatar">
+    <div class="user-name">ERNESTOTOBIAS</div>
+  </div>
+
   <nav class="nav">
     <a href="almacenamiento.html"><i class="fa-solid fa-warehouse"></i> Almacenamiento</a>
     <a href="clientes.html"><i class="fa-solid fa-users"></i> Clientes</a>
@@ -54,16 +51,20 @@
     <a href="lista_usuarios.html" id="usuarios-link"><i class="fa-solid fa-user-gear"></i> Usuarios</a>
     <a href="Verificasion.html"><i class="fa-solid fa-check-double"></i> Verificación</a>
   </nav>
+
+  <!-- Botón EXIT abajo -->
+  <button class="exit-btn" onclick="logout()">
+    <i class="fa-solid fa-right-from-bracket"></i> EXIT
+  </button>
 </aside>
 
 <main>
-  <h1 class="welcome"></h1>   <!-- ✅ MENSAJE VACÍO: “KLOHE A FAMILY COMPANY” ELIMINADO -->
+  <h1 class="welcome"></h1>
 </main>
 
 <script>
-/* ---------- IndexedDB ---------- */
+/* ---------- IndexedDB (sin cambios) ---------- */
 const DB_NAME = 'menuDB';
-const STORE_THEME = 'theme';
 const STORE_SESSION = 'userSession';
 let db;
 
@@ -74,35 +75,21 @@ async function openDB() {
     req.onsuccess = () => res(db = req.result);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_THEME))
-        db.createObjectStore(STORE_THEME);
       if (!db.objectStoreNames.contains(STORE_SESSION))
         db.createObjectStore(STORE_SESSION, { keyPath: 'id' });
     };
   });
 }
-async function getTheme() {
-  const tx = db.transaction([STORE_THEME], 'readonly');
-  return tx.objectStore(STORE_THEME).get('current');
-}
-async function setTheme(value) {
-  const tx = db.transaction([STORE_THEME], 'readwrite');
-  tx.objectStore(STORE_THEME).put(value, 'current');
-}
 async function getSession() {
   const tx = db.transaction([STORE_SESSION], 'readonly');
   return tx.objectStore(STORE_SESSION).get(1);
-}
-async function setSession(session) {
-  const tx = db.transaction([STORE_SESSION], 'readwrite');
-  tx.objectStore(STORE_SESSION).put({ ...session, id: 1 });
 }
 async function clearSession() {
   const tx = db.transaction([STORE_SESSION], 'readwrite');
   tx.objectStore(STORE_SESSION).clear();
 }
 
-/* ---------- Autenticación / sesión ---------- */
+/* ---------- Autenticación ---------- */
 function checkAuthentication() {
   if (sessionStorage.getItem('loggedIn') !== 'true') {
     window.location.replace('index.html');
@@ -129,27 +116,6 @@ async function configureUserLinks() {
   }
 }
 
-/* ---------- Tema ---------- */
-async function applyTheme(theme) {
-  const body = document.body;
-  const icon = document.getElementById('theme-icon');
-  if (theme === 'dark') {
-    body.setAttribute('data-theme', 'dark');
-    icon.classList.remove('fa-moon');
-    icon.classList.add('fa-sun');
-  } else {
-    body.removeAttribute('data-theme');
-    icon.classList.remove('fa-sun');
-    icon.classList.add('fa-moon');
-  }
-}
-async function toggleTheme() {
-  const current = (await getTheme()) || 'light';
-  const newTheme = current === 'light' ? 'dark' : 'light';
-  await setTheme(newTheme);
-  await applyTheme(newTheme);
-}
-
 /* ---------- Resaltar página actual ---------- */
 function highlightCurrentPage() {
   const currentPage = window.location.pathname.split('/').pop();
@@ -164,8 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await openDB();
   await configureUserLinks();
   highlightCurrentPage();
-  const savedTheme = (await getTheme()) || 'light';
-  await applyTheme(savedTheme);
 });
 </script>
 </body>

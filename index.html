@@ -15,30 +15,10 @@
       margin: 0;
       position: relative;
       overflow: hidden;
-      flex-direction: column;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 0.5em;
-    }
-    h1 {
-      color: #4a6a41;
-      font-size: 2.5em;
-      margin: 0;
-    }
-    h3 {
-      color: #2c3e50;
-      font-size: 1.5em;
-      margin: 0 0 1em;
-    }
-    .logo {
-      max-width: 80px;
-      margin-bottom: .5em;
-      margin-top: -10px;
     }
     .container {
       display: none;
-      background: rgba(255,255,255,.95);
+      background: rgba(255,255,255,.9);
       padding: 2em 1em;
       border-radius: 20px;
       box-shadow: 0 8px 25px rgba(0,0,0,.2);
@@ -50,9 +30,12 @@
       animation: fadeIn .5s ease-in-out;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {opacity:0;transform:translateY(-20px);}
+      to {opacity:1;transform:translateY(0);}
     }
+    .header { text-align: center; margin-bottom: 1em; }
+    h1 { color: #4a6a41; font-size: 2.5em; margin: 0; }
+    h3 { color: #2c3e50; font-size: 1.5em; margin: 0 0 1em; }
     input {
       width: calc(100% - 20px);
       padding: 10px;
@@ -62,10 +45,7 @@
       font-size: 1em;
       transition: border-color .3s;
     }
-    input:focus {
-      border-color: #00796b;
-      outline: none;
-    }
+    input:focus { border-color: #00796b; outline: none; }
     .button {
       background-color: #4a6a41;
       color: #fff;
@@ -77,10 +57,8 @@
       font-size: 1.1em;
       transition: background-color .3s, transform .2s;
     }
-    .button:hover {
-      background-color: #3b5e38;
-      transform: scale(1.05);
-    }
+    .button:hover { background-color: #3b5e38; transform: scale(1.05); }
+    .logo { max-width: 80px; margin-bottom: .5em; margin-top: -30px; }
   </style>
 </head>
 <body>
@@ -99,62 +77,65 @@
 </div>
 
 <script>
-  /* ---------- IndexedDB ---------- */
-  const DB_NAME = 'sessionDB', STORE_NAME = 'sessions';
-  let db;
+/* --- IndexedDB --- */
+const DB_NAME = 'sessionDB', STORE_NAME = 'sessions';
+let db;
 
-  async function openDB() {
-    return new Promise((res, rej) => {
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onerror = () => rej(req.error);
-      req.onsuccess = () => res(db = req.result);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(STORE_NAME))
-          db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-      };
-    });
-  }
-
-  async function guardarSesion(session) {
-    const tx = db.transaction([STORE_NAME], 'readwrite');
-    tx.objectStore(STORE_NAME).put(session);
-  }
-
-  /* ---------- Usuarios ---------- */
-  const users = [
-    { id: '2005', clave: 'admin2024', nombre: 'ERNESTO TOBIAS', foto: 'user2005.jpg' },
-    { id: '1001', clave: 'viewer2024', nombre: 'PAOLA PALACIOS', foto: 'userpaola.jpg' }
-  ];
-
-  /* ---------- Login ---------- */
-  async function login() {
-    const userID = document.getElementById('userID').value.trim();
-    const userClave = document.getElementById('userClave').value.trim();
-    const user = users.find(u => u.id === userID && u.clave === userClave);
-    if (!user) { alert('ID o contraseña incorrectos.'); return; }
-
-    await guardarSesion({ id: user.id, nombre: user.nombre, foto: user.foto, time: new Date().toLocaleString() });
-    sessionStorage.setItem('loggedIn', 'true');
-    sessionStorage.setItem('userID', user.id);
-    sessionStorage.setItem('nombre', user.nombre);
-    sessionStorage.setItem('foto', user.foto);
-
-    setTimeout(() => location.href = 'menu.html', 1000);
-  }
-
-  window.addEventListener('DOMContentLoaded', async () => {
-    await openDB();
-    document.querySelector('.container').style.display = 'block';
+async function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onerror = () => rej(req.error);
+    req.onsuccess = () => res(db = req.result);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME))
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    };
   });
+}
 
-  document.addEventListener('keypress', e => {
-    if (e.key === 'Enter') {
-      const active = document.activeElement;
-      if (active.id === 'userID') document.getElementById('userClave').focus();
-      else if (active.id === 'userClave') login();
-    }
-  });
+async function guardarSesion(user) {
+  const tx = db.transaction([STORE_NAME], 'readwrite');
+  tx.objectStore(STORE_NAME).put(user);
+}
+
+/* --- Usuarios --- */
+const users = [
+  { id: '2005', clave: 'admin2024', nombre: 'ERNESTO TOBIAS', foto: 'user2005.jpg' },
+  { id: '1001', clave: 'viewer2024', nombre: 'PAOLA PALACIOS', foto: 'userpaola.jpg' }
+];
+
+/* --- Login --- */
+async function login() {
+  const userID = document.getElementById('userID').value.trim();
+  const userClave = document.getElementById('userClave').value.trim();
+  const user = users.find(u => u.id === userID && u.clave === userClave);
+
+  if (!user) { alert('ID o contraseña incorrectos.'); return; }
+
+  await guardarSesion(user);
+  sessionStorage.setItem('loggedIn', 'true');
+  sessionStorage.setItem('userID', user.id);
+  sessionStorage.setItem('nombre', user.nombre);
+  sessionStorage.setItem('foto', user.foto);
+
+  setTimeout(() => location.href = 'menu.html', 800);
+}
+
+/* --- Inicialización --- */
+window.addEventListener('DOMContentLoaded', async () => {
+  await openDB();
+  document.querySelector('.container').style.display = 'block';
+});
+
+document.addEventListener('keypress', e => {
+  if (e.key === 'Enter') {
+    const active = document.activeElement;
+    if (active.id === 'userID') document.getElementById('userClave').focus();
+    else if (active.id === 'userClave') login();
+  }
+});
 </script>
+
 </body>
 </html>

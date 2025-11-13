@@ -49,6 +49,20 @@
       gap: 24px;
     }
 
+    /* ===== RESPONSIVE: Pantalla completa en móviles ===== */
+    @media (max-width: 768px) {
+      body {
+        padding: 0;
+      }
+      .container {
+        max-width: 100%;
+        border-radius: 0;
+        padding: 20px;
+        min-height: 100vh;
+        box-shadow: none;
+      }
+    }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -166,6 +180,69 @@
       color: #fff;
     }
 
+    /* ===== ESTILOS PARA EL BOTÓN FLOTANTE ===== */
+    .fab-totals {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fab-totals:hover {
+      transform: scale(1.1);
+    }
+
+    /* ===== ESTILOS PARA MODAL DE TOTALES ===== */
+    #totalesModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .totales-card {
+      position: relative;
+      width: 90vw;
+      max-width: 320px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* Modal Factura */
     #facturaModal {
       position: fixed;
@@ -174,7 +251,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 999;
+      z-index: 998; /* Cambiado para que no interfiera con FAB */
     }
 
     .factura-card {
@@ -252,11 +329,10 @@
     <button onclick="location.href='Total.html'">📊 Total</button>
   </div>
 
-  <!-- === RESUMEN DE VENTAS === -->
-  <div id="totalBox" class="card" style="margin:0 auto 12px;max-width:320px;text-align:center;background:var(--bg);box-shadow:var(--shadow);border-radius:var(--radius);padding:18px;">
+  <!-- === RESUMEN DE VENTAS (OCULTO) === -->
+  <div id="totalBox" style="display:none;">
     <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
     <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-
     <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
     <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
   </div>
@@ -266,6 +342,24 @@
   <div class="pagination">
     <button onclick="prevPage()">← Anterior</button>
     <button onclick="nextPage()">Siguiente →</button>
+  </div>
+</div>
+
+<!-- ===== BOTÓN FLOTANTE ===== -->
+<button class="fab-totals" onclick="abrirModalTotales()">
+  <span id="fabQty">0</span>
+</button>
+
+<!-- ===== MODAL DE TOTALES ===== -->
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="totales-card" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <div class="card" style="margin:0 auto;text-align:center;background:var(--bg);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+    </div>
   </div>
 </div>
 
@@ -308,7 +402,7 @@
         <div>¡Gracias por su compra!</div>
         <div style="font-size:9px;margin-top:4px">
           No se aceptan cambios ni devoluciones, a menos que el producto esté dañado.
-          Se aceptará dentro de los 15 días posteriores a la fecha de compra.
+          Se aceptará dentro de los 5 días posteriores a la fecha de compra.
         </div>
       </footer>
     </div>
@@ -321,8 +415,8 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
 <script>
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
@@ -345,6 +439,11 @@
     const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
     document.getElementById('totalQty').textContent  = totalUnits;
     document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
+    
+    // ===== SINCRONIZAR VALORES EN EL MODAL Y FAB =====
+    document.getElementById('totalQtyModal').textContent = totalUnits;
+    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('fabQty').textContent = totalUnits;
 
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
@@ -528,6 +627,15 @@
     split.forEach(l => { doc.text(l, margen, y); y += 3; });
 
     doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  /* ===== FUNCIONES PARA EL MODAL DE TOTALES ===== */
+  function abrirModalTotales() {
+    document.getElementById('totalesModal').style.display = 'flex';
+  }
+
+  function cerrarModalTotales() {
+    document.getElementById('totalesModal').style.display = 'none';
   }
 </script>
 </body>

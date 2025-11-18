@@ -1,28 +1,60 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
+  <!-- Meta tags esenciales -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Dashboard empresarial TOBIAS PALACIOS">
+  <meta name="author" content="TOBIAS PALACIOS COMPANY">
+  
+  <!-- Seguridad -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+  
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#DBB8BC">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  
   <title>Dashboard – TOBIAS PALACIOS</title>
 
   <!-- Google Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
 
   <!-- Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
 
+  <!-- Inline Critical CSS -->
   <style>
-    /* Variables de diseño */
+    /* Design System Tokens */
     :root {
-      --bg: #ffffff;
-      --panel: #ffffff;
-      --accent: #DBB8BC;
-      --text: #1F2937;
-      --muted: #9CA3AF;
-      --danger: #EF4444;
-      --border: #DBB8BC;
-      --transition-speed: 0.2s;
+      --color-bg: #ffffff;
+      --color-panel: #ffffff;
+      --color-accent: #DBB8BC;
+      --color-text: #1F2937;
+      --color-muted: #9CA3AF;
+      --color-danger: #EF4444;
+      --color-border: #DBB8BC;
+      --color-focus: #6366F1;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+      --radius: 10px;
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Modo oscuro automático */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-bg: #111827;
+        --color-panel: #1F2937;
+        --color-text: #F9FAFB;
+        --color-muted: #9CA3AF;
+        --color-border: #374151;
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
+      }
     }
 
     /* Reset y base */
@@ -32,24 +64,42 @@
       box-sizing: border-box;
     }
 
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      font-family: var(--font-family);
+      background: var(--color-bg);
+      color: var(--color-text);
       display: flex;
       min-height: 100vh;
       overflow: hidden;
     }
 
-    /* Sidebar */
+    /* Sidebar Component */
     .sidebar {
       width: 260px;
-      background: var(--panel);
+      background: var(--color-panel);
       display: flex;
       flex-direction: column;
       padding: 1.5rem 1rem;
-      border-right: 1px solid var(--border);
+      border-right: 1px solid var(--color-border);
       height: 100vh;
+      position: relative;
+    }
+
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -8px;
+      bottom: 0;
+      width: 8px;
+      background: linear-gradient(90deg, rgba(0,0,0,0.03), transparent);
+      pointer-events: none;
     }
 
     .nav {
@@ -58,51 +108,73 @@
       gap: .6rem;
       flex-grow: 1;
       overflow-y: auto;
-      list-style: none; /* Mejor semántica si usas <ul> */
+      list-style: none;
+      padding-inline-start: 0;
     }
 
+    /* NavLink Component */
     .nav-link {
+      --icon-size: 22px;
       display: flex;
       align-items: center;
       gap: .8rem;
       padding: .8rem 1rem;
-      border-radius: 10px;
+      border-radius: var(--radius);
       text-decoration: none;
-      color: var(--text);
+      color: var(--color-text);
       font-size: 1rem;
       font-weight: 500;
-      transition: background var(--transition-speed) ease,
-                  transform var(--transition-speed) ease,
-                  color var(--transition-speed) ease;
+      transition: background var(--transition),
+                  transform var(--transition),
+                  color var(--transition);
       white-space: nowrap;
-      border: none;
+      border: 2px solid transparent;
       background: transparent;
       cursor: pointer;
       width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--color-accent);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .nav-link:hover::before {
+      opacity: 0.1;
     }
 
     .nav-link:hover {
-      background: rgba(219, 184, 188, .15);
       transform: translateX(5px);
     }
 
     .nav-link.active {
-      background: var(--accent);
+      background: var(--color-accent);
       color: #fff;
     }
 
     .nav-link:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid var(--color-focus);
       outline-offset: 2px;
     }
 
-    /* Iconos */
+    /* Icon Component */
     .nav-link .material-icons {
-      font-size: 22px;
-      flex-shrink: 0; /* Evita que los iconos se deformen */
+      font-size: var(--icon-size);
+      flex-shrink: 0;
+      z-index: 1;
     }
 
-    /* Main content */
+    .nav-link span:not(.material-icons) {
+      z-index: 1;
+    }
+
+    /* Main Content Component */
     main {
       flex: 1;
       display: flex;
@@ -110,22 +182,25 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 2rem clamp(1rem, 4vw, 2.5rem); /* Padding responsivo */
+      padding: 2rem clamp(1rem, 4vw, 2.5rem);
+      container-type: inline-size; /* CSS Container Queries */
     }
 
     .welcome {
-      font-size: clamp(1.8rem, 5vw, 2.4rem); /* Texto fluido */
+      font-size: clamp(1.8rem, 5cqw, 2.4rem);
       font-weight: 800;
-      color: var(--accent);
+      color: var(--color-accent);
       margin-bottom: .3rem;
+      line-height: 1.2;
     }
 
     .subtitle {
-      font-size: clamp(1rem, 2.5vw, 1.1rem);
-      color: var(--muted);
+      font-size: clamp(1rem, 2.5cqw, 1.1rem);
+      color: var(--color-muted);
+      line-height: 1.4;
     }
 
-    /* Panel derecho */
+    /* User Panel Component */
     .right-panel {
       position: absolute;
       right: 1.5rem;
@@ -135,7 +210,7 @@
       align-items: center;
       justify-content: space-between;
       height: calc(100% - 2rem);
-      min-height: 120px; /* Evita colapso en pantallas pequeñas */
+      min-height: 120px;
     }
 
     .user-section {
@@ -143,6 +218,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: .5rem;
     }
 
     .user-avatar {
@@ -150,43 +226,60 @@
       height: 85px;
       border-radius: 50%;
       object-fit: cover;
-      border: 3px solid var(--accent);
-      background: #fff;
+      border: 3px solid var(--color-accent);
+      background: var(--color-panel);
+      transition: transform var(--transition);
+    }
+
+    .user-avatar:hover {
+      transform: scale(1.05);
     }
 
     .user-name {
-      margin-top: .5rem;
       font-weight: 700;
       font-size: 1rem;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .logout-btn {
-      background: var(--danger);
+      --icon-gap: .5rem;
+      background: var(--color-danger);
       color: #fff;
       border: none;
-      border-radius: 10px;
+      border-radius: var(--radius);
       padding: .8rem 1.5rem;
       font-size: 1rem;
       font-weight: 500;
       cursor: pointer;
-      transition: background var(--transition-speed) ease,
-                  transform var(--transition-speed) ease;
+      transition: background var(--transition),
+                  transform var(--transition),
+                  box-shadow var(--transition);
       display: inline-flex;
       align-items: center;
-      gap: .5rem;
+      gap: var(--icon-gap);
+      box-shadow: var(--shadow-sm);
+      min-width: fit-content;
     }
 
     .logout-btn:hover {
       background: #DC2626;
       transform: scale(1.05);
+      box-shadow: var(--shadow-md);
+    }
+
+    .logout-btn:active {
+      transform: scale(0.98);
     }
 
     .logout-btn:focus-visible {
-      outline: 2px solid var(--danger);
+      outline: 2px solid var(--color-focus);
       outline-offset: 2px;
     }
 
-    /* Responsive */
+    /* Responsive Design */
     @media (max-width: 1024px) {
       .sidebar {
         width: 220px;
@@ -206,7 +299,7 @@
     @media (max-width: 768px) {
       body {
         flex-direction: column;
-        overflow: auto; /* Permite scroll en móvil */
+        overflow: auto;
       }
 
       .sidebar {
@@ -215,8 +308,17 @@
         flex-direction: row;
         overflow-x: auto;
         border-right: none;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--color-border);
         padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(8px); /* Glassmorphism */
+        background: rgba(var(--color-panel-rgb, 255,255,255), 0.9);
+      }
+
+      .sidebar::after {
+        display: none;
       }
 
       .nav {
@@ -232,7 +334,7 @@
       }
 
       .nav-link:hover {
-        transform: none; /* Desactiva hover en touch */
+        transform: none; /* Mejor UX en touch */
       }
 
       .right-panel {
@@ -242,6 +344,7 @@
         width: 100%;
         padding: 1rem;
         height: auto;
+        border-top: 1px solid var(--color-border);
       }
 
       .logout-btn {
@@ -255,14 +358,35 @@
       }
     }
 
-    /* Scrollbar personalizado (opcional) */
+    /* Scrollbar personalizada */
     .nav::-webkit-scrollbar {
       width: 6px;
     }
 
+    .nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
     .nav::-webkit-scrollbar-thumb {
-      background: var(--accent);
+      background: var(--color-accent);
       border-radius: 3px;
+    }
+
+    .nav::-webkit-scrollbar-thumb:hover {
+      background: color-mix(in srgb, var(--color-accent) 80%, black);
+    }
+
+    /* Utilidades */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border-width: 0;
     }
   </style>
 </head>
@@ -270,243 +394,539 @@
 
 <!-- Sidebar -->
 <aside class="sidebar" aria-label="Navegación principal">
-  <nav class="nav" id="main-nav">
-    <a class="nav-link" href="almacenamiento.html">
-      <span class="material-icons" aria-hidden="true">warehouse</span>Almacenamiento
+  <nav class="nav" id="main-nav" role="navigation">
+    <!-- Cada link es un componente independiente -->
+    <a class="nav-link" href="almacenamiento.html" data-page="almacenamiento">
+      <span class="material-icons" aria-hidden="true">warehouse</span>
+      <span>Almacenamiento</span>
     </a>
-    <a class="nav-link" href="clientes.html">
-      <span class="material-icons" aria-hidden="true">groups</span>Clientes
+    <a class="nav-link" href="clientes.html" data-page="clientes">
+      <span class="material-icons" aria-hidden="true">groups</span>
+      <span>Clientes</span>
     </a>
-    <a class="nav-link" href="compra.html">
-      <span class="material-icons" aria-hidden="true">shopping_cart</span>Compra
+    <a class="nav-link" href="compra.html" data-page="compra">
+      <span class="material-icons" aria-hidden="true">shopping_cart</span>
+      <span>Compra</span>
     </a>
-    <a class="nav-link" href="descuentos.html">
-      <span class="material-icons" aria-hidden="true">local_offer</span>Descuentos
+    <a class="nav-link" href="descuentos.html" data-page="descuentos">
+      <span class="material-icons" aria-hidden="true">local_offer</span>
+      <span>Descuentos</span>
     </a>
-    <a class="nav-link" href="facturas.html">
-      <span class="material-icons" aria-hidden="true">receipt_long</span>Facturas
+    <a class="nav-link" href="facturas.html" data-page="facturas">
+      <span class="material-icons" aria-hidden="true">receipt_long</span>
+      <span>Facturas</span>
     </a>
-    <a class="nav-link" href="gastos.html">
-      <span class="material-icons" aria-hidden="true">store</span>Catálogo
+    <a class="nav-link" href="gastos.html" data-page="gastos">
+      <span class="material-icons" aria-hidden="true">store</span>
+      <span>Catálogo</span>
     </a>
-    <a class="nav-link" href="inventario.html">
-      <span class="material-icons" aria-hidden="true">inventory_2</span>Inventario
+    <a class="nav-link" href="inventario.html" data-page="inventario">
+      <span class="material-icons" aria-hidden="true">inventory_2</span>
+      <span>Inventario</span>
     </a>
-    <a class="nav-link" href="lista.html">
-      <span class="material-icons" aria-hidden="true">account_balance</span>Finanzas
+    <a class="nav-link" href="lista.html" data-page="lista">
+      <span class="material-icons" aria-hidden="true">account_balance</span>
+      <span>Finanzas</span>
     </a>
-    <a class="nav-link" href="traslados.html">
-      <span class="material-icons" aria-hidden="true">local_shipping</span>Traslados
+    <a class="nav-link" href="traslados.html" data-page="traslados">
+      <span class="material-icons" aria-hidden="true">local_shipping</span>
+      <span>Traslados</span>
     </a>
-    <a class="nav-link" href="venta.html">
-      <span class="material-icons" aria-hidden="true">point_of_sale</span>Venta
+    <a class="nav-link" href="venta.html" data-page="venta">
+      <span class="material-icons" aria-hidden="true">point_of_sale</span>
+      <span>Venta</span>
     </a>
-    <a class="nav-link" href="Verificasion.html">
-      <span class="material-icons" aria-hidden="true">verified</span>Verificación
+    <a class="nav-link" href="Verificasion.html" data-page="Verificasion">
+      <span class="material-icons" aria-hidden="true">verified</span>
+      <span>Verificación</span>
     </a>
   </nav>
 </aside>
 
-<!-- Panel derecho -->
-<div class="right-panel">
+<!-- User Panel -->
+<div class="right-panel" role="complementary" aria-label="Panel de usuario">
   <div class="user-section">
-    <!-- Imagen con manejo de error limpio -->
-    <img id="userPhoto" class="user-avatar" src="user2005.jpg" alt="Avatar del usuario">
+    <img id="userPhoto" class="user-avatar" 
+         src="user2005.jpg" 
+         alt="Avatar del usuario ERNESTO TOBIAS" 
+         loading="lazy">
     <div id="userName" class="user-name">ERNESTO TOBIAS</div>
   </div>
-  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión">
-    <span class="material-icons" aria-hidden="true">logout</span> Exit
+  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión (Exit)">
+    <span class="material-icons" aria-hidden="true">logout</span>
+    <span>Exit</span>
   </button>
 </div>
 
-<!-- Contenido principal -->
-<main>
+<!-- Main Content -->
+<main role="main">
   <h1 class="welcome">TOBIAS PALACIOS</h1>
   <p class="subtitle">A FAMILY COMPANY</p>
 </main>
 
+<!-- Service Worker Registration -->
 <script>
-/* ========== CONFIGURACIÓN ========== */
-const CONFIG = {
-  DB_NAME: 'menuDB',
-  STORE_SESSION: 'userSession',
-  DEFAULT_AVATAR: 'user2005.jpg',
-  DEFAULT_USER: 'Usuario',
-  LOGIN_PAGE: 'index.html',
-  SESSION_KEYS: {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        console.info('Service Worker no disponible');
+      });
+    });
+  }
+</script>
+
+<!-- Application Logic -->
+<script type="module">
+/**
+ * @fileoverview TOBIAS PALACIOS Dashboard - Enterprise Architecture
+ * @version 3.0.0
+ * @author Frontend Team
+ */
+
+// ==================== CONFIGURACIÓN CENTRAL ====================
+const CONFIG = Object.freeze({
+  APP: {
+    NAME: 'TOBIAS PALACIOS Dashboard',
+    VERSION: '3.0.0',
+    DEFAULT_PAGE: 'dashboard.html'
+  },
+  
+  STORAGE: {
+    DB_NAME: 'menuDB',
+    STORE_SESSION: 'userSession',
+    SESSION_TTL: 24 * 60 * 60 * 1000, // 24 horas
+  },
+  
+  SESSION: {
     LOGGED_IN: 'loggedIn',
     FOTO: 'foto',
-    NOMBRE: 'nombre'
-  }
+    NOMBRE: 'nombre',
+    TIMESTAMP: 'sessionTimestamp'
+  },
+  
+  DEFAULTS: {
+    AVATAR: 'user2005.jpg',
+    USERNAME: 'Usuario',
+    REDIRECT_PAGE: 'index.html'
+  },
+  
+  // Security
+  CSP: "default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' blob: data:;"
+});
+
+// ==================== SEGURIDAD ====================
+/**
+ * Sanitiza texto para prevenir XSS
+ * @param {string} str - Texto a sanitizar
+ * @returns {string}
+ */
+const sanitize = (str) => {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 };
 
-/* ========== BASE DE DATOS ========== */
-let db = null;
+// ==================== LOGGER ====================
+const Logger = {
+  info: (msg, data) => console.info(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
+  warn: (msg, data) => console.warn(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
+  error: (msg, data) => console.error(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
+};
 
-/**
- * Abre la base de datos IndexedDB
- * @returns {Promise<IDBDatabase>}
- */
-async function openDB() {
-  if (db) return db;
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(CONFIG.DB_NAME, 1);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      db = request.result;
-      resolve(db);
-    };
-
-    request.onupgradeneeded = () => {
-      const database = request.result;
-      if (!database.objectStoreNames.contains(CONFIG.STORE_SESSION)) {
-        database.createObjectStore(CONFIG.STORE_SESSION, { keyPath: 'id', autoIncrement: true });
-      }
-    };
-  });
-}
-
-/**
- * Obtiene la última sesión guardada
- * @returns {Promise<Object|null>}
- */
-async function getLastSession() {
-  await openDB();
-  const tx = db.transaction([CONFIG.STORE_SESSION], 'readonly');
-  const store = tx.objectStore(CONFIG.STORE_SESSION);
-
-  return new Promise((resolve) => {
-    // Más eficiente: abrir cursor en orden inverso
-    const request = store.openCursor(null, 'prev');
-    request.onsuccess = () => {
-      resolve(request.result ? request.result.value : null);
-    };
-  });
-}
-
-/**
- * Limpia todas las sesiones
- * @returns {Promise<void>}
- */
-async function clearSessions() {
-  await openDB();
-  const tx = db.transaction([CONFIG.STORE_SESSION], 'readwrite');
-  await new Promise((resolve) => {
-    tx.objectStore(CONFIG.STORE_SESSION).clear().onsuccess = resolve;
-  });
-}
-
-/* ========== AUTENTICACIÓN ========== */
-/**
- * Verifica si el usuario está autenticado
- */
-function checkAuthentication() {
-  const isLoggedIn = sessionStorage.getItem(CONFIG.SESSION_KEYS.LOGGED_IN) === 'true';
-  if (!isLoggedIn) {
-    // Redirige sin añadir al historial
-    window.location.replace(CONFIG.LOGIN_PAGE);
+// ==================== STORAGE MANAGER ====================
+class StorageManager {
+  constructor() {
+    this.db = null;
+    this.initialize();
   }
-}
 
-/**
- * Cierra sesión del usuario
- */
-async function logout() {
-  try {
-    await clearSessions();
-    sessionStorage.clear();
-  } catch (error) {
-    console.warn('Error al limpiar sesión:', error);
-  } finally {
-    window.location.replace(CONFIG.LOGIN_PAGE);
-  }
-}
-
-/* ========== UI DE USUARIO ========== */
-/**
- * Configura la interfaz de usuario con datos de sesión
- */
-async function configureUserUI() {
-  const foto = sessionStorage.getItem(CONFIG.SESSION_KEYS.FOTO) || CONFIG.DEFAULT_AVATAR;
-  const nombre = sessionStorage.getItem(CONFIG.SESSION_KEYS.NOMBRE) || CONFIG.DEFAULT_USER;
-
-  // Solo busca en IndexedDB si no hay datos en sessionStorage
-  if (!sessionStorage.getItem(CONFIG.SESSION_KEYS.FOTO) || !sessionStorage.getItem(CONFIG.SESSION_KEYS.NOMBRE)) {
+  async initialize() {
     try {
-      const session = await getLastSession();
-      if (session) {
-        if (session.foto && !sessionStorage.getItem(CONFIG.SESSION_KEYS.FOTO)) {
-          sessionStorage.setItem(CONFIG.SESSION_KEYS.FOTO, session.foto);
-        }
-        if (session.nombre && !sessionStorage.getItem(CONFIG.SESSION_KEYS.NOMBRE)) {
-          sessionStorage.setItem(CONFIG.SESSION_KEYS.NOMBRE, session.nombre);
-        }
-      }
+      this.db = await this.#openDB();
+      Logger.info('IndexedDB inicializada');
     } catch (error) {
-      console.warn('No se pudo cargar sesión de IndexedDB:', error);
+      Logger.error('Error al inicializar IndexedDB', error);
     }
   }
 
-  // Actualiza DOM
-  const imgElement = document.getElementById('userPhoto');
-  const nameElement = document.getElementById('userName');
+  #openDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(CONFIG.STORAGE.DB_NAME, 1);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(CONFIG.STORAGE.STORE_SESSION)) {
+          const store = db.createObjectStore(CONFIG.STORAGE.STORE_SESSION, { 
+            keyPath: 'id', 
+            autoIncrement: true 
+          });
+          store.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+      };
+    });
+  }
 
-  if (imgElement) {
-    imgElement.src = foto;
-    // Manejo de error de imagen
-    imgElement.onerror = () => {
-      imgElement.src = CONFIG.DEFAULT_AVATAR;
+  async saveSession(data) {
+    try {
+      await this.#ensureDB();
+      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readwrite');
+      const store = tx.objectStore(CONFIG.STORAGE.STORE_SESSION);
+      
+      return new Promise((resolve, reject) => {
+        const request = store.add({
+          ...data,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent
+        });
+        
+        request.onsuccess = () => {
+          Logger.info('Sesión guardada en IndexedDB');
+          resolve(request.result);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      Logger.warn('No se pudo guardar sesión:', error);
+    }
+  }
+
+  async getLastSession() {
+    try {
+      await this.#ensureDB();
+      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readonly');
+      const store = tx.objectStore(CONFIG.STORAGE.STORE_SESSION);
+      const index = store.index('timestamp');
+      
+      return new Promise((resolve) => {
+        const request = index.openCursor(null, 'prev');
+        request.onsuccess = () => {
+          const session = request.result?.value || null;
+          
+          // Validar antigüedad
+          if (session && (Date.now() - session.timestamp) > CONFIG.STORAGE.SESSION_TTL) {
+            Logger.info('Sesión expirada');
+            resolve(null);
+          } else {
+            resolve(session);
+          }
+        };
+      });
+    } catch (error) {
+      Logger.error('Error al recuperar sesión', error);
+      return null;
+    }
+  }
+
+  async clearSessions() {
+    try {
+      await this.#ensureDB();
+      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readwrite');
+      await new Promise((resolve) => {
+        tx.objectStore(CONFIG.STORAGE.STORE_SESSION).clear().onsuccess = resolve;
+      });
+      Logger.info('Sesiones limpiadas');
+    } catch (error) {
+      Logger.error('Error al limpiar sesiones', error);
+    }
+  }
+
+  async #ensureDB() {
+    if (!this.db) await this.initialize();
+  }
+}
+
+// ==================== AUTH MANAGER ====================
+class AuthManager {
+  static checkAuthentication() {
+    const isLoggedIn = sessionStorage.getItem(CONFIG.SESSION.LOGGED_IN) === 'true';
+    const sessionTimestamp = parseInt(sessionStorage.getItem(CONFIG.SESSION.TIMESTAMP), 10);
+    
+    if (!isLoggedIn) {
+      Logger.warn('Usuario no autenticado');
+      this.#redirect();
+      return false;
+    }
+
+    // Verificar expiración de sesión
+    if (Date.now() - sessionTimestamp > CONFIG.STORAGE.SESSION_TTL) {
+      Logger.warn('Sesión expirada por tiempo');
+      this.logout();
+      return false;
+    }
+
+    return true;
+  }
+
+  static async logout() {
+    try {
+      const storage = new StorageManager();
+      await storage.clearSessions();
+      
+      // Limpiar todos los storages
+      sessionStorage.clear();
+      localStorage.removeItem(CONFIG.SESSION.LOGGED_IN);
+      
+      Logger.info('Logout exitoso');
+    } catch (error) {
+      Logger.error('Error durante logout', error);
+    } finally {
+      this.#redirect();
+    }
+  }
+
+  static #redirect() {
+    try {
+      window.location.replace(CONFIG.DEFAULTS.REDIRECT_PAGE);
+    } catch {
+      window.location.href = CONFIG.DEFAULTS.REDIRECT_PAGE;
+    }
+  }
+}
+
+// ==================== UI MANAGER ====================
+class UIManager {
+  constructor() {
+    this.elements = {
+      userPhoto: document.getElementById('userPhoto'),
+      userName: document.getElementById('userName'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      mainNav: document.getElementById('main-nav')
+    };
+    
+    this.validateElements();
+  }
+
+  validateElements() {
+    const missing = Object.entries(this.elements)
+      .filter(([_, el]) => !el)
+      .map(([name]) => name);
+    
+    if (missing.length) {
+      Logger.warn('Elementos del DOM no encontrados', missing);
+    }
+  }
+
+  async initializeUser() {
+    try {
+      const userData = await this.#getUserData();
+      this.#updateUserUI(userData);
+    } catch (error) {
+      Logger.error('Error inicializando UI de usuario', error);
+      this.#updateUserUI({
+        foto: CONFIG.DEFAULTS.AVATAR,
+        nombre: CONFIG.DEFAULTS.USERNAME
+      });
+    }
+  }
+
+  async #getUserData() {
+    // Prioridad: sessionStorage > IndexedDB > Defaults
+    const foto = sessionStorage.getItem(CONFIG.SESSION.FOTO);
+    const nombre = sessionStorage.getItem(CONFIG.SESSION.NOMBRE);
+    
+    if (foto && nombre) {
+      return { foto, nombre };
+    }
+
+    // Fallback a IndexedDB
+    const storage = new StorageManager();
+    const session = await storage.getLastSession();
+    
+    if (session?.foto && session?.nombre) {
+      // Sincronizar con sessionStorage
+      sessionStorage.setItem(CONFIG.SESSION.FOTO, session.foto);
+      sessionStorage.setItem(CONFIG.SESSION.NOMBRE, session.nombre);
+      sessionStorage.setItem(CONFIG.SESSION.TIMESTAMP, Date.now());
+      
+      return {
+        foto: session.foto,
+        nombre: session.nombre
+      };
+    }
+
+    return {
+      foto: CONFIG.DEFAULTS.AVATAR,
+      nombre: CONFIG.DEFAULTS.USERNAME
     };
   }
 
-  if (nameElement) {
-    nameElement.textContent = nombre;
-  }
-}
-
-/* ========== NAVEGACIÓN ========== */
-/**
- * Resalta el enlace de la página actual
- */
-function highlightCurrentPage() {
-  const currentPage = window.location.pathname.split('/').pop().toLowerCase();
-  
-  document.querySelectorAll('.nav-link').forEach(link => {
-    const href = link.getAttribute('href').toLowerCase();
-    const isActive = href === currentPage || (currentPage === '' && href === 'index.html');
-    
-    if (isActive) {
-      link.classList.add('active');
-      link.setAttribute('aria-current', 'page');
-    } else {
-      link.classList.remove('active');
-      link.removeAttribute('aria-current');
+  #updateUserUI({ foto, nombre }) {
+    if (this.elements.userPhoto) {
+      const sanitizedFoto = sanitize(foto);
+      this.elements.userPhoto.src = sanitizedFoto;
+      
+      // Manejo de error con retries
+      this.elements.userPhoto.onerror = () => {
+        Logger.warn('Avatar no encontrado', foto);
+        this.elements.userPhoto.src = CONFIG.DEFAULTS.AVATAR;
+      };
+      
+      this.elements.userPhoto.alt = `Avatar de ${sanitize(nombre)}`;
     }
-  });
+
+    if (this.elements.userName) {
+      this.elements.userName.textContent = sanitize(nombre);
+    }
+  }
+
+  initializeNavigation() {
+    if (!this.elements.mainNav) return;
+
+    const currentPage = this.#normalizePath(window.location.pathname);
+    
+    this.elements.mainNav.querySelectorAll('.nav-link').forEach(link => {
+      const linkPage = this.#normalizePath(link.getAttribute('href'));
+      
+      if (this.#isActivePage(linkPage, currentPage)) {
+        link.classList.add('active');
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.classList.remove('active');
+        link.removeAttribute('aria-current');
+      }
+    });
+
+    // Delegación de eventos para mejor performance
+    this.elements.mainNav.addEventListener('click', (e) => {
+      const link = e.target.closest('.nav-link');
+      if (link) {
+        Logger.info('Navegación a:', link.href);
+      }
+    });
+  }
+
+  #normalizePath(path) {
+    return path.split('/').pop().toLowerCase().replace(/\.html$/, '') || 'index';
+  }
+
+  #isActivePage(linkPage, currentPage) {
+    return linkPage === currentPage || 
+           (currentPage === '' && linkPage === 'index') ||
+           (currentPage === 'index' && linkPage === '');
+  }
+
+  bindLogout(handler) {
+    if (this.elements.logoutBtn) {
+      this.elements.logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await handler();
+      });
+    }
+  }
 }
 
-/* ========== INICIALIZACIÓN ========== */
-document.addEventListener('DOMContentLoaded', async () => {
-  checkAuthentication();
-  
-  try {
-    await openDB();
-  } catch (error) {
-    console.warn('Error al abrir IndexedDB:', error);
+// ==================== APPLICATION CLASS ====================
+class TobPalDashboard {
+  constructor() {
+    this.storage = new StorageManager();
+    this.ui = new UIManager();
+    
+    // Estado de la aplicación
+    this.state = {
+      isReady: false,
+      user: null
+    };
   }
 
-  // Configurar UI
-  await configureUserUI();
-  highlightCurrentPage();
+  async bootstrap() {
+    Logger.info(`Iniciando ${CONFIG.APP.NAME} v${CONFIG.APP.VERSION}`);
+    
+    try {
+      // 1. Verificar autenticación
+      if (!AuthManager.checkAuthentication()) return;
 
-  // Event listener para logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
+      // 2. Inicializar storage
+      await this.storage.initialize();
+
+      // 3. Inicializar UI
+      await this.ui.initializeUser();
+      this.ui.initializeNavigation();
+      this.ui.bindLogout(() => AuthManager.logout());
+
+      // 4. Registrar eventos globales
+      this.#registerGlobalEvents();
+
+      // 5. Marcar como listo
+      this.state.isReady = true;
+      Logger.info('Aplicación lista');
+
+    } catch (error) {
+      Logger.error('Error crítico en bootstrap', error);
+      this.#handleFatalError();
+    }
   }
-});
+
+  #registerGlobalEvents() {
+    // Manejo de errores globales
+    window.addEventListener('error', (e) => {
+      Logger.error('Error no capturado', e.error);
+      // En producción: enviar a Sentry, etc.
+    });
+
+    // Manejo de rechazos de promesas
+    window.addEventListener('unhandledrejection', (e) => {
+      Logger.error('Promise rejection no capturado', e.reason);
+      e.preventDefault();
+    });
+
+    // Detección de cambios en sessionStorage (multitab)
+    window.addEventListener('storage', (e) => {
+      if (e.key === CONFIG.SESSION.LOGGED_IN && e.newValue === null) {
+        Logger.info('Logout detectado en otra pestaña');
+        AuthManager.logout();
+      }
+    });
+
+    // Actualizar timestamp de actividad
+    this.#updateActivityTimestamp();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.#updateActivityTimestamp();
+    });
+  }
+
+  #updateActivityTimestamp() {
+    sessionStorage.setItem(CONFIG.SESSION.TIMESTAMP, Date.now());
+  }
+
+  #handleFatalError() {
+    // Mostrar mensaje amigable al usuario
+    const main = document.querySelector('main');
+    if (main) {
+      main.innerHTML = `
+        <div role="alert" style="text-align: center; padding: 2rem;">
+          <span class="material-icons" style="font-size: 48px; color: var(--color-danger);">error</span>
+          <h2 style="margin: 1rem 0;">Error al cargar la aplicación</h2>
+          <p>Por favor, intenta recargar la página.</p>
+          <button onclick="window.location.reload()" class="logout-btn" style="margin-top: 1rem;">
+            Recargar
+          </button>
+        </div>
+      `;
+    }
+  }
+}
+
+// ==================== EJECUCIÓN ====================
+// Patrón IIFE para iniciar la app
+(async () => {
+  // Esperar al DOM
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+  }
+
+  // Inicializar aplicación
+  const app = new TobPalDashboard();
+  await app.bootstrap();
+
+  // Exponer globalmente para debugging (solo en desarrollo)
+  if (window.location.hostname === 'localhost') {
+    window.TobPalApp = app;
+    Logger.info('App expuesta en window.TobPalApp para debugging');
+  }
+})();
 </script>
 </body>
 </html>

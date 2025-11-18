@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
 <head>
-  <!-- Meta tags esenciales -->
+  <!-- Meta tags optimizados -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="Dashboard empresarial TOBIAS PALACIOS">
-  <meta name="author" content="TOBIAS PALACIOS COMPANY">
+  <meta name="description" content="Dashboard TOBIAS PALACIOS">
   
-  <!-- Seguridad -->
+  <!-- Security Headers Meta -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
   
-  <!-- PWA -->
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#DBB8BC">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Preconnect para fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Preload critical fonts -->
+  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" as="style" crossorigin>
   
   <title>Dashboard – TOBIAS PALACIOS</title>
 
@@ -26,9 +28,10 @@
   <!-- Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
 
-  <!-- Inline Critical CSS -->
   <style>
-    /* Design System Tokens */
+    /* ============== OPTIMIZACIÓN CRÍTICA ============== */
+    
+    /* Variables de diseño + Performance */
     :root {
       --color-bg: #ffffff;
       --color-panel: #ffffff;
@@ -37,37 +40,27 @@
       --color-muted: #9CA3AF;
       --color-danger: #EF4444;
       --color-border: #DBB8BC;
-      --color-focus: #6366F1;
       --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
       --radius: 10px;
-      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       --font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* Modo oscuro automático */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --color-bg: #111827;
-        --color-panel: #1F2937;
-        --color-text: #F9FAFB;
-        --color-muted: #9CA3AF;
-        --color-border: #374151;
-        --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
-      }
-    }
-
-    /* Reset y base */
-    *, *::before, *::after {
+    /* Optimización de renderizado */
+    * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent; /* Elimina flash táctil */
     }
 
-    html {
-      font-size: 16px;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+    /* Forzar GPU acceleration en elementos interactivos */
+    .nav-link, .logout-btn, .user-avatar {
+      will-change: transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      perspective: 1000px;
     }
 
     body {
@@ -77,29 +70,19 @@
       display: flex;
       min-height: 100vh;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Sidebar Component */
+    /* ============== SIDEBAR ============== */
     .sidebar {
       width: 260px;
       background: var(--color-panel);
-      display: flex;
-      flex-direction: column;
       padding: 1.5rem 1rem;
       border-right: 1px solid var(--color-border);
       height: 100vh;
-      position: relative;
-    }
-
-    .sidebar::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: -8px;
-      bottom: 0;
-      width: 8px;
-      background: linear-gradient(90deg, rgba(0,0,0,0.03), transparent);
-      pointer-events: none;
+      display: flex;
+      flex-direction: column;
     }
 
     .nav {
@@ -109,12 +92,11 @@
       flex-grow: 1;
       overflow-y: auto;
       list-style: none;
-      padding-inline-start: 0;
+      overflow-anchor: none; /* Previene jumps */
     }
 
-    /* NavLink Component */
+    /* ============== BOTÓN OPTIMIZADO ============== */
     .nav-link {
-      --icon-size: 22px;
       display: flex;
       align-items: center;
       gap: .8rem;
@@ -124,33 +106,30 @@
       color: var(--color-text);
       font-size: 1rem;
       font-weight: 500;
-      transition: background var(--transition),
-                  transform var(--transition),
-                  color var(--transition);
+      
+      /* Transiciones optimizadas */
+      transition: background var(--transition-fast),
+                  color var(--transition-fast);
+      
       white-space: nowrap;
       border: 2px solid transparent;
       background: transparent;
       cursor: pointer;
       width: 100%;
       position: relative;
-      overflow: hidden;
+      
+      /* Touch optimization */
+      touch-action: manipulation; /* Elimina delay de 300ms */
+      -webkit-user-select: none;
+      user-select: none;
+      
+      /* GPU layer */
+      transform: translateZ(0);
     }
 
-    .nav-link::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--color-accent);
-      opacity: 0;
-      transition: opacity var(--transition);
-    }
-
-    .nav-link:hover::before {
-      opacity: 0.1;
-    }
-
+    /* Hover simplificado y optimizado */
     .nav-link:hover {
-      transform: translateX(5px);
+      background: rgba(219, 184, 188, 0.15);
     }
 
     .nav-link.active {
@@ -158,23 +137,22 @@
       color: #fff;
     }
 
+    /* Focus visible optimizado */
     .nav-link:focus-visible {
-      outline: 2px solid var(--color-focus);
-      outline-offset: 2px;
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+      transition: outline-offset var(--transition-fast);
     }
 
-    /* Icon Component */
+    /* ============== ICONOS ============== */
     .nav-link .material-icons {
-      font-size: var(--icon-size);
+      font-size: 22px;
       flex-shrink: 0;
-      z-index: 1;
+      /* GPU acceleration para iconos */
+      transform: translateZ(0);
     }
 
-    .nav-link span:not(.material-icons) {
-      z-index: 1;
-    }
-
-    /* Main Content Component */
+    /* ============== MAIN ============== */
     main {
       flex: 1;
       display: flex;
@@ -183,7 +161,6 @@
       justify-content: center;
       text-align: center;
       padding: 2rem clamp(1rem, 4vw, 2.5rem);
-      container-type: inline-size; /* CSS Container Queries */
     }
 
     .welcome {
@@ -191,16 +168,17 @@
       font-weight: 800;
       color: var(--color-accent);
       margin-bottom: .3rem;
-      line-height: 1.2;
+      /* GPU acceleration */
+      transform: translateZ(0);
     }
 
     .subtitle {
       font-size: clamp(1rem, 2.5cqw, 1.1rem);
       color: var(--color-muted);
-      line-height: 1.4;
+      transform: translateZ(0);
     }
 
-    /* User Panel Component */
+    /* ============== PANEL DERECHO ============== */
     .right-panel {
       position: absolute;
       right: 1.5rem;
@@ -228,24 +206,19 @@
       object-fit: cover;
       border: 3px solid var(--color-accent);
       background: var(--color-panel);
-      transition: transform var(--transition);
+      transition: transform var(--transition-smooth);
+      
+      /* Touch optimization */
+      touch-action: manipulation;
+      user-select: none;
     }
 
     .user-avatar:hover {
       transform: scale(1.05);
     }
 
-    .user-name {
-      font-weight: 700;
-      font-size: 1rem;
-      max-width: 120px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
+    /* ============== BOTÓN LOGOUT ULTRA-OPTIMIZADO ============== */
     .logout-btn {
-      --icon-gap: .5rem;
       background: var(--color-danger);
       color: #fff;
       border: none;
@@ -254,32 +227,56 @@
       font-size: 1rem;
       font-weight: 500;
       cursor: pointer;
-      transition: background var(--transition),
-                  transform var(--transition),
-                  box-shadow var(--transition);
+      
+      /* Transición optimizada: solo transform */
+      transition: transform var(--transition-fast),
+                  box-shadow var(--transition-fast);
+      
       display: inline-flex;
       align-items: center;
-      gap: var(--icon-gap);
+      gap: .5rem;
       box-shadow: var(--shadow-sm);
       min-width: fit-content;
+      
+      /* GPU acceleration */
+      transform: translateZ(0);
+      
+      /* Touch optimization */
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      
+      /* Active state para feedback inmediato */
+      &:active {
+        transform: scale(0.95) translateZ(0);
+        transition-duration: 0.05s; /* Feedback ultra-rápido */
+      }
     }
 
     .logout-btn:hover {
-      background: #DC2626;
-      transform: scale(1.05);
       box-shadow: var(--shadow-md);
     }
 
-    .logout-btn:active {
-      transform: scale(0.98);
-    }
-
     .logout-btn:focus-visible {
-      outline: 2px solid var(--color-focus);
+      outline: 2px solid var(--color-accent);
       outline-offset: 2px;
     }
 
-    /* Responsive Design */
+    /* ============== SCROLLBAR ============== */
+    .nav::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .nav::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .nav::-webkit-scrollbar-thumb {
+      background: var(--color-accent);
+      border-radius: 3px;
+    }
+
+    /* ============== RESPONSIVE ============== */
     @media (max-width: 1024px) {
       .sidebar {
         width: 220px;
@@ -313,12 +310,21 @@
         position: sticky;
         top: 0;
         z-index: 100;
-        backdrop-filter: blur(8px); /* Glassmorphism */
-        background: rgba(var(--color-panel-rgb, 255,255,255), 0.9);
+        
+        /* Glassmorphism optimizado */
+        background: rgba(255, 255, 255, 0.85);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        
+        /* Mejor performance que blur puro */
+        will-change: transform;
+        transform: translateZ(0);
       }
 
-      .sidebar::after {
-        display: none;
+      @media (prefers-reduced-motion: no-preference) {
+        .sidebar {
+          transition: backdrop-filter var(--transition-fast);
+        }
       }
 
       .nav {
@@ -358,25 +364,18 @@
       }
     }
 
-    /* Scrollbar personalizada */
-    .nav::-webkit-scrollbar {
-      width: 6px;
+    /* ============== REDUCED MOTION ============== */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
 
-    .nav::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .nav::-webkit-scrollbar-thumb {
-      background: var(--color-accent);
-      border-radius: 3px;
-    }
-
-    .nav::-webkit-scrollbar-thumb:hover {
-      background: color-mix(in srgb, var(--color-accent) 80%, black);
-    }
-
-    /* Utilidades */
+    /* ============== UTILITIES ============== */
     .sr-only {
       position: absolute;
       width: 1px;
@@ -395,7 +394,6 @@
 <!-- Sidebar -->
 <aside class="sidebar" aria-label="Navegación principal">
   <nav class="nav" id="main-nav" role="navigation">
-    <!-- Cada link es un componente independiente -->
     <a class="nav-link" href="almacenamiento.html" data-page="almacenamiento">
       <span class="material-icons" aria-hidden="true">warehouse</span>
       <span>Almacenamiento</span>
@@ -449,482 +447,172 @@
     <img id="userPhoto" class="user-avatar" 
          src="user2005.jpg" 
          alt="Avatar del usuario ERNESTO TOBIAS" 
-         loading="lazy">
+         loading="lazy"
+         width="85"
+         height="85">
     <div id="userName" class="user-name">ERNESTO TOBIAS</div>
   </div>
-  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión (Exit)">
+  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión">
     <span class="material-icons" aria-hidden="true">logout</span>
     <span>Exit</span>
   </button>
 </div>
 
-<!-- Main Content -->
+<!-- Main -->
 <main role="main">
   <h1 class="welcome">TOBIAS PALACIOS</h1>
   <p class="subtitle">A FAMILY COMPANY</p>
 </main>
 
-<!-- Service Worker Registration -->
+<!-- JavaScript Optimizado -->
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        console.info('Service Worker no disponible');
-      });
-    });
-  }
-</script>
-
-<!-- Application Logic -->
-<script type="module">
-/**
- * @fileoverview TOBIAS PALACIOS Dashboard - Enterprise Architecture
- * @version 3.0.0
- * @author Frontend Team
- */
-
-// ==================== CONFIGURACIÓN CENTRAL ====================
-const CONFIG = Object.freeze({
-  APP: {
-    NAME: 'TOBIAS PALACIOS Dashboard',
-    VERSION: '3.0.0',
-    DEFAULT_PAGE: 'dashboard.html'
-  },
-  
-  STORAGE: {
-    DB_NAME: 'menuDB',
-    STORE_SESSION: 'userSession',
-    SESSION_TTL: 24 * 60 * 60 * 1000, // 24 horas
-  },
-  
-  SESSION: {
-    LOGGED_IN: 'loggedIn',
-    FOTO: 'foto',
-    NOMBRE: 'nombre',
-    TIMESTAMP: 'sessionTimestamp'
-  },
-  
-  DEFAULTS: {
-    AVATAR: 'user2005.jpg',
-    USERNAME: 'Usuario',
-    REDIRECT_PAGE: 'index.html'
-  },
-  
-  // Security
-  CSP: "default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' blob: data:;"
-});
-
-// ==================== SEGURIDAD ====================
-/**
- * Sanitiza texto para prevenir XSS
- * @param {string} str - Texto a sanitizar
- * @returns {string}
- */
-const sanitize = (str) => {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+// Configuración ultraligera
+const CONFIG = {
+  DB_NAME: 'menuDB',
+  STORE_SESSION: 'userSession',
+  DEFAULT_AVATAR: 'user2005.jpg',
+  DEFAULT_USER: 'Usuario',
+  REDIRECT_PAGE: 'index.html'
 };
 
-// ==================== LOGGER ====================
+// Logger minimalista
 const Logger = {
-  info: (msg, data) => console.info(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
-  warn: (msg, data) => console.warn(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
-  error: (msg, data) => console.error(`[${CONFIG.APP.NAME}] ${msg}`, data || ''),
+  warn: (...args) => console.warn('[Dashboard]', ...args)
 };
 
-// ==================== STORAGE MANAGER ====================
+// IndexedDB Manager - Singleton
 class StorageManager {
+  static #instance = null;
+  static getInstance() {
+    if (!this.#instance) this.#instance = new StorageManager();
+    return this.#instance;
+  }
+
   constructor() {
     this.db = null;
-    this.initialize();
+    this.#open();
   }
 
-  async initialize() {
-    try {
-      this.db = await this.#openDB();
-      Logger.info('IndexedDB inicializada');
-    } catch (error) {
-      Logger.error('Error al inicializar IndexedDB', error);
-    }
-  }
-
-  #openDB() {
+  async #open() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(CONFIG.STORAGE.DB_NAME, 1);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-      
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(CONFIG.STORAGE.STORE_SESSION)) {
-          const store = db.createObjectStore(CONFIG.STORAGE.STORE_SESSION, { 
-            keyPath: 'id', 
-            autoIncrement: true 
-          });
-          store.createIndex('timestamp', 'timestamp', { unique: false });
+      const req = indexedDB.open(CONFIG.DB_NAME, 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        this.db = req.result;
+        resolve();
+      };
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        if (!d.objectStoreNames.contains(CONFIG.STORE_SESSION)) {
+          d.createObjectStore(CONFIG.STORE_SESSION, { keyPath: 'id', autoIncrement: true });
         }
       };
     });
   }
 
-  async saveSession(data) {
-    try {
-      await this.#ensureDB();
-      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readwrite');
-      const store = tx.objectStore(CONFIG.STORAGE.STORE_SESSION);
-      
-      return new Promise((resolve, reject) => {
-        const request = store.add({
-          ...data,
-          timestamp: Date.now(),
-          userAgent: navigator.userAgent
-        });
-        
-        request.onsuccess = () => {
-          Logger.info('Sesión guardada en IndexedDB');
-          resolve(request.result);
-        };
-        request.onerror = () => reject(request.error);
-      });
-    } catch (error) {
-      Logger.warn('No se pudo guardar sesión:', error);
-    }
-  }
-
   async getLastSession() {
-    try {
-      await this.#ensureDB();
-      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readonly');
-      const store = tx.objectStore(CONFIG.STORAGE.STORE_SESSION);
-      const index = store.index('timestamp');
-      
-      return new Promise((resolve) => {
-        const request = index.openCursor(null, 'prev');
-        request.onsuccess = () => {
-          const session = request.result?.value || null;
-          
-          // Validar antigüedad
-          if (session && (Date.now() - session.timestamp) > CONFIG.STORAGE.SESSION_TTL) {
-            Logger.info('Sesión expirada');
-            resolve(null);
-          } else {
-            resolve(session);
-          }
-        };
-      });
-    } catch (error) {
-      Logger.error('Error al recuperar sesión', error);
-      return null;
-    }
+    if (!this.db) await this.#open();
+    const tx = this.db.transaction([CONFIG.STORE_SESSION], 'readonly');
+    return new Promise(resolve => {
+      tx.objectStore(CONFIG.STORE_SESSION).openCursor(null, 'prev').onsuccess = (e) => {
+        resolve(e.target.result?.value || null);
+      };
+    });
   }
 
-  async clearSessions() {
-    try {
-      await this.#ensureDB();
-      const tx = this.db.transaction([CONFIG.STORAGE.STORE_SESSION], 'readwrite');
-      await new Promise((resolve) => {
-        tx.objectStore(CONFIG.STORAGE.STORE_SESSION).clear().onsuccess = resolve;
-      });
-      Logger.info('Sesiones limpiadas');
-    } catch (error) {
-      Logger.error('Error al limpiar sesiones', error);
-    }
-  }
-
-  async #ensureDB() {
-    if (!this.db) await this.initialize();
+  async clear() {
+    if (!this.db) await this.#open();
+    this.db.transaction([CONFIG.STORE_SESSION], 'readwrite').objectStore(CONFIG.STORE_SESSION).clear();
   }
 }
 
-// ==================== AUTH MANAGER ====================
-class AuthManager {
-  static checkAuthentication() {
-    const isLoggedIn = sessionStorage.getItem(CONFIG.SESSION.LOGGED_IN) === 'true';
-    const sessionTimestamp = parseInt(sessionStorage.getItem(CONFIG.SESSION.TIMESTAMP), 10);
-    
-    if (!isLoggedIn) {
-      Logger.warn('Usuario no autenticado');
-      this.#redirect();
+// Auth Manager
+const AuthManager = {
+  check: () => {
+    if (sessionStorage.getItem('loggedIn') !== 'true') {
+      location.replace(CONFIG.REDIRECT_PAGE);
       return false;
     }
-
-    // Verificar expiración de sesión
-    if (Date.now() - sessionTimestamp > CONFIG.STORAGE.SESSION_TTL) {
-      Logger.warn('Sesión expirada por tiempo');
-      this.logout();
-      return false;
-    }
-
     return true;
+  },
+  
+  logout: async () => {
+    await StorageManager.getInstance().clear();
+    sessionStorage.clear();
+    location.replace(CONFIG.REDIRECT_PAGE);
   }
+};
 
-  static async logout() {
-    try {
-      const storage = new StorageManager();
-      await storage.clearSessions();
-      
-      // Limpiar todos los storages
-      sessionStorage.clear();
-      localStorage.removeItem(CONFIG.SESSION.LOGGED_IN);
-      
-      Logger.info('Logout exitoso');
-    } catch (error) {
-      Logger.error('Error durante logout', error);
-    } finally {
-      this.#redirect();
-    }
-  }
-
-  static #redirect() {
-    try {
-      window.location.replace(CONFIG.DEFAULTS.REDIRECT_PAGE);
-    } catch {
-      window.location.href = CONFIG.DEFAULTS.REDIRECT_PAGE;
-    }
-  }
-}
-
-// ==================== UI MANAGER ====================
-class UIManager {
-  constructor() {
-    this.elements = {
-      userPhoto: document.getElementById('userPhoto'),
-      userName: document.getElementById('userName'),
-      logoutBtn: document.getElementById('logoutBtn'),
-      mainNav: document.getElementById('main-nav')
-    };
+// UI Manager
+const UIManager = {
+  async init() {
+    const [photo, name] = [sessionStorage.getItem('foto'), sessionStorage.getItem('nombre')];
     
-    this.validateElements();
+    if (photo && name) {
+      this.update(photo, name);
+    } else {
+      const session = await StorageManager.getInstance().getLastSession();
+      if (session?.foto && session?.nombre) {
+        sessionStorage.setItem('foto', session.foto);
+        sessionStorage.setItem('nombre', session.nombre);
+        this.update(session.foto, session.nombre);
+      } else {
+        this.update(CONFIG.DEFAULT_AVATAR, CONFIG.DEFAULT_USER);
+      }
+    }
+  },
+  
+  update(foto, nombre) {
+    const imgEl = document.getElementById('userPhoto');
+    const nameEl = document.getElementById('userName');
+    if (imgEl) {
+      imgEl.src = foto;
+      imgEl.onerror = () => { imgEl.src = CONFIG.DEFAULT_AVATAR; };
+    }
+    if (nameEl) nameEl.textContent = nombre || CONFIG.DEFAULT_USER;
   }
+};
 
-  validateElements() {
-    const missing = Object.entries(this.elements)
-      .filter(([_, el]) => !el)
-      .map(([name]) => name);
-    
-    if (missing.length) {
-      Logger.warn('Elementos del DOM no encontrados', missing);
-    }
-  }
-
-  async initializeUser() {
-    try {
-      const userData = await this.#getUserData();
-      this.#updateUserUI(userData);
-    } catch (error) {
-      Logger.error('Error inicializando UI de usuario', error);
-      this.#updateUserUI({
-        foto: CONFIG.DEFAULTS.AVATAR,
-        nombre: CONFIG.DEFAULTS.USERNAME
-      });
-    }
-  }
-
-  async #getUserData() {
-    // Prioridad: sessionStorage > IndexedDB > Defaults
-    const foto = sessionStorage.getItem(CONFIG.SESSION.FOTO);
-    const nombre = sessionStorage.getItem(CONFIG.SESSION.NOMBRE);
-    
-    if (foto && nombre) {
-      return { foto, nombre };
-    }
-
-    // Fallback a IndexedDB
-    const storage = new StorageManager();
-    const session = await storage.getLastSession();
-    
-    if (session?.foto && session?.nombre) {
-      // Sincronizar con sessionStorage
-      sessionStorage.setItem(CONFIG.SESSION.FOTO, session.foto);
-      sessionStorage.setItem(CONFIG.SESSION.NOMBRE, session.nombre);
-      sessionStorage.setItem(CONFIG.SESSION.TIMESTAMP, Date.now());
-      
-      return {
-        foto: session.foto,
-        nombre: session.nombre
-      };
-    }
-
-    return {
-      foto: CONFIG.DEFAULTS.AVATAR,
-      nombre: CONFIG.DEFAULTS.USERNAME
-    };
-  }
-
-  #updateUserUI({ foto, nombre }) {
-    if (this.elements.userPhoto) {
-      const sanitizedFoto = sanitize(foto);
-      this.elements.userPhoto.src = sanitizedFoto;
-      
-      // Manejo de error con retries
-      this.elements.userPhoto.onerror = () => {
-        Logger.warn('Avatar no encontrado', foto);
-        this.elements.userPhoto.src = CONFIG.DEFAULTS.AVATAR;
-      };
-      
-      this.elements.userPhoto.alt = `Avatar de ${sanitize(nombre)}`;
-    }
-
-    if (this.elements.userName) {
-      this.elements.userName.textContent = sanitize(nombre);
-    }
-  }
-
-  initializeNavigation() {
-    if (!this.elements.mainNav) return;
-
-    const currentPage = this.#normalizePath(window.location.pathname);
-    
-    this.elements.mainNav.querySelectorAll('.nav-link').forEach(link => {
-      const linkPage = this.#normalizePath(link.getAttribute('href'));
-      
-      if (this.#isActivePage(linkPage, currentPage)) {
+// Navigation Manager
+const NavManager = {
+  init() {
+    const current = location.pathname.split('/').pop();
+    document.querySelectorAll('.nav-link').forEach(link => {
+      if (link.getAttribute('href') === current) {
         link.classList.add('active');
         link.setAttribute('aria-current', 'page');
-      } else {
-        link.classList.remove('active');
-        link.removeAttribute('aria-current');
-      }
-    });
-
-    // Delegación de eventos para mejor performance
-    this.elements.mainNav.addEventListener('click', (e) => {
-      const link = e.target.closest('.nav-link');
-      if (link) {
-        Logger.info('Navegación a:', link.href);
       }
     });
   }
+};
 
-  #normalizePath(path) {
-    return path.split('/').pop().toLowerCase().replace(/\.html$/, '') || 'index';
-  }
-
-  #isActivePage(linkPage, currentPage) {
-    return linkPage === currentPage || 
-           (currentPage === '' && linkPage === 'index') ||
-           (currentPage === 'index' && linkPage === '');
-  }
-
-  bindLogout(handler) {
-    if (this.elements.logoutBtn) {
-      this.elements.logoutBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await handler();
-      });
-    }
-  }
-}
-
-// ==================== APPLICATION CLASS ====================
-class TobPalDashboard {
-  constructor() {
-    this.storage = new StorageManager();
-    this.ui = new UIManager();
-    
-    // Estado de la aplicación
-    this.state = {
-      isReady: false,
-      user: null
-    };
-  }
-
-  async bootstrap() {
-    Logger.info(`Iniciando ${CONFIG.APP.NAME} v${CONFIG.APP.VERSION}`);
-    
-    try {
-      // 1. Verificar autenticación
-      if (!AuthManager.checkAuthentication()) return;
-
-      // 2. Inicializar storage
-      await this.storage.initialize();
-
-      // 3. Inicializar UI
-      await this.ui.initializeUser();
-      this.ui.initializeNavigation();
-      this.ui.bindLogout(() => AuthManager.logout());
-
-      // 4. Registrar eventos globales
-      this.#registerGlobalEvents();
-
-      // 5. Marcar como listo
-      this.state.isReady = true;
-      Logger.info('Aplicación lista');
-
-    } catch (error) {
-      Logger.error('Error crítico en bootstrap', error);
-      this.#handleFatalError();
-    }
-  }
-
-  #registerGlobalEvents() {
-    // Manejo de errores globales
-    window.addEventListener('error', (e) => {
-      Logger.error('Error no capturado', e.error);
-      // En producción: enviar a Sentry, etc.
-    });
-
-    // Manejo de rechazos de promesas
-    window.addEventListener('unhandledrejection', (e) => {
-      Logger.error('Promise rejection no capturado', e.reason);
-      e.preventDefault();
-    });
-
-    // Detección de cambios en sessionStorage (multitab)
-    window.addEventListener('storage', (e) => {
-      if (e.key === CONFIG.SESSION.LOGGED_IN && e.newValue === null) {
-        Logger.info('Logout detectado en otra pestaña');
-        AuthManager.logout();
-      }
-    });
-
-    // Actualizar timestamp de actividad
-    this.#updateActivityTimestamp();
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) this.#updateActivityTimestamp();
-    });
-  }
-
-  #updateActivityTimestamp() {
-    sessionStorage.setItem(CONFIG.SESSION.TIMESTAMP, Date.now());
-  }
-
-  #handleFatalError() {
-    // Mostrar mensaje amigable al usuario
-    const main = document.querySelector('main');
-    if (main) {
-      main.innerHTML = `
-        <div role="alert" style="text-align: center; padding: 2rem;">
-          <span class="material-icons" style="font-size: 48px; color: var(--color-danger);">error</span>
-          <h2 style="margin: 1rem 0;">Error al cargar la aplicación</h2>
-          <p>Por favor, intenta recargar la página.</p>
-          <button onclick="window.location.reload()" class="logout-btn" style="margin-top: 1rem;">
-            Recargar
-          </button>
-        </div>
-      `;
-    }
-  }
-}
-
-// ==================== EJECUCIÓN ====================
-// Patrón IIFE para iniciar la app
-(async () => {
-  // Esperar al DOM
+// ==================== INICIALIZACIÓN ULTRA-RÁPIDA ====================
+(function() {
+  'use strict';
+  
+  // Si el DOM ya está listo, iniciar inmediatamente
   if (document.readyState === 'loading') {
-    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+    document.addEventListener('DOMContentLoaded', init, { passive: true });
+  } else {
+    init();
   }
 
-  // Inicializar aplicación
-  const app = new TobPalDashboard();
-  await app.bootstrap();
+  async function init() {
+    // 1. Auth primero (bloqueante y rápido)
+    if (!AuthManager.check()) return;
 
-  // Exponer globalmente para debugging (solo en desarrollo)
-  if (window.location.hostname === 'localhost') {
-    window.TobPalApp = app;
-    Logger.info('App expuesta en window.TobPalApp para debugging');
+    // 2. UI en paralelo (no bloqueante)
+    UIManager.init().catch(Logger.warn);
+    NavManager.init();
+
+    // 3. Event listeners con passive: true
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        AuthManager.logout();
+      }, { passive: false });
+    }
   }
 })();
 </script>

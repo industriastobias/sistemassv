@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Verificación - Klohe</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     :root {
       --bg: #fafafa;
@@ -32,7 +32,6 @@
       text-align: center;
       font-weight: 500;
     }
-    /* =======  CONTADOR  ======= */
     .contador-pill {
       position: fixed;
       top: 1rem;
@@ -49,8 +48,6 @@
     }
     .contador-pill .verde { color: var(--verde); font-weight: 600; }
     .contador-pill .rojo  { color: var(--rojo);  font-weight: 600; }
-    /* =========================== */
-
     .catalogo {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -62,7 +59,6 @@
     @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 400px)  { .catalogo { grid-template-columns: 1fr; } }
-
     .producto {
       background: var(--card);
       border: 3px solid var(--rojo);
@@ -118,12 +114,10 @@
     <h1>VERIFICACIÓN DE CATÁLOGO KLOHE</h1>
   </header>
 
-  <!-- =======  CONTADOR  ======= -->
   <div class="contador-pill">
     <span>✔️ <span id="cConfirmados" class="verde">0</span></span>
     <span>❌ <span id="cNoConfirmados" class="rojo">0</span></span>
   </div>
-  <!-- =========================== -->
 
   <div class="catalogo" id="catalogo"></div>
 
@@ -138,8 +132,6 @@
     function guardarConfirmados(arr) {
       localStorage.setItem(claveConfirmados, JSON.stringify(arr));
     }
-
-    /* Actualiza los números del pill */
     function actualizarContadores() {
       const total = catalogo.querySelectorAll('.producto').length;
       const confirmados = getConfirmados().length;
@@ -152,6 +144,35 @@
       'Accesorios para el cabello','Lentes de sol','Chokers',
       'Relojes','Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
+
+    async function renderProducto(prod, esConfirmado, delay) {
+      const div = document.createElement('div');
+      div.className = 'producto';
+      div.style.animationDelay = `${delay * 0.05}s`;
+      div.classList.add(esConfirmado ? 'confirmado' : 'no-confirmado');
+
+      const blob = await localforage.getItem(`img_${prod.code}`);
+      const imgSrc = blob ? URL.createObjectURL(blob) : '';
+
+      div.innerHTML = `
+        <img src="${imgSrc}" alt="${prod.name}">
+        <h3>${prod.name}</h3>
+        <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
+        <p><strong>Categoría:</strong> ${prod.category}</p>
+        <p><strong>Código de barras:</strong> ${prod.barcode}</p>
+        <button class="btn-confirmar">${esConfirmado ? 'CONFIRMADO' : 'CONFIRMAR'}</button>
+      `;
+
+      div.querySelector('.btn-confirmar').addEventListener('click', () => {
+        const arr = getConfirmados();
+        const idx = arr.indexOf(prod.code);
+        if (idx === -1) arr.push(prod.code); else arr.splice(idx, 1);
+        guardarConfirmados(arr);
+        renderCatalogo();
+      });
+
+      catalogo.appendChild(div);
+    }
 
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
@@ -166,51 +187,27 @@
       }
 
       let delay = 0;
+
+      // NO confirmados primero
       for (const categoria of ordenCategorias) {
         const productos = porCategoria[categoria] || [];
         for (const prod of productos) {
-          const div = document.createElement('div');
-          div.className = 'producto';
-          div.style.animationDelay = `${delay}s`;
-
-          const esConfirmado = confirmados.includes(prod.code);
-          div.classList.add(esConfirmado ? 'confirmado' : 'no-confirmado');
-
-          const blob = await localforage.getItem(`img_${prod.code}`);
-          const imgSrc = blob ? URL.createObjectURL(blob) : '';
-
-          div.innerHTML = `
-            <img src="${imgSrc}" alt="${prod.name}">
-            <h3>${prod.name}</h3>
-            <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
-            <p><strong>Categoría:</strong> ${prod.category}</p>
-            <p><strong>Código de barras:</strong> ${prod.barcode}</p>
-            <button class="btn-confirmar">${esConfirmado ? 'CONFIRMADO' : 'CONFIRMAR'}</button>
-          `;
-
-          div.querySelector('.btn-confirmar').addEventListener('click', () => {
-            const arr = getConfirmados();
-            const idx = arr.indexOf(prod.code);
-            if (idx === -1) {
-              arr.push(prod.code);
-              div.classList.remove('no-confirmado');
-              div.classList.add('confirmado');
-              div.querySelector('.btn-confirmar').textContent = 'CONFIRMADO';
-            } else {
-              arr.splice(idx, 1);
-              div.classList.remove('confirmado');
-              div.classList.add('no-confirmado');
-              div.querySelector('.btn-confirmar').textContent = 'CONFIRMAR';
-            }
-            guardarConfirmados(arr);
-            actualizarContadores();   /* <— refresca números */
-          });
-
-          catalogo.appendChild(div);
-          delay += 0.05;
+          if (!confirmados.includes(prod.code)) {
+            await renderProducto(prod, false, delay++);
+          }
         }
       }
-      actualizarContadores(); /* primer pintado */
+      // Confirmados después
+      for (const categoria of ordenCategorias) {
+        const productos = porCategoria[categoria] || [];
+        for (const prod of productos) {
+          if (confirmados.includes(prod.code)) {
+            await renderProducto(prod, true, delay++);
+          }
+        }
+      }
+
+      actualizarContadores();
     }
 
     renderCatalogo();
@@ -218,6 +215,5 @@
       if (e.key === 'inventory' || e.key === claveConfirmados) renderCatalogo();
     });
   </script>
-
 </body>
 </html>

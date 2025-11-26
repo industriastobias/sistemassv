@@ -20,7 +20,7 @@
       flex-wrap: wrap;
     }
     .ticket {
-      width: 320px;
+      width: 360px;
       background: #fff;
       padding: 15px;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
@@ -41,12 +41,12 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
       margin-top: 10px;
     }
     th, td {
-      text-align: left;
-      padding: 5px 0;
+      text-align: center;
+      padding: 4px 2px;
     }
     th { border-bottom: 1px dashed #999; }
     .total {
@@ -69,16 +69,12 @@
     button:hover { background: #333; }
     .social { font-size: 12px; margin-top: 5px; text-align: center; color: #555; }
     .policy { font-size: 11px; margin-top: 8px; color: #444; text-align: center; }
-    input[type="number"] {
-      width: 60px;
-      padding: 4px;
-      margin-left: 5px;
-    }
+    input[type="number"] { width: 50px; padding: 3px; }
   </style>
 </head>
 <body>
   <div class="facturas-container">
-    <!-- ========== FACTURA KLOHE ========== -->
+    <!-- ========== KLOHE ========== -->
     <div class="ticket" id="invoice-klohe">
       <h2>KLOHESV</h2>
       <div class="center">
@@ -93,23 +89,26 @@
       </div>
       <table>
         <thead>
-          <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Total</th></tr>
+          <tr>
+            <th>Producto</th>
+            <th>Cant</th>
+            <th>Precio</th>
+            <th>Desc(%)</th>
+            <th>Total</th>
+          </tr>
         </thead>
         <tbody id="productos-klohe">
           <tr>
             <td contenteditable="true">Collar</td>
             <td contenteditable="true" class="cantidad-klohe">1</td>
             <td contenteditable="true" class="precio-klohe">10.00</td>
+            <td contenteditable="true" class="desc-klohe">0</td>
             <td class="subtotal-klohe">10.00</td>
           </tr>
         </tbody>
       </table>
       <button onclick="agregarFila('klohe')">Agregar producto</button>
       <button onclick="calcularTotal('klohe')">Actualizar total</button>
-      <div style="margin-top: 10px;">
-        <label>Descuento (%): </label>
-        <input type="number" id="descuento-klohe" value="0" min="0" max="100" oninput="calcularTotal('klohe')">
-      </div>
       <div class="total">TOTAL: $<span id="total-klohe">10.00</span></div>
       <div class="footer center">
         <p>¡Gracias por su compra!</p>
@@ -119,7 +118,7 @@
       <button onclick="imprimirFactura('klohe')">Imprimir Factura</button>
     </div>
 
-    <!-- ========== FACTURA CASEUP ========== -->
+    <!-- ========== CASEUP ========== -->
     <div class="ticket" id="invoice-caseup">
       <h2>CASEUP</h2>
       <div class="center">
@@ -134,23 +133,26 @@
       </div>
       <table>
         <thead>
-          <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Total</th></tr>
+          <tr>
+            <th>Producto</th>
+            <th>Cant</th>
+            <th>Precio</th>
+            <th>Desc(%)</th>
+            <th>Total</th>
+          </tr>
         </thead>
         <tbody id="productos-caseup">
           <tr>
             <td contenteditable="true">Pulsera</td>
             <td contenteditable="true" class="cantidad-caseup">1</td>
             <td contenteditable="true" class="precio-caseup">5.00</td>
+            <td contenteditable="true" class="desc-caseup">0</td>
             <td class="subtotal-caseup">5.00</td>
           </tr>
         </tbody>
       </table>
       <button onclick="agregarFila('caseup')">Agregar producto</button>
       <button onclick="calcularTotal('caseup')">Actualizar total</button>
-      <div style="margin-top: 10px;">
-        <label>Descuento (%): </label>
-        <input type="number" id="descuento-caseup" value="0" min="0" max="100" oninput="calcularTotal('caseup')">
-      </div>
       <div class="total">TOTAL: $<span id="total-caseup">5.00</span></div>
       <div class="footer center">
         <p>¡Gracias por su compra!</p>
@@ -177,6 +179,7 @@
         <td contenteditable="true">Nuevo producto</td>
         <td contenteditable="true" class="cantidad-${suffix}">1</td>
         <td contenteditable="true" class="precio-${suffix}">0.00</td>
+        <td contenteditable="true" class="desc-${suffix}">0</td>
         <td class="subtotal-${suffix}">0.00</td>
       `;
       tbody.appendChild(fila);
@@ -188,12 +191,11 @@
       document.querySelectorAll(`#productos-${suffix} tr`).forEach(tr => {
         const cant = parseFloat(tr.querySelector(`.cantidad-${suffix}`).textContent) || 0;
         const precio = parseFloat(tr.querySelector(`.precio-${suffix}`).textContent) || 0;
-        const sub = cant * precio;
+        const desc = parseFloat(tr.querySelector(`.desc-${suffix}`).textContent) || 0;
+        const sub = cant * precio * (1 - desc / 100);
         tr.querySelector(`.subtotal-${suffix}`).textContent = sub.toFixed(2);
         total += sub;
       });
-      const desc = parseFloat(document.getElementById(`descuento-${suffix}`)?.value || 0);
-      total = total - (total * desc / 100);
       document.getElementById(`total-${suffix}`).textContent = total.toFixed(2);
     }
 

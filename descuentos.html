@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Descuentos - FULL</title>
+  <title>Sistema de Descuentos - IndexedDB</title>
   <style>
     :root {
       --primary: #0052d4;
@@ -76,20 +76,14 @@
       gap: 1.5rem;
       flex-wrap: wrap;
     }
-    .price-desc {
-      font-size: .85rem;
-      color: #555;
-      margin-top: .25rem;
-    }
     #scrollArea { height: 65vh; overflow: auto; }
   </style>
 </head>
 <body>
 
-<header>Sistema de Descuentos - FULL</header>
+<header>Sistema de Descuentos - IndexedDB</header>
 
 <div class="wrap">
-  <!-- Filtros -->
   <div class="filters">
     <input id="searchBarcode" placeholder="Código de barras (ENTER)" autocomplete="off">
     <select id="catFilter">
@@ -133,7 +127,6 @@
   </div>
 </div>
 
-<!-- localforage para imágenes -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.19.0/clusterize.min.js"></script>
 <script type="module">
@@ -141,7 +134,6 @@
 const DB_NAME   = 'inv_v1';
 const STORE     = 'products';
 const IMG_STORE = 'images';
-const CHECKSUM  = 'inv_checksum';
 const STORED_FILTERS = 'last_filters';
 
 const db  = localforage.createInstance({ name: DB_NAME, storeName: STORE });
@@ -150,10 +142,6 @@ const img = localforage.createInstance({ name: DB_NAME, storeName: IMG_STORE });
 /* ----------  UTILS  ---------- */
 const $   = s => document.querySelector(s);
 const fmt = n => (+n).toLocaleString('es-CL', {minimumFractionDigits:2});
-const sha256 = async txt => {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
-};
 
 /* ----------  STATE  ---------- */
 let inv = [];
@@ -206,27 +194,13 @@ window.removeDisc = code => setDisc(code,0);
 
 /* ----------  SAVE / LOAD  ---------- */
 async function save(){
-  const txt = JSON.stringify(inv);
-  const sum = await sha256(txt);
-  localStorage.setItem(DB_NAME, txt);
-  localStorage.setItem(CHECKSUM, sum);
-  downloadBackup(txt);
+  for(const it of inv) await db.setItem(it.code, it);
 }
 async function load(){
-  const txt = localStorage.getItem(DB_NAME);
-  if(!txt) return;
-  if(await sha256(txt) !== localStorage.getItem(CHECKSUM)){
-     if(!confirm('Integridad comprometida. ¿Restaurar igualmente?')) return;
-  }
-  inv = JSON.parse(txt);
-  inv.forEach((it,i)=> it.barcode && barMap.set(it.barcode, i));
-}
-function downloadBackup(txt){
-  const blob = new Blob([txt], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'inventario_'+new Date().toISOString().slice(0,10)+'.bak';
-  a.click();
+  inv = [];
+  await db.iterate((value, key, i) => { inv.push(value); });
+  barMap.clear();
+  inv.forEach((it, i) => { if(it.barcode) barMap.set(it.barcode, i); });
 }
 
 /* ----------  FILTERS  ---------- */
@@ -287,8 +261,8 @@ window.uploadCSV = async (ev) => {
     const [code,name,barcode,price,discount,category,quantity] = l.split(',');
     return {code,name,barcode,price:+price,discount:+discount,category,quantity:+quantity};
   });
-  inv = parsed;
-  save();
+  for(const it of parsed) await db.setItem(it.code, it);
+  await load();
   render();
 };
 

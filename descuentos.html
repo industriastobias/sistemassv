@@ -8,7 +8,7 @@
     :root {
       --primary: #0052d4;
       --primary-light: #4f83cc;
-      --bg: #f5f7ff;
+      --bg: #f5f7fa;
       --card: #ffffff;
       --text: #222;
       --green: #00c853;
@@ -120,6 +120,8 @@
   <div>Con dto: $<span id="totD">0.00</span></div>
 </div>
 
+<!-- localforage para imágenes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 <script>
 /* ----------  DATOS  ---------- */
 const inv = JSON.parse(localStorage.getItem('inventory')) || [];
@@ -134,7 +136,7 @@ function render(arr = inv) {
     tr.dataset.line = idx + 1;
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td><img class="thumb" src="${it.image || 'https://via.placeholder.com/60?text=Sin+img'}" alt=""></td>
+      <td><img class="thumb" id="img-${it.code}" alt="img"></td>
       <td>${it.name}</td>
       <td>${it.code}</td>
       <td>$${(+it.price).toFixed(2)}</td>
@@ -146,7 +148,25 @@ function render(arr = inv) {
       <td><button onclick="setDisc('${it.code}',0)">Quitar</button></td>`;
     tb.appendChild(tr);
   });
+  loadImages(); // ⬅️ carga imágenes después de pintar
   totals();
+}
+
+/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE (compra.html)  ---------- */
+function loadImages() {
+  inv.forEach(it => {
+    const imgEl = document.getElementById(`img-${it.code}`);
+    if (!imgEl) return;
+    localforage.getItem(`img_${it.code}`).then(blob => {
+      if (blob) {
+        imgEl.src = URL.createObjectURL(blob);
+      } else {
+        imgEl.src = 'https://via.placeholder.com/60?text=Sin+img';
+      }
+    }).catch(() => {
+      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img';
+    });
+  });
 }
 
 /* ----------  LÓGICA  ---------- */

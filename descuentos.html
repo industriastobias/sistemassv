@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Descuentos</title>
+  <title>Sistema de Descuentos - FULL</title>
   <style>
     :root {
       --primary: #0052d4;
@@ -81,11 +81,12 @@
       color: #555;
       margin-top: .25rem;
     }
+    #scrollArea { height: 65vh; overflow: auto; }
   </style>
 </head>
 <body>
 
-<header>Sistema de Descuentos</header>
+<header>Sistema de Descuentos - FULL</header>
 
 <div class="wrap">
   <!-- Filtros -->
@@ -111,162 +112,188 @@
     <input id="globalDisc" type="number" min="0" max="100" placeholder="Dto global %">
     <button onclick="applyGlobal()">Aplicar</button>
     <button onclick="removeGlobal()">Quitar</button>
+    <button onclick="downloadCSV()">Exportar CSV</button>
+    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="uploadCSV(event)">
+    <button onclick="document.getElementById('csvFile').click()">Importar CSV</button>
   </div>
 
   <div class="info" id="info"></div>
   <div class="counters" id="counters"></div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
-        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
-      </tr>
-    </thead>
-    <tbody id="list"></tbody>
-  </table>
+  <div id="scrollArea">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
+          <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- localforage para imágenes -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-<script>
-/* ----------  DATOS  ---------- */
-const inv = JSON.parse(localStorage.getItem('inventory')) || [];
-const qs  = (s) => document.querySelector(s);
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.19.0/clusterize.min.js"></script>
+<script type="module">
+/* ----------  CONFIG  ---------- */
+const DB_NAME   = 'inv_v1';
+const STORE     = 'products';
+const IMG_STORE = 'images';
+const CHECKSUM  = 'inv_checksum';
+const STORED_FILTERS = 'last_filters';
 
-/* ----------  PINTAR  ---------- */
-function render(arr = inv) {
-  const tb = qs('#list');
-  tb.innerHTML = '';
-  arr.forEach((it, idx) => {
-    const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
-    const tr = document.createElement('tr');
-    tr.dataset.line = idx + 1;
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><img class="thumb" id="img-${it.code}" alt="img"></td>
-      <td>${it.name}</td>
-      <td>${it.code}</td>
-      <td>${it.barcode || ''}</td>
-      <td>
-        <span style="text-decoration: line-through; opacity: .7;">$${(+it.price).toFixed(2)}</span>
-        <strong>$${final}</strong>
-      </td>
-      <td><input type="number" min="0" max="100" value="${it.discount||0}"
-                 onchange="startSave('${it.code}', this.value)"></td>
-      <td>$${final}</td>
-      <td>${it.category}</td>
-      <td>${it.quantity}</td>
-      <td><button onclick="removeDiscount('${it.code}')">Quitar descuento</button></td>`;
-    tb.appendChild(tr);
-  });
-  loadImages();
-  totals();
-  updateCounters();
+const db  = localforage.createInstance({ name: DB_NAME, storeName: STORE });
+const img = localforage.createInstance({ name: DB_NAME, storeName: IMG_STORE });
+
+/* ----------  UTILS  ---------- */
+const $   = s => document.querySelector(s);
+const fmt = n => (+n).toLocaleString('es-CL', {minimumFractionDigits:2});
+const sha256 = async txt => {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+};
+
+/* ----------  STATE  ---------- */
+let inv = [];
+let barMap = new Map();          // barcode -> index
+let virt;                        // clusterize instance
+
+/* ----------  RENDER  ---------- */
+function rowTpl(it, idx){
+  const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
+  return `<tr data-line="${idx+1}">
+    <td>${idx+1}</td>
+    <td><img class="thumb" data-code="${it.code}" src="https://via.placeholder.com/60?text=Sin+img"></td>
+    <td>${it.name}</td>
+    <td>${it.code}</td>
+    <td>${it.barcode||''}</td>
+    <td><span style="text-decoration:line-through;opacity:.7;">$${fmt(it.price)}</span>
+        <strong>$${fmt(final)}</strong></td>
+    <td><input type="number" min="0" max="100" value="${it.discount||0}"
+               onchange="setDisc('${it.code}',this.value)"></td>
+    <td>$${fmt(final)}</td>
+    <td>${it.category}</td>
+    <td>${it.quantity}</td>
+    <td><button onclick="removeDisc('${it.code}')">Quitar</button></td>
+  </tr>`;
 }
 
-/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE ---------- */
-function loadImages() {
-  inv.forEach(it => {
-    const imgEl = document.getElementById(`img-${it.code}`);
-    if (!imgEl) return;
-    localforage.getItem(`img_${it.code}`).then(blob => {
-      if (blob) {
-        imgEl.src = URL.createObjectURL(blob);
-      } else {
-        imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
-      }
-    }).catch(() => {
-      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
-    });
-  });
+async function render(list = inv){
+  const rows = list.map(rowTpl);
+  virt ? virt.update(rows) : virt = new Clusterize({ rows, scrollElem: $('#scrollArea'), contentElem: $('#list') });
+  loadImages(list);
+  updateCounters(list);
 }
 
-/* ----------  LÓGICA DE DESCUENTOS ---------- */
-let saveTimeout = {};
-function startSave(code, val) {
-  clearTimeout(saveTimeout[code]);
-  saveTimeout[code] = setTimeout(() => {
-    setDisc(code, val);
-  }, 500);
-}
-function setDisc(code, val) {
-  const it = inv.find(i => i.code === code);
-  if (it) {
-    it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
-    save();
-    filterAndRender();
+/* ----------  IMAGES  ---------- */
+async function loadImages(list){
+  for(const it of list){
+    const el = $(`img[data-code="${it.code}"]`);
+    if(!el) continue;
+    const blob = await img.getItem(it.code);
+    el.src = blob ? URL.createObjectURL(blob) : 'https://via.placeholder.com/60?text=Sin+img';
   }
 }
-function removeDiscount(code) {
-  setDisc(code, 0);
+
+/* ----------  DISCOUNTS  ---------- */
+window.setDisc = (code, val) => {
+  const it = inv.find(i=>i.code===code);
+  if(it){ it.discount = Math.max(0, Math.min(100, parseFloat(val)||0)); save(); render(); }
+};
+window.removeDisc = code => setDisc(code,0);
+
+/* ----------  SAVE / LOAD  ---------- */
+async function save(){
+  const txt = JSON.stringify(inv);
+  const sum = await sha256(txt);
+  localStorage.setItem(DB_NAME, txt);
+  localStorage.setItem(CHECKSUM, sum);
+  downloadBackup(txt);
 }
-function applyGlobal() {
-  const v = parseFloat(qs('#globalDisc').value);
-  if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
-  inv.forEach(i => i.discount = v);
-  save();
-  filterAndRender();
+async function load(){
+  const txt = localStorage.getItem(DB_NAME);
+  if(!txt) return;
+  if(await sha256(txt) !== localStorage.getItem(CHECKSUM)){
+     if(!confirm('Integridad comprometida. ¿Restaurar igualmente?')) return;
+  }
+  inv = JSON.parse(txt);
+  inv.forEach((it,i)=> it.barcode && barMap.set(it.barcode, i));
 }
-function removeGlobal() {
-  inv.forEach(i => i.discount = 0);
-  save();
-  filterAndRender();
-}
-
-/* ----------  CONTADORES + PRECIOS ---------- */
-function updateCounters() {
-  const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
-  const normal = inv.length - withDisc;
-
-  const normalTotal = inv.reduce((sum, i) => {
-    if ((i.discount || 0) === 0) return sum + (i.price * i.quantity);
-    return sum;
-  }, 0);
-
-  const discTotal = inv.reduce((sum, i) => {
-    if ((i.discount || 0) > 0) return sum + (i.price * (1 - (i.discount || 0)/100) * i.quantity);
-    return sum;
-  }, 0);
-
-  qs('#counters').innerHTML = `
-    Con descuento: ${withDisc} | Precio normal: ${normal} |
-    Normal: <strong>$${normalTotal.toFixed(2)}</strong> |
-    Con dto: <strong>$${discTotal.toFixed(2)}</strong>
-  `;
+function downloadBackup(txt){
+  const blob = new Blob([txt], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'inventario_'+new Date().toISOString().slice(0,10)+'.bak';
+  a.click();
 }
 
-/* ----------  TOTALES ---------- */
-function totals() {
-  let norm = 0, desc = 0;
-  inv.forEach(i => {
-    const q = +i.quantity, p = +i.price, d = (+i.discount||0);
-    norm += p * q;
-    desc += p * (1 - d/100) * q;
+/* ----------  FILTERS  ---------- */
+let lastFilter = JSON.parse(localStorage.getItem(STORED_FILTERS)||'{}');
+$('#searchBarcode').value = lastFilter.barcode||'';
+$('#catFilter').value     = lastFilter.cat||'';
+
+function applyFilters(){
+  const bc = $('#searchBarcode').value.trim();
+  const ct = $('#catFilter').value;
+  localStorage.setItem(STORED_FILTERS, JSON.stringify({barcode:bc, cat:ct}));
+
+  let list = inv;
+  if(bc) list = list.filter(it=>it.barcode===bc);
+  if(ct) list = list.filter(it=>it.category===ct);
+  render(list);
+}
+$('#searchBarcode').addEventListener('input', applyFilters);
+$('#catFilter').addEventListener('change', applyFilters);
+
+/* ----------  COUNTERS  ---------- */
+function updateCounters(list){
+  const w = list.filter(it=> (it.discount||0)>0 ).length;
+  const n = list.length - w;
+  const tNorm = list.reduce((s,it)=> s + it.price * it.quantity, 0);
+  const tDisc = list.reduce((s,it)=> s + it.price * (1-(it.discount||0)/100) * it.quantity, 0);
+  $('#counters').innerHTML = `Con descuento: ${w} | Normal: ${n} | Total Normal: <strong>$${fmt(tNorm)}</strong> | Con dto: <strong>$${fmt(tDisc)}</strong>`;
+}
+
+/* ----------  GLOBAL DISCOUNT  ---------- */
+window.applyGlobal = () => {
+  const v = parseFloat($('#globalDisc').value);
+  if(isNaN(v) || v<0 || v>100) return alert('Descuento inválido');
+  inv.forEach(i=> i.discount = v);
+  save(); render();
+};
+window.removeGlobal = () => {
+  inv.forEach(i=> i.discount = 0);
+  save(); render();
+};
+
+/* ----------  CSV  ---------- */
+window.downloadCSV = () => {
+  const hdr = 'code,name,barcode,price,discount,category,quantity\n';
+  const rows = inv.map(i => `${i.code},"${i.name}",${i.barcode||''},${i.price},${i.discount||0},${i.category},${i.quantity}`).join('\n');
+  const blob = new Blob([hdr+rows], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'inventario.csv';
+  a.click();
+};
+window.uploadCSV = async (ev) => {
+  const file = ev.target.files[0];
+  if(!file) return;
+  const txt = await file.text();
+  const lines = txt.split('\n').slice(1).filter(l=>l.trim());
+  const parsed = lines.map(l=>{
+    const [code,name,barcode,price,discount,category,quantity] = l.split(',');
+    return {code,name,barcode,price:+price,discount:+discount,category,quantity:+quantity};
   });
-}
-function save() {
-  localStorage.setItem('inventory', JSON.stringify(inv));
-}
+  inv = parsed;
+  save();
+  render();
+};
 
-/* ----------  FILTRAR ---------- */
-function filterAndRender() {
-  const barcode = qs('#searchBarcode').value.trim();
-  const cat  = qs('#catFilter').value;
-  let aux = inv;
-  if (barcode) aux = aux.filter(i => i.barcode === barcode);
-  if (cat)  aux = aux.filter(i => i.category === cat);
-  render(aux);
-}
-
-/* ----------  EVENTOS ---------- */
-qs('#searchBarcode').addEventListener('input', filterAndRender);
-qs('#catFilter').addEventListener('change', filterAndRender);
-qs('#searchBarcode').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchBarcode').select(); }
-});
-
-/* ----------  INICIO ---------- */
+/* ----------  INIT  ---------- */
+await load();
 render();
 </script>
 </body>

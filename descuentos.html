@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Descuentos - IndexedDB</title>
+  <title>Sistema de Descuentos</title>
   <style>
     :root {
       --primary: #0052d4;
@@ -76,14 +76,19 @@
       gap: 1.5rem;
       flex-wrap: wrap;
     }
-    #scrollArea { height: 65vh; overflow: auto; }
+    .price-desc {
+      font-size: .85rem;
+      color: #555;
+      margin-top: .25rem;
+    }
   </style>
 </head>
 <body>
 
-<header>Sistema de Descuentos - IndexedDB</header>
+<header>Sistema de Descuentos</header>
 
 <div class="wrap">
+  <!-- Filtros -->
   <div class="filters">
     <input id="searchBarcode" placeholder="Código de barras (ENTER)" autocomplete="off">
     <select id="catFilter">
@@ -106,168 +111,162 @@
     <input id="globalDisc" type="number" min="0" max="100" placeholder="Dto global %">
     <button onclick="applyGlobal()">Aplicar</button>
     <button onclick="removeGlobal()">Quitar</button>
-    <button onclick="downloadCSV()">Exportar CSV</button>
-    <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="uploadCSV(event)">
-    <button onclick="document.getElementById('csvFile').click()">Importar CSV</button>
   </div>
 
   <div class="info" id="info"></div>
   <div class="counters" id="counters"></div>
 
-  <div id="scrollArea">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
-          <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="list"></tbody>
-    </table>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
+        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="list"></tbody>
+  </table>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.19.0/clusterize.min.js"></script>
-<script type="module">
-/* ----------  CONFIG  ---------- */
-const DB_NAME   = 'inv_v1';
-const STORE     = 'products';
-const IMG_STORE = 'images';
-const STORED_FILTERS = 'last_filters';
+<!-- localforage para imágenes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+<script>
+/* ----------  DATOS  ---------- */
+const inv = JSON.parse(localStorage.getItem('inventory')) || [];
+const qs  = (s) => document.querySelector(s);
 
-const db  = localforage.createInstance({ name: DB_NAME, storeName: STORE });
-const img = localforage.createInstance({ name: DB_NAME, storeName: IMG_STORE });
-
-/* ----------  UTILS  ---------- */
-const $   = s => document.querySelector(s);
-const fmt = n => (+n).toLocaleString('es-CL', {minimumFractionDigits:2});
-
-/* ----------  STATE  ---------- */
-let inv = [];
-let barMap = new Map();          // barcode -> index
-let virt;                        // clusterize instance
-
-/* ----------  RENDER  ---------- */
-function rowTpl(it, idx){
-  const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
-  return `<tr data-line="${idx+1}">
-    <td>${idx+1}</td>
-    <td><img class="thumb" data-code="${it.code}" src="https://via.placeholder.com/60?text=Sin+img"></td>
-    <td>${it.name}</td>
-    <td>${it.code}</td>
-    <td>${it.barcode||''}</td>
-    <td><span style="text-decoration:line-through;opacity:.7;">$${fmt(it.price)}</span>
-        <strong>$${fmt(final)}</strong></td>
-    <td><input type="number" min="0" max="100" value="${it.discount||0}"
-               onchange="setDisc('${it.code}',this.value)"></td>
-    <td>$${fmt(final)}</td>
-    <td>${it.category}</td>
-    <td>${it.quantity}</td>
-    <td><button onclick="removeDisc('${it.code}')">Quitar</button></td>
-  </tr>`;
+/* ----------  PINTAR  ---------- */
+function render(arr = inv) {
+  const tb = qs('#list');
+  tb.innerHTML = '';
+  arr.forEach((it, idx) => {
+    const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
+    const tr = document.createElement('tr');
+    tr.dataset.line = idx + 1;
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><img class="thumb" id="img-${it.code}" alt="img"></td>
+      <td>${it.name}</td>
+      <td>${it.code}</td>
+      <td>${it.barcode || ''}</td>
+      <td>
+        <span style="text-decoration: line-through; opacity: .7;">$${(+it.price).toFixed(2)}</span>
+        <strong>$${final}</strong>
+      </td>
+      <td><input type="number" min="0" max="100" value="${it.discount||0}"
+                 onchange="startSave('${it.code}', this.value)"></td>
+      <td>$${final}</td>
+      <td>${it.category}</td>
+      <td>${it.quantity}</td>
+      <td><button onclick="removeDiscount('${it.code}')">Quitar descuento</button></td>`;
+    tb.appendChild(tr);
+  });
+  loadImages();
+  totals();
+  updateCounters();
 }
 
-async function render(list = inv){
-  const rows = list.map(rowTpl);
-  virt ? virt.update(rows) : virt = new Clusterize({ rows, scrollElem: $('#scrollArea'), contentElem: $('#list') });
-  loadImages(list);
-  updateCounters(list);
+/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE ---------- */
+function loadImages() {
+  inv.forEach(it => {
+    const imgEl = document.getElementById(`img-${it.code}`);
+    if (!imgEl) return;
+    localforage.getItem(`img_${it.code}`).then(blob => {
+      if (blob) {
+        imgEl.src = URL.createObjectURL(blob);
+      } else {
+        imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
+      }
+    }).catch(() => {
+      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
+    });
+  });
 }
 
-/* ----------  IMAGES  ---------- */
-async function loadImages(list){
-  for(const it of list){
-    const el = $(`img[data-code="${it.code}"]`);
-    if(!el) continue;
-    const blob = await img.getItem(it.code);
-    el.src = blob ? URL.createObjectURL(blob) : 'https://via.placeholder.com/60?text=Sin+img';
+/* ----------  LÓGICA DE DESCUENTOS ---------- */
+let saveTimeout = {};
+function startSave(code, val) {
+  clearTimeout(saveTimeout[code]);
+  saveTimeout[code] = setTimeout(() => {
+    setDisc(code, val);
+  }, 500);
+}
+function setDisc(code, val) {
+  const it = inv.find(i => i.code === code);
+  if (it) {
+    it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
+    save();
+    filterAndRender();
   }
 }
-
-/* ----------  DISCOUNTS  ---------- */
-window.setDisc = (code, val) => {
-  const it = inv.find(i=>i.code===code);
-  if(it){ it.discount = Math.max(0, Math.min(100, parseFloat(val)||0)); save(); render(); }
-};
-window.removeDisc = code => setDisc(code,0);
-
-/* ----------  SAVE / LOAD  ---------- */
-async function save(){
-  for(const it of inv) await db.setItem(it.code, it);
+function removeDiscount(code) {
+  setDisc(code, 0);
 }
-async function load(){
-  inv = [];
-  await db.iterate((value, key, i) => { inv.push(value); });
-  barMap.clear();
-  inv.forEach((it, i) => { if(it.barcode) barMap.set(it.barcode, i); });
+function applyGlobal() {
+  const v = parseFloat(qs('#globalDisc').value);
+  if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
+  inv.forEach(i => i.discount = v);
+  save();
+  filterAndRender();
+}
+function removeGlobal() {
+  inv.forEach(i => i.discount = 0);
+  save();
+  filterAndRender();
 }
 
-/* ----------  FILTERS  ---------- */
-let lastFilter = JSON.parse(localStorage.getItem(STORED_FILTERS)||'{}');
-$('#searchBarcode').value = lastFilter.barcode||'';
-$('#catFilter').value     = lastFilter.cat||'';
+/* ----------  CONTADORES + PRECIOS ---------- */
+function updateCounters() {
+  const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
+  const normal = inv.length - withDisc;
 
-function applyFilters(){
-  const bc = $('#searchBarcode').value.trim();
-  const ct = $('#catFilter').value;
-  localStorage.setItem(STORED_FILTERS, JSON.stringify({barcode:bc, cat:ct}));
+  const normalTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) === 0) return sum + (i.price * i.quantity);
+    return sum;
+  }, 0);
 
-  let list = inv;
-  if(bc) list = list.filter(it=>it.barcode===bc);
-  if(ct) list = list.filter(it=>it.category===ct);
-  render(list);
-}
-$('#searchBarcode').addEventListener('input', applyFilters);
-$('#catFilter').addEventListener('change', applyFilters);
+  const discTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) > 0) return sum + (i.price * (1 - (i.discount || 0)/100) * i.quantity);
+    return sum;
+  }, 0);
 
-/* ----------  COUNTERS  ---------- */
-function updateCounters(list){
-  const w = list.filter(it=> (it.discount||0)>0 ).length;
-  const n = list.length - w;
-  const tNorm = list.reduce((s,it)=> s + it.price * it.quantity, 0);
-  const tDisc = list.reduce((s,it)=> s + it.price * (1-(it.discount||0)/100) * it.quantity, 0);
-  $('#counters').innerHTML = `Con descuento: ${w} | Normal: ${n} | Total Normal: <strong>$${fmt(tNorm)}</strong> | Con dto: <strong>$${fmt(tDisc)}</strong>`;
+  qs('#counters').innerHTML = `
+    Con descuento: ${withDisc} | Precio normal: ${normal} |
+    Normal: <strong>$${normalTotal.toFixed(2)}</strong> |
+    Con dto: <strong>$${discTotal.toFixed(2)}</strong>
+  `;
 }
 
-/* ----------  GLOBAL DISCOUNT  ---------- */
-window.applyGlobal = () => {
-  const v = parseFloat($('#globalDisc').value);
-  if(isNaN(v) || v<0 || v>100) return alert('Descuento inválido');
-  inv.forEach(i=> i.discount = v);
-  save(); render();
-};
-window.removeGlobal = () => {
-  inv.forEach(i=> i.discount = 0);
-  save(); render();
-};
-
-/* ----------  CSV  ---------- */
-window.downloadCSV = () => {
-  const hdr = 'code,name,barcode,price,discount,category,quantity\n';
-  const rows = inv.map(i => `${i.code},"${i.name}",${i.barcode||''},${i.price},${i.discount||0},${i.category},${i.quantity}`).join('\n');
-  const blob = new Blob([hdr+rows], {type:'text/csv'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'inventario.csv';
-  a.click();
-};
-window.uploadCSV = async (ev) => {
-  const file = ev.target.files[0];
-  if(!file) return;
-  const txt = await file.text();
-  const lines = txt.split('\n').slice(1).filter(l=>l.trim());
-  const parsed = lines.map(l=>{
-    const [code,name,barcode,price,discount,category,quantity] = l.split(',');
-    return {code,name,barcode,price:+price,discount:+discount,category,quantity:+quantity};
+/* ----------  TOTALES ---------- */
+function totals() {
+  let norm = 0, desc = 0;
+  inv.forEach(i => {
+    const q = +i.quantity, p = +i.price, d = (+i.discount||0);
+    norm += p * q;
+    desc += p * (1 - d/100) * q;
   });
-  for(const it of parsed) await db.setItem(it.code, it);
-  await load();
-  render();
-};
+}
+function save() {
+  localStorage.setItem('inventory', JSON.stringify(inv));
+}
 
-/* ----------  INIT  ---------- */
-await load();
+/* ----------  FILTRAR ---------- */
+function filterAndRender() {
+  const barcode = qs('#searchBarcode').value.trim();
+  const cat  = qs('#catFilter').value;
+  let aux = inv;
+  if (barcode) aux = aux.filter(i => i.barcode === barcode);
+  if (cat)  aux = aux.filter(i => i.category === cat);
+  render(aux);
+}
+
+/* ----------  EVENTOS ---------- */
+qs('#searchBarcode').addEventListener('input', filterAndRender);
+qs('#catFilter').addEventListener('change', filterAndRender);
+qs('#searchBarcode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchBarcode').select(); }
+});
+
+/* ----------  INICIO ---------- */
 render();
 </script>
 </body>

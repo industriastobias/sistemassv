@@ -150,7 +150,21 @@
   $('#clientes-table').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const id = b.dataset.id; const c = clientes.find(x => x.id === id); if (!c) return;
     if (b.classList.contains('history')) { clienteActualHistorial = c; $('#modal-historial').classList.add('active'); actualizarHistorial(); }
-    if (b.classList.contains('edit')) { editando = id; $('#cliente-id').value = c.id; $('#cliente-correo').value = c.correo; $('#cliente-telefono').value = c.telefono; $('#cliente-id').disabled = true; $('#btn-guardar').textContent = 'Actualizar Cliente'; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (b.classList.contains('edit')) {
+      editando = id;
+      $('#cliente-id').value = c.id;
+      $('#cliente-telefono').value = c.telefono;
+      // --------- NUEVO: parte el correo --------
+      const [usuario, dominio] = c.correo.split('@');
+      const opt = [...sel.options].find(o => o.value === `@${dominio}` || o.value === dominio);
+      if (opt) { sel.value = opt.value; usr.value = usuario; hdn.type = 'hidden'; hdn.disabled = true; usr.style.display = 'block'; }
+      else { sel.value = 'otro'; hdn.type = 'email'; hdn.disabled = false; hdn.value = c.correo; usr.style.display = 'none'; }
+      armaCorreo();
+      // ----------------------------------------
+      $('#cliente-id').disabled = true;
+      $('#btn-guardar').textContent = 'Actualizar Cliente';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
     if (b.classList.contains('del') && confirm(`¿Eliminar ${id}?`)) { clientes = clientes.filter(x => x.id !== id); save(); render(); if (editando === id) { editando = null; $('#form-cliente').reset(); $('#btn-guardar').textContent = 'Agregar Cliente'; $('#cliente-id').disabled = false; } }
     if (b.classList.contains('add') || b.classList.contains('sub')) { const m = $('#modal-overlay'); m.dataset.id = id; m.dataset.act = b.classList.contains('add') ? 'sum' : 'res'; m.classList.add('active'); $('#input-puntos').value = ''; $('#input-motivo').value = ''; $('#input-puntos').focus(); }
   });
@@ -185,7 +199,7 @@
 
   /* ---------- ZIP ---------- */
   $('#btn-export-zip').onclick = async () => {
-    const zip = (await import('https://cdn.skypack.dev/jszip@3.10.1')).default();
+    const zip = (await import('https://cdn.skypack.dev/jszip@3.10.1 ')).default();
     zip.file('clientes.json', JSON.stringify(clientes));
     const rows = [['ID', 'Correo', 'Tipo', 'Cantidad', 'Motivo', 'Fecha']];
     clientes.forEach(c => c.historial.forEach(h => rows.push([c.id, c.correo, h.tipo, h.cantidad, h.motivo || '', h.fecha])));
@@ -200,7 +214,7 @@
     const file = e.target.files[0];
     if (!file || !file.name.endsWith('.zip')) return notify('Archivo no válido');
     try {
-      const zip = await (await import('https://cdn.skypack.dev/jszip@3.10.1')).default.loadAsync(file);
+      const zip = await (await import('https://cdn.skypack.dev/jszip@3.10.1 ')).default.loadAsync(file);
       const jsonFile = zip.file('clientes.json');
       if (!jsonFile) return notify('No se encontró clientes.json en el ZIP');
       const data = JSON.parse(await jsonFile.async('text'));

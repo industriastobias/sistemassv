@@ -82,8 +82,11 @@
     .info { margin: .5rem 0; font-weight: 600; }
     .counters {
       margin: .5rem 0;
-      font-size: .9rem;
+      font-size: .95rem;
       font-weight: 600;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
     }
   </style>
 </head>
@@ -132,6 +135,7 @@
 </div>
 
 <div class="summary">
+  <b>Resumen</b>
   <div>Normal: $<span id="totN">0.00</span></div>
   <div>Con dto: $<span id="totD">0.00</span></div>
 </div>
@@ -219,11 +223,26 @@ function removeGlobal() {
   filterAndRender();
 }
 
-/* ----------  CONTADORES ---------- */
+/* ----------  CONTADORES + PRECIOS ---------- */
 function updateCounters() {
   const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
   const normal = inv.length - withDisc;
-  qs('#counters').textContent = `Con descuento: ${withDisc} | Precio normal: ${normal}`;
+
+  const normalTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) === 0) return sum + (i.price * i.quantity);
+    return sum;
+  }, 0);
+
+  const discTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) > 0) return sum + (i.price * (1 - (i.discount || 0)/100) * i.quantity);
+    return sum;
+  }, 0);
+
+  qs('#counters').innerHTML = `
+    Con descuento: ${withDisc} | Precio normal: ${normal} |
+    Normal: <strong>$${normalTotal.toFixed(2)}</strong> |
+    Con dto: <strong>$${discTotal.toFixed(2)}</strong>
+  `;
 }
 
 /* ----------  TOTALES ---------- */

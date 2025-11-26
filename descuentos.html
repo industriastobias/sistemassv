@@ -1,279 +1,198 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SISTEMA DE DESCUENTOS</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Descuentos</title>
   <style>
     :root {
-      --primary: #0077ff;
-      --secondary: #f5f7fa;
-      --text: #333;
-      --green: #28a745;
-      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --primary: #0052d4;
+      --primary-light: #4f83cc;
+      --bg: #f5f7ff;
+      --card: #ffffff;
+      --text: #222;
+      --green: #00c853;
+      --red: #ff5252;
+      --shadow: 0 4px 12px rgba(0,0,0,.08);
     }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--secondary);
-      color: var(--text);
-    }
-
-    .header {
-      background-color: white;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      font-size: 24px;
-      font-weight: 600;
+    * { box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 1rem;
       text-align: center;
+      font-size: 1.3rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
     }
-
-    .container {
+    .wrap {
       max-width: 1200px;
       margin: auto;
-      padding: 20px;
+      padding: 1rem;
     }
-
-    .controls {
+    /* --- filtros --- */
+    .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: .8rem;
+      margin-bottom: 1.2rem;
     }
-
-    .controls input, .controls button {
-      padding: 10px;
+    .filters input, .filters select, .filters button {
+      padding: .55rem .7rem;
+      border: 1px solid #bbb;
       border-radius: 6px;
-      border: 1px solid #ccc;
+      font-size: .95rem;
     }
-
-    .controls button {
-      background-color: var(--primary);
-      color: white;
+    .filters button {
+      background: var(--primary);
+      color: #fff;
       border: none;
       cursor: pointer;
     }
-
-    .controls button:hover {
-      background-color: #005fd1;
-    }
-
+    .filters button:hover { background: var(--primary-light); }
+    /* --- tabla --- */
     table {
       width: 100%;
+      background: var(--card);
       border-collapse: collapse;
-      background-color: white;
       box-shadow: var(--shadow);
       border-radius: 8px;
       overflow: hidden;
     }
-
-    th, td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-
-    .highlight {
-      background-color: var(--green) !important;
-      color: white;
-    }
-
-    .line-info {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    .summary-box {
+    th, td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+    th { background: #f2f5ff; }
+    tr.highlight { background: var(--green); color: #fff; }
+    /* --- totales --- */
+    .summary {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background-color: white;
-      padding: 15px;
+      bottom: 1rem; right: 1rem;
+      background: var(--card);
+      padding: 1rem 1.2rem;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      font-size: 14px;
-      width: 200px;
-      z-index: 999;
+      box-shadow: var(--shadow);
+      font-size: .95rem;
+      line-height: 1.4;
     }
-
-    .summary-box div {
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
+    .summary b { display: block; margin-bottom: .3rem; }
+    .info { margin: .5rem 0; font-weight: 600; }
   </style>
 </head>
 <body>
 
-<div class="header">SISTEMA DE DESCUENTOS</div>
+<header>Sistema de Descuentos 2.0</header>
 
-<div class="container">
-  <div class="controls">
-    <input type="text" id="searchInput" placeholder="Buscar por nombre, código, categoría..." />
-    <input type="number" id="globalDiscount" placeholder="Descuento global %" min="0" max="100" />
-    <button onclick="applyGlobalDiscount()">Aplicar Descuento</button>
-    <button onclick="removeGlobalDiscount()">Quitar Descuento</button>
-    <input type="number" id="goToLine" placeholder="Ir a línea #" min="1" />
-    <button onclick="goToLine()">Ir</button>
+<div class="wrap">
+  <!-- Filtros -->
+  <div class="filters">
+    <input id="searchCode" placeholder="Código de barras (ENTER para buscar)" autocomplete="off">
+    <select id="catFilter">
+      <option value="">-- Categoría --</option>
+    </select>
+    <input id="globalDisc" type="number" min="0" max="100" placeholder="Dto global %">
+    <button onclick="applyGlobal()">Aplicar</button>
+    <button onclick="removeGlobal()">Quitar</button>
   </div>
 
-  <div class="line-info" id="lineInfo"></div>
+  <div class="info" id="info"></div>
 
   <table>
     <thead>
       <tr>
-        <th># Línea</th>
-        <th>Nombre</th>
-        <th>Código</th>
-        <th>Precio</th>
-        <th>Descuento %</th>
-        <th>Precio Final</th>
-        <th>Categoría</th>
-        <th>Stock</th>
-        <th>Acciones</th>
+        <th>#</th><th>Nombre</th><th>Código</th><th>Precio</th>
+        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
       </tr>
     </thead>
-    <tbody id="discountList"></tbody>
+    <tbody id="list"></tbody>
   </table>
 </div>
 
-<div class="summary-box">
-  <div>Precio Total Normal: $<span id="totalNormal">0.00</span></div>
-  <div>Precio Total con Descuento: $<span id="totalDescuento">0.00</span></div>
+<div class="summary">
+  <b>Resumen</b>
+  <div>Normal: $<span id="totN">0.00</span></div>
+  <div>Con dto: $<span id="totD">0.00</span></div>
 </div>
 
 <script>
-  const tbody = document.getElementById('discountList');
-  const searchInput = document.getElementById('searchInput');
-  const lineInfo = document.getElementById('lineInfo');
-  let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+/* ----------  DATOS  ---------- */
+const inv = JSON.parse(localStorage.getItem('inventory')) || [];
+const qs  = (s) => document.querySelector(s);
 
-  function renderTable(data = inventory) {
-    tbody.innerHTML = '';
-    data.forEach((item, idx) => {
-      const row = document.createElement('tr');
-      row.dataset.line = idx + 1;
-      row.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>${item.name}</td>
-        <td>${item.code}</td>
-        <td>$${item.price}</td>
-        <td><input type="number" value="${item.discount || 0}" min="0" max="100" onchange="updateDiscount('${item.code}', this.value)" /></td>
-        <td>$${(item.price - (item.price * (item.discount || 0) / 100)).toFixed(2)}</td>
-        <td>${item.category}</td>
-        <td>${item.quantity}</td>
-        <td><button onclick="removeDiscount('${item.code}')">Quitar Descuento</button></td>
-      `;
-      tbody.appendChild(row);
-    });
-    updateTotals();
-  }
+/* ----------  RELLENAR SELECT CATEGORÍAS  ---------- */
+function fillCatFilter() {
+  const cats = [...new Set(inv.map(i => i.category))].sort();
+  const sel = qs('#catFilter');
+  sel.innerHTML = '<option value="">-- Categoría --</option>';
+  cats.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+}
 
-  function updateDiscount(code, value) {
-    const item = inventory.find(i => i.code === code);
-    if (item) {
-      item.discount = parseFloat(value) || 0;
-      localStorage.setItem('inventory', JSON.stringify(inventory));
-      renderTable(inventory);
-    }
-  }
-
-  function removeDiscount(code) {
-    updateDiscount(code, 0);
-  }
-
-  function applyGlobalDiscount() {
-    const discount = parseFloat(document.getElementById('globalDiscount').value);
-    if (isNaN(discount) || discount < 0 || discount > 100) return alert('Descuento inválido');
-    inventory.forEach(item => item.discount = discount);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    renderTable(inventory);
-  }
-
-  function removeGlobalDiscount() {
-    inventory.forEach(item => item.discount = 0);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    renderTable(inventory);
-  }
-
-  function goToLine() {
-    const line = parseInt(document.getElementById('goToLine').value);
-    if (isNaN(line) || line < 1 || line > inventory.length) {
-      lineInfo.textContent = 'Línea fuera de rango.';
-      return;
-    }
-    renderTable(inventory);
-    const target = tbody.querySelector(`tr[data-line="${line}"]`);
-    if (target) {
-      target.classList.add('highlight');
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      lineInfo.textContent = `Producto encontrado en la línea ${line} de ${inventory.length}.`;
-    }
-  }
-
-  function updateTotals() {
-    let totalNormal = 0;
-    let totalDescuento = 0;
-
-    inventory.forEach(item => {
-      const precio = parseFloat(item.price) || 0;
-      const cantidad = parseInt(item.quantity) || 0;
-      const descuento = parseFloat(item.discount) || 0;
-      const precioFinal = precio - (precio * descuento / 100);
-
-      totalNormal += precio * cantidad;
-      totalDescuento += precioFinal * cantidad;
-    });
-
-    document.getElementById('totalNormal').textContent = totalNormal.toFixed(2);
-    document.getElementById('totalDescuento').textContent = totalDescuento.toFixed(2);
-  }
-
-  searchInput.addEventListener('input', () => {
-    const search = searchInput.value.trim().toLowerCase();
-    if (!search) {
-      renderTable(inventory);
-      lineInfo.textContent = '';
-      return;
-    }
-    const matchIndex = inventory.findIndex(item =>
-      item.code.toLowerCase().includes(search) ||
-      item.name.toLowerCase().includes(search) ||
-      item.category.toLowerCase().includes(search)
-    );
-    if (matchIndex === -1) {
-      tbody.innerHTML = '';
-      lineInfo.textContent = 'Producto no encontrado.';
-      return;
-    }
-    const item = inventory[matchIndex];
-    tbody.innerHTML = '';
-    const row = document.createElement('tr');
-    row.dataset.line = matchIndex + 1;
-    row.classList.add('highlight');
-    row.innerHTML = `
-      <td>${matchIndex + 1}</td>
-      <td>${item.name}</td>
-      <td>${item.code}</td>
-      <td>$${item.price}</td>
-      <td><input type="number" value="${item.discount || 0}" min="0" max="100" onchange="updateDiscount('${item.code}', this.value)" /></td>
-      <td>$${(item.price - (item.price * (item.discount || 0) / 100)).toFixed(2)}</td>
-      <td>${item.category}</td>
-      <td>${item.quantity}</td>
-      <td><button onclick="removeDiscount('${item.code}')">Quitar Descuento</button></td>
-    `;
-    tbody.appendChild(row);
-    lineInfo.textContent = `Producto encontrado en la línea ${matchIndex + 1} de ${inventory.length}.`;
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+/* ----------  PINTAR  ---------- */
+function render(arr = inv) {
+  const tb = qs('#list');
+  tb.innerHTML = '';
+  arr.forEach((it, idx) => {
+    const tr = document.createElement('tr');
+    tr.dataset.line = idx + 1;
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${it.name}</td>
+      <td>${it.code}</td>
+      <td>$${(+it.price).toFixed(2)}</td>
+      <td><input type="number" min="0" max="100" value="${it.discount||0}"
+                 onchange="setDisc('${it.code}',this.value)"></td>
+      <td>$${(+it.price * (1 - (it.discount||0)/100)).toFixed(2)}</td>
+      <td>${it.category}</td>
+      <td>${it.quantity}</td>
+      <td><button onclick="setDisc('${it.code}',0)">Quitar</button></td>`;
+    tb.appendChild(tr);
   });
+  totals();
+}
 
-  document.addEventListener('DOMContentLoaded', () => renderTable(inventory));
+/* ----------  LÓGICA  ---------- */
+function setDisc(code, val) {
+  const it = inv.find(i => i.code === code);
+  if (it) { it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0)); save(); filterAndRender(); }
+}
+function applyGlobal() {
+  const v = parseFloat(qs('#globalDisc').value);
+  if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
+  inv.forEach(i => i.discount = v); save(); filterAndRender();
+}
+function removeGlobal() { inv.forEach(i => i.discount = 0); save(); filterAndRender(); }
+
+function totals() {
+  let norm = 0, desc = 0;
+  inv.forEach(i => {
+    const q = +i.quantity, p = +i.price, d = (+i.discount||0);
+    norm += p * q;
+    desc += p * (1 - d/100) * q;
+  });
+  qs('#totN').textContent = norm.toFixed(2);
+  qs('#totD').textContent = desc.toFixed(2);
+}
+function save() { localStorage.setItem('inventory', JSON.stringify(inv)); }
+
+/* ----------  FILTRAR  ---------- */
+function filterAndRender() {
+  const code = qs('#searchCode').value.trim();
+  const cat  = qs('#catFilter').value;
+  let aux = inv;
+  if (code) aux = aux.filter(i => i.code === code);
+  if (cat)  aux = aux.filter(i => i.category === cat);
+  render(aux);
+}
+
+/* ----------  EVENTOS  ---------- */
+qs('#searchCode').addEventListener('input', filterAndRender);
+qs('#catFilter').addEventListener('change', filterAndRender);
+qs('#searchCode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchCode').select(); }
+});
+
+/* ----------  INICIO  ---------- */
+fillCatFilter();
+render();
 </script>
-
 </body>
 </html>

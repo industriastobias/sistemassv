@@ -80,6 +80,11 @@
     }
     .summary b { display: block; margin-bottom: .3rem; }
     .info { margin: .5rem 0; font-weight: 600; }
+    .counters {
+      margin: .5rem 0;
+      font-size: .9rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -89,7 +94,7 @@
 <div class="wrap">
   <!-- Filtros -->
   <div class="filters">
-    <input id="searchCode" placeholder="Código de barras (ENTER)" autocomplete="off">
+    <input id="searchBarcode" placeholder="Código de barras (ENTER)" autocomplete="off">
     <select id="catFilter">
       <option value="">-- Categoría --</option>
       <option value="Accesorios para el cabello">Accesorios para el cabello</option>
@@ -113,6 +118,7 @@
   </div>
 
   <div class="info" id="info"></div>
+  <div class="counters" id="counters"></div>
 
   <table>
     <thead>
@@ -152,18 +158,19 @@ function render(arr = inv) {
       <td>${it.barcode || ''}</td>
       <td>$${(+it.price).toFixed(2)}</td>
       <td><input type="number" min="0" max="100" value="${it.discount||0}"
-                 onchange="setDisc('${it.code}',this.value)"></td>
+                 onchange="startSave('${it.code}', this.value)"></td>
       <td>$${(+it.price * (1 - (it.discount||0)/100)).toFixed(2)}</td>
       <td>${it.category}</td>
       <td>${it.quantity}</td>
-      <td><button onclick="setDisc('${it.code}',0)">Quitar</button></td>`;
+      <td><button onclick="removeDiscount('${it.code}')">Quitar descuento</button></td>`;
     tb.appendChild(tr);
   });
-  loadImages(); // ⬅️ carga imágenes después de pintar
+  loadImages();
   totals();
+  updateCounters();
 }
 
-/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE (compra.html)  ---------- */
+/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE ---------- */
 function loadImages() {
   inv.forEach(it => {
     const imgEl = document.getElementById(`img-${it.code}`);
@@ -180,18 +187,46 @@ function loadImages() {
   });
 }
 
-/* ----------  LÓGICA  ---------- */
+/* ----------  LÓGICA DE DESCUENTOS ---------- */
+let saveTimeout = {};
+function startSave(code, val) {
+  clearTimeout(saveTimeout[code]);
+  saveTimeout[code] = setTimeout(() => {
+    setDisc(code, val);
+  }, 500);
+}
 function setDisc(code, val) {
   const it = inv.find(i => i.code === code);
-  if (it) { it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0)); save(); filterAndRender(); }
+  if (it) {
+    it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
+    save();
+    filterAndRender();
+  }
+}
+function removeDiscount(code) {
+  setDisc(code, 0);
 }
 function applyGlobal() {
   const v = parseFloat(qs('#globalDisc').value);
   if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
-  inv.forEach(i => i.discount = v); save(); filterAndRender();
+  inv.forEach(i => i.discount = v);
+  save();
+  filterAndRender();
 }
-function removeGlobal() { inv.forEach(i => i.discount = 0); save(); filterAndRender(); }
+function removeGlobal() {
+  inv.forEach(i => i.discount = 0);
+  save();
+  filterAndRender();
+}
 
+/* ----------  CONTADORES ---------- */
+function updateCounters() {
+  const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
+  const normal = inv.length - withDisc;
+  qs('#counters').textContent = `Con descuento: ${withDisc} | Precio normal: ${normal}`;
+}
+
+/* ----------  TOTALES ---------- */
 function totals() {
   let norm = 0, desc = 0;
   inv.forEach(i => {
@@ -202,26 +237,28 @@ function totals() {
   qs('#totN').textContent = norm.toFixed(2);
   qs('#totD').textContent = desc.toFixed(2);
 }
-function save() { localStorage.setItem('inventory', JSON.stringify(inv)); }
+function save() {
+  localStorage.setItem('inventory', JSON.stringify(inv));
+}
 
-/* ----------  FILTRAR  ---------- */
+/* ----------  FILTRAR ---------- */
 function filterAndRender() {
-  const code = qs('#searchCode').value.trim();
+  const barcode = qs('#searchBarcode').value.trim();
   const cat  = qs('#catFilter').value;
   let aux = inv;
-  if (code) aux = aux.filter(i => i.code === code);
+  if (barcode) aux = aux.filter(i => i.barcode === barcode);
   if (cat)  aux = aux.filter(i => i.category === cat);
   render(aux);
 }
 
-/* ----------  EVENTOS  ---------- */
-qs('#searchCode').addEventListener('input', filterAndRender);
+/* ----------  EVENTOS ---------- */
+qs('#searchBarcode').addEventListener('input', filterAndRender);
 qs('#catFilter').addEventListener('change', filterAndRender);
-qs('#searchCode').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchCode').select(); }
+qs('#searchBarcode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchBarcode').select(); }
 });
 
-/* ----------  INICIO  ---------- */
+/* ----------  INICIO ---------- */
 render();
 </script>
 </body>

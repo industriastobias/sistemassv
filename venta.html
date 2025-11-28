@@ -470,10 +470,10 @@
       barcodeImg.style.objectFit = 'contain';
       barcodeImg.style.cursor = 'pointer';
 
-      const barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
-      if (barcodeBlob) {
-        barcodeImg.src = URL.createObjectURL(barcodeBlob);
-      } else {
+      // Buscar imagen de código de barras
+      let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
+      if (!barcodeBlob) {
+        // Generar si no existe
         const canvas = document.createElement('canvas');
         JsBarcode(canvas, item.barcode, {
           format: 'CODE128',
@@ -485,6 +485,8 @@
           await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
           barcodeImg.src = URL.createObjectURL(blob);
         });
+      } else {
+        barcodeImg.src = URL.createObjectURL(barcodeBlob);
       }
       barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
 

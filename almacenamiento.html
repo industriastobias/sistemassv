@@ -9,6 +9,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
@@ -99,10 +100,42 @@
     </div>
 
     <!-- Alerta + botones compactos -->
-    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;font-size:.7rem;flex-wrap:wrap;">
-      <div id="lowStockAlert" style="display:none;background:#f87171;color:#fff;padding:.2rem .4rem;border-radius:4px;font-weight:700;">⚠️ Stock bajo</div>
-      <button class="stamp" onclick="startCameraScan()" title="Escanear código" style="padding:.2rem .4rem;font-size:.7rem;">📷</button>
-      <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas" style="padding:.2rem .4rem;font-size:.7rem;">📇</button>
+    <div style="
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:.6rem;
+      margin:.6rem 0;
+      font-size:.9rem;
+    ">
+      <!-- Alerta -->
+      <div id="lowStockAlert"
+           style="
+             display:none;
+             background:#f87171;
+             color:#fff;
+             padding:.4rem .8rem;
+             border-radius:6px;
+             font-weight:700;
+           ">
+        ⚠️ Stock bajo
+      </div>
+
+      <!-- Botones -->
+      <div style="display:flex; gap:.8rem;">
+        <button class="stamp"
+                onclick="startCameraScan()"
+                title="Escanear código"
+                style="padding:.55rem 1rem;font-size:.9rem;">
+          📷 Escanear
+        </button>
+        <button class="stamp"
+                onclick="downloadLabelsPDF()"
+                title="Descargar etiquetas"
+                style="padding:.55rem 1rem;font-size:.9rem;">
+          📇 Etiquetas PDF
+        </button>
+      </div>
     </div>
 
     <!-- Lector QR -->
@@ -233,9 +266,9 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-      const w = 30, h = 18;               // tamaño etiqueta
-      const margLeft = 10, margTop = 10;  // márgenes hoja
-      const dx = w + 2, dy = h + 2;       // separación
+      const w = 30, h = 18;
+      const margLeft = 10, margTop = 10;
+      const dx = w + 2, dy = h + 2;
 
       const list = inventory.filter(p => p.quantity > 0);
       let col = 0, fil = 0;
@@ -247,12 +280,10 @@
         const y = margTop + fil * dy;
         const p = list[i];
 
-        // texto
         doc.setFontSize(7);
         doc.text(p.name.slice(0, 14), x + w / 2, y + 3, { align: 'center' });
         doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 5.5, { align: 'center' });
 
-        // código de barras
         const canvas = document.createElement('canvas');
         const scale = 300 / 25.4;
         canvas.width = w * scale; canvas.height = h * scale * 0.45;
@@ -260,7 +291,6 @@
         const imgData = canvas.toDataURL('image/png');
         doc.addImage(imgData, 'PNG', x, y + 6.5, w, h * 0.45);
 
-        // siguiente posición
         col++;
         if (col === 5) { col = 0; fil++; }
       }
@@ -481,7 +511,6 @@
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
 
-      // Factura REMOVIDA de aquí
       filterInventory();
       closeSoldModal();
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';

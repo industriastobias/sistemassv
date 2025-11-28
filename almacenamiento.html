@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -12,159 +11,142 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
-      --bg: #f5f5f7;
-      --surface: #ffffff;
-      --text: #1d1d1f;
-      --text-light: #6e6e73;
-      --primary: #0071e3;
-      --primary-hover: #005bb5;
-      --danger: #ff3b30;
-      --success: #34c759;
-      --border: #d2d2d7;
-      --radius: 12px;
-      --shadow: 0 4px 24px rgba(0,0,0,.06);
+      --bg: #f9fafb;
+      --text: #1f2937;
+      --border: #e5e7eb;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --highlight: #f3f4f6;
+      --white: #ffffff;
+      --danger: #f87171;
+      --card-shadow: 0 2px 8px rgba(0,0,0,.08);
     }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    html, body { height: 100%; background: var(--bg); color: var(--text); }
-
-    /* TOP BAR */
-    .top-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      background: rgba(255,255,255,.82);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: .75rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-      z-index: 10;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
-    .top-bar h1 { font-size: 1.25rem; font-weight: 500; margin-right: auto; }
-    .top-bar button, .top-bar select, .top-bar input {
-      height: 32px; padding: 0 .75rem; border: 1px solid var(--border);
-      border-radius: var(--radius); background: var(--surface);
-      font-size: .9rem; cursor: pointer;
-    }
-    .top-bar button { border-color: var(--primary); background: var(--primary); color: #fff; font-weight: 500; }
-
-    /* CONTENT */
-    .content { padding: 4rem 1rem 2rem; max-width: 1400px; margin: 0 auto; }
-    .dashboard {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem; margin-bottom: 1.5rem;
-    }
-    .metric {
-      background: var(--surface); border-radius: var(--radius);
-      box-shadow: var(--shadow); padding: 1rem 1.25rem;
-    }
-    .metric .label { font-size: .85rem; color: var(--text-light); }
-    .metric .value { font-size: 1.5rem; font-weight: 500; margin-top: .25rem; }
-
-    /* TABLE / CARDS */
-    table {
-      width: 100%; border-collapse: collapse; background: var(--surface);
-      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
-    }
-    th, td { padding: .75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-weight: 500; font-size: .9rem; color: var(--text-light); }
-    tr:hover { background: #f9f9fb; }
-    td img { max-height: 48px; border-radius: 6px; object-fit: cover; cursor: pointer; }
-
-    .cards-view { display: none; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier Prime', monospace; }
+    html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 16px; }
+    h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin: .8rem 0 .6rem; letter-spacing: 1px; text-transform: uppercase; }
+    .container { width: 98vw; height: 96vh; background: var(--white); border: 1px solid var(--border); padding: 1.2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.05); display: flex; flex-direction: column; overflow: hidden; }
+    .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
+    label { font-weight: 700; font-size: .9rem; }
+    input, select { padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 6px; font-size: .95rem; }
+    button.stamp { padding: .55rem 1rem; border: 1px solid var(--accent); background: var(--accent); color: var(--white); font-weight: 700; font-size: .9rem; text-transform: uppercase; cursor: pointer; border-radius: 6px; transition: background .2s ease; white-space: nowrap; }
+    button.stamp:hover { background: var(--accent-hover); }
+    table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
+    thead { background: var(--highlight); }
+    th, td { padding: .55rem .65rem; border: 1px solid var(--border); text-align: left; font-size: .9rem; }
+    th { font-weight: 700; letter-spacing: .5px; }
+    tbody tr:nth-child(odd) { background: var(--highlight); }
+    td img { max-height: 48px; border-radius: 4px; object-fit: cover; cursor: pointer; }
+    .no-results, .result-message { font-weight: 700; text-align: center; margin-top: .6rem; font-size: .9rem; }
+    .no-results { color: var(--danger); }
+    .result-message { color: var(--text); }
+    tr.highlight td { background: #fef08a !important; color: #1f2937 !important; }
+    .cards-view { display: none; flex-wrap: wrap; gap: 1rem; overflow-y: auto; padding-right: .4rem; margin-top: .6rem; }
     .card {
-      background: var(--surface); border-radius: var(--radius);
-      box-shadow: var(--shadow); padding: 1.25rem;
-      display: flex; flex-direction: column; gap: .6rem;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      padding: .8rem;
+      gap: .5rem;
     }
-    .card img { width: 100%; height: 160px; object-fit: cover; border-radius: var(--radius); cursor: pointer; }
+    .card img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; cursor: pointer; }
     .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
-
-    /* MODAL */
-    .modal {
-      display: none; place-items: center; position: fixed; inset: 0;
-      background: rgba(0,0,0,.28); backdrop-filter: blur(8px); z-index: 20;
-    }
-    .modal-content {
-      background: var(--surface); border-radius: var(--radius); padding: 2rem;
-      max-width: 420px; width: 90vw; display: flex; flex-direction: column; gap: 1rem;
-    }
-    .modal-content .close { align-self: flex-end; font-size: 1.3rem; cursor: pointer; }
-    .modal-content label { font-size: .9rem; font-weight: 500; }
-    .modal-content input { padding: .6rem .75rem; border: 1px solid var(--border); border-radius: var(--radius); }
-    .modal-content button { margin-top: .5rem; }
-
+    .card-footer span { font-weight: 700; }
+    .card.highlight { background: #fef08a !important; }
+    .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
+    .modal-content { position: relative; margin: 5vh auto; background: #ffffff; border-radius: 16px; width: 90vw; max-width: 400px; padding: 1.5rem; display: flex; flex-direction: column; gap: .8rem; }
+    .close { position: absolute; top: 12px; right: 12px; color: #6b7280; font-size: 24px; font-weight: 300; cursor: pointer; line-height: 1; }
+    .close:hover { color: #111827; }
+    #modalImage { width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 12px; margin-top: 1rem; }
+    #reader { width: 320px; margin: 0 auto; display: none; }
     .btn-edit {
-      background: var(--text-light); color: #fff; border: none;
-      padding: .2rem .4rem; border-radius: 6px; font-size: .75rem; cursor: pointer;
+      background: #9ca3af;
+      border: none;
+      color: #fff;
+      padding: .15rem .3rem;
+      font-size: .65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: .25rem;
     }
-    .btn-edit:hover { background: var(--text); }
-
-    .no-results, .result-message {
-      text-align: center; font-weight: 500; margin-top: 1rem;
-    }
-    .highlight { background: #fff8d9 !important; }
-
-    /* READER MODAL */
-    #reader {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.5);
-      backdrop-filter: blur(6px);
-      z-index: 30;
-      display: none;
-      place-items: center;
-    }
-    #reader > div {
-      background: var(--surface);
-      padding: 1rem;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
+    .btn-edit:hover { background: #6b7280; }
   </style>
 </head>
 
 <body>
+  <h1>Inventario</h1>
 
-  <!-- TOP BAR -->
-  <header class="top-bar">
-    <h1>Inventario</h1>
+  <div class="container">
+    <!-- Dashboard rápido -->
+    <div id="miniDash" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem;font-size:.75rem;">
+      <div style="flex:1 1 160px;background:var(--highlight);padding:.4rem;border-radius:6px;text-align:center;">
+        <div>Productos únicos</div>
+        <div id="dashTotal" style="font-weight:700;font-size:1rem;">-</div>
+      </div>
+      <div style="flex:1 1 160px;background:#fef08a;padding:.4rem;border-radius:6px;text-align:center;">
+        <div>Stock bajo</div>
+        <div id="dashLow" style="font-weight:700;font-size:1rem;">-</div>
+      </div>
+      <div style="flex:1 1 160px;background:var(--highlight);padding:.4rem;border-radius:6px;text-align:center;">
+        <div>Valor inventario</div>
+        <div id="dashValue" style="font-weight:700;font-size:1rem;">-</div>
+      </div>
+    </div>
 
-    <div id="lowStockAlert" style="display:none;font-size:.85rem;color:var(--danger);font-weight:500;">⚠️ <span id="lowStockText">0 producto(s) con stock bajo.</span></div>
+    <!-- Alerta + botones en una sola línea -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin:.6rem 0;font-size:.9rem;flex-wrap:wrap;">
+      <div id="lowStockAlert" style="display:none;background:var(--danger);color:#fff;padding:.4rem .8rem;border-radius:6px;font-weight:700;white-space:nowrap;">
+        ⚠️ <span id="lowStockText">0 producto(s) con stock bajo.</span>
+      </div>
+      <button class="stamp" onclick="startCameraScan()" title="Escanear código">📷 Escanear</button>
+      <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
+    </div>
 
-    <button onclick="startCameraScan()">📷 Escanear</button>
-    <button onclick="downloadLabelsPDF()">📇 Etiquetas PDF</button>
+    <div id="reader"></div>
 
-    <select id="searchCategory">
-      <option value="">Todas las categorías</option>
-      <option>Accesorios para el cabello</option><option>Anillos</option><option>Aritos</option>
-      <option>Billeteras</option><option>Carteras</option><option>Case audífonos</option>
-      <option>Case teléfonos</option><option>Chokers</option><option>Collares</option>
-      <option>General</option><option>Lentes de sol</option><option>Otros</option>
-      <option>Pulseras</option><option>Relojes</option>
-    </select>
+    <div class="search-block">
+      <div>
+        <label for="searchCategory">Filtrar por categoría:</label>
+        <select id="searchCategory">
+          <option value="">Todas las categorías</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Case audífonos">Case audífonos</option>
+          <option value="Case teléfonos">Case teléfonos</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="General">General</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Otros">Otros</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+        </select>
+      </div>
+      <div>
+        <label for="searchCode">Buscar por código de barras:</label>
+        <input type="text" id="searchCode" placeholder="Ej: 123456">
+      </div>
+      <button class="stamp" onclick="filterInventory()">Buscar</button>
+      <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
+    </div>
 
-    <input type="text" id="searchCode" placeholder="Código de barras">
-    <button onclick="filterInventory()">Buscar</button>
-    <button onclick="clearFilters()">Limpiar</button>
-    <button id="toggleViewBtn" onclick="toggleView()">Ver Tarjetas</button>
-  </header>
+    <div style="display:flex; gap:.6rem; align-items:center; flex-wrap: wrap;">
+      <label for="goToRow">Ir a fila:</label>
+      <input type="number" id="goToRow" min="1" style="width:80px;">
+      <button class="stamp" onclick="goToRow()">Ir</button>
+      <button class="stamp" onclick="clearFilters()">Limpiar filtros</button>
+    </div>
 
-  <!-- CONTENT -->
-  <main class="content">
-    <!-- Dashboard -->
-    <section class="dashboard">
-      <div class="metric"><div class="label">Productos únicos</div><div class="value" id="dashTotal">-</div></div>
-      <div class="metric"><div class="label">Stock bajo</div><div class="value" id="dashLow">-</div></div>
-      <div class="metric"><div class="label">Valor inventario</div><div class="value" id="dashValue">-</div></div>
-    </section>
-
-    <!-- Vista Tabla -->
-    <div id="tableView">
+    <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
       <table>
         <thead>
           <tr>
@@ -188,24 +170,24 @@
       <div id="resultMessage" class="result-message" style="display:none;"></div>
     </div>
 
-    <!-- Vista Tarjetas -->
     <div id="cardsView" class="cards-view"></div>
-  </main>
+  </div>
 
-  <!-- Modales -->
+  <!-- Modal registrar venta -->
   <div id="soldModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeSoldModal()">&times;</span>
       <h2>Registrar Venta</h2>
       <label for="soldQuantity">Cantidad vendida:</label>
       <input type="number" id="soldQuantity" min="1">
-      <label for="soldPrice">Precio vendido (unidad):</label>
+      <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
       <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500">
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
     </div>
   </div>
 
+  <!-- Modal editar precio -->
   <div id="priceModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closePriceModal()">&times;</span>
@@ -216,15 +198,13 @@
     </div>
   </div>
 
+  <!-- Modal imagen grande -->
   <div id="imageModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeImageModal()">&times;</span>
       <img id="modalImage" src="" alt="Imagen grande">
     </div>
   </div>
-
-  <!-- READER MODAL -->
-  <div id="reader"></div>
 
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
@@ -287,7 +267,7 @@
         readerDiv.style.width = '320px'; readerDiv.style.margin = '0 auto';
         document.body.appendChild(readerDiv);
       }
-      readerDiv.style.display = 'grid';
+      readerDiv.style.display = 'block';
     }
 
     function loadInventory(filteredInventory = inventory) {
@@ -307,10 +287,10 @@
         return `
           <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
             <td>${idx + 1}</td>
-            <td><img id="img-${idx}" style="max-height:48px;border-radius:6px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
+            <td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>${item.name}</td>
             <td>${item.barcode}</td>
-            <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:6px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
+            <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
@@ -333,7 +313,7 @@
             <img id="card-img-${idx}" onclick="openImageModal(this.src)" />
             <div><strong>${item.name}</strong></div>
             <div>Barras: ${item.barcode}</div>
-            <div><img id="card-barcodeimg-${idx}" style="height:48px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
+            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${item.category}</div>
@@ -366,7 +346,7 @@
               if (cardImg) cardImg.src = url;
             } else {
               const canvas = document.createElement('canvas');
-              JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 48, displayValue: true });
+              JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: true });
               canvas.toBlob(barcodeBlob => {
                 if (barcodeBlob) {
                   localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob);
@@ -391,7 +371,7 @@
       if (currentView === 'table') {
         currentView = 'cards';
         table.style.display = 'none';
-        cards.style.display = 'grid';
+        cards.style.display = 'flex';
         btn.textContent = 'Ver Tabla';
       } else {
         currentView = 'table';
@@ -404,7 +384,7 @@
 
     function markSold(index) {
       currentSoldIndex = index;
-      document.getElementById('soldModal').style.display = 'grid';
+      document.getElementById('soldModal').style.display = 'block';
     }
 
     function closeSoldModal() {
@@ -416,7 +396,7 @@
       currentPriceIndex = index;
       const item = inventory[index];
       document.getElementById('newPrice').value = item.price;
-      document.getElementById('priceModal').style.display = 'grid';
+      document.getElementById('priceModal').style.display = 'block';
     }
 
     function closePriceModal() {
@@ -489,9 +469,31 @@
       document.getElementById('resultMessage').style.display = 'none';
     }
 
+    function goToRow() {
+      const row = parseInt(document.getElementById('goToRow').value);
+      if (currentView === 'table') {
+        const rows = document.querySelectorAll('#inventoryList tr');
+        rows.forEach(r => r.classList.remove('highlight'));
+        if (row >= 1 && row <= rows.length) {
+          const target = rows[row - 1];
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else alert('Fila fuera de rango.');
+      } else {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(c => c.classList.remove('highlight'));
+        if (row >= 1 && row <= cards.length) {
+          const target = cards[row - 1];
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else alert('Fila fuera de rango.');
+      }
+    }
+
     function clearFilters() {
       document.getElementById('searchCategory').value = '';
       document.getElementById('searchCode').value = '';
+      document.getElementById('goToRow').value = '';
       document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
       loadInventory();
       document.getElementById('resultMessage').style.display = 'none';
@@ -499,9 +501,8 @@
 
     function openImageModal(src) {
       document.getElementById('modalImage').src = src;
-      document.getElementById('imageModal').style.display = 'grid';
+      document.getElementById('imageModal').style.display = 'block';
     }
-
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
     }
@@ -514,7 +515,7 @@
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';
-      document.getElementById('cardsView').style.display = 'grid';
+      document.getElementById('cardsView').style.display = 'flex';
       document.getElementById('toggleViewBtn').textContent = 'Ver Tabla';
     } else {
       document.getElementById('tableView').style.display = 'block';

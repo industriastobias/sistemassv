@@ -6,6 +6,8 @@
   <title>Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <!-- JsBarcode para generar códigos de barras -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
@@ -233,6 +235,7 @@
               if (imgCard) imgCard.src = url;
             }
           });
+
           localforage.getItem(`barcodeimg_${item.barcode}`).then(blob => {
             if (blob) {
               const url = URL.createObjectURL(blob);
@@ -240,6 +243,25 @@
               const cardImg = document.getElementById(`card-barcodeimg-${idx}`);
               if (tblImg) tblImg.src = url;
               if (cardImg) cardImg.src = url;
+            } else {
+              // Generar código de barras si no existe
+              const canvas = document.createElement('canvas');
+              JsBarcode(canvas, item.barcode, {
+                format: 'CODE128',
+                width: 2,
+                height: 60,
+                displayValue: true
+              });
+              canvas.toBlob(barcodeBlob => {
+                if (barcodeBlob) {
+                  localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob);
+                  const url = URL.createObjectURL(barcodeBlob);
+                  const tblImg = document.getElementById(`barcodeimg-${idx}`);
+                  const cardImg = document.getElementById(`card-barcodeimg-${idx}`);
+                  if (tblImg) tblImg.src = url;
+                  if (cardImg) cardImg.src = url;
+                }
+              });
             }
           });
         });

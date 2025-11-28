@@ -50,9 +50,7 @@
     }
 
     @media (max-width: 768px) {
-      body {
-        padding: 0;
-      }
+      body { padding: 0; }
       .container {
         max-width: 100%;
         border-radius: 0;
@@ -125,6 +123,7 @@
       gap: 12px;
       transition: .3s;
       position: relative;
+      min-height: 320px;
     }
 
     .card:hover { transform: translateY(-4px); }
@@ -304,7 +303,7 @@
     .btn-print { background: #16a34a; color: #fff; }
     .btn-close { background: #6b7280; color: #fff; }
 
-    /* ===== MODAL PARA IMAGENES ===== */
+    /* Modal imagen */
     #imgModal {
       position: fixed;
       inset: 0;
@@ -322,7 +321,24 @@
       object-fit: contain;
       border-radius: 8px;
     }
+
+    /* Imagen y barcode de tarjeta */
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .barcode {
+      width: 100%;
+      height: 40px;
+      margin-top: auto;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
@@ -409,6 +425,7 @@
       </table>
       <div class="line"></div>
       <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
+      <canvas id="barcodeTicket" style="width:100%;height:40px;margin-top:6px;"></canvas>
       <footer>
         <div>¡Gracias por su compra!</div>
         <div style="font-size:9px;margin-top:4px">
@@ -425,7 +442,6 @@
   </div>
 </div>
 
-<!-- Modal para imagen -->
 <div id="imgModal" onclick="cerrarImgModal()">
   <img id="imgModalImg" src="" alt="Imagen ampliada">
 </div>
@@ -469,10 +485,6 @@
       card.className = 'card';
 
       const img = document.createElement('img');
-      img.style.maxHeight = '100px';
-      img.style.objectFit = 'cover';
-      img.style.borderRadius = '8px';
-      img.style.cursor = 'pointer';
       img.alt = item.name;
 
       const blob = await localforage.getItem(`img_${item.code}`);
@@ -491,6 +503,7 @@
         </div>
         <div class="card-price">$${Number(item.price).toFixed(2)}</div>
         <div>Cantidad vendida: ${item.quantity}</div>
+        <canvas class="barcode" data-code="${item.code}"></canvas>
         <div class="card-footer">
           <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
           <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
@@ -501,6 +514,21 @@
       card.insertBefore(img, card.firstChild);
       container.appendChild(card);
     }
+
+    generarBarras();
+  }
+
+  function generarBarras() {
+    document.querySelectorAll('.barcode').forEach(canvas => {
+      const code = canvas.dataset.code;
+      JsBarcode(canvas, code, {
+        format: "CODE128",
+        lineColor: "#000",
+        width: 2,
+        height: 40,
+        displayValue: true
+      });
+    });
   }
 
   window.deleteSoldItem = function (code) {
@@ -570,6 +598,14 @@
     document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
     document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
     document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+
+    JsBarcode("#barcodeTicket", document.getElementById('fNum').value, {
+      format: "CODE128",
+      lineColor: "#000",
+      width: 2,
+      height: 40,
+      displayValue: true
+    });
   }
 
   function imprimirTicket(){

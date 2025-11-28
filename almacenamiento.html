@@ -112,6 +112,21 @@
       margin-left: .25rem;
     }
     .btn-edit:hover { background: #6b7280; }
+
+    /* Tooltip para Ctrl+B */
+    #searchCode {
+      position: relative;
+    }
+    #searchCode::after {
+      content: "Ctrl+B";
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      color: #9ca3af;
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -149,9 +164,10 @@
           <option value="Relojes">Relojes</option>
         </select>
       </div>
-      <div>
+      <div style="position:relative;">
         <label for="searchCode">Buscar por código de barras:</label>
-        <input type="text" id="searchCode" placeholder="Ej: 123456">
+        <input type="text" id="searchCode" placeholder="Ej: 123456" style="padding-right: 3rem;">
+        <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:#9ca3af; pointer-events:none;">Ctrl+B</span>
       </div>
       <button class="stamp" onclick="filterInventory()">Buscar</button>
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
@@ -274,11 +290,8 @@
     }
 
     function cancelScan() {
-      // ocultamos botón y lector inmediatamente
       document.getElementById('reader').style.display = 'none';
       document.getElementById('cancelScanBtn').style.display = 'none';
-
-      // detenemos la cámara (no nos importa si tarda o falla)
       if (html5QrCode) {
         html5QrCode.stop()
           .then(() => html5QrCode.clear())
@@ -522,6 +535,14 @@
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
     }
+
+    // 🔽 MEJORA 5: Atajo Ctrl+B para enfocar búsqueda
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        document.getElementById('searchCode').focus();
+      }
+    });
 
     document.getElementById('searchCategory').addEventListener('change', filterInventory);
     document.getElementById('searchCode').addEventListener('input', () => {

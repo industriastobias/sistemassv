@@ -20,7 +20,7 @@
       --accent-hover: #2563eb;
       --highlight: #f3f4f6;
       --white: #ffffff;
-      --danger: #ef4444;
+      --danger: #f87171;
       --card-shadow: 0 2px 8px rgba(0,0,0,.08);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier Prime', monospace; }
@@ -31,7 +31,7 @@
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
     label { font-weight: 700; font-size: .9rem; }
     input, select { padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 6px; font-size: .95rem; }
-    button.stamp { padding: .55rem .9rem; border: 1px solid var(--accent); background: var(--accent); color: var(--white); font-weight: 700; font-size: .85rem; text-transform: uppercase; cursor: pointer; border-radius: 6px; transition: background .2s ease; }
+    button.stamp { padding: .55rem 1rem; border: 1px solid var(--accent); background: var(--accent); color: var(--white); font-weight: 700; font-size: .9rem; text-transform: uppercase; cursor: pointer; border-radius: 6px; transition: background .2s ease; white-space: nowrap; }
     button.stamp:hover { background: var(--accent-hover); }
     table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
     thead { background: var(--highlight); }
@@ -99,40 +99,13 @@
       </div>
     </div>
 
-    <!-- Alerta + botones compactos -->
-    <div style="
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:.6rem;
-      margin:.6rem 0;
-      font-size:.9rem;
-    ">
-      <div id="lowStockAlert"
-           style="
-             display:none;
-             background:#f87171;
-             color:#fff;
-             padding:.4rem .8rem;
-             border-radius:6px;
-             font-weight:700;
-           ">
-        ⚠️ Stock bajo
+    <!-- Alerta + botones en una sola línea -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin:.6rem 0;font-size:.9rem;flex-wrap:wrap;">
+      <div id="lowStockAlert" style="display:none;background:var(--danger);color:#fff;padding:.4rem .8rem;border-radius:6px;font-weight:700;white-space:nowrap;">
+        ⚠️ <span id="lowStockText">0 producto(s) con stock bajo.</span>
       </div>
-      <div style="display:flex; gap:.8rem;">
-        <button class="stamp"
-                onclick="startCameraScan()"
-                title="Escanear código"
-                style="padding:.55rem 1rem;font-size:.9rem;">
-          📷 Escanear
-        </button>
-        <button class="stamp"
-                onclick="downloadLabelsPDF()"
-                title="Descargar etiquetas"
-                style="padding:.55rem 1rem;font-size:.9rem;">
-          📇 Etiquetas PDF
-        </button>
-      </div>
+      <button class="stamp" onclick="startCameraScan()" title="Escanear código">📷 Escanear</button>
+      <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
     </div>
 
     <div id="reader"></div>
@@ -200,6 +173,7 @@
     <div id="cardsView" class="cards-view"></div>
   </div>
 
+  <!-- Modal registrar venta -->
   <div id="soldModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeSoldModal()">&times;</span>
@@ -213,6 +187,7 @@
     </div>
   </div>
 
+  <!-- Modal editar precio -->
   <div id="priceModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closePriceModal()">&times;</span>
@@ -223,6 +198,7 @@
     </div>
   </div>
 
+  <!-- Modal imagen grande -->
   <div id="imageModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeImageModal()">&times;</span>
@@ -244,61 +220,46 @@
       document.getElementById('dashLow').textContent = low;
       document.getElementById('dashValue').textContent = '$' + value;
       const alertBox = document.getElementById('lowStockAlert');
+      const lowText = document.getElementById('lowStockText');
       if (low) {
         alertBox.style.display = 'block';
-        alertBox.textContent = `⚠️ ${low} producto(s) con stock bajo.`;
-      } else alertBox.style.display = 'none';
+        lowText.textContent = `${low} producto(s) con stock bajo.`;
+      } else {
+        alertBox.style.display = 'none';
+      }
     }
 
     async function downloadLabelsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-      const w = 30, h = 18;
-      const margLeft = 10, margTop = 10;
-      const dx = w + 2, dy = h + 2;
-
+      const w = 30, h = 18, margLeft = 10, margTop = 10, dx = w + 2, dy = h + 2;
       const list = inventory.filter(p => p.quantity > 0);
       let col = 0, fil = 0;
-
       for (let i = 0; i < list.length; i++) {
         if (i > 0 && i % 15 === 0) { doc.addPage(); col = 0; fil = 0; }
-
-        const x = margLeft + col * dx;
-        const y = margTop + fil * dy;
-        const p = list[i];
-
+        const x = margLeft + col * dx, y = margTop + fil * dy, p = list[i];
         doc.setFontSize(7);
         doc.text(p.name.slice(0, 14), x + w / 2, y + 3, { align: 'center' });
         doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 5.5, { align: 'center' });
-
-        const canvas = document.createElement('canvas');
-        const scale = 300 / 25.4;
+        const canvas = document.createElement('canvas'), scale = 300 / 25.4;
         canvas.width = w * scale; canvas.height = h * scale * 0.45;
         await JsBarcode(canvas, p.barcode, { format: 'CODE128', width: 1.3, height: h * scale * 0.45, fontSize: 0 });
         const imgData = canvas.toDataURL('image/png');
         doc.addImage(imgData, 'PNG', x, y + 6.5, w, h * 0.45);
-
-        col++;
-        if (col === 5) { col = 0; fil++; }
+        col++; if (col === 5) { col = 0; fil++; }
       }
-
       doc.save('etiquetas.pdf');
     }
 
     function startCameraScan() {
       const html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
+      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
         barcode => {
           document.getElementById('searchCode').value = barcode;
           filterInventory();
           html5QrCode.stop();
           document.getElementById('reader').style.display = 'none';
-        },
-        err => {}
-      );
+        }, () => {});
       let readerDiv = document.getElementById('reader');
       if (!readerDiv) {
         readerDiv = document.createElement('div');
@@ -314,31 +275,22 @@
       const cards = document.getElementById('cardsView');
       const noResults = document.getElementById('noResultsMessage');
       const resultMsg = document.getElementById('resultMessage');
-
       if (filteredInventory.length === 0) {
-        list.innerHTML = '';
-        cards.innerHTML = '';
-        noResults.style.display = 'block';
-        resultMsg.style.display = 'none';
-        return;
+        list.innerHTML = ''; cards.innerHTML = '';
+        noResults.style.display = 'block'; resultMsg.style.display = 'none'; return;
       }
-
       noResults.style.display = 'none';
-
-      const withStock = filteredInventory.filter(item => item.quantity > 0);
-      const withoutStock = filteredInventory.filter(item => item.quantity === 0);
-      const sorted = withStock.concat(withoutStock);
-
+      const sorted = [...filteredInventory].sort((a, b) => b.quantity - a.quantity);
       list.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         const desc = item.description?.trim() || '---';
         return `
           <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
             <td>${idx + 1}</td>
-            <td><img id="img-${idx}" style="max-height:48px; border-radius:4px; cursor:pointer;" onclick="openImageModal(this.src)" /></td>
+            <td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>${item.name}</td>
             <td>${item.barcode}</td>
-            <td><img id="barcodeimg-${idx}" style="max-height:48px; border-radius:4px; cursor:pointer;" onclick="openImageModal(this.src)" /></td>
+            <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
@@ -361,7 +313,7 @@
             <img id="card-img-${idx}" onclick="openImageModal(this.src)" />
             <div><strong>${item.name}</strong></div>
             <div>Barras: ${item.barcode}</div>
-            <div><img id="card-barcodeimg-${idx}" style="height:60px; cursor:pointer;" onclick="openImageModal(this.src)" /></div>
+            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${item.category}</div>
@@ -385,7 +337,6 @@
               if (imgCard) imgCard.src = url;
             }
           });
-
           localforage.getItem(`barcodeimg_${item.barcode}`).then(blob => {
             if (blob) {
               const url = URL.createObjectURL(blob);
@@ -395,12 +346,7 @@
               if (cardImg) cardImg.src = url;
             } else {
               const canvas = document.createElement('canvas');
-              JsBarcode(canvas, item.barcode, {
-                format: 'CODE128',
-                width: 2,
-                height: 60,
-                displayValue: true
-              });
+              JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: true });
               canvas.toBlob(barcodeBlob => {
                 if (barcodeBlob) {
                   localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob);
@@ -415,7 +361,6 @@
           });
         });
       }, 100);
-
       updateDash();
     }
 
@@ -473,28 +418,16 @@
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
-
       if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
       if (isNaN(soldPrice) || soldPrice < 0) { alert('Precio inválido'); return; }
-
       const item = inventory[currentSoldIndex];
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
-
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-
-      const soldItem = {
-        name: item.name,
-        code: item.code,
-        price: soldPrice,
-        quantity: soldQty,
-        total: soldPrice * soldQty
-      };
-
+      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-
       filterInventory();
       closeSoldModal();
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
@@ -505,14 +438,9 @@
     function filterInventory() {
       const category = document.getElementById('searchCategory').value.trim().toLowerCase();
       const code = document.getElementById('searchCode').value.trim().toLowerCase();
-
       let filtered = inventory;
-
       if (code) {
-        filtered = inventory.filter(item =>
-          item.barcode.trim().toLowerCase().includes(code)
-        );
-
+        filtered = inventory.filter(item => item.barcode.trim().toLowerCase().includes(code));
         if (filtered.length === 0) {
           document.getElementById('inventoryList').innerHTML = '';
           document.getElementById('cardsView').innerHTML = '';
@@ -520,10 +448,8 @@
           document.getElementById('resultMessage').style.display = 'none';
           return;
         }
-
         loadInventory(filtered);
         document.getElementById('noResultsMessage').style.display = 'none';
-
         setTimeout(() => {
           const firstRow = document.querySelector('#inventoryList tr') || document.querySelector('.card');
           if (firstRow) {
@@ -536,13 +462,9 @@
         }, 100);
         return;
       }
-
       if (category) {
-        filtered = inventory.filter(item =>
-          item.category.trim().toLowerCase() === category
-        );
+        filtered = inventory.filter(item => item.category.trim().toLowerCase() === category);
       }
-
       loadInventory(filtered);
       document.getElementById('resultMessage').style.display = 'none';
     }
@@ -585,16 +507,11 @@
       document.getElementById('imageModal').style.display = 'none';
     }
 
-    function debounce(fn, delay) {
-      let timer;
-      return function (...args) {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn.apply(this, args), delay);
-      };
-    }
-
     document.getElementById('searchCategory').addEventListener('change', filterInventory);
-    document.getElementById('searchCode').addEventListener('input', debounce(filterInventory, 300));
+    document.getElementById('searchCode').addEventListener('input', () => {
+      clearTimeout(window.filterTimeout);
+      window.filterTimeout = setTimeout(filterInventory, 300);
+    });
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';

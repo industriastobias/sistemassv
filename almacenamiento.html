@@ -29,7 +29,7 @@
     h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin: .8rem 0 .6rem; letter-spacing: 1px; text-transform: uppercase; }
     .container { width: 98vw; height: 96vh; background: var(--white); border: 1px solid var(--border); padding: 1.2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.05); display: flex; flex-direction: column; overflow: hidden; }
 
-    /* 🔽 NUEVO: Fila compacta para alerta y botones */
+    /* 🔽 Fila compacta */
     .top-bar {
       display: flex;
       flex-wrap: wrap;
@@ -41,6 +41,18 @@
 
     .top-bar > * {
       white-space: nowrap;
+    }
+
+    /* 🔽 Cuadrito pequeño para Stock bajo */
+    #lowStockBox {
+      background: var(--danger);
+      color: #fff;
+      padding: .3rem .6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: .8rem;
+      min-width: 40px;
+      text-align: center;
     }
 
     #reader {
@@ -115,22 +127,12 @@
   <h1>Inventario</h1>
 
   <div class="container">
-    <!-- Dashboard rápido -->
-    <div id="miniDash" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem;font-size:.75rem;">
-      <div style="flex:1 1 160px;background:#fef08a;padding:.4rem;border-radius:6px;text-align:center;">
-        <div>Stock bajo</div>
-        <div id="dashLow" style="font-weight:700;font-size:1rem;">-</div>
-      </div>
-    </div>
-
-    <!-- 🔽 NUEVO: Fila compacta para alerta y botones -->
+    <!-- 🔽 Fila compacta: cuadrito + botones -->
     <div class="top-bar">
-      <div id="lowStockAlert" style="display:none;background:var(--danger);color:#fff;padding:.4rem .8rem;border-radius:6px;font-weight:700;">
-        ⚠️ <span id="lowStockText">0 producto(s) con stock bajo.</span>
-      </div>
+      <div id="lowStockBox" style="display:none;" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
       <button class="stamp" onclick="startCameraScan()" title="Escanear código">📷 Escanear</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
-      <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar escaneo</button>
+      <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
     <div id="reader"></div>
@@ -236,19 +238,14 @@
     let currentSoldIndex = -1;
     let currentPriceIndex = -1;
     let currentView = localStorage.getItem('preferredView') || 'table';
-    let html5QrCode; // 🔽 para poder detenerlo desde cancelar
+    let html5QrCode;
 
     function updateDash() {
       const low = inventory.filter(p => p.quantity <= (p.stockMin || 0)).length;
-      document.getElementById('dashLow').textContent = low;
-      const alertBox = document.getElementById('lowStockAlert');
-      const lowText = document.getElementById('lowStockText');
-      if (low) {
-        alertBox.style.display = 'block';
-        lowText.textContent = `${low} producto(s) con stock bajo.`;
-      } else {
-        alertBox.style.display = 'none';
-      }
+      const box = document.getElementById('lowStockBox');
+      const lowSpan = document.getElementById('dashLow');
+      lowSpan.textContent = low;
+      box.style.display = low > 0 ? 'inline-block' : 'none';
     }
 
     async function downloadLabelsPDF() {

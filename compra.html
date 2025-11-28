@@ -229,6 +229,7 @@
         <h3>${escapeHtml(item.name)}</h3>
         <p>Código: ${escapeHtml(item.code)}</p>
         <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
+        <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none; width:100%; margin-top:0.5rem;" />
         <p>Precio: $${Number(item.price).toFixed(2)}</p>
         <p>Stock: ${Number(item.quantity)}</p>
         <div class="actions">
@@ -237,12 +238,30 @@
         </div>
       </div>
     `).join('');
+
     inventory.forEach((p,i)=>{
       localforage.getItem(`img_${p.code}`).then(blob=>{
         if(blob && document.getElementById(`invImg${i}`)){
           document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
         }
       }).catch(()=>{});
+
+      // Mostrar código de barras como imagen
+      if (p.barcode) {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, p.barcode, {
+          format: "CODE128",
+          width: 2,
+          height: 40,
+          displayValue: true,
+          fontSize: 12
+        });
+        const img = document.getElementById(`barcodeImg${i}`);
+        if (img) {
+          img.src = canvas.toDataURL('image/png');
+          img.style.display = 'block';
+        }
+      }
     });
   }
 
@@ -293,6 +312,7 @@
           renderTable(); calculateTotal();
           e.target.reset();
           document.getElementById('imagePreview').style.display = 'none';
+          barcodeCanvas.style.display = 'none';
           return;
         }
       }
@@ -312,6 +332,7 @@
     }
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
+    barcodeCanvas.style.display = 'none';
     renderTable(); calculateTotal();
   });
 
@@ -470,6 +491,7 @@
       }
     }).catch(()=>{});
     document.getElementById('formularioBubble').scrollIntoView({behavior:'smooth'});
+    generarBarcode(p.barcode);
   }
 
   function deleteProduct(idx){
@@ -586,33 +608,28 @@
     document.getElementById('editLoteBubble').style.display = 'none';
     renderTable(); calculateTotal();
   }
-  /* =========  FIN CARGA MASIVA  ========= */
 
   // ===== CÓDIGO DE BARRAS EN TIEMPO REAL =====
   const barcodeInput = document.getElementById('barcode');
   const barcodeCanvas = document.getElementById('barcodeCanvas');
 
   function generarBarcode(value) {
-    if (value.trim() === '') {
+    if (!value || value.trim() === '') {
       barcodeCanvas.style.display = 'none';
       return;
     }
 
-    // Mostrar canvas antes de dibujar
     barcodeCanvas.style.display = 'block';
-
-    // Esperar a que el canvas esté visible
-    setTimeout(() => {
-      JsBarcode(barcodeCanvas, value, {
-        format: "CODE128",
-        lineColor: "#000",
-        width: 2,
-        height: 60,
-        displayValue: true,
-        fontSize: 14,
-        margin: 5
-      });
-    }, 10);
+    canvas.width = canvas.offsetWidth;
+    JsBarcode(barcodeCanvas, value, {
+      format: "CODE128",
+      lineColor: "#000",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14,
+      margin: 5
+    });
   }
 
   barcodeInput.addEventListener('input', () => {

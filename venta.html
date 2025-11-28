@@ -4,10 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ventas Realizadas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    html { animation: fadeIn .4s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
       --bg: #fafafa;
       --card: #fff;
@@ -17,7 +19,6 @@
       --radius: 12px;
       --shadow: 0 4px 16px rgba(0,0,0,.06);
     }
-
     [data-theme="dark"] {
       --bg: #121212;
       --card: #1e1e1e;
@@ -25,7 +26,6 @@
       --accent: #3b82f6;
       --danger: #ef4444;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     body {
       background: var(--bg);
@@ -36,7 +36,6 @@
       padding: 40px 20px;
       min-height: 100vh;
     }
-
     .container {
       width: 100%;
       max-width: 1200px;
@@ -48,7 +47,6 @@
       flex-direction: column;
       gap: 24px;
     }
-
     @media (max-width: 768px) {
       body { padding: 0; }
       .container {
@@ -59,7 +57,6 @@
         box-shadow: none;
       }
     }
-
     .header {
       display: flex;
       justify-content: space-between;
@@ -67,9 +64,7 @@
       flex-wrap: wrap;
       gap: 12px;
     }
-
     .header h1 { font-size: 2rem; font-weight: 700; }
-
     .theme-toggle {
       cursor: pointer;
       font-size: 1.4rem;
@@ -77,15 +72,12 @@
       border-radius: 50%;
       transition: .2s;
     }
-
     .theme-toggle:hover { background: #00000011; }
-
     .controls {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
     }
-
     .controls input,
     .controls select,
     .controls button {
@@ -97,22 +89,18 @@
       box-shadow: var(--shadow);
       font-size: .875rem;
     }
-
     .controls button {
       background: var(--accent);
       color: #fff;
       cursor: pointer;
       font-weight: 600;
     }
-
     .controls button:hover { opacity: .9; }
-
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 20px;
     }
-
     .card {
       background: var(--bg);
       border-radius: var(--radius);
@@ -125,25 +113,20 @@
       position: relative;
       min-height: 320px;
     }
-
     .card:hover { transform: translateY(-4px); }
-
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
     .card-title { font-size: 1.1rem; font-weight: 600; }
     .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-
     .card-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-top: auto;
     }
-
     .card-delete {
       background: var(--danger);
       color: #fff;
@@ -153,14 +136,12 @@
       font-size: .75rem;
       cursor: pointer;
     }
-
     .pagination {
       display: flex;
       justify-content: center;
       gap: 12px;
       margin-top: auto;
     }
-
     .pagination button {
       padding: 8px 16px;
       border: none;
@@ -171,12 +152,10 @@
       cursor: pointer;
       font-weight: 600;
     }
-
     .pagination button:hover {
       background: var(--accent);
       color: #fff;
     }
-
     .fab-totals {
       position: fixed;
       bottom: 20px;
@@ -197,11 +176,7 @@
       align-items: center;
       justify-content: center;
     }
-
-    .fab-totals:hover {
-      transform: scale(1.1);
-    }
-
+    .fab-totals:hover { transform: scale(1.1); }
     #totalesModal {
       position: fixed;
       inset: 0;
@@ -211,7 +186,6 @@
       justify-content: center;
       z-index: 999;
     }
-
     .totales-card {
       position: relative;
       width: 90vw;
@@ -221,7 +195,6 @@
       box-shadow: var(--shadow);
       padding: 24px;
     }
-
     .close-btn {
       position: absolute;
       top: 8px;
@@ -237,7 +210,6 @@
       align-items: center;
       justify-content: center;
     }
-
     #facturaModal {
       position: fixed;
       inset: 0;
@@ -247,7 +219,6 @@
       justify-content: center;
       z-index: 998;
     }
-
     .factura-card {
       width: 90vw;
       max-width: 420px;
@@ -261,7 +232,6 @@
       max-height: 90vh;
       overflow: auto;
     }
-
     .ticket-preview {
       background: #fff;
       color: #000;
@@ -275,7 +245,6 @@
       margin: 0 auto;
       box-sizing: border-box;
     }
-
     .ticket-preview .total {
       font-weight: 700;
       font-size: 12px;
@@ -283,14 +252,12 @@
       margin-top: 6px;
       padding-right: 6px;
     }
-
     .modal-buttons {
       display: flex;
       gap: 8px;
       justify-content: flex-end;
       margin-top: 10px;
     }
-
     .modal-buttons button {
       padding: 8px 14px;
       border: none;
@@ -298,10 +265,8 @@
       cursor: pointer;
       font-weight: 600;
     }
-
     .btn-print { background: #16a34a; color: #fff; }
     .btn-close { background: #6b7280; color: #fff; }
-
     #imgModal {
       position: fixed;
       inset: 0;
@@ -312,14 +277,12 @@
       z-index: 1001;
       cursor: pointer;
     }
-
     #imgModal img {
       max-width: 90vw;
       max-height: 90vh;
       object-fit: contain;
       border-radius: 8px;
     }
-
     .card img {
       width: 100%;
       height: 160px;
@@ -328,7 +291,6 @@
       cursor: pointer;
       margin-bottom: 8px;
     }
-
     .barcode {
       width: 100%;
       height: 40px;
@@ -494,6 +456,7 @@
         img.style.display = 'none';
       }
 
+      // Crear imagen del código de barras
       const barcodeImg = document.createElement('img');
       barcodeImg.className = 'barcode';
       barcodeImg.style.width = '100%';
@@ -501,13 +464,31 @@
       barcodeImg.style.objectFit = 'contain';
       barcodeImg.style.cursor = 'pointer';
 
+      // Generar código de barras si no existe
       const barcodeBlob = await localforage.getItem(`barcode_${item.code}`);
       if (barcodeBlob) {
         barcodeImg.src = URL.createObjectURL(barcodeBlob);
-        barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
       } else {
-        barcodeImg.style.display = 'none';
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, item.barcode, {
+          format: 'CODE128',
+          width: 2,
+          height: 40,
+          displayValue: false
+        });
+        canvas.toBlob(async (blob) => {
+          await localforage.setItem(`barcode_${item.code}`, blob);
+          barcodeImg.src = URL.createObjectURL(blob);
+        });
       }
+      barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
+
+      // Mostrar número de código de barras
+      const barcodeText = document.createElement('div');
+      barcodeText.style.fontSize = '10px';
+      barcodeText.style.textAlign = 'center';
+      barcodeText.style.marginTop = '4px';
+      barcodeText.textContent = `Código: ${item.barcode}`;
 
       card.innerHTML = `
         <div class="card-header">
@@ -524,6 +505,7 @@
 
       card.insertBefore(img, card.firstChild);
       card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
+      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
   }
@@ -688,5 +670,6 @@
     document.getElementById('imgModal').style.display = 'none';
   }
 </script>
+
 </body>
 </html>

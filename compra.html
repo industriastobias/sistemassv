@@ -4,11 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css     "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js     "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js     "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js     "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js     "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     :root{
       --bg:#f5f7fa;
@@ -96,6 +97,15 @@
     @media(max-width:768px){.table-cards{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.table-cards{grid-template-columns:1fr}}
     .lote-block{margin-top:1.5rem;padding:1.5rem;border:2px dashed var(--accent);border-radius:var(--radius);background:#f0f9ff;}
+    #barcodeCanvas {
+      margin-top: 0.5rem;
+      width: 100%;
+      height: 80px;
+      display: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+    }
   </style>
 </head>
 <body>
@@ -107,7 +117,11 @@
     <form id="purchaseForm" class="form-grid">
       <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
       <div><label>Código *</label><input type="text" id="code" name="code" required></div>
-      <div><label>Código de Barras *</label><input type="text" id="barcode" name="barcode" required></div>
+      <div>
+        <label>Código de Barras *</label>
+        <input type="text" id="barcode" name="barcode" required>
+        <canvas id="barcodeCanvas"></canvas>
+      </div>
       <div><label>Precio *</label><input type="number" id="price" name="price" step="0.01" required></div>
       <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
       <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
@@ -294,6 +308,7 @@
     }
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
+    barcodeCanvas.style.display = 'none';
     renderTable(); calculateTotal();
   });
 
@@ -452,6 +467,7 @@
       }
     }).catch(()=>{});
     document.getElementById('formularioBubble').scrollIntoView({behavior:'smooth'});
+    generarBarcode(p.barcode);
   }
 
   function deleteProduct(idx){
@@ -569,6 +585,33 @@
     renderTable(); calculateTotal();
   }
   /* =========  FIN CARGA MASIVA  ========= */
+
+  // Generar código de barras en tiempo real
+  const barcodeInput = document.getElementById('barcode');
+  const barcodeCanvas = document.getElementById('barcodeCanvas');
+
+  function generarBarcode(value) {
+    if (value.trim() === '') {
+      barcodeCanvas.style.display = 'none';
+      return;
+    }
+
+    JsBarcode(barcodeCanvas, value, {
+      format: "CODE128",
+      lineColor: "#000",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14,
+      margin: 5
+    });
+
+    barcodeCanvas.style.display = 'block';
+  }
+
+  barcodeInput.addEventListener('input', () => {
+    generarBarcode(barcodeInput.value);
+  });
 
   window.addEventListener('DOMContentLoaded',()=>{
     renderTable(); calculateTotal();

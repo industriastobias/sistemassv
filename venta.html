@@ -49,7 +49,6 @@
       gap: 24px;
     }
 
-    /* ===== RESPONSIVE: Pantalla completa en móviles ===== */
     @media (max-width: 768px) {
       body {
         padding: 0;
@@ -180,7 +179,6 @@
       color: #fff;
     }
 
-    /* ===== ESTILOS PARA EL BOTÓN FLOTANTE ===== */
     .fab-totals {
       position: fixed;
       bottom: 20px;
@@ -206,7 +204,6 @@
       transform: scale(1.1);
     }
 
-    /* ===== ESTILOS PARA MODAL DE TOTALES ===== */
     #totalesModal {
       position: fixed;
       inset: 0;
@@ -243,7 +240,6 @@
       justify-content: center;
     }
 
-    /* Modal Factura */
     #facturaModal {
       position: fixed;
       inset: 0;
@@ -251,7 +247,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 998; /* Cambiado para que no interfiera con FAB */
+      z-index: 998;
     }
 
     .factura-card {
@@ -307,6 +303,25 @@
 
     .btn-print { background: #16a34a; color: #fff; }
     .btn-close { background: #6b7280; color: #fff; }
+
+    /* ===== MODAL PARA IMAGENES ===== */
+    #imgModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      cursor: pointer;
+    }
+
+    #imgModal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -329,7 +344,6 @@
     <button onclick="location.href='Total.html'">📊 Total</button>
   </div>
 
-  <!-- === RESUMEN DE VENTAS (OCULTO) === -->
   <div id="totalBox" style="display:none;">
     <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
     <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
@@ -345,12 +359,10 @@
   </div>
 </div>
 
-<!-- ===== BOTÓN FLOTANTE ===== -->
 <button class="fab-totals" onclick="abrirModalTotales()">
   <span id="fabQty">0</span>
 </button>
 
-<!-- ===== MODAL DE TOTALES ===== -->
 <div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarModalTotales()">×</button>
@@ -363,7 +375,6 @@
   </div>
 </div>
 
-<!-- Modal Factura -->
 <div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
   <div class="factura-card" onclick="event.stopPropagation()">
     <h2>Factura – Ticket</h2>
@@ -414,8 +425,13 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+<!-- Modal para imagen -->
+<div id="imgModal" onclick="cerrarImgModal()">
+  <img id="imgModalImg" src="" alt="Imagen ampliada">
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 <script>
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
@@ -433,13 +449,11 @@
 
     filtered.reverse();
 
-    // --- TOTALES ---
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
     const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
     document.getElementById('totalQty').textContent  = totalUnits;
     document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
     
-    // ===== SINCRONIZAR VALORES EN EL MODAL Y FAB =====
     document.getElementById('totalQtyModal').textContent = totalUnits;
     document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
     document.getElementById('fabQty').textContent = totalUnits;
@@ -458,11 +472,13 @@
       img.style.maxHeight = '100px';
       img.style.objectFit = 'cover';
       img.style.borderRadius = '8px';
+      img.style.cursor = 'pointer';
       img.alt = item.name;
 
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
         img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
       } else {
         img.src = '';
         img.style.display = 'none';
@@ -628,13 +644,23 @@
     doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
   }
 
-  /* ===== FUNCIONES PARA EL MODAL DE TOTALES ===== */
   function abrirModalTotales() {
     document.getElementById('totalesModal').style.display = 'flex';
   }
 
   function cerrarModalTotales() {
     document.getElementById('totalesModal').style.display = 'none';
+  }
+
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+
+  function cerrarImgModal() {
+    document.getElementById('imgModal').style.display = 'none';
   }
 </script>
 </body>

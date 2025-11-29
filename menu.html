@@ -1,175 +1,593 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="Dashboard TOBIAS PALACIOS">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="X-Frame-Options" content="DENY">
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" as="style" crossorigin>
-  <title>Dashboard – TOBIAS PALACIOS</title>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Compra</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
   <style>
-    :root {
-      --color-bg: #ffffff;
-      --color-panel: #ffffff;
-      --color-accent: #DBB8BC;
-      --color-text: #1F2937;
-      --color-muted: #9CA3AF;
-      --color-danger: #EF4444;
-      --color-border: #DBB8BC;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-      --radius: 10px;
-      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-      --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#1f2937;
+      --accent:#3b82f6;
+      --accent-hover:#2563eb;
+      --danger:#ef4444;
+      --success:#10b981;
+      --radius:16px;
+      --shadow:0 6px 20px rgba(0,0,0,.08);
+      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
+      --transition:.3s ease;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    .nav-link, .logout-btn, .user-avatar { will-change: transform; transform: translateZ(0); backface-visibility: hidden; perspective: 1000px; }
-    body { font-family: var(--font-family); background: var(--color-bg); color: var(--color-text); display: flex; min-height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-    .sidebar { width: 260px; background: var(--color-panel); padding: 1.5rem 1rem; border-right: 1px solid var(--color-border); height: 100vh; display: flex; flex-direction: column; }
-    .nav { display: flex; flex-direction: column; gap: .6rem; flex-grow: 1; overflow-y: auto; list-style: none; overflow-anchor: none; }
-    .nav-link { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; border-radius: var(--radius); text-decoration: none; color: var(--color-text); font-size: 1rem; font-weight: 500; transition: background var(--transition-fast), color var(--transition-fast); white-space: nowrap; border: 2px solid transparent; background: transparent; cursor: pointer; width: 100%; position: relative; touch-action: manipulation; -webkit-user-select: none; user-select: none; transform: translateZ(0); }
-    .nav-link:hover { background: rgba(219, 184, 188, 0.15); }
-    .nav-link.active { background: var(--color-accent); color: #fff; }
-    .nav-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; transition: outline-offset var(--transition-fast); }
-    .nav-link .material-icons { font-size: 22px; flex-shrink: 0; transform: translateZ(0); }
-    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem clamp(1rem, 4vw, 2.5rem); }
-    .welcome { font-size: clamp(1.8rem, 5cqw, 2.4rem); font-weight: 800; color: var(--color-accent); margin-bottom: .3rem; transform: translateZ(0); }
-    .subtitle { font-size: clamp(1rem, 2.5cqw, 1.1rem); color: var(--color-muted); transform: translateZ(0); }
-    .right-panel { position: absolute; right: 1.5rem; top: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: calc(100% - 2rem); min-height: 120px; }
-    .user-section { text-align: center; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
-    .user-avatar { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent); background: var(--color-panel); transition: transform var(--transition-smooth); touch-action: manipulation; user-select: none; }
-    .user-avatar:hover { transform: scale(1.05); }
-    .logout-btn { background: var(--color-danger); color: #fff; border: none; border-radius: var(--radius); padding: .8rem 1.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast); display: inline-flex; align-items: center; gap: .5rem; box-shadow: var(--shadow-sm); min-width: fit-content; transform: translateZ(0); touch-action: manipulation; -webkit-user-select: none; user-select: none; }
-    .logout-btn:active { transform: scale(0.95) translateZ(0); transition-duration: 0.05s; }
-    .logout-btn:hover { box-shadow: var(--shadow-md); }
-    .logout-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-    .nav::-webkit-scrollbar { width: 6px; }
-    .nav::-webkit-scrollbar-track { background: transparent; }
-    .nav::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
-    @media (max-width: 1024px) { .sidebar { width: 220px; } .nav-link { font-size: .95rem; padding: .7rem .9rem; } .user-avatar { width: 75px; height: 75px; } }
-    @media (max-width: 768px) { body { flex-direction: column; overflow: auto; } .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--color-border); padding: 1rem; position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, 0.85); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); will-change: transform; transform: translateZ(0); } .nav { flex-direction: row; gap: .4rem; flex-wrap: nowrap; } .nav-link { flex: 0 0 auto; padding: .7rem .9rem; font-size: .9rem; } .right-panel { position: static; flex-direction: row; justify-content: space-between; width: 100%; padding: 1rem; height: auto; border-top: 1px solid var(--color-border); } .logout-btn { margin-bottom: 0; padding: .7rem 1.2rem; } .user-avatar { width: 65px; height: 65px; } }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+    h1{font-size:2rem;font-weight:700;margin-bottom:2rem;letter-spacing:-.5px}
+    .bubble{background:var(--card);border-radius:var(--radius);padding:2rem;box-shadow:var(--shadow);width:100%;max-width:1200px;margin-bottom:2rem;transition:transform var(--transition),box-shadow var(--transition);}
+    .bubble:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
+    label{font-size:.9rem;font-weight:500;margin-bottom:.25rem;display:block}
+    input,select,textarea{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;color:var(--text);transition:background .3s,border-color .3s;}
+    input:focus,select:focus,textarea:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+    button{padding:.75rem 1.5rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;}
+    button:hover{transform:translateY(-2px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
+    .btn-primary:hover{background:var(--accent-hover)}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
+    .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
+    .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
+    #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
+    .table-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;}
+    .card-item{background:var(--card);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.75rem;transition:transform var(--transition),box-shadow var(--transition);}
+    .card-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .card-item img{width:100%;height:160px;object-fit:cover;border-radius:12px}
+    .card-item h3{font-size:1.1rem;color:var(--accent)}
+    .card-item p{margin:0;font-size:.85rem;color:#6b7280}
+    .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
+    .mini-lote{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;}
+    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+    .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
+    .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
+    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem}
+    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
+    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+    @media(max-width:1024px){.table-cards{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:768px){.table-cards{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.table-cards{grid-template-columns:1fr}}
+    .lote-block{margin-top:1.5rem;padding:1.5rem;border:2px dashed var(--accent);border-radius:var(--radius);background:#f0f9ff;}
+    #barcodeCanvas{margin-top:.5rem;width:100%;height:80px;display:none;border:1px solid #e5e7eb;border-radius:12px;background:#fff;}
   </style>
 </head>
 <body>
 
-<aside class="sidebar" aria-label="Navegación principal">
-  <nav class="nav" id="main-nav" role="navigation">
-    <a class="nav-link" href="compra.html" data-page="compra"><span class="material-icons" aria-hidden="true">shopping_cart</span><span>Compra</span></a>
-    <a class="nav-link" href="almacenamiento.html" data-page="almacenamiento"><span class="material-icons" aria-hidden="true">warehouse</span><span>Almacenamiento</span></a>
-    <a class="nav-link" href="lista.html" data-page="lista"><span class="material-icons" aria-hidden="true">account_balance</span><span>Finanzas</span></a>
-    <a class="nav-link" href="inventario.html" data-page="inventario"><span class="material-icons" aria-hidden="true">inventory_2</span><span>Inventario</span></a>
-    <a class="nav-link" href="gastos.html" data-page="gastos"><span class="material-icons" aria-hidden="true">store</span><span>Catálogo</span></a>
-    <a class="nav-link" href="clientes.html" data-page="clientes"><span class="material-icons" aria-hidden="true">groups</span><span>Clientes</span></a>
-    <a class="nav-link" href="descuentos.html" data-page="descuentos"><span class="material-icons" aria-hidden="true">local_offer</span><span>Descuentos</span></a>
-    <a class="nav-link" href="facturas.html" data-page="facturas"><span class="material-icons" aria-hidden="true">receipt_long</span><span>Facturas</span></a>
-    <a class="nav-link" href="traslados.html" data-page="traslados"><span class="material-icons" aria-hidden="true">local_shipping</span><span>Traslados</span></a>
-    <a class="nav-link" href="venta.html" data-page="venta"><span class="material-icons" aria-hidden="true">point_of_sale</span><span>Venta</span></a>
-    <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons" aria-hidden="true">verified</span><span>Verificación</span></a>
+  <h1>Compra</h1>
 
-    <!-- BOTONES NUEVOS -->
-    <button id="exportBtn" class="nav-link" style="margin-top: auto;"><span class="material-icons" aria-hidden="true">archive</span><span>Exportar ZIP</span></button>
-    <button id="importBtn" class="nav-link"><span class="material-icons" aria-hidden="true">unarchive</span><span>Importar ZIP</span></button>
-    <input type="file" id="importFile" accept=".zip" style="display:none;" />
-  </nav>
-</aside>
-
-<div class="right-panel" role="complementary" aria-label="Panel de usuario">
-  <div class="user-section">
-    <img id="userPhoto" class="user-avatar" src="user2005.jpg" alt="Avatar del usuario ERNESTO TOBIAS" loading="lazy" width="85" height="85">
-    <div id="userName" class="user-name">ERNESTO TOBIAS</div>
+  <div class="bubble" id="formularioBubble">
+    <h2><i class="fa fa-edit"></i> rápida de producto</h2>
+    <form id="purchaseForm" class="form-grid">
+      <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
+      <div><label>Código *</label><input type="text" id="code" name="code" required></div>
+      <div>
+        <label>Código de Barras *</label>
+        <input type="text" id="barcode" name="barcode" required>
+        <canvas id="barcodeCanvas"></canvas>
+      </div>
+      <div><label>Precio *</label><input type="number" id="price" name="price" step="0.01" required></div>
+      <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
+      <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
+      <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
+      <div><label>Categoría *</label>
+        <select id="category" name="category" required>
+          <option value="">-- Seleccione --</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Case audífonos">Case audífonos</option>
+          <option value="Case teléfonos">Case teléfonos</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="General">General</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Otros">Otros</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label>Imagen del producto:</label>
+        <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
+        <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
+      </div>
+      <div style="grid-column:1/-1" class="actions">
+        <button type="submit" class="btn-primary">Guardar producto</button>
+        <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
+        <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
+        <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
+        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
+        <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
+      </div>
+    </form>
   </div>
-  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión"><span class="material-icons" aria-hidden="true">logout</span><span>Exit</span></button>
-</div>
 
-<main role="main">
-  <h1 class="welcome">TOBIAS PALACIOS</h1>
-  <p class="subtitle">A FAMILY COMPANY</p>
-</main>
+  <div class="bubble">
+    <h2><i class="fa fa-images"></i> Carga imágenes</h2>
+    <p>Selecciona entre <strong>1 y 130 imágenes</strong>. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
+    <div style="margin-bottom:1rem">
+      <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
+      <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
+    </div>
+    <input type="file" id="loteFiles" accept="image/*" multiple>
+    <div class="actions">
+      <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
+      <button class="btn-danger" onclick="vaciarLote()">Vaciar lote actual</button>
+    </div>
+    <div id="loteStatus"></div>
+    <div class="mini-lote" id="lotePreview"></div>
+  </div>
 
-<!-- LIBRERÍA ZIP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <div class="bubble" id="editLoteBubble" style="display:none">
+    <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
+    <div class="table-cards" id="editLoteGrid"></div>
+    <div class="actions">
+      <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
+    </div>
+  </div>
 
-<script>
-  const CONFIG = { DB_NAME: 'menuDB', STORE_SESSION: 'userSession', DEFAULT_AVATAR: 'user2005.jpg', DEFAULT_USER: 'Usuario', REDIRECT_PAGE: 'index.html' };
-  const Logger = { warn: (...args) => console.warn('[Dashboard]', ...args) };
-  class StorageManager {
-    static #instance = null;
-    static getInstance() { if (!this.#instance) this.#instance = new StorageManager(); return this.#instance; }
-    constructor() { this.db = null; this.#open(); }
-    async #open() { return new Promise((res, rej) => { const req = indexedDB.open(CONFIG.DB_NAME, 1); req.onerror = () => rej(req.error); req.onsuccess = () => { this.db = req.result; res(); }; req.onupgradeneeded = () => { const d = req.result; if (!d.objectStoreNames.contains(CONFIG.STORE_SESSION)) d.createObjectStore(CONFIG.STORE_SESSION, { keyPath: 'id', autoIncrement: true }); }; }); }
-    async getLastSession() { if (!this.db) await this.#open(); const tx = this.db.transaction([CONFIG.STORE_SESSION], 'readonly'); return new Promise(res => { tx.objectStore(CONFIG.STORE_SESSION).openCursor(null, 'prev').onsuccess = (e) => res(e.target.result?.value || null); }); }
-    async clear() { if (!this.db) await this.#open(); this.db.transaction([CONFIG.STORE_SESSION], 'readwrite').objectStore(CONFIG.STORE_SESSION).clear(); }
+  <div class="bubble">
+    <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
+    <div class="table-cards" id="inventoryList"></div>
+  </div>
+
+  <div class="total-box">
+    <h2>Total en USD</h2>
+    <p id="totalAmount">$0.00</p>
+  </div>
+
+  <script>
+  // GLOBAL
+  let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+  let editIndex = -1;
+  let loteTemporal = [];
+
+  // RENDER + TOTAL
+  function calculateTotal(){
+    const total = inventory.reduce((sum,item)=>{
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const discount = Number(item.discount) || 0;
+      const finalPrice = price * (1 - discount/100);
+      return sum + finalPrice * quantity;
+    },0);
+    document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
   }
-  const AuthManager = {
-    check: () => { if (sessionStorage.getItem('loggedIn') !== 'true') { location.replace(CONFIG.REDIRECT_PAGE); return false; } return true; },
-    logout: async () => { await StorageManager.getInstance().clear(); sessionStorage.clear(); location.replace(CONFIG.REDIRECT_PAGE); }
-  };
-  const UIManager = {
-    async init() { const [photo, name] = [sessionStorage.getItem('foto'), sessionStorage.getItem('nombre')]; if (photo && name) this.update(photo, name); else { const session = await StorageManager.getInstance().getLastSession(); if (session?.foto && session?.nombre) { sessionStorage.setItem('foto', session.foto); sessionStorage.setItem('nombre', session.nombre); this.update(session.foto, session.nombre); } else this.update(CONFIG.DEFAULT_AVATAR, CONFIG.DEFAULT_USER); } },
-    update(foto, nombre) { const imgEl = document.getElementById('userPhoto'); const nameEl = document.getElementById('userName'); if (imgEl) { imgEl.src = foto; imgEl.onerror = () => imgEl.src = CONFIG.DEFAULT_AVATAR; } if (nameEl) nameEl.textContent = nombre || CONFIG.DEFAULT_USER; }
-  };
-  const NavManager = { init() { const current = location.pathname.split('/').pop(); document.querySelectorAll('.nav-link').forEach(link => { if (link.getAttribute('href') === current) { link.classList.add('active'); link.setAttribute('aria-current', 'page'); } }); } };
 
-  /* ----------  EXPORTAR / IMPORTAR ZIP  ---------- */
-  async function getAllStorageData() {
-    const data = {};
-    for (let key in localStorage) { try { data[`localStorage/${key}`] = localStorage.getItem(key); } catch {} }
-    const dbs = await window.indexedDB.databases?.() || [];
-    for (const dbInfo of dbs) {
-      const db = await new Promise((res, rej) => { const req = indexedDB.open(dbInfo.name); req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
-      const tx = db.transaction(db.objectStoreNames, 'readonly');
-      for (const storeName of db.objectStoreNames) {
-        const store = tx.objectStore(storeName);
-        const all = await store.getAll();
-        data[`indexedDB/${dbInfo.name}/${storeName}.json`] = JSON.stringify(all);
+  function renderTable(){
+    const list = document.getElementById('inventoryList');
+    list.innerHTML = inventory.map((item,idx)=>`
+      <div class="card-item">
+        <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>Código: ${escapeHtml(item.code)}</p>
+        <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
+        <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none; width:100%; margin-top:0.5rem;" />
+        <p>Precio: $${Number(item.price).toFixed(2)}</p>
+        <p>Stock: ${Number(item.quantity)}</p>
+        <div class="actions">
+          <button class="btn-primary" onclick="editProduct(${idx})"><i class="fa fa-edit"></i> Editar</button>
+          <button class="btn-danger" onclick="deleteProduct(${idx})"><i class="fa fa-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `).join('');
+
+    inventory.forEach((p,i)=>{
+      localforage.getItem(`img_${p.code}`).then(blob=>{
+        if(blob && document.getElementById(`invImg${i}`)){
+          document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+        }
+      }).catch(()=>{});
+
+      if (p.barcode) {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, p.barcode, {
+          format: "CODE128",
+          width: 2,
+          height: 40,
+          displayValue: true,
+          fontSize: 12
+        });
+        const img = document.getElementById(`barcodeImg${i}`);
+        if (img) {
+          img.src = canvas.toDataURL('image/png');
+          img.style.display = 'block';
+        }
       }
-    }
-    return data;
+    });
   }
-  async function exportZIP() {
-    const zip = new JSZip();
-    const data = await getAllStorageData();
-    for (const [path, content] of Object.entries(data)) zip.file(path, content);
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup-${new Date().toISOString().split('T')[0]}.zip`; a.click();
-  }
-  async function importZIP(file) {
-    const zip = await JSZip.loadAsync(file);
-    for (const [path, zipEntry] of Object.entries(zip.files)) {
-      if (path.startsWith('localStorage/')) { const key = path.replace('localStorage/', ''); const content = await zipEntry.async('string'); localStorage.setItem(key, content); }
-      if (path.startsWith('indexedDB/')) {
-        const json = await zipEntry.async('string');
-        const parts = path.split('/'); const dbName = parts[1]; const storeName = parts[2].replace('.json', ''); const data = JSON.parse(json);
-        const req = indexedDB.open(dbName, 1); req.onsuccess = () => { const db = req.result; const tx = db.transaction(storeName, 'readwrite'); const store = tx.objectStore(storeName); data.forEach(item => store.put(item)); };
-      }
-    }
-    alert('✅ Datos importados correctamente. Refresca las páginas para ver los cambios.');
-  }
-  document.getElementById('exportBtn').addEventListener('click', exportZIP);
-  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
-  document.getElementById('importFile').addEventListener('change', e => { const file = e.target.files[0]; if (file) importZIP(file); });
 
-  /* ----------  INICIALIZACIÓN  ---------- */
-  (function () {
-    'use strict';
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { passive: true }); else init();
-    async function init() {
-      if (!AuthManager.check()) return;
-      UIManager.init().catch(Logger.warn); NavManager.init();
-      const logoutBtn = document.getElementById('logoutBtn'); if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); AuthManager.logout(); }, { passive: false });
+  function escapeHtml(text){
+    return String(text||'').replace(/[&<>"'`]/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;', '`':'&#96;'
+    })[s]);
+  }
+
+  function previewImage(evt){
+    const file = evt.target.files[0];
+    if(!file) return;
+    new Compressor(file,{quality:0.6,maxWidth:800,maxHeight:800,
+      success(result){
+        const reader = new FileReader();
+        reader.onload = e=>{
+          document.getElementById('imagePreview').src = e.target.result;
+          document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(result);
+      },
+      error(err){ console.error(err); }
+    });
+  }
+
+  document.getElementById('purchaseForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const item = {
+      name: form.get('name') || '',
+      code: form.get('code') || '',
+      barcode: form.get('barcode') || '',
+      price: Number(form.get('price')) || 0,
+      discount: Number(form.get('discount')) || 0,
+      quantity: Number(form.get('quantity')) || 0,
+      description: form.get('description') || '',
+      category: form.get('category') || ''
+    };
+    if(editIndex === -1){
+      const exists = inventory.find(i=>i.code === item.code);
+      if(exists){
+        if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
+          item.code = `${item.code}_${Date.now()}`;
+        } else {
+          exists.quantity = Number(exists.quantity) + Number(item.quantity);
+          localStorage.setItem('inventory', JSON.stringify(inventory));
+          renderTable(); calculateTotal();
+          e.target.reset();
+          document.getElementById('imagePreview').style.display = 'none';
+          barcodeCanvas.style.display = 'none';
+          return;
+        }
+      }
+      inventory.push(item);
+    } else {
+      inventory[editIndex] = item;
+      editIndex = -1;
     }
-  })();
-</script>
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    const imgFile = document.getElementById('imageFile').files[0];
+    if(imgFile){
+      new Compressor(imgFile,{quality:0.6,maxWidth:800,maxHeight:800,
+        success(result){
+          localforage.setItem(`img_${item.code}`, result).catch(()=>{});
+        }
+      });
+    }
+    e.target.reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    barcodeCanvas.style.display = 'none';
+    renderTable(); calculateTotal();
+  });
+
+  function vaciarInventario(){
+    if(!confirm('¿Vaciar todo el inventario?')) return;
+    inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(()=>{}));
+    inventory = [];
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    renderTable(); calculateTotal();
+  }
+
+  // ✅ EXPORTAR ZIP con imágenes
+  async function exportToZip(){
+    try{
+      const zip = new JSZip();
+      zip.file('inventory.json', JSON.stringify(inventory, null, 2));
+      const imgFolder = zip.folder('images');
+      for(const p of inventory){
+        try{
+          const blob = await localforage.getItem(`img_${p.code}`);
+          if(blob) imgFolder.file(`${p.code}.jpg`, blob);
+        }catch(e){}
+      }
+      const blobZip = await zip.generateAsync({ type:'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blobZip);
+      a.download = `inventario_completo_${new Date().toISOString().split('T')[0]}.zip`;
+      a.click();
+    }catch(e){
+      alert('Error exportando ZIP: ' + (e.message || e));
+    }
+  }
+
+  // ✅ IMPORTAR ZIP con imágenes
+  async function importFromZip(evt){
+    const file = evt.target.files[0];
+    if(!file) return;
+    if(!file.name.toLowerCase().endsWith('.zip')){
+      alert('Selecciona un archivo .zip');
+      evt.target.value = '';
+      return;
+    }
+    try{
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      const jsonFile = zip.file('inventory.json');
+      if(!jsonFile){
+        alert('El ZIP no contiene inventory.json');
+        evt.target.value = '';
+        return;
+      }
+
+      const jsonText = await jsonFile.async('string');
+      let imported = JSON.parse(jsonText);
+      if(!Array.isArray(imported)) imported = [];
+
+      for(const p of imported){
+        p.price = Number(p.price) || 0;
+        p.quantity = Number(p.quantity) || 0;
+        p.discount = Number(p.discount) || 0;
+
+        const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
+        if(imgEntry){
+          try{
+            const blob = await imgEntry.async('blob');
+            await localforage.setItem(`img_${p.code}`, blob);
+          }catch(e){}
+        }
+
+        const idx = inventory.findIndex(x => x.code === p.code);
+        if(idx > -1){
+          inventory[idx].quantity += Number(p.quantity || 0);
+          if(!inventory[idx].name && p.name) inventory[idx].name = p.name;
+          if(!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
+          if((!inventory[idx].price || inventory[idx].price===0) && p.price) inventory[idx].price = p.price;
+          if(!inventory[idx].description && p.description) inventory[idx].description = p.description;
+          if(!inventory[idx].category && p.category) inventory[idx].category = p.category;
+        } else {
+          inventory.push({
+            name: p.name || p.code,
+            code: p.code,
+            barcode: p.barcode || '',
+            price: Number(p.price) || 0,
+            discount: Number(p.discount) || 0,
+            quantity: Number(p.quantity) || 0,
+            description: p.description || '',
+            category: p.category || ''
+          });
+        }
+      }
+
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      renderTable(); calculateTotal();
+      alert('✅ Importación completa (incluye imágenes)');
+    }catch(e){
+      console.error(e);
+      alert('Error leyendo ZIP: ' + (e.message || e));
+    } finally {
+      evt.target.value = '';
+    }
+  }
+
+  function resetAndOpenImport(){
+    const inp = document.getElementById('importFile');
+    inp.value = '';
+    inp.click();
+  }
+
+  async function exportToPDF(){
+    try{
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 15;
+      let y = margin;
+
+      pdf.setFontSize(16);
+      pdf.text('Inventario con imágenes', margin, y);
+      y += 10;
+
+      for(let i=0;i<inventory.length;i++){
+        const p = inventory[i];
+        let blob = null;
+        try{ blob = await localforage.getItem(`img_${p.code}`); }catch(e){ blob = null; }
+        if(blob){
+          const dataUrl = await blobToDataURL(blob);
+          try {
+            pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40);
+          } catch(e){}
+        }
+        pdf.setFontSize(11);
+        pdf.text(`Código: ${p.code}`, 60, y + 7);
+        pdf.text(`Nombre: ${p.name}`, 60, y + 14);
+        pdf.text(`Precio: $${Number(p.price).toFixed(2)}`, 60, y + 21);
+        pdf.text(`Stock: ${Number(p.quantity)}`, 60, y + 28);
+        y += 48;
+        if(y > 250){ pdf.addPage(); y = margin; }
+      }
+      pdf.save('inventario.pdf');
+    }catch(e){
+      console.error(e);
+      alert('Error generando PDF: ' + (e.message || e));
+    }
+  }
+
+  function blobToDataURL(blob){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function editProduct(idx){
+    const p = inventory[idx];
+    document.getElementById('name').value = p.name;
+    document.getElementById('code').value = p.code;
+    document.getElementById('barcode').value = p.barcode;
+    document.getElementById('price').value = p.price;
+    document.getElementById('discount').value = p.discount;
+    document.getElementById('quantity').value = p.quantity;
+    document.getElementById('description').value = p.description;
+    document.getElementById('category').value = p.category;
+    editIndex = idx;
+    localforage.getItem(`img_${p.code}`).then(blob=>{
+      if(blob){
+        document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+        document.getElementById('imagePreview').style.display = 'block';
+      }
+    }).catch(()=>{});
+    document.getElementById('formularioBubble').scrollIntoView({behavior:'smooth'});
+    generarBarcode(p.barcode);
+  }
+
+  function deleteProduct(idx){
+    if(!confirm('¿Eliminar este producto?')) return;
+    const code = inventory[idx].code;
+    inventory.splice(idx,1);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    localforage.removeItem(`img_${code}`).catch(()=>{});
+    renderTable(); calculateTotal();
+  }
+
+  /* =========  CARGA MASIVA  ========= */
+  async function procesarLote(){
+    const files = document.getElementById('loteFiles').files;
+    if(!files.length){ alert('Selecciona imágenes'); return; }
+    if(files.length < 1 || files.length > 130){ alert('Elige entre 1 y 130 imágenes'); return; }
+    const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
+    loteTemporal = [];
+    const preview = document.getElementById('lotePreview');
+    preview.innerHTML = '';
+    document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const codigo = `${prefix}${Date.now()}${i}`;
+      await new Promise(res => {
+        new Compressor(file,{ quality:0.6, maxWidth:800, maxHeight:800,
+          success(result){
+            const reader = new FileReader();
+            reader.onload = e => {
+              const mini = document.createElement('div');
+              mini.className = 'mini-item';
+              mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+              preview.appendChild(mini);
+              localforage.setItem(`img_${codigo}`, result);
+              loteTemporal.push({name:'',code:codigo,barcode:'',price:0,discount:0,quantity:0,description:'',category:''});
+              res();
+            };
+            reader.readAsDataURL(result);
+          },
+          error(err){ console.error(err); res(); }
+        });
+      });
+    }
+    document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+    mostrarEditorLote();
+  }
+
+  function vaciarLote(){
+    if(!confirm('¿Vaciar lote actual?')) return;
+    loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(()=>{}));
+    loteTemporal = [];
+    document.getElementById('lotePreview').innerHTML = '';
+    document.getElementById('loteStatus').textContent = '';
+    document.getElementById('editLoteBubble').style.display = 'none';
+  }
+
+  function mostrarEditorLote(){
+    const grid = document.getElementById('editLoteGrid');
+    grid.innerHTML = '';
+    document.getElementById('editLoteBubble').style.display = 'block';
+    loteTemporal.forEach((p,i)=>{
+      const card = document.createElement('div');
+      card.className = 'card-item';
+      card.innerHTML = `
+        <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
+        <h3>${p.code}</h3>
+        <input placeholder="Nombre" id="loteName${i}" value="${escapeHtml(p.name)}">
+        <input placeholder="Barras" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
+        <input placeholder="Precio" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
+        <input placeholder="Desc(%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
+        <input placeholder="Stock" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
+        <input placeholder="Descripción" id="loteDescription${i}" value="${escapeHtml(p.description)}">
+        <select id="loteCategory${i}">
+          <option value="">-- Categoría --</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Case audífonos">Case audífonos</option>
+          <option value="Case teléfonos">Case teléfonos</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="General">General</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Otros">Otros</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+        </select>
+      `;
+      grid.appendChild(card);
+      localforage.getItem(`img_${p.code}`).then(blob=>{
+        if(blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
+      }).catch(()=>{});
+    });
+  }
+
+  function guardarLoteCompleto(){
+    if(!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+    loteTemporal.forEach((p,i)=>{
+      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
+      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
+      p.description = document.getElementById(`loteDescription${i}`).value.trim();
+      p.category = document.getElementById(`loteCategory${i}`).value;
+    });
+    inventory = inventory.concat(loteTemporal);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    alert('Lote guardado ✅');
+    loteTemporal = [];
+    document.getElementById('editLoteBubble').style.display = 'none';
+    renderTable(); calculateTotal();
+  }
+
+  function generarBarcode(value) {
+    if (!value || value.trim() === '') {
+      barcodeCanvas.style.display = 'none';
+      return;
+    }
+    barcodeCanvas.style.display = 'block';
+    JsBarcode(barcodeCanvas, value, {
+      format: "CODE128",
+      lineColor: "#000",
+      width: 2,
+      height: 60,
+      displayValue: true,
+      fontSize: 14,
+      margin: 5
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    renderTable(); calculateTotal();
+  });
+  </script>
 </body>
 </html>

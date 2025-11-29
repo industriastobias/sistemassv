@@ -15,6 +15,9 @@
   <title>Dashboard – TOBIAS PALACIOS</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
   <style>
     :root {
       --color-bg: #ffffff;
@@ -97,9 +100,6 @@
   <p class="subtitle">A FAMILY COMPANY</p>
 </main>
 
-<!-- LIBRERÍA ZIP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 <script>
   const CONFIG = { DB_NAME: 'menuDB', STORE_SESSION: 'userSession', DEFAULT_AVATAR: 'user2005.jpg', DEFAULT_USER: 'Usuario', REDIRECT_PAGE: 'index.html' };
   const Logger = { warn: (...args) => console.warn('[Dashboard]', ...args) };
@@ -122,45 +122,96 @@
   const NavManager = { init() { const current = location.pathname.split('/').pop(); document.querySelectorAll('.nav-link').forEach(link => { if (link.getAttribute('href') === current) { link.classList.add('active'); link.setAttribute('aria-current', 'page'); } }); } };
 
   /* ----------  EXPORTAR / IMPORTAR ZIP  ---------- */
-  async function getAllStorageData() {
-    const data = {};
-    for (let key in localStorage) { try { data[`localStorage/${key}`] = localStorage.getItem(key); } catch {} }
+  async function exportLocalForageBlobs(zipFolder) {
+    const keys = await localforage.keys();
+    for (const key of keys) {
+      if (key.startsWith('img_')) {
+        try {
+          const blob = await localforage.getItem(key);
+          if (blob) zipFolder.file(`${key}.jpg`, blob);
+        } catch (e) {
+          console.warn('No se pudo leer', key, e);
+        }
+      }
+    }
+  }
+
+  async function importLocalForageBlobs(zip) {
+    const imgFolder = zip.folder('localforage');
+    if (!imgFolder) return;
+    for (const [fileName, zipEntry] of Object.entries(imgFolder.files)) {
+      if (!zipEntry.dir && fileName.startsWith('img_')) {
+        try {
+          const blob = await zipEntry.async('blob');
+          const key = fileName.replace('.jpg', '');
+          await localforage.setItem(key, blob);
+        } catch (e) {
+          console.warn('Error al restaurar', fileName, e);
+        }
+      }
+    }
+  }
+
+  async function exportZIP() {
+    const zip = new JSZip();
+    for (let key in localStorage) {
+      try {
+        zip.file(`localStorage/${key}`, localStorage.getItem(key));
+      } catch {}
+    }
     const dbs = await window.indexedDB.databases?.() || [];
     for (const dbInfo of dbs) {
-      const db = await new Promise((res, rej) => { const req = indexedDB.open(dbInfo.name); req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
+      const db = await new Promise((res, rej) => {
+        const req = indexedDB.open(dbInfo.name);
+        req.onsuccess = () => res(req.result);
+        req.onerror = () => rej(req.error)
+      });
       const tx = db.transaction(db.objectStoreNames, 'readonly');
       for (const storeName of db.objectStoreNames) {
         const store = tx.objectStore(storeName);
         const all = await store.getAll();
-        data[`indexedDB/${dbInfo.name}/${storeName}.json`] = JSON.stringify(all);
+        zip.file(`indexedDB/${dbInfo.name}/${storeName}.json`, JSON.stringify(all));
       }
     }
-    return data;
-  }
-  async function exportZIP() {
-    const zip = new JSZip();
-    const data = await getAllStorageData();
-    for (const [path, content] of Object.entries(data)) zip.file(path, content);
+    await exportLocalForageBlobs(zip.folder('localforage'));
     const blob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup-${new Date().toISOString().split('T')[0]}.zip`; a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backup-${new Date().toISOString().split('T')[0]}.zip`;
+    a.click();
   }
+
   async function importZIP(file) {
     const zip = await JSZip.loadAsync(file);
     for (const [path, zipEntry] of Object.entries(zip.files)) {
-      if (path.startsWith('localStorage/')) { const key = path.replace('localStorage/', ''); const content = await zipEntry.async('string'); localStorage.setItem(key, content); }
+      if (path.startsWith('localStorage/')) {
+        const key = path.replace('localStorage/', '');
+        const content = await zipEntry.async('string');
+        localStorage.setItem(key, content);
+      }
       if (path.startsWith('indexedDB/')) {
         const json = await zipEntry.async('string');
-        const parts = path.split('/'); const dbName = parts[1]; const storeName = parts[2].replace('.json', ''); const data = JSON.parse(json);
-        const req = indexedDB.open(dbName, 1); req.onsuccess = () => { const db = req.result; const tx = db.transaction(storeName, 'readwrite'); const store = tx.objectStore(storeName); data.forEach(item => store.put(item)); };
+        const parts = path.split('/');
+        const dbName = parts[1];
+        const storeName = parts[2].replace('.json', '');
+        const data = JSON.parse(json);
+        const req = indexedDB.open(dbName, 1);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          data.forEach(item => store.put(item));
+        };
       }
     }
+    await importLocalForageBlobs(zip);
     alert('✅ Datos importados correctamente. Refresca las páginas para ver los cambios.');
   }
+
   document.getElementById('exportBtn').addEventListener('click', exportZIP);
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', e => { const file = e.target.files[0]; if (file) importZIP(file); });
 
-  /* ----------  INICIALIZACIÓN  ---------- */
   (function () {
     'use strict';
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { passive: true }); else init();

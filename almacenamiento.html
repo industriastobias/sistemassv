@@ -51,7 +51,8 @@
       display: none;
     }
 
-    #reader { width: 320px; margin: .6rem auto; display: none; }
+    /* ---- visor SIEMPRE visible cuando se active ---- */
+    #reader { width: 320px; margin: .6rem auto; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
     label { font-weight: 700; font-size: .9rem; }
@@ -132,9 +133,9 @@
 </head>
 
 <body>
-  <h1>Inventario</h1>
-
   <div id="notExistModal">Producto no existente</div>
+
+  <h1>Inventario</h1>
 
   <div class="container">
     <div class="top-bar">
@@ -145,6 +146,7 @@
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
+    <!-- Visor de cámara: ahora SIEMPRE visible cuando se active -->
     <div id="reader"></div>
 
     <div class="search-block">
@@ -302,10 +304,13 @@
     }
 
     function startCameraScan() {
+      // Si ya está iniciado, no hacer nada (evita duplicados)
+      if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
+
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: 300 },          // <-- más lento, caja más grande
+        { fps: 5, qrbox: 300 },          // más lento, caja más grande
         (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
           if (!found) {
@@ -316,7 +321,6 @@
           beepOK();
           document.getElementById('searchCode').value = barcode;
           filterInventory();
-          cancelScan();
         },
         (error) => { /* silenciamos errores de frame vacío */ },
         { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
@@ -326,19 +330,21 @@
                                Html5QrcodeSupportedFormats.UPC_A,
                                Html5QrcodeSupportedFormats.UPC_E ],
           useBarCodeDetectorIfSupported: true,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           showTorchButtonIfSupported: true }
       ).catch(err => console.log(err));
+
+      // Muestro el visor y el botón Cancelar
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
 
     function cancelScan() {
-      document.getElementById('reader').style.display = 'none';
-      document.getElementById('cancelScanBtn').style.display = 'none';
+      // Paro y oculto
       if (html5QrCode) {
         html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
       }
+      document.getElementById('reader').style.display = 'none';
+      document.getElementById('cancelScanBtn').style.display = 'none';
     }
 
     /* =========================================================

@@ -135,7 +135,8 @@
   <div class="container">
     <div class="top-bar">
       <div id="lowStockBox" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
-      <button class="stamp" onclick="startCameraScan()" title="Escanear código">📷 Escanear</button>
+      <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
+      <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
@@ -329,6 +330,49 @@
           .catch(() => { /* silenciamos error */ });
       }
     }
+
+    /* =========================================================
+       LECTOR USB-HID (aparato externo)
+       ========================================================= */
+    let usbReaderReady = false;
+    function initUSBReader() {
+      if (usbReaderReady) {            // ya está activo → lo desactivamos
+        window.removeEventListener('keydown', handleUSBreader);
+        usbReaderReady = false;
+        document.getElementById('usbBtn').style.background = 'var(--accent)';
+        document.getElementById('usbBtn').textContent = '🔌 Lector USB';
+        return;
+      }
+
+      // Activamos modo lector
+      window.addEventListener('keydown', handleUSBreader);
+      usbReaderReady = true;
+      document.getElementById('usbBtn').style.background = 'var(--danger)';
+      document.getElementById('usbBtn').textContent = '✅ USB Activo';
+      document.getElementById('searchCode').focus();   // listo para leer
+    }
+
+    let usbBuffer = '';               // acumula dígitos del lector
+    let usbTimer = null;              // para detectar fin de lectura
+    function handleUSBreader(e) {
+      // los HID mandan el código como si escribieran → capturamos todo
+      if (e.key === 'Enter') {        // fin de lectura
+        if (usbBuffer.trim()) {
+          document.getElementById('searchCode').value = usbBuffer.trim();
+          filterInventory();
+        }
+        usbBuffer = '';
+        clearTimeout(usbTimer);
+        return;
+      }
+      // acumulamos números y letras del código
+      if (/^[a-zA-Z0-9]$/.test(e.key)) {
+        usbBuffer += e.key;
+        clearTimeout(usbTimer);
+        usbTimer = setTimeout(() => { usbBuffer = ''; }, 150); // reset si hay pausa
+      }
+    }
+    /* ========================================================= */
 
     function loadInventory(filteredInventory = inventory) {
       const list = document.getElementById('inventoryList');

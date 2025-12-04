@@ -45,10 +45,10 @@
       padding: .3rem .6rem;
       border-radius: 6px;
       font-weight: 700;
-        font-size: .8rem;
-        min-width: 40px;
-        text-align: center;
-        display: none;
+      font-size: .8rem;
+      min-width: 40px;
+      text-align: center;
+      display: none;
     }
 
     #reader { width: 320px; margin: .6rem auto; display: none; }
@@ -128,11 +128,30 @@
         display: none;
         box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
+
+    /* --- Miniatura de foto capturada --- */
+    .photo-thumb { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-top: .5rem; }
+
+    /* --- Indicador de OCR activo --- */
+    #ocrStatus {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #10b981;
+        color: #fff;
+        padding: .4rem .8rem;
+        border-radius: 6px;
+        font-size: .75rem;
+        z-index: 9999;
+        display: none;
+    }
   </style>
 </head>
 
 <body>
   <div id="notExistModal">Producto no existente</div>
+  <div id="ocrStatus">🔍 Buscando texto en tiempo real...</div>
 
   <h1>Inventario</h1>
 
@@ -161,12 +180,12 @@
           <option value="Case audífonos">Case audífonos</option>
           <option value="Case teléfonos">Case teléfonos</option>
           <option value="Chokers">Chokers</option>
-          <option value="Collares">Collares</option>
-          <option value="General">General</option>
-          <option value="Lentes de sol">Lentes de sol</option>
-          <option value="Otros">Otros</option>
-          <option value="Pulseras">Pulseras</option>
-          <option value="Relojes">Relojes</option>
+            <option value="Collares">Collares</option>
+            <option value="General">General</option>
+            <option value="Lentes de sol">Lentes de sol</option>
+            <option value="Otros">Otros</option>
+            <option value="Pulseras">Pulseras</option>
+            <option value="Relojes">Relojes</option>
         </select>
       </div>
       <div style="position:relative;">
@@ -194,14 +213,14 @@
             <th>Nombre</th>
             <th>Código de Barras</th>
             <th>Código de Barras (img)</th>
-                <th>Precio</th>
-                <th>Desc(%)</th>
-                <th>Precio c/Desc</th>
-                <th>Descripción</th>
-                <th>Categoría</th>
-                <th>Stock</th>
-                <th>Acciones</th>
-            </tr>
+            <th>Precio</th>
+            <th>Desc(%)</th>
+            <th>Precio c/Desc</th>
+            <th>Descripción</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
         </thead>
         <tbody id="inventoryList"></tbody>
       </table>
@@ -350,13 +369,73 @@
       ).catch(err => console.log(err));
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
+      // 🔍 ACTIVAR BÚSQUEDA POR TEXTO VISUAL
+      startVisualSearch();
     }
 
     function cancelScan() {
       if (html5QrCode) { html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {}); }
       document.getElementById('reader').style.display = 'none';
       document.getElementById('cancelScanBtn').style.display = 'none';
+      stopVisualSearch();
     }
+
+    /* =========================================================
+       BÚSQUEDA VISUAL POR TEXTO (OCR EN TIEMPO REAL)
+       ========================================================= */
+    let visualInterval = null;
+    let lastText = '';
+
+    function startVisualSearch() {
+      if (!('BarcodeDetector' in window)) {
+        console.warn('BarcodeDetector no disponible. Se usará solo lectura de códigos.');
+        return;
+      }
+      const ocrStatus = document.getElementById('ocrStatus');
+      ocrStatus.style.display = 'block';
+
+      visualInterval = setInterval(async () => {
+        if (!html5QrCode) return;
+        try {
+          // Capturamos frame actual como imagen
+          const canvas = html5QrCode.getCanvas();
+          if (!canvas) return;
+          const barcodeDetector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+          const barcodes = await barcodeDetector.detect(canvas);
+          if (barcodes.length > 0) {
+            const rawValue = barcodes[0].rawValue;
+            if (rawValue !== lastText) {
+              lastText = rawValue;
+              // Buscamos en el inventario
+              const found = inventory.filter(p =>
+                p.name.toLowerCase().includes(rawValue.toLowerCase()) ||
+                p.description.toLowerCase().includes(rawValue.toLowerCase())
+              );
+              if (found.length) {
+                beepOK();
+                loadInventory(found);
+                document.getElementById('searchCode').value = rawValue;
+              } else {
+                beepError();
+                showNotExist();
+              }
+            }
+          }
+        } catch (e) {
+          // Si no detecta texto, no hacemos nada
+        }
+      }, 1000); // cada segundo
+    }
+
+    function stopVisualSearch() {
+      if (visualInterval) {
+        clearInterval(visualInterval);
+        visualInterval = null;
+        document.getElementById('ocrStatus').style.display = 'none';
+        lastText = '';
+      }
+    }
+    /* ========================================================= */
 
     let usbReaderReady = false;
     function initUSBReader() {

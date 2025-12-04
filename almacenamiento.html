@@ -102,35 +102,39 @@
     .close:hover { color: #111827; }
     #modalImage { width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 12px; margin-top: 1rem; }
     .btn-edit {
-      background: #9ca3af;
-      border: none;
-      color: #fff;
-      padding: .15rem .3rem;
-      font-size: .65rem;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: .25rem;
+        background: #9ca3af;
+        border: none;
+        color: #fff;
+        padding: .15rem .3rem;
+        font-size: .65rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: .25rem;
     }
     .btn-edit:hover { background: #6b7280; }
 
-    #searchCode {
-      position: relative;
-    }
-    #searchCode::after {
-        content: "Ctrl+B";
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 0.7rem;
-        color: #9ca3af;
-        pointer-events: none;
+    /* --- Modal flotante "Producto no existente" --- */
+    #notExistModal {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--danger);
+        color: #fff;
+        padding: .6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        z-index: 9999;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
   </style>
 </head>
 
 <body>
   <h1>Inventario</h1>
+
+  <div id="notExistModal">Producto no existente</div>
 
   <div class="container">
     <div class="top-bar">
@@ -301,27 +305,30 @@
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        barcode => {
+        { fps: 5, qrbox: 300 },          // <-- más lento, caja más grande
+        (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
           if (!found) {
             beepError();
-            showNoStock();
+            showNotExist();
             return;
           }
-          // éxito
-          const beep = new AudioContext();
-          const osc  = beep.createOscillator();
-          osc.connect(beep.destination);
-          osc.frequency.value = 880;
-          osc.start();  osc.stop(beep.currentTime + 0.08);
-
+          beepOK();
           document.getElementById('searchCode').value = barcode;
           filterInventory();
           cancelScan();
         },
-        () => {}
-      );
+        (error) => { /* silenciamos errores de frame vacío */ },
+        { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
+                               Html5QrcodeSupportedFormats.CODE_39,
+                               Html5QrcodeSupportedFormats.EAN_13,
+                               Html5QrcodeSupportedFormats.EAN_8,
+                               Html5QrcodeSupportedFormats.UPC_A,
+                               Html5QrcodeSupportedFormats.UPC_E ],
+          useBarCodeDetectorIfSupported: true,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          showTorchButtonIfSupported: true }
+      ).catch(err => console.log(err));
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
@@ -330,9 +337,7 @@
       document.getElementById('reader').style.display = 'none';
       document.getElementById('cancelScanBtn').style.display = 'none';
       if (html5QrCode) {
-        html5QrCode.stop()
-          .then(() => html5QrCode.clear())
-          .catch(() => { /* silenciamos error */ });
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
       }
     }
 
@@ -341,42 +346,33 @@
        ========================================================= */
     let usbReaderReady = false;
     function initUSBReader() {
-      if (usbReaderReady) {            // ya está activo → lo desactivamos
+      if (usbReaderReady) {
         window.removeEventListener('keydown', handleUSBreader);
         usbReaderReady = false;
         document.getElementById('usbBtn').style.background = 'var(--accent)';
         document.getElementById('usbBtn').textContent = '🔌 Lector USB';
         return;
       }
-
-      // Activamos modo lector
       window.addEventListener('keydown', handleUSBreader);
       usbReaderReady = true;
       document.getElementById('usbBtn').style.background = 'var(--danger)';
       document.getElementById('usbBtn').textContent = '✅ USB Activo';
-      document.getElementById('searchCode').focus();   // listo para leer
+      document.getElementById('searchCode').focus();
     }
 
-    let usbBuffer = '';               // acumula dígitos del lector
-    let usbTimer = null;              // para detectar fin de lectura
+    let usbBuffer = '';
+    let usbTimer = null;
     function handleUSBreader(e) {
-      // los HID mandan el código como si escribieran → capturamos todo
-      if (e.key === 'Enter') {        // fin de lectura
+      if (e.key === 'Enter') {
         if (usbBuffer.trim()) {
           const found = inventory.some(p => p.barcode.trim() === usbBuffer.trim());
           if (!found) {
             beepError();
-            showNoStock();
+            showNotExist();
             usbBuffer = '';
             return;
           }
-          // éxito
-          const beep = new AudioContext();
-          const osc  = beep.createOscillator();
-          osc.connect(beep.destination);
-          osc.frequency.value = 880;
-          osc.start();  osc.stop(beep.currentTime + 0.08);
-
+          beepOK();
           document.getElementById('searchCode').value = usbBuffer.trim();
           filterInventory();
         }
@@ -384,30 +380,31 @@
         clearTimeout(usbTimer);
         return;
       }
-      // acumulamos números y letras del código
       if (/^[a-zA-Z0-9]$/.test(e.key)) {
         usbBuffer += e.key;
         clearTimeout(usbTimer);
-        usbTimer = setTimeout(() => { usbBuffer = ''; }, 150); // reset si hay pausa
+        usbTimer = setTimeout(() => { usbBuffer = ''; }, 150);
       }
     }
     /* ========================================================= */
 
-    function beepError() {
-      const ctx = new AudioContext();
+    function beepOK() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       osc.connect(ctx.destination);
-      osc.frequency.value = 400; // tono bajo
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
+      osc.frequency.value = 880;
+      osc.start(); osc.stop(ctx.currentTime + 0.08);
     }
-
-    function showNoStock() {
-      const box = document.getElementById('noResultsMessage');
-      box.textContent = 'No existencias';
+    function beepError() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.frequency.value = 400;
+      osc.start(); osc.stop(ctx.currentTime + 0.25);
+    }
+    function showNotExist() {
+      const box = document.getElementById('notExistModal');
       box.style.display = 'block';
-      document.getElementById('resultMessage').style.display = 'none';
-      document.getElementById('searchCode').value = '';
       setTimeout(() => box.style.display = 'none', 3000);
     }
 

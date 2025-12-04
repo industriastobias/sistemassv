@@ -117,14 +117,14 @@
       position: relative;
     }
     #searchCode::after {
-      content: "Ctrl+B";
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.7rem;
-      color: #9ca3af;
-      pointer-events: none;
+        content: "Ctrl+B";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        color: #9ca3af;
+        pointer-events: none;
     }
   </style>
 </head>
@@ -303,13 +303,18 @@
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         barcode => {
-          // -------- sonido ---------
+          const found = inventory.some(p => p.barcode.trim() === barcode.trim());
+          if (!found) {
+            beepError();
+            showNoStock();
+            return;
+          }
+          // éxito
           const beep = new AudioContext();
           const osc  = beep.createOscillator();
           osc.connect(beep.destination);
-          osc.frequency.value = 880;   // tono
-          osc.start();  osc.stop(beep.currentTime + 0.08); // 80 ms
-          // -------------------------
+          osc.frequency.value = 880;
+          osc.start();  osc.stop(beep.currentTime + 0.08);
 
           document.getElementById('searchCode').value = barcode;
           filterInventory();
@@ -358,6 +363,20 @@
       // los HID mandan el código como si escribieran → capturamos todo
       if (e.key === 'Enter') {        // fin de lectura
         if (usbBuffer.trim()) {
+          const found = inventory.some(p => p.barcode.trim() === usbBuffer.trim());
+          if (!found) {
+            beepError();
+            showNoStock();
+            usbBuffer = '';
+            return;
+          }
+          // éxito
+          const beep = new AudioContext();
+          const osc  = beep.createOscillator();
+          osc.connect(beep.destination);
+          osc.frequency.value = 880;
+          osc.start();  osc.stop(beep.currentTime + 0.08);
+
           document.getElementById('searchCode').value = usbBuffer.trim();
           filterInventory();
         }
@@ -373,6 +392,24 @@
       }
     }
     /* ========================================================= */
+
+    function beepError() {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.frequency.value = 400; // tono bajo
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    }
+
+    function showNoStock() {
+      const box = document.getElementById('noResultsMessage');
+      box.textContent = 'No existencias';
+      box.style.display = 'block';
+      document.getElementById('resultMessage').style.display = 'none';
+      document.getElementById('searchCode').value = '';
+      setTimeout(() => box.style.display = 'none', 3000);
+    }
 
     function loadInventory(filteredInventory = inventory) {
       const list = document.getElementById('inventoryList');

@@ -51,8 +51,7 @@
       display: none;
     }
 
-    /* ---- visor SIEMPRE visible cuando se active ---- */
-    #reader { width: 320px; margin: .6rem auto; }
+    #reader { width: 320px; margin: .6rem auto; display: none; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
     label { font-weight: 700; font-size: .9rem; }
@@ -129,6 +128,9 @@
         display: none;
         box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
+
+    /* --- Miniatura de foto capturada --- */
+    .photo-thumb { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-top: .5rem; }
   </style>
 </head>
 
@@ -143,10 +145,10 @@
       <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
+      <button class="stamp" onclick="downloadCSV()" title="Exportar CSV">📊 Excel</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
-    <!-- Visor de cámara: ahora SIEMPRE visible cuando se active -->
     <div id="reader"></div>
 
     <div class="search-block">
@@ -222,6 +224,12 @@
       <input type="number" id="soldQuantity" min="1">
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
       <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500">
+
+      <!-- Campo para tomar foto -->
+      <label style="margin-top:1rem;display:block;">Foto del producto (opcional):</label>
+      <input type="file" accept="image/*" capture="environment" onchange="saveCurrentPhoto(this)">
+      <img id="currentPhoto" class="photo-thumb" style="display:none;">
+
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
     </div>
@@ -253,103 +261,112 @@
     let currentView = localStorage.getItem('preferredView') || 'table';
     let html5QrCode;
 
+    /* ========== 1. SONIDOS DISTINTOS ========== */
+    function audioBeep(freq, ms) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.start();
+      osc.stop(ctx.currentTime + ms / 1000);
+    }
+    function beepOK()     { audioBeep(880, 80);  }
+    function beepError()  { audioBeep(400, 250); }
+    function beepLow()    { audioBeep(600, 100); }
+
+    /* ========== 6. ÚLTIMA VENTA / ACTUALIZACIÓN ========== */
+    function updateDateTime() {
+      const now = new Date().toLocaleString('es-CL');
+      localStorage.setItem('lastUpdate', now);
+      // Muestra en la esquina superior derecha
+      const box = document.getElementById('lowStockBox');
+      box.insertAdjacentHTML('afterend', `<span id="dateBox" style="margin-left:auto;font-size:.7rem;color:#6b7280;">${now}</span>`);
+    }
+    window.addEventListener('load', () => {
+      const last = localStorage.getItem('lastUpdate');
+      if (last) document.getElementById('lowStockBox').insertAdjacentHTML('afterend', `<span id="dateBox" style="margin-left:auto;font-size:.7rem;color:#6b7280;">${last}</span>`);
+    });
+
+    /* ========== 10. NOTIFICACIÓN PUSH STOCK BAJO ========== */
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const lowList = inventory.filter(p => p.quantity <= (p.stockMin || 0));
+      if (lowList.length) {
+        new Notification('Stock bajo', { body: lowList.map(p => p.name).join(', ') });
+      }
+    } else {
+      Notification.requestPermission();
+    }
+
     function updateDash() {
       const low = inventory.filter(p => p.quantity <= (p.stockMin || 0)).length;
       const box = document.getElementById('lowStockBox');
       const lowSpan = document.getElementById('dashLow');
       lowSpan.textContent = low;
       box.style.display = low > 0 ? 'inline-block' : 'none';
+      // Beep si hay stock bajo al cargar
+      if (low > 0) beepLow();
     }
 
     async function downloadLabelsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-      const w = 45;               // ancho etiqueta (mm)
-      const h = 21;               // alto etiqueta (mm)
-      const margLeft = 12;        // margen izquierdo
-      const margTop = 10;
-      const dx = w + 3;           // separación horizontal
-      const dy = h + 3;           // separación vertical
-
+      const w = 45, h = 21, margLeft = 12, margTop = 10, dx = w + 3, dy = h + 3;
       const list = inventory.filter(p => p.quantity > 0);
-
       let col = 0, fil = 0;
       list.forEach((p, i) => {
-        if (i > 0 && i % 40 === 0) {          // 40 por hoja (10 filas × 4 columnas)
-          doc.addPage();
-          col = 0; fil = 0;
-        }
-
-        const x = margLeft + col * dx;
-        const y = margTop + fil * dy;
-
+        if (i > 0 && i % 40 === 0) { doc.addPage(); col = 0; fil = 0; }
+        const x = margLeft + col * dx, y = margTop + fil * dy;
         doc.setFontSize(8);
         doc.text(p.name.slice(0, 16), x + w / 2, y + 3, { align: 'center' });
         doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 6, { align: 'center' });
-
         const canvas = document.createElement('canvas');
-        const scale = 300 / 25.4;
-        canvas.width = w * scale;
-        canvas.height = h * scale * 0.45;
+        const scale = 300 / 25.4; canvas.width = w * scale; canvas.height = h * scale * 0.45;
         JsBarcode(canvas, p.barcode, { format: 'CODE128', width: 1.3, height: h * scale * 0.45, fontSize: 0 });
         const imgData = canvas.toDataURL('image/png');
         doc.addImage(imgData, 'PNG', x, y + 7, w, h * 0.45);
-
-        col++;
-        if (col === 4) { col = 0; fil++; }   // 4 columnas
+        col++; if (col === 4) { col = 0; fil++; }
       });
-
       doc.save('etiquetas.pdf');
     }
 
-    function startCameraScan() {
-      // Si ya está iniciado, no hacer nada (evita duplicados)
-      if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
+    function downloadCSV() {
+      const headers = 'Código,Nombre,Precio,Descuento,Precio c/Desc,Stock,Categoría,Descripción\n';
+      const rows = inventory.map(p =>
+        `${p.barcode},"${p.name}",${p.price},${p.discount},${(p.price * (1 - p.discount / 100)).toFixed(2)},${p.quantity},"${p.category}","${p.description || ''}"`
+      ).join('\n');
+      const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'inventario.csv';
+      link.click();
+    }
 
+    function startCameraScan() {
+      if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: 300 },          // más lento, caja más grande
+        { fps: 5, qrbox: 300 },
         (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
-          if (!found) {
-            beepError();
-            showNotExist();
-            return;
-          }
+          if (!found) { beepError(); showNotExist(); return; }
           beepOK();
           document.getElementById('searchCode').value = barcode;
           filterInventory();
         },
-        (error) => { /* silenciamos errores de frame vacío */ },
-        { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
-                               Html5QrcodeSupportedFormats.CODE_39,
-                               Html5QrcodeSupportedFormats.EAN_13,
-                               Html5QrcodeSupportedFormats.EAN_8,
-                               Html5QrcodeSupportedFormats.UPC_A,
-                               Html5QrcodeSupportedFormats.UPC_E ],
-          useBarCodeDetectorIfSupported: true,
-          showTorchButtonIfSupported: true }
+        (error) => { },
+        { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39, Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E ], useBarCodeDetectorIfSupported: true, showTorchButtonIfSupported: true }
       ).catch(err => console.log(err));
-
-      // Muestro el visor y el botón Cancelar
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
 
     function cancelScan() {
-      // Paro y oculto
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
-      }
+      if (html5QrCode) { html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {}); }
       document.getElementById('reader').style.display = 'none';
       document.getElementById('cancelScanBtn').style.display = 'none';
     }
 
-    /* =========================================================
-       LECTOR USB-HID (aparato externo)
-       ========================================================= */
     let usbReaderReady = false;
     function initUSBReader() {
       if (usbReaderReady) {
@@ -372,12 +389,7 @@
       if (e.key === 'Enter') {
         if (usbBuffer.trim()) {
           const found = inventory.some(p => p.barcode.trim() === usbBuffer.trim());
-          if (!found) {
-            beepError();
-            showNotExist();
-            usbBuffer = '';
-            return;
-          }
+          if (!found) { beepError(); showNotExist(); usbBuffer = ''; return; }
           beepOK();
           document.getElementById('searchCode').value = usbBuffer.trim();
           filterInventory();
@@ -392,26 +404,23 @@
         usbTimer = setTimeout(() => { usbBuffer = ''; }, 150);
       }
     }
-    /* ========================================================= */
 
-    function beepOK() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.start(); osc.stop(ctx.currentTime + 0.08);
-    }
-    function beepError() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.frequency.value = 400;
-      osc.start(); osc.stop(ctx.currentTime + 0.25);
-    }
     function showNotExist() {
       const box = document.getElementById('notExistModal');
       box.style.display = 'block';
       setTimeout(() => box.style.display = 'none', 3000);
+    }
+
+    /* ========== 4. FOTO DEL PRODUCTO ========== */
+    let currentPhotoBlob = null;
+    function saveCurrentPhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      currentPhotoBlob = file;
+      const url = URL.createObjectURL(file);
+      const img = document.getElementById('currentPhoto');
+      img.src = url;
+      img.style.display = 'block';
     }
 
     function loadInventory(filteredInventory = inventory) {
@@ -528,6 +537,8 @@
 
     function markSold(index) {
       currentSoldIndex = index;
+      currentPhotoBlob = null;
+      document.getElementById('currentPhoto').style.display = 'none';
       document.getElementById('soldModal').style.display = 'block';
     }
 
@@ -552,6 +563,7 @@
       if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
       inventory[currentPriceIndex].price = newPrice;
       localStorage.setItem('inventory', JSON.stringify(inventory));
+      updateDateTime();
       closePriceModal();
       loadInventory();
       document.getElementById('resultMessage').textContent = 'Precio actualizado';
@@ -568,10 +580,13 @@
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty };
+      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty, soldAt: new Date().toLocaleString('es-CL') };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      // Guardar foto si se tomó
+      if (currentPhotoBlob) localforage.setItem(`img_${item.code}`, currentPhotoBlob);
+      updateDateTime();
       filterInventory();
       closeSoldModal();
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';

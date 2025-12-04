@@ -113,7 +113,6 @@
     }
     .btn-edit:hover { background: #6b7280; }
 
-    /* Tooltip para Ctrl+B */
     #searchCode {
       position: relative;
     }
@@ -258,33 +257,65 @@
     async function downloadLabelsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-      const w = 30, h = 18, margLeft = 10, margTop = 10, dx = w + 2, dy = h + 2;
+
+      const w = 38;               // ancho etiqueta
+      const h = 21;               // alto etiqueta
+      const margLeft = 10;        // margen izq.
+      const margTop = 10;         // margen sup.
+      const dx = w + 4;           // separación horizontal
+      const dy = h + 3;           // separación vertical
+
       const list = inventory.filter(p => p.quantity > 0);
+
       let col = 0, fil = 0;
-      for (let i = 0; i < list.length; i++) {
-        if (i > 0 && i % 15 === 0) { doc.addPage(); col = 0; fil = 0; }
-        const x = margLeft + col * dx, y = margTop + fil * dy, p = list[i];
-        doc.setFontSize(7);
-        doc.text(p.name.slice(0, 14), x + w / 2, y + 3, { align: 'center' });
-        doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 5.5, { align: 'center' });
-        const canvas = document.createElement('canvas'), scale = 300 / 25.4;
-        canvas.width = w * scale; canvas.height = h * scale * 0.45;
-        await JsBarcode(canvas, p.barcode, { format: 'CODE128', width: 1.3, height: h * scale * 0.45, fontSize: 0 });
+      list.forEach((p, i) => {
+        if (i > 0 && i % 50 === 0) {          // 50 por hoja
+          doc.addPage();
+          col = 0; fil = 0;
+        }
+
+        const x = margLeft + col * dx;
+        const y = margTop + fil * dy;
+
+        doc.setFontSize(8);
+        doc.text(p.name.slice(0, 18), x + w / 2, y + 3, { align: 'center' });
+        doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 6, { align: 'center' });
+
+        const canvas = document.createElement('canvas');
+        const scale = 300 / 25.4;
+        canvas.width = w * scale;
+        canvas.height = h * scale * 0.5;
+        JsBarcode(canvas, p.barcode, { format: 'CODE128', width: 1.5, height: h * scale * 0.5, fontSize: 0 });
         const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', x, y + 6.5, w, h * 0.45);
-        col++; if (col === 5) { col = 0; fil++; }
-      }
+        doc.addImage(imgData, 'PNG', x, y + 7, w, h * 0.5);
+
+        col++;
+        if (col === 5) { col = 0; fil++; }   // 5 columnas
+      });
+
       doc.save('etiquetas.pdf');
     }
 
     function startCameraScan() {
       html5QrCode = new Html5Qrcode("reader");
-      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
         barcode => {
+          // -------- sonido ---------
+          const beep = new AudioContext();
+          const osc  = beep.createOscillator();
+          osc.connect(beep.destination);
+          osc.frequency.value = 880;   // tono
+          osc.start();  osc.stop(beep.currentTime + 0.08); // 80 ms
+          // -------------------------
+
           document.getElementById('searchCode').value = barcode;
           filterInventory();
           cancelScan();
-        }, () => {});
+        },
+        () => {}
+      );
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
@@ -536,7 +567,6 @@
       document.getElementById('imageModal').style.display = 'none';
     }
 
-    // 🔽 MEJORA 5: Atajo Ctrl+B para enfocar búsqueda
     document.addEventListener('keydown', e => {
       if (e.ctrlKey && e.key === 'b') {
         e.preventDefault();

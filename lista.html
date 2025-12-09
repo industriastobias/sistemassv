@@ -4,13 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CONTABILIDAD A FAMILY COMPANY</title>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- SheetJS para Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
   <style>
     :root{
       --color-bg:#f4f6f8;
@@ -23,14 +18,14 @@
     }
     body{font-family:"Inter",Arial,sans-serif;background:var(--color-bg);color:var(--color-text);margin:0;padding:0}
     header{background:var(--color-primary);color:#fff;padding:1rem 2rem;text-align:center;font-size:1.5rem;font-weight:600;letter-spacing:.5px;box-shadow:var(--shadow)}
-    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd}
+    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd;flex-wrap:wrap}
     .tab{padding:1rem 1.5rem;cursor:pointer;font-weight:500;color:#666;transition:all .2s}
     .tab.active{color:var(--color-primary);border-bottom:3px solid var(--color-primary);background:#f9fafc}
     main{padding:2rem;max-width:1200px;margin:auto}
     section{display:none;animation:fadeIn .3s ease-in-out}
     section.active{display:block}
     @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-bottom:2rem}
+    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem}
     .card{background:var(--color-card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}
     .card:hover{transform:translateY(-3px)}
     .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
@@ -56,12 +51,13 @@
 </head>
 <body>
 
-<header>📊FINANZAS</header>
+<header>📊 FINANZAS</header>
 
 <nav>
   <div class="tab active" data-tab="dashboard">Dashboard</div>
   <div class="tab" data-tab="ingresos">Ingresos</div>
   <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
   <div class="tab" data-tab="proveedores">Proveedores</div>
   <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
 </nav>
@@ -72,8 +68,10 @@
     <h2>Resumen General</h2>
     <div class="dashboard">
       <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
+      <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
+      <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
       <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
-      <div class="card"><h3>Saldo Neto</h3><p id="balance">$0.00</p></div>
+      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
   </section>
@@ -91,13 +89,11 @@
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
     </form>
-
     <div class="excel-bar">
       <button id="exportIngresos">Exportar Excel</button>
       <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
       <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
     </div>
-
     <table id="tablaIngresos">
       <thead>
         <tr>
@@ -122,17 +118,42 @@
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
     </form>
-
     <div class="excel-bar">
       <button id="exportGastos">Exportar Excel</button>
       <label for="importGastos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
       <input type="file" id="importGastos" accept=".xlsx,.xls" style="display:none">
     </div>
-
     <table id="tablaGastos">
       <thead>
         <tr>
           <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- GASTOS DESDE INGRESOS -->
+  <section id="gastosDesdeIngresos">
+    <h2>Gastos desde Ingresos</h2>
+    <form id="formGastosDesdeIngresos">
+      <input name="fecha" type="date" required>
+      <input name="descripcion" placeholder="Descripción" required>
+      <input name="categoria" placeholder="Categoría">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="responsable" placeholder="Responsable">
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportGastosDesdeIngresos">Exportar Excel</button>
+      <label for="importGastosDesdeIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importGastosDesdeIngresos" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <table id="tablaGastosDesdeIngresos">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -151,13 +172,11 @@
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
     </form>
-
     <div class="excel-bar">
       <button id="exportProveedores">Exportar Excel</button>
       <label for="importProveedores" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
       <input type="file" id="importProveedores" accept=".xlsx,.xls" style="display:none">
     </div>
-
     <table id="tablaProveedores">
       <thead>
         <tr>
@@ -181,13 +200,11 @@
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
     </form>
-
     <div class="excel-bar">
       <button id="exportCuentas">Exportar Excel</button>
       <label for="importCuentas" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
       <input type="file" id="importCuentas" accept=".xlsx,.xls" style="display:none">
     </div>
-
     <table id="tablaCuentas">
       <thead>
         <tr>
@@ -221,30 +238,40 @@ const data={
   proveedores:JSON.parse(localStorage.getItem('proveedores')||'[]'),
   cuentas:JSON.parse(localStorage.getItem('cuentas')||'[]')
 };
-const saveData=()=>{
+const gastosDesdeIngresos=JSON.parse(localStorage.getItem('gastosDesdeIngresos')||'[]');
+
+function saveData(){
   for(const k in data) localStorage.setItem(k,JSON.stringify(data[k]));
+  localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
   actualizarDashboard();
-};
+}
 
 /* ---------- GRÁFICO ---------- */
 const ctx=document.getElementById('chartResumen').getContext('2d');
 const chart=new Chart(ctx,{
   type:'doughnut',
-  data:{labels:['Ingresos','Gastos','Saldo Neto'],datasets:[{data:[0,0,0],backgroundColor:['#1a73e8','#e53935','#43a047'],hoverOffset:10}]},
+  data:{labels:['Ingreso Neto','Gastos','Saldo Neto'],datasets:[{data:[0,0,0],backgroundColor:['#1a73e8','#e53935','#43a047'],hoverOffset:10}]},
   options:{responsive:true,plugins:{legend:{position:'bottom'}}}
 });
+
 function actualizarDashboard(){
   const ti=data.ingresos.reduce((a,i)=>a+parseFloat(i.monto||0),0);
   const tg=data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const bal=ti-tg;
+  const gdi=gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
+  const ingresoNeto=ti-gdi;
+  const balance=ingresoNeto-tg;
+
   document.getElementById('totalIngresos').textContent='$'+ti.toFixed(2);
+  document.getElementById('totalGastosDesdeIngresos').textContent='$'+gdi.toFixed(2);
+  document.getElementById('ingresoNeto').textContent='$'+ingresoNeto.toFixed(2);
   document.getElementById('totalGastos').textContent='$'+tg.toFixed(2);
-  document.getElementById('balance').textContent='$'+bal.toFixed(2);
-  chart.data.datasets[0].data=[ti,tg,Math.abs(bal)];
+  document.getElementById('balance').textContent='$'+balance.toFixed(2);
+
+  chart.data.datasets[0].data=[ingresoNeto,tg,Math.abs(balance)];
   chart.update();
 }
 
-/* ---------- RENDER TABLAS ---------- */
+/* ---------- RENDER TABLA ---------- */
 function renderTable(id,arr,keys,keyName){
   const tbody=document.querySelector(`#${id} tbody`);
   tbody.innerHTML=arr.map((it,i)=>`
@@ -255,7 +282,6 @@ function renderTable(id,arr,keys,keyName){
         <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
       </td>
     </tr>`).join('');
-  actualizarDashboard();
 }
 
 /* ---------- FORMULARIOS ---------- */
@@ -280,32 +306,73 @@ forms.forEach(f=>{
   renderTable(f.table,data[f.key],f.fields,f.key);
 });
 
+/* ---------- GASTOS DESDE INGRESOS ---------- */
+const formGDI=document.getElementById('formGastosDesdeIngresos');
+formGDI.addEventListener('submit',e=>{
+  e.preventDefault();
+  const item={
+    fecha:formGDI.fecha.value,
+    descripcion:formGDI.descripcion.value,
+    categoria:formGDI.categoria.value,
+    monto:parseFloat(formGDI.monto.value),
+    responsable:formGDI.responsable.value,
+    observaciones:formGDI.observaciones.value
+  };
+  gastosDesdeIngresos.push(item);
+  saveData();
+  renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
+  formGDI.reset();
+});
+renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
+
 /* ---------- EDITAR / ELIMINAR ---------- */
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('eliminar')){
     const {key,index}=e.target.dataset;
     if(confirm('¿Eliminar este registro?')){
-      data[key].splice(index,1);
-      saveData();
-      const f=forms.find(x=>x.key===key);
-      renderTable(f.table,data[key],f.fields,key);
+      if(key==='gastosDesdeIngresos'){
+        gastosDesdeIngresos.splice(index,1);
+        localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
+        renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
+      }else{
+        data[key].splice(index,1);
+        saveData();
+        const f=forms.find(x=>x.key===key);
+        renderTable(f.table,data[key],f.fields,key);
+      }
+      actualizarDashboard();
     }
   }
   if(e.target.classList.contains('editar')){
     const {key,index}=e.target.dataset;
-    const f=forms.find(x=>x.key===key);
-    const form=document.getElementById(f.id);
-    const item=data[key][index];
-    f.fields.forEach(k=>form[k].value=item[k]||'');
-    data[key].splice(index,1);
-    saveData();
-    renderTable(f.table,data[key],f.fields,key);
+    if(key==='gastosDesdeIngresos'){
+      const item=gastosDesdeIngresos[index];
+      formGDI.fecha.value=item.fecha;
+      formGDI.descripcion.value=item.descripcion;
+      formGDI.categoria.value=item.categoria;
+      formGDI.monto.value=item.monto;
+      formGDI.responsable.value=item.responsable;
+      formGDI.observaciones.value=item.observaciones;
+      gastosDesdeIngresos.splice(index,1);
+      saveData();
+      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
+    }else{
+      const f=forms.find(x=>x.key===key);
+      const form=document.getElementById(f.id);
+      const item=data[key][index];
+      f.fields.forEach(k=>form[k].value=item[k]||'');
+      data[key].splice(index,1);
+      saveData();
+      renderTable(f.table,data[key],f.fields,key);
+    }
+    actualizarDashboard();
   }
 });
 
 /* ---------- EXCEL ---------- */
 function exportExcel(key,filename){
-  const ws=XLSX.utils.json_to_sheet(data[key]);
+  let source=key==='gastosDesdeIngresos'?gastosDesdeIngresos:data[key];
+  const ws=XLSX.utils.json_to_sheet(source);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,key);
   XLSX.writeFile(wb,filename);
@@ -319,11 +386,16 @@ function importExcel(file,key,fields){
     rows.forEach(r=>{
       const item={};
       fields.forEach(f=>item[f]=r[f]||'');
-      data[key].push(item);
+      if(key==='gastosDesdeIngresos') gastosDesdeIngresos.push(item);
+      else data[key].push(item);
     });
     saveData();
-    const f=forms.find(x=>x.key===key);
-    renderTable(f.table,data[key],fields,key);
+    if(key==='gastosDesdeIngresos'){
+      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,fields,key);
+    }else{
+      const f=forms.find(x=>x.key===key);
+      renderTable(f.table,data[key],fields,key);
+    }
   };
   reader.readAsBinaryString(file);
 }
@@ -331,14 +403,16 @@ function importExcel(file,key,fields){
 /* botones exportar */
 document.getElementById('exportIngresos').onclick=()=>exportExcel('ingresos','ingresos.xlsx');
 document.getElementById('exportGastos').onclick=()=>exportExcel('gastos','gastos.xlsx');
+document.getElementById('exportGastosDesdeIngresos').onclick=()=>exportExcel('gastosDesdeIngresos','gastos_desde_ingresos.xlsx');
 document.getElementById('exportProveedores').onclick=()=>exportExcel('proveedores','proveedores.xlsx');
 document.getElementById('exportCuentas').onclick=()=>exportExcel('cuentas','cuentas.xlsx');
 
 /* inputs importar */
-document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',forms[0].fields);this.value='';}
-document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',forms[1].fields);this.value='';}
-document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',forms[2].fields);this.value='';}
-document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',forms[3].fields);this.value='';}
+document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);this.value='';}
+document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']);this.value='';}
+document.getElementById('importGastosDesdeIngresos').onchange=function(e){importExcel(e.target.files[0],'gastosDesdeIngresos',['fecha','descripcion','categoria','monto','responsable','observaciones']);this.value='';}
+document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
+document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
 
 actualizarDashboard();
 </script>

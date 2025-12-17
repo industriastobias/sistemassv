@@ -1,11 +1,12 @@
+lista
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
       --color-bg:#f4f6f8;
@@ -47,10 +48,6 @@
     .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
     .excel-bar button{background:#388e3c}
     .excel-bar button:hover{background:#2e7d32}
-
-    /* miniaturas de productos vendidos */
-    #ingresosImgGrid{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
-    #ingresosImgGrid img{height:64px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.1);cursor:pointer;object-fit:contain}
   </style>
 </head>
 <body>
@@ -78,10 +75,6 @@
       <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
-
-    <!-- Miniaturas de productos vendidos -->
-    <h3 style="margin-top:2rem">Productos vendidos (imágenes)</h3>
-    <div id="ingresosImgGrid"></div>
   </section>
 
   <!-- INGRESOS -->
@@ -236,7 +229,6 @@ tabs.forEach(btn=>{
     const id=btn.dataset.tab;
     sections.forEach(s=>s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    if(id==='dashboard'){mostrarImagenesVentas();}
   });
 });
 
@@ -276,37 +268,6 @@ function actualizarDashboard(){
   document.getElementById('totalGastos').textContent='$'+tg.toFixed(2);
   document.getElementById('balance').textContent='$'+balance.toFixed(2);
 
-  chart.data.datasets[0].data=[ingresoNeto,tg,Math.abs(balance)];
-  chart.update();
-}
-
-/* ---------- MOSTRAR IMÁGENES DE VENTAS ---------- */
-async function mostrarImagenesVentas(){
-  const soldInventory=JSON.parse(localStorage.getItem('soldInventory')||'[]');
-  const grid=document.getElementById('ingresosImgGrid');
-  grid.innerHTML='';
-  for(const item of soldInventory){
-    const blob=await localforage.getItem(`img_${item.code}`);
-    if(blob){
-      const img=document.createElement('img');
-      img.src=URL.createObjectURL(blob);
-      img.title=`${item.name}  ($${Number(item.total).toFixed(2)})`;
-      img.onclick=()=>window.open(img.src,'_blank');
-      grid.appendChild(img);
-    }
-  }
-}
-
-/* ---------- LECTURA AUTOMÁTICA DEL TOTAL DE VENTAS ---------- */
-function leerTotalVentas(){
-  const totalVentas=parseFloat(localStorage.getItem('totalVentas')||'0');
-  document.getElementById('totalIngresos').textContent='$'+totalVentas.toFixed(2);
-  /* actualizamos también el gráfico */
-  const ti=totalVentas;
-  const gdi=gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const ingresoNeto=ti-gdi;
-  const tg=data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const balance=ingresoNeto-tg;
   chart.data.datasets[0].data=[ingresoNeto,tg,Math.abs(balance)];
   chart.update();
 }
@@ -454,9 +415,6 @@ document.getElementById('importGastosDesdeIngresos').onchange=function(e){import
 document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
 document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
 
-/* ---------- ARRANQUE ---------- */
-leerTotalVentas();
-mostrarImagenesVentas();
 actualizarDashboard();
 </script>
 </body>

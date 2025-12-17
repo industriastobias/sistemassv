@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
       --color-bg:#f4f6f8;
@@ -76,19 +76,9 @@
     <canvas id="chartResumen"></canvas>
   </section>
 
-  <!-- INGRESOS -->
+  <!-- INGRESOS (solo lectura) -->
   <section id="ingresos">
     <h2>Ingresos</h2>
-    <form id="formIngreso">
-      <input name="fecha" type="date" required>
-      <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
     <div class="excel-bar">
       <button id="exportIngresos">Exportar Excel</button>
       <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
@@ -104,7 +94,7 @@
     </table>
   </section>
 
-  <!-- GASTOS -->
+  <!-- GASTOS (manual) -->
   <section id="gastos">
     <h2>Gastos</h2>
     <form id="formGasto">
@@ -133,7 +123,7 @@
     </table>
   </section>
 
-  <!-- GASTOS DESDE INGRESOS -->
+  <!-- GASTOS DESDE INGRESOS (manual) -->
   <section id="gastosDesdeIngresos">
     <h2>Gastos desde Ingresos</h2>
     <form id="formGastosDesdeIngresos">
@@ -160,7 +150,7 @@
     </table>
   </section>
 
-  <!-- PROVEEDORES -->
+  <!-- PROVEEDORES (manual) -->
   <section id="proveedores">
     <h2>Proveedores</h2>
     <form id="formProveedor">
@@ -187,7 +177,7 @@
     </table>
   </section>
 
-  <!-- CUENTAS -->
+  <!-- CUENTAS (manual) -->
   <section id="cuentas">
     <h2>Cuentas Pendientes</h2>
     <form id="formCuenta">
@@ -255,22 +245,19 @@ const chart=new Chart(ctx,{
 });
 
 function actualizarDashboard(){
-  const ti=data.ingresos.reduce((a,i)=>a+parseFloat(i.monto||0),0);
-  const tg=data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const gdi=gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const ingresoNeto=ti-gdi;
-  const balance=ingresoNeto-tg;
+  const ti = parseFloat(localStorage.getItem('totalVendido') || '0');
+  const tg = data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
+  const gdi = gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
+  const ingresoNeto = ti - gdi;
+  const balance = ingresoNeto - tg;
 
-  /* ---------- SINCRONIZAR TOTAL VENDIDO ---------- */
-  const vendido=parseFloat(localStorage.getItem('totalVendido')||'0');
-  document.getElementById('totalIngresos').textContent='$'+vendido.toFixed(2);
+  document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
+  document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
+  document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
+  document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2);
+  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
 
-  document.getElementById('totalGastosDesdeIngresos').textContent='$'+gdi.toFixed(2);
-  document.getElementById('ingresoNeto').textContent='$'+ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent='$'+tg.toFixed(2);
-  document.getElementById('balance').textContent='$'+balance.toFixed(2);
-
-  chart.data.datasets[0].data=[ingresoNeto,tg,Math.abs(balance)];
+  chart.data.datasets[0].data = [ingresoNeto, tg, Math.abs(balance)];
   chart.update();
 }
 
@@ -287,9 +274,8 @@ function renderTable(id,arr,keys,keyName){
     </tr>`).join('');
 }
 
-/* ---------- FORMULARIOS ---------- */
+/* ---------- FORMULARIOS (solo gastos, proveedores, cuentas) ---------- */
 const forms=[
-  {id:'formIngreso',key:'ingresos',table:'tablaIngresos',fields:['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']},
   {id:'formGasto',key:'gastos',table:'tablaGastos',fields:['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']},
   {id:'formProveedor',key:'proveedores',table:'tablaProveedores',fields:['nombre','nit','telefono','email','direccion','observaciones']},
   {id:'formCuenta',key:'cuentas',table:'tablaCuentas',fields:['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']}
@@ -309,7 +295,7 @@ forms.forEach(f=>{
   renderTable(f.table,data[f.key],f.fields,f.key);
 });
 
-/* ---------- GASTOS DESDE INGRESOS ---------- */
+/* ---------- GASTOS DESDE INGRESOS (manual) ---------- */
 const formGDI=document.getElementById('formGastosDesdeIngresos');
 formGDI.addEventListener('submit',e=>{
   e.preventDefault();
@@ -417,6 +403,12 @@ document.getElementById('importGastosDesdeIngresos').onchange=function(e){import
 document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
 document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
 
+/* ---------- CARGAR INGRESOS AUTOMÁTICOS ---------- */
+function cargarIngresosAutom(){
+  const ingresos=JSON.parse(localStorage.getItem('ingresos')||'[]');
+  renderTable('tablaIngresos',ingresos,['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'],'ingresos');
+}
+cargarIngresosAutom();
 actualizarDashboard();
 </script>
 </body>

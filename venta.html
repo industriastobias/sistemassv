@@ -1,104 +1,114 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Total de Ventas</title>
+  <title>Compra - KLOHESV</title>
   <style>
-    html{animation:fadeIn .4s ease-in-out}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    :root{--bg:#fafafa;--card:#fff;--text:#000;--accent:#2563eb;--danger:#dc2626;--radius:12px;--shadow:0 4px 16px rgba(0,0,0,.06)}
-    [data-theme="dark"]{--bg:#121212;--card:#1e1e1e;--text:#fff;--accent:#3b82f6;--danger:#ef4444}
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
-    body{background:var(--bg);color:var(--text);padding:40px}
-    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
-    .header h1{font-size:2rem;font-weight:700}
-    .total-box{background:var(--card);padding:12px 20px;border-radius:var(--radius);box-shadow:var(--shadow);font-size:1.1rem;font-weight:600}
-    .theme-toggle{cursor:pointer;font-size:1.4rem;padding:8px;border-radius:50%;transition:.2s}
-    .theme-toggle:hover{background:#00000011}
-    .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
-    .controls input,.controls select,.controls button{padding:10px 14px;border:none;border-radius:var(--radius);background:var(--card);color:var(--text);box-shadow:var(--shadow);font-size:.875rem}
-    .controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
-    .controls button:hover{opacity:.9}
-    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
-    .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:.3s}
-    .card:hover{transform:translateY(-4px)}
-    .card img{width:100%;height:auto;border-radius:8px}
-    .card-header{display:flex;justify-content:space-between;align-items:center}
-    .card-title{font-size:1.1rem;font-weight:600}
-    .card-code{font-size:.75rem;color:var(--text)}
-    .card-price{font-size:1.5rem;font-weight:700;color:var(--accent)}
-    .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
-    .card-delete{background:var(--danger);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer}
+    :root{--bg:#fafafa;--card:#fff;--text:#000;--accent:#2563eb;--radius:12px;--shadow:0 4px 12px rgba(0,0,0,.08)}
+    [data-theme="dark"]{--bg:#121212;--card:#1e1e1e;--text:#fff;--accent:#3b82f6}
+    body{margin:0;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);padding:40px}
+    h1{margin-bottom:20px}
+    .catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
+    .product{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;text-align:center}
+    .product img{width:100%;height:150px;object-fit:cover;border-radius:8px}
+    .product h3{margin:10px 0 6px;font-size:1rem}
+    .product p{margin:4px 0;font-size:.9rem}
+    .product button{margin-top:10px;padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
+    .cart{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;padding:12px 20px;border-radius:30px;box-shadow:var(--shadow);cursor:pointer;font-weight:600}
   </style>
 </head>
 <body>
 
-  <header class="header">
-    <h1>Total de Ventas</h1>
-    <div class="total-box" id="totalUSD">Total vendido: $0.00 USD</div>
-    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
-  </header>
+  <h1>Catálogo de Productos</h1>
 
-  <div class="controls">
-    <input type="text" id="filterName" placeholder="Filtrar por nombre">
-    <input type="text" id="filterCode" placeholder="Filtrar por código">
-    <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="10">10</option>
-      <option value="25">25</option>
-      <option value="50">50</option>
-    </select>
-    <button onclick="location.href='menu.html'">← Regresar</button>
-  </div>
+  <div class="catalog" id="catalog"></div>
 
-  <section class="cards-grid" id="soldInventoryList"></section>
+  <div class="cart" onclick="verCarrito()">🛒 Ver carrito (<span id="cartCount">0</span>)</div>
 
   <script>
-    let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+    const productos = [
+      {
+        codigo: "K001",
+        nombre: "Camiseta KLOHESV Negra",
+        precio: 15.00,
+        imagen: "https://via.placeholder.com/300x200?text=Camiseta+Negra"
+      },
+      {
+        codigo: "K002",
+        nombre: "Camiseta KLOHESV Blanca",
+        precio: 15.00,
+        imagen: "https://via.placeholder.com/300x200?text=Camiseta+Blanca"
+      },
+      {
+        codigo: "K003",
+        nombre: "Sudadera KLOHESV Gris",
+        precio: 25.00,
+        imagen: "https://via.placeholder.com/300x200?text=Sudadera+Gris"
+      }
+    ];
 
-    function loadSoldInventory() {
-      const nameFilter = document.getElementById('filterName').value.toLowerCase();
-      const codeFilter = document.getElementById('filterCode').value.toLowerCase();
-      const filtered = soldInventory.filter(item =>
-        item.name.toLowerCase().includes(nameFilter) &&
-        item.code.toLowerCase().includes(codeFilter)
-      ).reverse();
+    let carrito = [];
 
-      const total = filtered.reduce((sum, item) => sum + Number(item.total), 0);
-      document.getElementById('totalUSD').textContent = `Total vendido: $${total.toFixed(2)} USD`;
-
-      const container = document.getElementById('soldInventoryList');
-      container.innerHTML = filtered.map(item => `
-        <div class="card">
-          <img src="${item.image || 'https://via.placeholder.com/260x150?text=Sin+Imagen'}" alt="${item.name}">
-          <div class="card-header">
-            <div class="card-title">${item.name}</div>
-            <div class="card-code">${item.code}</div>
-          </div>
-          <div class="card-price">$${Number(item.price).toFixed(2)}</div>
-          <div>Cantidad vendida: ${item.quantity}</div>
-          <div class="card-footer">
-            <div><strong>Total: $${Number(item.total).toFixed(2)}</strong></div>
-            <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
-          </div>
+    function renderCatalogo() {
+      const catalogo = document.getElementById('catalog');
+      catalogo.innerHTML = productos.map(p => `
+        <div class="product">
+          <img src="${p.imagen}" alt="${p.nombre}">
+          <h3>${p.nombre}</h3>
+          <p><strong>$${p.precio.toFixed(2)} USD</strong></p>
+          <p>Código: ${p.codigo}</p>
+          <button onclick="agregarAlCarrito('${p.codigo}')">Agregar</button>
         </div>
       `).join('');
     }
 
-    function deleteSoldItem(code) {
-      soldInventory = soldInventory.filter(item => item.code !== code);
+    function agregarAlCarrito(codigo) {
+      const producto = productos.find(p => p.codigo === codigo);
+      const existente = carrito.find(c => c.codigo === codigo);
+      if (existente) {
+        existente.cantidad += 1;
+      } else {
+        carrito.push({ ...producto, cantidad: 1 });
+      }
+      actualizarContador();
+    }
+
+    function actualizarContador() {
+      const total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+      document.getElementById('cartCount').textContent = total;
+    }
+
+    function verCarrito() {
+      if (carrito.length === 0) {
+        alert("El carrito está vacío.");
+        return;
+      }
+
+      const confirmado = confirm(`¿Finalizar compra?\n\n${carrito.map(c => `${c.nombre} x${c.cantidad}`).join('\n')}`);
+      if (!confirmado) return;
+
+      // Guardar en localStorage con imagen
+      let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+      carrito.forEach(c => {
+        soldInventory.push({
+          name: c.nombre,
+          code: c.codigo,
+          price: c.precio,
+          quantity: c.cantidad,
+          total: c.precio * c.cantidad,
+          image: c.imagen
+        });
+      });
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-      loadSoldInventory();
+
+      // Vaciar carrito y redirigir
+      carrito = [];
+      actualizarContador();
+      location.href = 'total.html';
     }
 
-    function toggleTheme() {
-      const html = document.documentElement;
-      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-    }
-
-    document.getElementById('filterName').addEventListener('input', loadSoldInventory);
-    document.getElementById('filterCode').addEventListener('input', loadSoldInventory);
-
-    window.addEventListener('DOMContentLoaded', loadSoldInventory);
+    window.addEventListener('DOMContentLoaded', renderCatalogo);
   </script>
 </body>
 </html>

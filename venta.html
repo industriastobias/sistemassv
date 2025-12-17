@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Compra - KLOHESV</title>
+  <title>Almacén - KLOHESV</title>
   <style>
     :root{--bg:#fafafa;--card:#fff;--text:#000;--accent:#2563eb;--radius:12px;--shadow:0 4px 12px rgba(0,0,0,.08)}
     [data-theme="dark"]{--bg:#121212;--card:#1e1e1e;--text:#fff;--accent:#3b82f6}
@@ -15,16 +15,13 @@
     .product h3{margin:10px 0 6px;font-size:1rem}
     .product p{margin:4px 0;font-size:.9rem}
     .product button{margin-top:10px;padding:8px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer}
-    .cart{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;padding:12px 20px;border-radius:30px;box-shadow:var(--shadow);cursor:pointer;font-weight:600}
   </style>
 </head>
 <body>
 
-  <h1>Catálogo de Productos</h1>
+  <h1>Almacén - Marcar como Vendido</h1>
 
   <div class="catalog" id="catalog"></div>
-
-  <div class="cart" onclick="verCarrito()">🛒 Ver carrito (<span id="cartCount">0</span>)</div>
 
   <script>
     const productos = [
@@ -48,8 +45,6 @@
       }
     ];
 
-    let carrito = [];
-
     function renderCatalogo() {
       const catalogo = document.getElementById('catalog');
       catalogo.innerHTML = productos.map(p => `
@@ -58,54 +53,30 @@
           <h3>${p.nombre}</h3>
           <p><strong>$${p.precio.toFixed(2)} USD</strong></p>
           <p>Código: ${p.codigo}</p>
-          <button onclick="agregarAlCarrito('${p.codigo}')">Agregar</button>
+          <button onclick="marcarVendido('${p.codigo}')">Marcar como Vendido</button>
         </div>
       `).join('');
     }
 
-    function agregarAlCarrito(codigo) {
+    function marcarVendido(codigo) {
       const producto = productos.find(p => p.codigo === codigo);
-      const existente = carrito.find(c => c.codigo === codigo);
-      if (existente) {
-        existente.cantidad += 1;
-      } else {
-        carrito.push({ ...producto, cantidad: 1 });
-      }
-      actualizarContador();
-    }
+      const cantidad = prompt(`¿Cuántas unidades de "${producto.nombre}" se vendieron?`, "1");
+      if (!cantidad || isNaN(cantidad) || parseInt(cantidad) <= 0) return;
 
-    function actualizarContador() {
-      const total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-      document.getElementById('cartCount').textContent = total;
-    }
+      const venta = {
+        name: producto.nombre,
+        code: producto.codigo,
+        price: producto.precio,
+        quantity: parseInt(cantidad),
+        total: producto.precio * parseInt(cantidad),
+        image: producto.imagen
+      };
 
-    function verCarrito() {
-      if (carrito.length === 0) {
-        alert("El carrito está vacío.");
-        return;
-      }
-
-      const confirmado = confirm(`¿Finalizar compra?\n\n${carrito.map(c => `${c.nombre} x${c.cantidad}`).join('\n')}`);
-      if (!confirmado) return;
-
-      // Guardar en localStorage con imagen
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
-      carrito.forEach(c => {
-        soldInventory.push({
-          name: c.nombre,
-          code: c.codigo,
-          price: c.precio,
-          quantity: c.cantidad,
-          total: c.precio * c.cantidad,
-          image: c.imagen
-        });
-      });
+      soldInventory.push(venta);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
 
-      // Vaciar carrito y redirigir
-      carrito = [];
-      actualizarContador();
-      location.href = 'total.html';
+      alert(`✅ Venta registrada: ${producto.nombre} x${cantidad}`);
     }
 
     window.addEventListener('DOMContentLoaded', renderCatalogo);

@@ -434,7 +434,7 @@
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
     const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
 
-    /* ---------- LÍNEA NUEVA ---------- */
+    /* ---------- SINCRONIZAR TOTAL VENDIDO ---------- */
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
     document.getElementById('totalQty').textContent  = totalUnits;
@@ -517,6 +517,24 @@
       card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
+
+    /* ---------- AUTO-INGRESO POR CADA VENTA ---------- */
+    let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+    filtered.forEach(item => {
+      const yaEsta = ingresos.some(r => r.fecha === item.date && r.descripcion === `Venta ${item.name}`);
+      if (!yaEsta) {
+        ingresos.push({
+          fecha: item.date,
+          descripcion: `Venta ${item.name}`,
+          categoria: 'Ventas',
+          monto: parseFloat(item.total).toFixed(2),
+          metodo_pago: 'Efectivo',
+          responsable: 'Sistema',
+          observaciones: `Código ${item.code} – ${item.quantity} unidad(es)`
+        });
+      }
+    });
+    localStorage.setItem('ingresos', JSON.stringify(ingresos));
   }
 
   window.deleteSoldItem = function (code) {

@@ -518,14 +518,17 @@
       container.appendChild(card);
     }
 
-    /* ---------- AUTO-INGRESO POR CADA VENTA ---------- */
+    /* ---------- AUTO-INGRESO POR CADA VENTA (fecha de hoy y ordenado) ---------- */
     let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+    const hoy = new Date().toISOString().slice(0, 10);          // yyyy-mm-dd
     filtered.forEach(item => {
-      const yaEsta = ingresos.some(r => r.fecha === item.date && r.descripcion === `Venta ${item.name}`);
+      const descripcion = `Venta ${item.name}`;
+      // evitamos duplicados por fecha+descripción
+      const yaEsta = ingresos.some(r => r.fecha === hoy && r.descripcion === descripcion);
       if (!yaEsta) {
-        ingresos.push({
-          fecha: item.date,
-          descripcion: `Venta ${item.name}`,
+        ingresos.unshift({               // unshift = insertar al principio (más nuevo arriba)
+          fecha: hoy,
+          descripcion: descripcion,
           categoria: 'Ventas',
           monto: parseFloat(item.total).toFixed(2),
           metodo_pago: 'Efectivo',

@@ -2,28 +2,34 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Lista de Ingresos</title>
+  <title>Ingresos - Lista Completa</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    body{font-family:Arial,sans-serif;margin:2rem}
-    table{width:100%;border-collapse:collapse;margin-top:1rem}
-    th,td{padding:8px;border:1px solid #ccc;text-align:left}
-    th{background:#f5f5f5}
+    body{font-family:"Inter",Arial,sans-serif;margin:0;padding:2rem;background:#f4f6f8}
+    h2{margin-top:0}
+    .excel-bar{display:flex;gap:.5rem;margin-bottom:1rem}
+    button{background:#1a73e8;color:#fff;border:none;border-radius:6px;padding:10px 16px;cursor:pointer}
+    button:hover{background:#0d47a1}
+    table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.9rem}
+    th{background:#f8f9fa;color:#555;font-weight:600}
   </style>
 </head>
 <body>
 
-  <h2>Ingresos registrados desde venta.html</h2>
+  <h2>Ingresos desde venta.html</h2>
+
+  <div class="excel-bar">
+    <button id="exportIngresos">Exportar Excel</button>
+    <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:6px;cursor:pointer">Importar Excel</label>
+    <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
+    <button onclick="location.href='venta.html'">➕ Nueva Venta</button>
+  </div>
 
   <table id="tablaIngresos">
     <thead>
       <tr>
-        <th>Fecha</th>
-        <th>Descripción</th>
-        <th>Categoría</th>
-        <th>Monto</th>
-        <th>Método Pago</th>
-        <th>Responsable</th>
-        <th>Observaciones</th>
+        <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -45,6 +51,32 @@
         </tr>
       `).join('');
     }
+
+    /* ---------- EXCEL ---------- */
+    document.getElementById('exportIngresos').onclick = () => {
+      const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+      const ws = XLSX.utils.json_to_sheet(ingresos);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
+      XLSX.writeFile(wb, 'ingresos_desde_venta.xlsx');
+    };
+
+    document.getElementById('importIngresos').onchange = function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+        rows.forEach(r => ingresos.push(r));
+        localStorage.setItem('ingresos', JSON.stringify(ingresos));
+        cargarIngresos();
+      };
+      reader.readAsBinaryString(file);
+      this.value = '';
+    };
 
     // Cargar al entrar
     cargarIngresos();

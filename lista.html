@@ -3,421 +3,704 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <title>Ventas Realizadas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    :root{
-      --color-bg:#f4f6f8;
-      --color-primary:#1a73e8;
-      --color-secondary:#0d47a1;
-      --color-text:#2c3e50;
-      --color-card:#ffffff;
-      --radius:12px;
-      --shadow:0 3px 10px rgba(0,0,0,.05);
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    :root {
+      --bg: #fafafa;
+      --card: #fff;
+      --text: #000;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --radius: 12px;
+      --shadow: 0 4px 16px rgba(0,0,0,.06);
     }
-    body{font-family:"Inter",Arial,sans-serif;background:var(--color-bg);color:var(--color-text);margin:0;padding:0}
-    header{background:var(--color-primary);color:#fff;padding:1rem 2rem;text-align:center;font-size:1.5rem;font-weight:600;letter-spacing:.5px;box-shadow:var(--shadow)}
-    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd;flex-wrap:wrap}
-    .tab{padding:1rem 1.5rem;cursor:pointer;font-weight:500;color:#666;transition:all .2s}
-    .tab.active{color:var(--color-primary);border-bottom:3px solid var(--color-primary);background:#f9fafc}
-    main{padding:2rem;max-width:1200px;margin:auto}
-    section{display:none;animation:fadeIn .3s ease-in-out}
-    section.active{display:block}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem}
-    .card{background:var(--color-card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}
-    .card:hover{transform:translateY(-3px)}
-    .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
-    .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
-    canvas{display:block;margin:2rem auto;max-width:350px}
-    form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
-    input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
-    textarea{resize:vertical;min-height:60px}
-    button{background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-weight:500;transition:background .2s}
-    button:hover{background:var(--color-secondary)}
-    table{width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.9rem}
-    th{background:#f8f9fa;color:#555;font-weight:600}
-    tr:hover td{background:#f3f6fa}
-    .acciones button{background:none;border:none;cursor:pointer;font-size:1rem;margin:0 5px}
-    .acciones .editar{color:#1a73e8}
-    .acciones .eliminar{color:#e53935}
-    footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
-    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
-    .excel-bar button{background:#388e3c}
-    .excel-bar button:hover{background:#2e7d32}
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --text: #fff;
+      --accent: #3b82f6;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      body { padding: 0; }
+      .container {
+        max-width: 100%;
+        border-radius: 0;
+        padding: 20px;
+        min-height: 100vh;
+        box-shadow: none;
+      }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 2rem; font-weight: 700; }
+    .theme-toggle {
+      cursor: pointer;
+      font-size: 1.4rem;
+      padding: 8px;
+      border-radius: 50%;
+      transition: .2s;
+    }
+    .theme-toggle:hover { background: #00000011; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .controls input,
+    .controls select,
+    .controls button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font-size: .875rem;
+    }
+    .controls button {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .controls button:hover { opacity: .9; }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: .3s;
+      position: relative;
+      min-height: 320px;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title { font-size: 1.1rem; font-weight: 600; }
+    .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+    .card-delete {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: .75rem;
+      cursor: pointer;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .pagination button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .pagination button:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    .fab-totals {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fab-totals:hover { transform: scale(1.1); }
+    #totalesModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .totales-card {
+      position: relative;
+      width: 90vw;
+      max-width: 320px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #facturaModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 998;
+    }
+    .factura-card {
+      width: 90vw;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    .ticket-preview {
+      background: #fff;
+      color: #000;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.3;
+      padding: 8px 6px;
+      border: 1px dashed #999;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    .ticket-preview .total {
+      font-weight: 700;
+      font-size: 12px;
+      text-align: right;
+      margin-top: 6px;
+      padding-right: 6px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .modal-buttons button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-print { background: #16a34a; color: #fff; }
+    .btn-close { background: #6b7280; color: #fff; }
+    #imgModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      cursor: pointer;
+    }
+    #imgModal img {
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    .card img {
+        width: 100%;
+        height: 160px;
+        object-fit: contain;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 8px;
+    }
+    .barcode {
+        width: 100%;
+        height: 40px;
+        object-fit: contain;
+        cursor: pointer;
+        margin-top: auto;
+    }
+    .barcode-text {
+        font-size: 10px;
+        text-align: center;
+        margin-top: 4px;
+        color: var(--text);
+    }
   </style>
 </head>
 <body>
 
-<header>📊 FINANZAS</header>
+<div class="container">
+  <header class="header">
+    <h1>Ventas Realizadas</h1>
+    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
+  </header>
 
-<nav>
-  <div class="tab active" data-tab="dashboard">Dashboard</div>
-  <div class="tab" data-tab="ingresos">Ingresos</div>
-  <div class="tab" data-tab="gastos">Gastos</div>
-  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
-  <div class="tab" data-tab="proveedores">Proveedores</div>
-  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
-</nav>
+  <div class="controls">
+    <input type="text" id="filterName" placeholder="Filtrar por nombre">
+    <input type="text" id="filterCode" placeholder="Filtrar por código">
+    <select id="rowsPerPage" onchange="loadSoldInventory()">
+      <option value="10">10</option>
+      <option value="25">25</option>
+      <option value="50">50</option>
+    </select>
+    <button onclick="abrirFactura()">🧾 Generar Factura</button>
+    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
+  </div>
 
-<main>
-  <!-- DASHBOARD -->
-  <section id="dashboard" class="active">
-    <h2>Resumen General</h2>
-    <div class="dashboard">
-      <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
-      <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
-      <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
-      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
-      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
+  <div id="totalBox" style="display:none;">
+    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+  </div>
+
+  <section class="cards-grid" id="soldInventoryList"></section>
+
+  <div class="pagination">
+    <button onclick="prevPage()">← Anterior</button>
+    <button onclick="nextPage()">Siguiente →</button>
+  </div>
+</div>
+
+<!-- MODALES Y FUNCIONES (sin cambios) -->
+<button class="fab-totals" onclick="abrirModalTotales()">
+  <span id="fabQty">0</span>
+</button>
+
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="totales-card" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <div class="card" style="margin:0 auto;text-align:center;background:var(--bg);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
     </div>
-    <canvas id="chartResumen"></canvas>
-  </section>
+  </div>
+</div>
 
-  <!-- INGRESOS (solo lectura, orden nuevo → antiguo) -->
-  <section id="ingresos">
-    <h2>Ingresos</h2>
-    <div class="excel-bar">
-      <button id="exportIngresos">Exportar Excel</button>
-      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="factura-card" onclick="event.stopPropagation()">
+    <h2>Factura – Ticket</h2>
+    <label>Factura N°</label>
+    <input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label>
+    <input id="fFecha" readonly>
+    <label>Cliente</label>
+    <input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+
+    <div class="ticket-preview">
+      <header>
+        <div style="font-size:12px;font-weight:700">KLOHESV</div>
+        <div>San Salvador, El Salvador</div>
+        <div>industriastobias@gmail.com</div>
+        <div>Instagram: @Klohesv</div>
+      </header>
+      <div class="line"></div>
+      <div style="font-size:11px">
+        <div>Factura N°: <span id="fNumTxt">0001</span></div>
+        <div>Fecha: <span id="fFechaTxt"></span></div>
+        <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
+      </div>
+      <div class="line"></div>
+      <table>
+        <thead><tr>
+          <th>Producto</th>
+          <th>Cant</th>
+          <th>Total</th>
+        </tr></thead>
+        <tbody id="fBody"></tbody>
+      </table>
+      <div class="line"></div>
+      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
+      <footer>
+        <div>¡Gracias por su compra!</div>
+        <div style="font-size:9px;margin-top:4px">
+          No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.
+        </div>
+      </footer>
     </div>
-    <table id="tablaIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
 
-  <!-- GASTOS (manual) -->
-  <section id="gastos">
-    <h2>Gastos</h2>
-    <form id="formGasto">
-      <input name="fecha" type="date" required>
-      <input name="proveedor" placeholder="Proveedor">
-      <input name="categoria" placeholder="Categoría">
-      <input name="descripcion" placeholder="Descripción">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportGastos">Exportar Excel</button>
-      <label for="importGastos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importGastos" accept=".xlsx,.xls" style="display:none">
+    <div class="modal-buttons">
+      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
+      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
+      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
     </div>
-    <table id="tablaGastos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+  </div>
+</div>
 
-  <!-- GASTOS DESDE INGRESOS (manual) -->
-  <section id="gastosDesdeIngresos">
-    <h2>Gastos desde Ingresos</h2>
-    <form id="formGastosDesdeIngresos">
-      <input name="fecha" type="date" required>
-      <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportGastosDesdeIngresos">Exportar Excel</button>
-      <label for="importGastosDesdeIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importGastosDesdeIngresos" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaGastosDesdeIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- PROVEEDORES (manual) -->
-  <section id="proveedores">
-    <h2>Proveedores</h2>
-    <form id="formProveedor">
-      <input name="nombre" placeholder="Nombre" required>
-      <input name="nit" placeholder="NIT">
-      <input name="telefono" placeholder="Teléfono">
-      <input name="email" type="email" placeholder="Email">
-      <input name="direccion" placeholder="Dirección">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportProveedores">Exportar Excel</button>
-      <label for="importProveedores" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importProveedores" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaProveedores">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- CUENTAS (manual) -->
-  <section id="cuentas">
-    <h2>Cuentas Pendientes</h2>
-    <form id="formCuenta">
-      <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
-      <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
-      <input name="concepto" placeholder="Concepto">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="fecha_vencimiento" type="date">
-      <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportCuentas">Exportar Excel</button>
-      <label for="importCuentas" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importCuentas" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaCuentas">
-      <thead>
-        <tr>
-          <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-</main>
-
-<footer>© 2025 Panel Financiero Empresarial</footer>
+<div id="imgModal" onclick="cerrarImgModal()">
+  <img id="imgModalImg" src="" alt="Imagen ampliada">
+</div>
 
 <script>
-/* ---------- NAVEGACIÓN ---------- */
-const tabs=document.querySelectorAll('.tab'),sections=document.querySelectorAll('section');
-tabs.forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    tabs.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const id=btn.dataset.tab;
-    sections.forEach(s=>s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  });
-});
+  /* ---------- VARIABLES Y FUNCIONES ORIGINALES ---------- */
+  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  let currentPage = 1;
+  let rowsPerPage = 10;
 
-/* ---------- DATOS ---------- */
-const data={
-  gastos:JSON.parse(localStorage.getItem('gastos')||'[]'),
-  proveedores:JSON.parse(localStorage.getItem('proveedores')||'[]'),
-  cuentas:JSON.parse(localStorage.getItem('cuentas')||'[]')
-};
-const gastosDesdeIngresos=JSON.parse(localStorage.getItem('gastosDesdeIngresos')||'[]');
+  async function loadSoldInventory() {
+    const nameFilter = document.getElementById('filterName').value.toLowerCase();
+    const codeFilter = document.getElementById('filterCode').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
 
-function saveData(){
-  for(const k in data) localStorage.setItem(k,JSON.stringify(data[k]));
-  localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
-  actualizarDashboard();
-}
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(nameFilter) &&
+      item.code.toLowerCase().includes(codeFilter)
+    );
 
-/* ---------- GRÁFICO ---------- */
-const ctx=document.getElementById('chartResumen').getContext('2d');
-const chart=new Chart(ctx,{
-  type:'doughnut',
-  data:{labels:['Ingreso Neto','Gastos','Saldo Neto'],datasets:[{data:[0,0,0],backgroundColor:['#1a73e8','#e53935','#43a047'],hoverOffset:10}]},
-  options:{responsive:true,plugins:{legend:{position:'bottom'}}}
-});
+    filtered.reverse();
 
-// ✅ FUNCIÓN CORREGIDA: lee siempre desde localStorage.ingresos
-function actualizarDashboard(){
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-  const ti = ingresos.reduce((sum, item) => sum + parseFloat(item.monto || 0), 0);
+    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
 
-  const tg = data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const gdi = gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const ingresoNeto = ti - gdi;
-  const balance = ingresoNeto - tg;
+    // ✅ Guardamos el total para finanzas.html
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
-  document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
-  document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
-  document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2);
-  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
+    document.getElementById('totalQty').textContent  = totalUnits;
+    document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
+    
+    document.getElementById('totalQtyModal').textContent = totalUnits;
+    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('fabQty').textContent = totalUnits;
 
-  chart.data.datasets[0].data = [ingresoNeto, tg, Math.abs(balance)];
-  chart.update();
-}
+    const start = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(start, start + rowsPerPage);
 
-/* ---------- RENDER TABLA ---------- */
-function renderTable(id,arr,keys,keyName){
-  const tbody=document.querySelector(`#${id} tbody`);
-  tbody.innerHTML=arr.map((it,i)=>`
-    <tr>
-      ${keys.map(k=>`<td>${it[k]||''}</td>`).join('')}
-      <td class="acciones">
-        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
-      </td>
-    </tr>`).join('');
-}
+    const container = document.getElementById('soldInventoryList');
+    container.innerHTML = '';
 
-/* ---------- FORMULARIOS (solo gastos, proveedores, cuentas) ---------- */
-const forms=[
-  {id:'formGasto',key:'gastos',table:'tablaGastos',fields:['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']},
-  {id:'formProveedor',key:'proveedores',table:'tablaProveedores',fields:['nombre','nit','telefono','email','direccion','observaciones']},
-  {id:'formCuenta',key:'cuentas',table:'tablaCuentas',fields:['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']}
-];
+    for (const item of paginated) {
+      const card = document.createElement('div');
+      card.className = 'card';
 
-forms.forEach(f=>{
-  const form=document.getElementById(f.id);
-  form.addEventListener('submit',e=>{
-    e.preventDefault();
-    const item={};
-    f.fields.forEach(k=>item[k]=form[k].value);
-    data[f.key].push(item);
-    saveData();
-    renderTable(f.table,data[f.key],f.fields,f.key);
-    form.reset();
-  });
-  renderTable(f.table,data[f.key],f.fields,f.key);
-});
+      const img = document.createElement('img');
+      img.alt = item.name;
 
-/* ---------- GASTOS DESDE INGRESOS (manual) ---------- */
-const formGDI=document.getElementById('formGastosDesdeIngresos');
-formGDI.addEventListener('submit',e=>{
-  e.preventDefault();
-  const item={
-    fecha:formGDI.fecha.value,
-    descripcion:formGDI.descripcion.value,
-    categoria:formGDI.categoria.value,
-    monto:parseFloat(formGDI.monto.value),
-    responsable:formGDI.responsable.value,
-    observaciones:formGDI.observaciones.value
-  };
-  gastosDesdeIngresos.push(item);
-  saveData();
-  renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-  formGDI.reset();
-});
-renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-
-/* ---------- EDITAR / ELIMINAR ---------- */
-document.addEventListener('click',e=>{
-  if(e.target.classList.contains('eliminar')){
-    const {key,index}=e.target.dataset;
-    if(confirm('¿Eliminar este registro?')){
-      if(key==='gastosDesdeIngresos'){
-        gastosDesdeIngresos.splice(parseInt(index),1);
-        localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
-        renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-      }else{
-        data[key].splice(parseInt(index),1);
-        saveData();
-        const f=forms.find(x=>x.key===key);
-        renderTable(f.table,data[key],f.fields,key);
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
       }
-      actualizarDashboard();
-    }
-  }
-  if(e.target.classList.contains('editar')){
-    const {key,index}=e.target.dataset;
-    if(key==='gastosDesdeIngresos'){
-      const item=gastosDesdeIngresos[index];
-      formGDI.fecha.value=item.fecha;
-      formGDI.descripcion.value=item.descripcion;
-      formGDI.categoria.value=item.categoria;
-      formGDI.monto.value=item.monto;
-      formGDI.responsable.value=item.responsable;
-      formGDI.observaciones.value=item.observaciones;
-      gastosDesdeIngresos.splice(parseInt(index),1);
-      saveData();
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-    }else{
-      const f=forms.find(x=>x.key===key);
-      const form=document.getElementById(f.id);
-      const item=data[key][index];
-      f.fields.forEach(k=>form[k].value=item[k]||'');
-      data[key].splice(parseInt(index),1);
-      saveData();
-      renderTable(f.table,data[key],f.fields,key);
-    }
-    actualizarDashboard();
-  }
-});
 
-/* ---------- EXCEL ---------- */
-function exportExcel(key,filename){
-  let source=key==='gastosDesdeIngresos'?gastosDesdeIngresos:data[key];
-  const ws=XLSX.utils.json_to_sheet(source);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,key);
-  XLSX.writeFile(wb,filename);
-}
-function importExcel(file,key,fields){
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const wb=XLSX.read(e.target.result,{type:'binary'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    rows.forEach(r=>{
-      const item={};
-      fields.forEach(f=>item[f]=r[f]||'');
-      if(key==='gastosDesdeIngresos') gastosDesdeIngresos.push(item);
-      else data[key].push(item);
+      // Imagen del código de barras
+      const barcodeImg = document.createElement('img');
+      barcodeImg.className = 'barcode';
+      barcodeImg.style.width = '100%';
+      barcodeImg.style.height = '40px';
+      barcodeImg.style.objectFit = 'contain';
+      barcodeImg.style.cursor = 'pointer';
+
+      let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
+      if (!barcodeBlob) {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, item.barcode, {
+          format: 'CODE128',
+          width: 2,
+          height: 40,
+          displayValue: false
+        });
+        canvas.toBlob(async (blob) => {
+          await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
+          barcodeImg.src = URL.createObjectURL(blob);
+        });
+      } else {
+        barcodeImg.src = URL.createObjectURL(barcodeBlob);
+      }
+      barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
+
+      // Texto del código de barras
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = `Código: ${item.barcode}`;
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${item.name}</div>
+        </div>
+        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
+        <div>Cantidad vendida: ${item.quantity}</div>
+        <div class="card-footer">
+          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
+          <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
+        </div>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
+      `;
+
+      card.insertBefore(img, card.firstChild);
+      card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
+      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      container.appendChild(card);
+    }
+  }
+
+  window.deleteSoldItem = function (code) {
+    const index = soldInventory.findIndex(item => item.code === code);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      loadSoldInventory();
+    }
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
+
+  function prevPage() {
+    if (currentPage > 1) { currentPage--; loadSoldInventory(); }
+  }
+
+  function nextPage() {
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(document.getElementById('filterName').value.toLowerCase()) &&
+      item.code.toLowerCase().includes(document.getElementById('filterCode').value.toLowerCase())
+    );
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
+  }
+
+  document.getElementById('filterName').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
+  document.getElementById('filterCode').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadSoldInventory();
+  });
+
+  function abrirFactura(){
+    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
+    if(seleccionados.length === 0){
+      alert('Por favor selecciona al menos un producto para facturar.');
+      return;
+    }
+    document.getElementById('facturaModal').style.display='flex';
+    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+    actualizarTablaTicket();
+  }
+
+  function cerrarFactura(){ 
+    document.getElementById('facturaModal').style.display='none'; 
+  }
+
+  function actualizarTablaTicket(){
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    let sum = 0;
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br><span style="font-size:10px;">P/U: $${Number(p.price).toFixed(2)}</span></td>
+        <td>${p.quantity}</td>
+        <td>$${Number(p.total).toFixed(2)}</td>`;
+      body.appendChild(tr);
+      sum += Number(p.total);
     });
-    saveData();
-    if(key==='gastosDesdeIngresos'){
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,fields,key);
-    }else{
-      const f=forms.find(x=>x.key===key);
-      renderTable(f.table,data[key],fields,key);
-    }
-  };
-  reader.readAsBinaryString(file);
-}
+    document.getElementById('fTotal').textContent = sum.toFixed(2);
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+  }
 
-/* botones exportar */
-document.getElementById('exportIngresos').onclick=()=>{
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-  const ws = XLSX.utils.json_to_sheet(ingresos);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
-  XLSX.writeFile(wb, 'ingresos.xlsx');
-};
-document.getElementById('exportGastos').onclick=()=>exportExcel('gastos','gastos.xlsx');
-document.getElementById('exportGastosDesdeIngresos').onclick=()=>exportExcel('gastosDesdeIngresos','gastos_desde_ingresos.xlsx');
-document.getElementById('exportProveedores').onclick=()=>exportExcel('proveedores','proveedores.xlsx');
-document.getElementById('exportCuentas').onclick=()=>exportExcel('cuentas','cuentas.xlsx');
+  function imprimirTicket(){
+    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const ventana = window.open('', '', 'width=360,height=600');
+    ventana.document.write(`
+      <html>
+      <head><title>Ticket</title>
+      <style>
+        body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+        table{width:100%;border-collapse:collapse;table-layout:fixed}
+        th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        th:first-child,td:first-child{text-align:left;width:60%}
+        th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+        th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+        .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+        .line{border-top:1px dashed #000;margin:6px 0}
+        .pu{font-size:10px;color:#555;}
+      </style>
+      </head>
+      <body>${cont}</body></html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
 
-/* inputs importar */
-document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastosDesdeIngresos').onchange=function(e){importExcel(e.target.files[0],'gastosDesdeIngresos',['fecha','descripcion','categoria','monto','responsable','observaciones']);this.value='';}
-document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
-document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
+  function descargarPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 190] });
+    let y = 6;
+    const margen = 4;
+    const ancho = 80 - margen * 2;
 
-/* ---------- CARGAR / ORDENAR INGRESOS AUTOMÁTICOS ---------- */
-function cargarIngresosAutom(){
-  const ingresos=JSON.parse(localStorage.getItem('ingresos')||'[]');
-  renderTable('tablaIngresos',ingresos,['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'],'ingresos');
-}
-cargarIngresosAutom();
-actualizarDashboard();
+    doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
+    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
+    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
+    doc.line(margen, y, 80 - margen, y); y += 5;
+
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
+    y += 3;
+    doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(9); doc.setFont(undefined, 'bold');
+    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
+    doc.setFont(undefined, 'normal');
+    const filas = document.querySelectorAll('#fBody tr');
+    filas.forEach(fr => {
+      const c = fr.cells;
+      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
+      y += prod.length * 3 + 1;
+    });
+    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
+    const split = doc.splitTextToSize(msg, ancho);
+    split.forEach(l => { doc.text(l, margen, y); y += 3; });
+
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  function abrirModalTotales() {
+    document.getElementById('totalesModal').style.display = 'flex';
+  }
+
+  function cerrarModalTotales() {
+    document.getElementById('totalesModal').style.display = 'none';
+  }
+
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+
+  function cerrarImgModal() {
+    document.getElementById('imgModal').style.display = 'none';
+  }
+
+  /* === GUARDAR CADA PRODUCTO COMO INGRESO INDIVIDUAL === */
+  (() => {
+    // Obtenemos los productos seleccionados en la factura
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    if (checks.length === 0) return;
+
+    let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      ingresos.unshift({
+        fecha: new Date().toISOString().slice(0,10),
+        descripcion: `Venta: ${p.name}`,
+        categoria: 'Ventas',
+        monto: parseFloat(p.total).toFixed(2),
+        metodo_pago: 'Efectivo',
+        responsable: 'Sistema',
+        observaciones: `Código ${p.code} – ${p.quantity} unidad(es)`
+      });
+    });
+
+    localStorage.setItem('ingresos', JSON.stringify(ingresos));
+    console.log('✅ Ingresos guardados:', ingresos.length);
+  })();
 </script>
+
 </body>
 </html>

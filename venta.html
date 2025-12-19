@@ -341,7 +341,7 @@
   </div>
 </div>
 
-<!-- MODALES Y SCRIPTS (sin cambios) -->
+<!-- MODALES Y FUNCIONES (sin cambios) -->
 <button class="fab-totals" onclick="abrirModalTotales()">
   <span id="fabQty">0</span>
 </button>
@@ -413,6 +413,7 @@
 </div>
 
 <script>
+  /* ---------- VARIABLES Y FUNCIONES ORIGINALES ---------- */
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
   let rowsPerPage = 10;
@@ -522,7 +523,7 @@
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
       loadSoldInventory();
     }
-  };
+  }
 
   function toggleTheme() {
     const html = document.documentElement;
@@ -675,19 +676,29 @@
     document.getElementById('imgModal').style.display = 'none';
   }
 
-  /* === CORRECCIÓN RÁPIDA: fuerza que los ingresos sean = totalVendido === */
+  /* === GUARDAR CADA PRODUCTO COMO INGRESO INDIVIDUAL === */
   (() => {
-    const total = parseFloat(localStorage.getItem('totalVendido') || '0');
-    localStorage.setItem('ingresos', JSON.stringify([{
-      fecha: new Date().toISOString().slice(0,10),
-      descripcion: 'Venta consolidada',
-      categoria: 'Ventas',
-      monto: total.toFixed(2),
-      metodo_pago: 'Efectivo',
-      responsable: 'Sistema',
-      observaciones: 'Corrección automática'
-    }]));
-    console.log('✅ Ingresos ahora =', total);
+    // Obtenemos los productos seleccionados en la factura
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    if (checks.length === 0) return;
+
+    let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      ingresos.unshift({
+        fecha: new Date().toISOString().slice(0,10),
+        descripcion: `Venta: ${p.name}`,
+        categoria: 'Ventas',
+        monto: parseFloat(p.total).toFixed(2),
+        metodo_pago: 'Efectivo',
+        responsable: 'Sistema',
+        observaciones: `Código ${p.code} – ${p.quantity} unidad(es)`
+      });
+    });
+
+    localStorage.setItem('ingresos', JSON.stringify(ingresos));
+    console.log('✅ Ingresos guardados:', ingresos.length);
   })();
 </script>
 

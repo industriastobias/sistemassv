@@ -76,18 +76,13 @@
     <canvas id="chartResumen"></canvas>
   </section>
 
-  <!-- INGRESOS (solo lectura) -->
+  <!-- INGRESOS (solo lectura, sin agregar) -->
   <section id="ingresos">
-    <h2>Ingresos</h2>
-    <div class="excel-bar">
-      <button id="exportIngresos">Exportar Excel</button>
-      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
-    </div>
+    <h2>Ingresos (desde Venta.html)</h2>
     <table id="tablaIngresos">
       <thead>
         <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -262,19 +257,15 @@ function actualizarDashboard(){
 }
 
 /* ---------- RENDER TABLA ---------- */
-function renderTable(id,arr,keys,keyName){
+function renderTable(id,arr,keys){
   const tbody=document.querySelector(`#${id} tbody`);
-  tbody.innerHTML=arr.map((it,i)=>`
+  tbody.innerHTML=arr.map((it)=>`
     <tr>
       ${keys.map(k=>`<td>${it[k]||''}</td>`).join('')}
-      <td class="acciones">
-        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
-      </td>
     </tr>`).join('');
 }
 
-/* ---------- FORMULARIOS ---------- */
+/* ---------- FORMULARIOS (sin ingresos) ---------- */
 const forms=[
   {id:'formGasto',key:'gastos',table:'tablaGastos',fields:['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']},
   {id:'formProveedor',key:'proveedores',table:'tablaProveedores',fields:['nombre','nit','telefono','email','direccion','observaciones']},
@@ -289,10 +280,10 @@ forms.forEach(f=>{
     f.fields.forEach(k=>item[k]=form[k].value);
     data[f.key].push(item);
     saveData();
-    renderTable(f.table,data[f.key],f.fields,f.key);
+    renderTable(f.table,data[f.key],f.fields);
     form.reset();
   });
-  renderTable(f.table,data[f.key],f.fields,f.key);
+  renderTable(f.table,data[f.key],f.fields);
 });
 
 /* ---------- GASTOS DESDE INGRESOS ---------- */
@@ -309,54 +300,10 @@ formGDI.addEventListener('submit',e=>{
   };
   gastosDesdeIngresos.push(item);
   saveData();
-  renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
+  renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones']);
   formGDI.reset();
 });
-renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-
-/* ---------- EDITAR / ELIMINAR (FIXED) ---------- */
-document.addEventListener('click',e=>{
-  if(e.target.classList.contains('eliminar')){
-    const {key,index}=e.target.dataset;
-    if(confirm('¿Eliminar este registro?')){
-      if(key==='gastosDesdeIngresos'){
-        gastosDesdeIngresos.splice(parseInt(index),1);
-        localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
-        renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-      }else{
-        data[key].splice(parseInt(index),1);
-        saveData();
-        const f=forms.find(x=>x.key===key);
-        renderTable(f.table,data[key],f.fields,key);
-      }
-      actualizarDashboard();
-    }
-  }
-  if(e.target.classList.contains('editar')){
-    const {key,index}=e.target.dataset;
-    if(key==='gastosDesdeIngresos'){
-      const item=gastosDesdeIngresos[index];
-      formGDI.fecha.value=item.fecha;
-      formGDI.descripcion.value=item.descripcion;
-      formGDI.categoria.value=item.categoria;
-      formGDI.monto.value=item.monto;
-      formGDI.responsable.value=item.responsable;
-      formGDI.observaciones.value=item.observaciones;
-      gastosDesdeIngresos.splice(parseInt(index),1);
-      saveData();
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-    }else{
-      const f=forms.find(x=>x.key===key);
-      const form=document.getElementById(f.id);
-      const item=data[key][index];
-      f.fields.forEach(k=>form[k].value=item[k]||'');
-      data[key].splice(parseInt(index),1);
-      saveData();
-      renderTable(f.table,data[key],f.fields,key);
-    }
-    actualizarDashboard();
-  }
-});
+renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones']);
 
 /* ---------- EXCEL ---------- */
 function exportExcel(key,filename){
@@ -366,47 +313,16 @@ function exportExcel(key,filename){
   XLSX.utils.book_append_sheet(wb,ws,key);
   XLSX.writeFile(wb,filename);
 }
-function importExcel(file,key,fields){
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const wb=XLSX.read(e.target.result,{type:'binary'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    rows.forEach(r=>{
-      const item={};
-      fields.forEach(f=>item[f]=r[f]||'');
-      if(key==='gastosDesdeIngresos') gastosDesdeIngresos.push(item);
-      else data[key].push(item);
-    });
-    saveData();
-    if(key==='gastosDesdeIngresos'){
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,fields,key);
-    }else{
-      const f=forms.find(x=>x.key===key);
-      renderTable(f.table,data[key],fields,key);
-    }
-  };
-  reader.readAsBinaryString(file);
-}
 
-/* botones exportar */
-document.getElementById('exportIngresos').onclick=()=>exportExcel('ingresos','ingresos.xlsx');
 document.getElementById('exportGastos').onclick=()=>exportExcel('gastos','gastos.xlsx');
 document.getElementById('exportGastosDesdeIngresos').onclick=()=>exportExcel('gastosDesdeIngresos','gastos_desde_ingresos.xlsx');
 document.getElementById('exportProveedores').onclick=()=>exportExcel('proveedores','proveedores.xlsx');
 document.getElementById('exportCuentas').onclick=()=>exportExcel('cuentas','cuentas.xlsx');
 
-/* inputs importar */
-document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastosDesdeIngresos').onchange=function(e){importExcel(e.target.files[0],'gastosDesdeIngresos',['fecha','descripcion','categoria','monto','responsable','observaciones']);this.value='';}
-document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
-document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
-
-/* ---------- CARGAR INGRESOS ---------- */
+/* ---------- CARGAR INGRESOS DESDE VENTA.HTML ---------- */
 function cargarIngresosAutom(){
   const ingresos=JSON.parse(localStorage.getItem('ingresos')||'[]');
-  renderTable('tablaIngresos',ingresos,['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'],'ingresos');
+  renderTable('tablaIngresos',ingresos,['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);
 }
 cargarIngresosAutom();
 actualizarDashboard();

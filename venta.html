@@ -673,7 +673,27 @@
   function cerrarImgModal() {
     document.getElementById('imgModal').style.display = 'none';
   }
+  /* ---------- LIMPIEZA ÚNICA DE INGRESOS HUÉRFANOS (sin tocar funciones) ---------- */
+(() => {
+  const sold = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+
+  // Conservamos solo los ingresos cuyo código AÚN existe en soldInventory
+  const limpios = ingresos.filter(ing => {
+    // Extraemos el código del campo observaciones (ajusta si lo guardas en otro lado)
+    const match = ing.observaciones?.match(/Código (\S+)/);
+    if (!match) return false; // si no tiene código, lo eliminamos
+    const cod = match[1];
+    return sold.some(s => s.code === cod);
+  });
+
+  if (ingresos.length !== limpios.length) {
+    localStorage.setItem('ingresos', JSON.stringify(limpios));
+    console.log(`🧹 Se eliminaron ${ingresos.length - limpios.length} ingresos huérfanos`);
+  }
+})();
 </script>
 
 </body>
 </html>
+

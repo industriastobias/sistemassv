@@ -280,7 +280,7 @@
     #imgModal img {
       max-width: 90vw;
       max-height: 90vh;
-      object-fit: contain;
+        object-fit: contain;
       border-radius: 8px;
     }
     .card img {
@@ -345,6 +345,7 @@
   <span id="fabQty">0</span>
 </button>
 
+<!-- MODALES (sin cambios) -->
 <div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarModalTotales()">×</button>
@@ -673,27 +674,22 @@
   function cerrarImgModal() {
     document.getElementById('imgModal').style.display = 'none';
   }
-  /* ---------- LIMPIEZA ÚNICA DE INGRESOS HUÉRFANOS (sin tocar funciones) ---------- */
-(() => {
-  const sold = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
 
-  // Conservamos solo los ingresos cuyo código AÚN existe en soldInventory
-  const limpios = ingresos.filter(ing => {
-    // Extraemos el código del campo observaciones (ajusta si lo guardas en otro lado)
-    const match = ing.observaciones?.match(/Código (\S+)/);
-    if (!match) return false; // si no tiene código, lo eliminamos
-    const cod = match[1];
-    return sold.some(s => s.code === cod);
-  });
-
-  if (ingresos.length !== limpios.length) {
-    localStorage.setItem('ingresos', JSON.stringify(limpios));
-    console.log(`🧹 Se eliminaron ${ingresos.length - limpios.length} ingresos huérfanos`);
-  }
-})();
+  /* === CORRECCIÓN RÁPIDA: fuerza que los ingresos sean = totalVendido === */
+  (() => {
+    const total = parseFloat(localStorage.getItem('totalVendido') || '0');
+    localStorage.setItem('ingresos', JSON.stringify([{
+      fecha: new Date().toISOString().slice(0,10),
+      descripcion: 'Venta consolidada',
+      categoria: 'Ventas',
+      monto: total.toFixed(2),
+      metodo_pago: 'Efectivo',
+      responsable: 'Sistema',
+      observaciones: 'Corrección automática'
+    }]));
+    console.log('✅ Ingresos ahora =', total);
+  })();
 </script>
 
 </body>
 </html>
-

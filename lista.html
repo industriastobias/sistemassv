@@ -418,6 +418,21 @@ function cargarIngresosAutom(){
 }
 cargarIngresosAutom();
 actualizarDashboard();
+  /* === ACTUALIZAR SIEMPRE DESDE VENTA === */
+(() => {
+  // fuerza que los ingresos sean solo los que existen HOY
+  const vendidos = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+  const limpios = ingresos.filter(ing => {
+    const match = ing.observaciones?.match(/Código (\S+)/);
+    if (!match) return false;
+    const cod = match[1];
+    return vendidos.some(v => v.code === cod);
+  });
+  localStorage.setItem('ingresos', JSON.stringify(limpios));
+  cargarIngresos(); // tu función que pinta la tabla
+})();
 </script>
 </body>
 </html>
+

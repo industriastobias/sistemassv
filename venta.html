@@ -305,9 +305,6 @@
       color: var(--text);
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 </head>
 <body>
 
@@ -326,7 +323,7 @@
       <option value="50">50</option>
     </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
-    <button onclick="location.href='Total.html'">📊 Total</button>
+    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
   </div>
 
   <div id="totalBox" style="display:none;">
@@ -434,7 +431,7 @@
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
     const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
 
-    /* ---------- GUARDAR TOTAL VENDIDO ---------- */
+    // ✅ Guardamos el total para finanzas.html
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
     document.getElementById('totalQty').textContent  = totalUnits;
@@ -474,10 +471,8 @@
       barcodeImg.style.objectFit = 'contain';
       barcodeImg.style.cursor = 'pointer';
 
-      // Buscar imagen de código de barras
       let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
       if (!barcodeBlob) {
-        // Generar si no existe
         const canvas = document.createElement('canvas');
         JsBarcode(canvas, item.barcode, {
           format: 'CODE128',
@@ -517,27 +512,6 @@
       card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
-
-    /* ---------- AUTO-INGRESO POR CADA VENTA (fecha de hoy y ordenado) ---------- */
-    let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-    const hoy = new Date().toISOString().slice(0, 10);          // yyyy-mm-dd
-    filtered.forEach(item => {
-      const descripcion = `Venta ${item.name}`;
-      // evitamos duplicados por fecha+descripción
-      const yaEsta = ingresos.some(r => r.fecha === hoy && r.descripcion === descripcion);
-      if (!yaEsta) {
-        ingresos.unshift({               // unshift = insertar al principio (más nuevo arriba)
-          fecha: hoy,
-          descripcion: descripcion,
-          categoria: 'Ventas',
-          monto: parseFloat(item.total).toFixed(2),
-          metodo_pago: 'Efectivo',
-          responsable: 'Sistema',
-          observaciones: `Código ${item.code} – ${item.quantity} unidad(es)`
-        });
-      }
-    });
-    localStorage.setItem('ingresos', JSON.stringify(ingresos));
   }
 
   window.deleteSoldItem = function (code) {

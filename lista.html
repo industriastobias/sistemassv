@@ -105,6 +105,24 @@
     </thead>
     <tbody></tbody>
   </table>
+
+  <!-- NUEVA SECCIÓN: PRODUCTOS AGREGADOS DESDE VENTA -->
+  <div class="section-header" style="margin-top:2rem">
+    <h2 class="section-title">Productos agregados desde venta</h2>
+    <button class="btn" onclick="actualizarProductosDesdeVenta()">🔄 Actualizar productos</button>
+  </div>
+  <table id="tablaProductos">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Producto</th>
+        <th>Cantidad</th>
+        <th>Precio</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </main>
 
 <script>
@@ -173,8 +191,27 @@ function exportarExcel() {
   XLSX.writeFile(wb, 'ingresos_desde_venta.xlsx');
 }
 
+function actualizarProductosDesdeVenta() {
+  const productos = JSON.parse(localStorage.getItem('lista') || '[]');
+  const tbody = document.querySelector('#tablaProductos tbody');
+  tbody.innerHTML = productos.map(p => `
+    <tr>
+      <td>${p.code}</td>
+      <td>${p.name}</td>
+      <td>${p.quantity}</td>
+      <td>$${parseFloat(p.price).toFixed(2)}</td>
+      <td>$${parseFloat(p.total).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  if (productos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7280;">No hay productos agregados aún.</td></tr>';
+  }
+}
+
 (() => {
   actualizarDesdeVenta();
+  actualizarProductosDesdeVenta();
 })();
 </script>
 

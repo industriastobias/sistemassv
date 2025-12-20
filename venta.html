@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ventas Realizadas</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400 ;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
       --bg: #fafafa;
       --card: #fff;
@@ -327,11 +327,12 @@
     <button onclick="actualizarTodoEnLista()">🔄 Actualizar todo en lista</button>
   </div>
 
-  <div id="totalBox" style="display:none;">
-    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
-    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
-    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+    <label style="font-weight:600;font-size:.9rem;">
+      <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+      Seleccionar todo
+    </label>
+    <button class="btn" onclick="actualizarSeleccionadosEnLista()">⬆️ Actualizar seleccionados en lista</button>
   </div>
 
   <section class="cards-grid" id="soldInventoryList"></section>
@@ -444,6 +445,9 @@
     const container = document.getElementById('soldInventoryList');
     container.innerHTML = '';
 
+    const lista = JSON.parse(localStorage.getItem('lista') || '[]');
+    const codigosEnLista = new Set(lista.map(p => p.code));
+
     for (const item of paginated) {
       const card = document.createElement('div');
       card.className = 'card';
@@ -489,9 +493,12 @@
       barcodeText.className = 'barcode-text';
       barcodeText.textContent = `Código: ${item.barcode}`;
 
+      const yaEnLista = codigosEnLista.has(item.code);
+
       card.innerHTML = `
         <div class="card-header">
           <div class="card-title">${item.name}</div>
+          ${yaEnLista ? '<span style="font-size:11px;color:#10b981;font-weight:600;">✔ Ya en lista</span>' : ''}
         </div>
         <div class="card-price">$${Number(item.price).toFixed(2)}</div>
         <div>Cantidad vendida: ${item.quantity}</div>
@@ -499,8 +506,10 @@
           <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
           <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;" ${yaEnLista ? 'disabled' : ''}>
       `;
+
+      if (yaEnLista) card.style.opacity = '0.7';
 
       card.insertBefore(img, card.firstChild);
       card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
@@ -510,17 +519,14 @@
   }
 
   window.deleteSoldItem = function (code) {
-    // 1. Eliminar de venta
     let venta = JSON.parse(localStorage.getItem('soldInventory')) || [];
     venta = venta.filter(item => item.code !== code);
     localStorage.setItem('soldInventory', JSON.stringify(venta));
 
-    // 2. Eliminar de lista
     let lista = JSON.parse(localStorage.getItem('lista')) || [];
     lista = lista.filter(item => item.code !== code);
     localStorage.setItem('lista', JSON.stringify(lista));
 
-    // 3. Refrescar vista
     loadSoldInventory();
   };
 
@@ -675,6 +681,37 @@
     document.getElementById('imgModal').style.display = 'none';
   }
 
+  /* ---------- SELECCIONAR / DESSELECCIONAR TODO ---------- */
+  function toggleSelectAll(source) {
+    const checks = document.querySelectorAll('.factCheck:not(:disabled)');
+    checks.forEach(ch => ch.checked = source.checked);
+  }
+
+  /* ---------- ACTUALIZAR SELECCIONADOS EN LISTA (SIN DUPLICAR) ---------- */
+  function actualizarSeleccionadosEnLista() {
+    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
+    if (seleccionados.length === 0) {
+      alert('No hay productos seleccionados.');
+      return;
+    }
+
+    let lista = JSON.parse(localStorage.getItem('lista') || '[]');
+    const codigosEnLista = new Set(lista.map(p => p.code));
+
+    let agregados = 0;
+
+    seleccionados.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      if (!codigosEnLista.has(p.code)) {
+        lista.push({ ...p });
+        agregados++;
+      }
+    });
+
+    localStorage.setItem('lista', JSON.stringify(lista));
+    alert(`✅ ${agregados} productos nuevos agregados a lista.html`);
+  }
+
   /* ---------- ACTUALIZAR TODO EN LISTA (SIN DUPLICAR) ---------- */
   function actualizarTodoEnLista() {
     const venta = JSON.parse(localStorage.getItem('soldInventory') || '[]');
@@ -683,7 +720,7 @@
     const codigosEnLista = new Set(lista.map(p => p.code));
     const nuevos = venta.filter(p => !codigosEnLista.has(p.code));
 
-    lista.push(...nuevos.map(p => ({ ...p }))); // copia limpia
+    lista.push(...nuevos.map(p => ({ ...p })));
     localStorage.setItem('lista', JSON.stringify(lista));
 
     alert(`✅ ${nuevos.length} productos nuevos agregados a lista.html`);

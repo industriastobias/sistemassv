@@ -79,21 +79,6 @@
   <!-- INGRESOS -->
   <section id="ingresos">
     <h2>Ingresos</h2>
-    <form id="formIngreso">
-      <input name="fecha" type="date" required>
-      <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportIngresos">Exportar Excel</button>
-      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
-    </div>
     <table id="tablaIngresos">
       <thead>
         <tr>
@@ -233,7 +218,7 @@ tabs.forEach(btn=>{
 
 /* ---------- DATOS ---------- */
 const data={
-  ingresos:JSON.parse(localStorage.getItem('ingresos')||'[]'),
+  ingresos:[],
   gastos:JSON.parse(localStorage.getItem('gastos')||'[]'),
   proveedores:JSON.parse(localStorage.getItem('proveedores')||'[]'),
   cuentas:JSON.parse(localStorage.getItem('cuentas')||'[]')
@@ -271,22 +256,37 @@ function actualizarDashboard(){
   chart.update();
 }
 
+/* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
+function cargarVentasComoIngresos() {
+  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  data.ingresos = ventas.map(v => ({
+    fecha: new Date().toISOString().split('T')[0],
+    descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
+    categoria: 'Venta',
+    monto: parseFloat(v.total).toFixed(2),
+    metodo_pago: 'Efectivo',
+    responsable: 'Sistema',
+    observaciones: `Cantidad vendida: ${v.quantity}`
+  }));
+  saveData();
+  renderTable('tablaIngresos', data.ingresos, ['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'], 'ingresos');
+}
+
 /* ---------- RENDER TABLA ---------- */
 function renderTable(id,arr,keys,keyName){
   const tbody=document.querySelector(`#${id} tbody`);
   tbody.innerHTML=arr.map((it,i)=>`
     <tr>
       ${keys.map(k=>`<td>${it[k]||''}</td>`).join('')}
-      <td class="acciones">
+      <td class="acciones">${keyName==='ingresos'?'Solo lectura':`
         <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
+        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>`}
       </td>
     </tr>`).join('');
 }
 
 /* ---------- FORMULARIOS ---------- */
 const forms=[
-  {id:'formIngreso',key:'ingresos',table:'tablaIngresos',fields:['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']},
   {id:'formGasto',key:'gastos',table:'tablaGastos',fields:['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']},
   {id:'formProveedor',key:'proveedores',table:'tablaProveedores',fields:['nombre','nit','telefono','email','direccion','observaciones']},
   {id:'formCuenta',key:'cuentas',table:'tablaCuentas',fields:['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']}
@@ -329,6 +329,7 @@ renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('eliminar')){
     const {key,index}=e.target.dataset;
+    if(key==='ingresos') return; // ❌ Bloquear eliminación en ingresos
     if(confirm('¿Eliminar este registro?')){
       if(key==='gastosDesdeIngresos'){
         gastosDesdeIngresos.splice(index,1);
@@ -345,6 +346,7 @@ document.addEventListener('click',e=>{
   }
   if(e.target.classList.contains('editar')){
     const {key,index}=e.target.dataset;
+    if(key==='ingresos') return; // ❌ Bloquear edición en ingresos
     if(key==='gastosDesdeIngresos'){
       const item=gastosDesdeIngresos[index];
       formGDI.fecha.value=item.fecha;
@@ -401,20 +403,26 @@ function importExcel(file,key,fields){
 }
 
 /* botones exportar */
-document.getElementById('exportIngresos').onclick=()=>exportExcel('ingresos','ingresos.xlsx');
 document.getElementById('exportGastos').onclick=()=>exportExcel('gastos','gastos.xlsx');
 document.getElementById('exportGastosDesdeIngresos').onclick=()=>exportExcel('gastosDesdeIngresos','gastos_desde_ingresos.xlsx');
 document.getElementById('exportProveedores').onclick=()=>exportExcel('proveedores','proveedores.xlsx');
 document.getElementById('exportCuentas').onclick=()=>exportExcel('cuentas','cuentas.xlsx');
 
 /* inputs importar */
-document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);this.value='';}
 document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']);this.value='';}
 document.getElementById('importGastosDesdeIngresos').onchange=function(e){importExcel(e.target.files[0],'gastosDesdeIngresos',['fecha','descripcion','categoria','monto','responsable','observaciones']);this.value='';}
 document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
 document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
 
+/* ---------- INICIALIZAR ---------- */
+cargarVentasComoIngresos();
 actualizarDashboard();
+
+// Escuchar cambios en tiempo real
+window.addEventListener('storage', () => {
+  cargarVentasComoIngresos();
+  actualizarDashboard();
+});
 </script>
 </body>
 </html>

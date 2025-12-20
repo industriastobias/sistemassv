@@ -3,192 +3,80 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lista de Ingresos - KLOHESV</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <title>Venta - KLOHESV</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-    :root {
-      --bg: #f4f7fb;
-      --card: #ffffff;
-      --text: #1f2937;
-      --primary: #3b82f6;
-      --success: #10b981;
-      --danger: #ef4444;
-      --shadow: 0 10px 15px -3px rgba(0,0,0,.05);
-      --radius: 16px;
-    }
-    [data-theme="dark"] {
-      --bg: #111827;
-      --card: #1f2937;
-      --text: #e5e7eb;
-      --primary: #60a5fa;
-      --success: #34d399;
-      --danger: #f87171;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
-    header { background: var(--primary); color: #fff; padding: 1.2rem 2rem; text-align: center; font-size: 1.6rem; font-weight: 700; letter-spacing: .5px; box-shadow: var(--shadow); }
-    main { flex: 1; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; width: 100%; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
-    .btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: .6rem 1.2rem; cursor: pointer; font-weight: 600; transition: .2s; }
-    .btn:hover { opacity: .9; }
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-    .card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); transition: .3s; }
-    .card:hover { transform: translateY(-4px); }
-    .card h3 { font-size: .9rem; color: #6b7280; margin-bottom: .5rem; }
-    .card p { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .section-title { font-size: 1.3rem; font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
-    th, td { padding: .75rem 1rem; text-align: left; font-size: .9rem; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f3f4f6; font-weight: 600; color: #4b5563; }
-    tr:hover { background: #f9fafb; }
-    .theme-toggle { cursor: pointer; font-size: 1.4rem; padding: .5rem; border-radius: 50%; transition: .2s; }
-    .theme-toggle:hover { background: #00000011; }
-    @media (max-width: 768px) {
-      .top-bar { flex-direction: column; align-items: flex-start; }
-      .card-grid { grid-template-columns: 1fr; }
-    }
+    body{font-family:Inter,sans-serif;background:#f4f7fb;margin:0;padding:2rem;color:#1f2937}
+    .btn{background:#3b82f6;color:#fff;border:none;padding:.6rem 1.2rem;border-radius:12px;cursor:pointer;font-weight:600;margin:.25rem}
+    .btn:hover{opacity:.9}
+    table{width:100%;border-collapse-collapse;margin-top:1rem;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 10px 15px -3px rgba(0,0,0,.05)}
+    th,td{padding:.75rem 1rem;text-align:left;border-bottom:1px solid #e5e7eb}
+    th{background:#f3f4f6;font-weight:600}
   </style>
 </head>
 <body>
 
-<header>
-  📊 Lista de Ingresos – KLOHESV
-  <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
-</header>
+<h2>🛒 Venta - KLOHESV</h2>
 
-<main>
-  <!-- TARJETAS DE RESUMEN -->
-  <div class="top-bar">
-    <h2 style="margin:0;">Resumen de Ingresos</h2>
-    <div>
-      <button class="btn" onclick="actualizarDesdeVenta()">🔄 Actualizar</button>
-      <button class="btn" onclick="exportarExcel()">📥 Exportar Excel</button>
-    </div>
-  </div>
+<div>
+  <button class="btn" onclick="actualizarTodoEnLista()">🔄 Actualizar todo en lista</button>
+  <button class="btn" onclick="location.href='lista.html'">📊 Ver lista</button>
+</div>
 
-  <div class="card-grid">
-    <div class="card">
-      <h3>Total Ingresos</h3>
-      <p id="totalIngresos">$0.00</p>
-    </div>
-    <div class="card">
-      <h3>Cantidad de Ventas</h3>
-      <p id="cantVentas">0</p>
-    </div>
-    <div class="card">
-      <h3>Promedio por Venta</h3>
-      <p id="promedioVenta">$0.00</p>
-    </div>
-  </div>
-
-  <!-- GRÁFICO DE BARRAS -->
-  <div class="section-header">
-    <h2 class="section-title">Ventas por Día</h2>
-  </div>
-  <canvas id="chartVentas" style="max-height:300px"></canvas>
-
-  <!-- TABLA DE INGRESOS -->
-  <div class="section-header" style="margin-top:2rem">
-    <h2 class="section-title">Detalle de Ventas</h2>
-  </div>
-  <table id="tablaIngresos">
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Descripción</th>
-        <th>Categoría</th>
-        <th>Monto</th>
-        <th>Método Pago</th>
-        <th>Responsable</th>
-        <th>Observaciones</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</main>
+<table id="tablaVenta">
+  <thead>
+    <tr>
+      <th>Código</th><th>Producto</th><th>Cantidad</th><th>Total</th><th></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
-/* ---------- TEMA CLARO/OSCURO ---------- */
-function toggleTheme() {
-  const html = document.documentElement;
-  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-}
-
-/* ---------- ACTUALIZAR DESDE VENTA ---------- */
-function actualizarDesdeVenta() {
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-
-  // Pinta tabla
-  const tbody = document.querySelector('#tablaIngresos tbody');
-  tbody.innerHTML = ingresos.map(v => `
+/* ---------- RENDERIZAR TABLA ---------- */
+function renderizarVenta() {
+  const venta = JSON.parse(localStorage.getItem('venta') || '[]');
+  const tbody = document.querySelector('#tablaVenta tbody');
+  tbody.innerHTML = venta.map(p => `
     <tr>
-      <td>${v.fecha}</td>
-      <td>${v.descripcion}</td>
-      <td>${v.categoria}</td>
-      <td>$${parseFloat(v.monto).toFixed(2)}</td>
-      <td>${v.metodo_pago}</td>
-      <td>${v.responsable}</td>
-      <td>${v.observaciones}</td>
+      <td>${p.code}</td>
+      <td>${p.name}</td>
+      <td>${p.quantity}</td>
+      <td>$${parseFloat(p.total).toFixed(2)}</td>
+      <td><button class="btn" style="background:#ef4444" onclick="eliminar('${p.code}')">❌</button></td>
     </tr>
   `).join('');
-
-  // Calcula resumen
-  const total = ingresos.reduce((sum, v) => sum + parseFloat(v.monto || 0), 0);
-  const cantidad = ingresos.length;
-  const promedio = cantidad ? total / cantidad : 0;
-
-  document.getElementById('totalIngresos').textContent = '$' + total.toFixed(2);
-  document.getElementById('cantVentas').textContent = cantidad;
-  document.getElementById('promedioVenta').textContent = '$' + promedio.toFixed(2);
-
-  // Gráfico de barras por día
-  const porDia = {};
-  ingresos.forEach(v => {
-    porDia[v.fecha] = (porDia[v.fecha] || 0) + parseFloat(v.monto);
-  });
-
-  const etiquetas = Object.keys(porDia).sort();
-  const valores = etiquetas.map(d => porDia[d]);
-
-  const ctx = document.getElementById('chartVentas');
-  if (window.chartVentasInstance) window.chartVentasInstance.destroy();
-  window.chartVentasInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: etiquetas,
-      datasets: [{
-        label: 'Ventas por día',
-        data: valores,
-        backgroundColor: '#3b82f6',
-        borderRadius: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
-    }
-  });
-
-  console.log('✅ Datos actualizados desde venta.html');
 }
 
-/* ---------- EXPORTAR A EXCEL ---------- */
-function exportarExcel() {
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-  const ws = XLSX.utils.json_to_sheet(ingresos);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
-  XLSX.writeFile(wb, 'ingresos_desde_venta.xlsx');
+/* ---------- ELIMINAR (SINCRONIZADO) ---------- */
+function eliminar(code) {
+  let venta = JSON.parse(localStorage.getItem('venta') || '[]');
+  venta = venta.filter(p => p.code !== code);
+  localStorage.setItem('venta', JSON.stringify(venta));
+
+  let lista = JSON.parse(localStorage.getItem('lista') || '[]');
+  lista = lista.filter(p => p.code !== code);
+  localStorage.setItem('lista', JSON.stringify(lista));
+
+  renderizarVenta();
+}
+
+/* ---------- ACTUALIZAR TODO EN LISTA (SIN DUPLICAR) ---------- */
+function actualizarTodoEnLista() {
+  const venta = JSON.parse(localStorage.getItem('venta') || '[]');
+  let lista = JSON.parse(localStorage.getItem('lista') || '[]');
+
+  const codigosEnLista = new Set(lista.map(p => p.code));
+  const nuevos = venta.filter(p => !codigosEnLista.has(p.code));
+
+  lista.push(...nuevos.map(p => ({ ...p }))); // copia limpia
+  localStorage.setItem('lista', JSON.stringify(lista));
+
+  alert(`✅ ${nuevos.length} productos nuevos agregados a lista.html`);
 }
 
 /* ---------- CARGA INICIAL ---------- */
 (() => {
-  actualizarDesdeVenta();
+  renderizarVenta();
 })();
 </script>
 

@@ -1,138 +1,700 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Ventas</title>
-<style>
-body{font-family:Arial;background:#f4f4f4;padding:20px}
-table{width:100%;border-collapse:collapse;background:#fff}
-th,td{border:1px solid #ddd;padding:8px;text-align:center}
-th{background:#333;color:#fff}
-button{padding:8px 12px;margin:5px;cursor:pointer}
-#facturaModal{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  justify-content:center;
-  align-items:center
-}
-.modal{
-  background:#fff;
-  padding:20px;
-  width:80%;
-}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ventas Realizadas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    :root {
+      --bg: #fafafa;
+      --card: #fff;
+      --text: #000;
+      --accent: #2563eb;
+      --danger: #dc2626;
+      --radius: 12px;
+      --shadow: 0 4px 16px rgba(0,0,0,.06);
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --text: #fff;
+      --accent: #3b82f6;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      body { padding: 0; }
+      .container {
+        max-width: 100%;
+        border-radius: 0;
+        padding: 20px;
+        min-height: 100vh;
+        box-shadow: none;
+      }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { font-size: 2rem; font-weight: 700; }
+    .theme-toggle {
+      cursor: pointer;
+      font-size: 1.4rem;
+      padding: 8px;
+      border-radius: 50%;
+      transition: .2s;
+    }
+    .theme-toggle:hover { background: #00000011; }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .controls input,
+    .controls select,
+    .controls button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font-size: .875rem;
+    }
+    .controls button {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .controls button:hover { opacity: .9; }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: .3s;
+      position: relative;
+      min-height: 320px;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title { font-size: 1.1rem; font-weight: 600; }
+    .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+    .card-delete {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: .75rem;
+      cursor: pointer;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .pagination button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .pagination button:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+    .fab-totals {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fab-totals:hover { transform: scale(1.1); }
+    #totalesModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .totales-card {
+      position: relative;
+      width: 90vw;
+      max-width: 320px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #facturaModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 998;
+    }
+    .factura-card {
+      width: 90vw;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    .ticket-preview {
+      background: #fff;
+      color: #000;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px;
+        line-height: 1.3;
+        padding: 8px 6px;
+        border: 1px dashed #999;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .ticket-preview .total {
+      font-weight: 700;
+      font-size: 12px;
+      text-align: right;
+      margin-top: 6px;
+      padding-right: 6px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .modal-buttons button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-print { background: #16a34a; color: #fff; }
+    .btn-close { background: #6b7280; color: #fff; }
+    #imgModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      cursor: pointer;
+    }
+    #imgModal img {
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    .card img {
+        width: 100%;
+        height: 160px;
+        object-fit: contain;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-bottom: 8px;
+    }
+    .barcode {
+        width: 100%;
+        height: 40px;
+        object-fit: contain;
+        cursor: pointer;
+        margin-top: auto;
+    }
+    .barcode-text {
+        font-size: 10px;
+        text-align: center;
+        margin-top: 4px;
+        color: var(--text);
+    }
+  </style>
 </head>
 <body>
 
-<h2>Ventas</h2>
+<div class="container">
+  <header class="header">
+    <h1>Ventas Realizadas</h1>
+    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
+  </header>
 
-<table>
-<thead>
-<tr>
-<th>✔</th>
-<th>Código</th>
-<th>Producto</th>
-<th>Cantidad</th>
-<th>Total</th>
-</tr>
-</thead>
-<tbody id="tablaVentas"></tbody>
-</table>
+  <div class="controls">
+    <input type="text" id="filterName" placeholder="Filtrar por nombre">
+    <input type="text" id="filterCode" placeholder="Filtrar por código">
+    <select id="rowsPerPage" onchange="loadSoldInventory()">
+      <option value="10">10</option>
+      <option value="25">25</option>
+      <option value="50">50</option>
+    </select>
+    <button onclick="abrirFactura()">🧾 Generar Factura</button>
+    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
+  </div>
 
-<button onclick="abrirFactura()">🧾 Generar Factura</button>
+  <div id="totalBox" style="display:none;">
+    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+  </div>
 
-<div id="facturaModal">
-  <div class="modal">
-    <h3>Factura</h3>
-    <label>Fecha:
-      <input id="fFecha" readonly>
-    </label>
-    <table>
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Cantidad</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody id="tablaTicket"></tbody>
-    </table>
-    <button onclick="cerrarFactura()">Cerrar</button>
+  <section class="cards-grid" id="soldInventoryList"></section>
+
+  <div class="pagination">
+    <button onclick="prevPage()">← Anterior</button>
+    <button onclick="nextPage()">Siguiente →</button>
   </div>
 </div>
 
+<!-- MODALES Y FUNCIONES (sin cambios) -->
+<button class="fab-totals" onclick="abrirModalTotales()">
+  <span id="fabQty">0</span>
+</button>
+
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="totales-card" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <div class="card" style="margin:0 auto;text-align:center;background:var(--bg);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+    </div>
+  </div>
+</div>
+
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="factura-card" onclick="event.stopPropagation()">
+    <h2>Factura – Ticket</h2>
+    <label>Factura N°</label>
+    <input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label>
+    <input id="fFecha" readonly>
+    <label>Cliente</label>
+    <input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+
+    <div class="ticket-preview">
+      <header>
+        <div style="font-size:12px;font-weight:700">KLOHESV</div>
+        <div>San Salvador, El Salvador</div>
+        <div>industriastobias@gmail.com</div>
+        <div>Instagram: @Klohesv</div>
+      </header>
+      <div class="line"></div>
+      <div style="font-size:11px">
+        <div>Factura N°: <span id="fNumTxt">0001</span></div>
+        <div>Fecha: <span id="fFechaTxt"></span></div>
+        <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
+      </div>
+      <div class="line"></div>
+      <table>
+        <thead><tr>
+          <th>Producto</th>
+          <th>Cant</th>
+          <th>Total</th>
+        </tr></thead>
+        <tbody id="fBody"></tbody>
+      </table>
+      <div class="line"></div>
+      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
+      <footer>
+        <div>¡Gracias por su compra!</div>
+        <div style="font-size:9px;margin-top:4px">
+          No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.
+        </div>
+      </footer>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
+      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
+      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="imgModal" onclick="cerrarImgModal()">
+  <img id="imgModalImg" src="" alt="Imagen ampliada">
+</div>
+
 <script>
-// 🔹 PRODUCTOS DE EJEMPLO
-const productos = [
-  {code:'A01',name:'Producto A',quantity:1,total:50},
-  {code:'B02',name:'Producto B',quantity:2,total:75.5},
-  {code:'C03',name:'Producto C',quantity:1,total:30}
-];
+  /* ---------- VARIABLES Y FUNCIONES ORIGINALES ---------- */
+  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  let currentPage = 1;
+  let rowsPerPage = 10;
 
-// 🔹 CARGAR TABLA
-function cargarVentas(){
-  const tb=document.getElementById('tablaVentas');
-  tb.innerHTML='';
-  productos.forEach(p=>{
-    tb.innerHTML+=`
-      <tr>
-        <td><input type="checkbox" class="factCheck" value='${JSON.stringify(p)}'></td>
-        <td>${p.code}</td>
-        <td>${p.name}</td>
-        <td>${p.quantity}</td>
-        <td>$${p.total.toFixed(2)}</td>
-      </tr>
-    `;
-  });
-}
-cargarVentas();
+  async function loadSoldInventory() {
+    const nameFilter = document.getElementById('filterName').value.toLowerCase();
+    const codeFilter = document.getElementById('filterCode').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
 
-// 🔹 FACTURA
-function abrirFactura(){
-  const seleccionados=[...document.querySelectorAll('.factCheck:checked')];
-  if(seleccionados.length===0){
-    alert('Selecciona al menos un producto');
-    return;
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(nameFilter) &&
+      item.code.toLowerCase().includes(codeFilter)
+    );
+
+    filtered.reverse();
+
+    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+
+    // ✅ Guardamos el total para finanzas.html
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
+
+    document.getElementById('totalQty').textContent  = totalUnits;
+    document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
+    
+    document.getElementById('totalQtyModal').textContent = totalUnits;
+    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('fabQty').textContent = totalUnits;
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(start, start + rowsPerPage);
+
+    const container = document.getElementById('soldInventoryList');
+    container.innerHTML = '';
+
+    for (const item of paginated) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const img = document.createElement('img');
+      img.alt = item.name;
+
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      // Imagen del código de barras
+      const barcodeImg = document.createElement('img');
+      barcodeImg.className = 'barcode';
+      barcodeImg.style.width = '100%';
+      barcodeImg.style.height = '40px';
+      barcodeImg.style.objectFit = 'contain';
+      barcodeImg.style.cursor = 'pointer';
+
+      let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
+      if (!barcodeBlob) {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, item.barcode, {
+          format: 'CODE128',
+          width: 2,
+          height: 40,
+          displayValue: false
+        });
+        canvas.toBlob(async (blob) => {
+          await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
+          barcodeImg.src = URL.createObjectURL(blob);
+        });
+      } else {
+        barcodeImg.src = URL.createObjectURL(barcodeBlob);
+      }
+      barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
+
+      // Texto del código de barras
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = `Código: ${item.barcode}`;
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${item.name}</div>
+        </div>
+        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
+        <div>Cantidad vendida: ${item.quantity}</div>
+        <div class="card-footer">
+          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
+          <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
+        </div>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
+      `;
+
+      card.insertBefore(img, card.firstChild);
+      card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
+      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      container.appendChild(card);
+    }
   }
 
-  document.getElementById('facturaModal').style.display='flex';
-  document.getElementById('fFecha').value=
-    new Date().toLocaleDateString('es-SV');
+  window.deleteSoldItem = function (code) {
+    const index = soldInventory.findIndex(item => item.code === code);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      loadSoldInventory();
+    }
+  }
 
-  const tb=document.getElementById('tablaTicket');
-  tb.innerHTML='';
+  function toggleTheme() {
+    const html = document.documentElement;
+    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  }
 
-  let ingresos=JSON.parse(localStorage.getItem('ingresos')||'[]');
+  function prevPage() {
+    if (currentPage > 1) { currentPage--; loadSoldInventory(); }
+  }
 
-  seleccionados.forEach(ch=>{
-    const p=JSON.parse(ch.value);
-    tb.innerHTML+=`
-      <tr>
-        <td>${p.name}</td>
-        <td>${p.quantity}</td>
-        <td>$${p.total.toFixed(2)}</td>
-      </tr>
-    `;
+  function nextPage() {
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(document.getElementById('filterName').value.toLowerCase()) &&
+      item.code.toLowerCase().includes(document.getElementById('filterCode').value.toLowerCase())
+    );
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
+  }
 
-    ingresos.unshift({
-      fecha:new Date().toISOString().slice(0,10),
-      descripcion:`Venta: ${p.name}`,
-      categoria:'Ventas',
-      monto:Number(p.total),
-      metodo_pago:'Efectivo',
-      responsable:'Sistema',
-      observaciones:`Código ${p.code}`
-    });
+  document.getElementById('filterName').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
+  document.getElementById('filterCode').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadSoldInventory();
   });
 
-  localStorage.setItem('ingresos',JSON.stringify(ingresos));
-}
+  function abrirFactura(){
+    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
+    if(seleccionados.length === 0){
+      alert('Por favor selecciona al menos un producto para facturar.');
+      return;
+    }
 
-function cerrarFactura(){
-  document.getElementById('facturaModal').style.display='none';
-}
+    // === GUARDAR CADA PRODUCTO COMO INGRESO INDIVIDUAL ===
+    let ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+    seleccionados.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      ingresos.unshift({
+        fecha: new Date().toISOString().slice(0,10),
+        descripcion: `Venta: ${p.name}`,
+        categoria: 'Ventas',
+        monto: parseFloat(p.total).toFixed(2),
+        metodo_pago: 'Efectivo',
+        responsable: 'Sistema',
+        observaciones: `Código ${p.code} – ${p.quantity} unidad(es)`
+      });
+    });
+    localStorage.setItem('ingresos', JSON.stringify(ingresos));
+    console.log('✅ Ingresos guardados:', seleccionados.length);
+
+    // Abrir modal
+    document.getElementById('facturaModal').style.display='flex';
+    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+    actualizarTablaTicket();
+  }
+
+  function cerrarFactura(){ 
+    document.getElementById('facturaModal').style.display='none'; 
+  }
+
+  function actualizarTablaTicket(){
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    let sum = 0;
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br><span style="font-size:10px;">P/U: $${Number(p.price).toFixed(2)}</span></td>
+        <td>${p.quantity}</td>
+        <td>$${Number(p.total).toFixed(2)}</td>`;
+      body.appendChild(tr);
+      sum += Number(p.total);
+    });
+    document.getElementById('fTotal').textContent = sum.toFixed(2);
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+  }
+
+  function imprimirTicket(){
+    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const ventana = window.open('', '', 'width=360,height=600');
+    ventana.document.write(`
+      <html>
+      <head><title>Ticket</title>
+      <style>
+        body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+        table{width:100%;border-collapse:collapse;table-layout:fixed}
+        th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        th:first-child,td:first-child{text-align:left;width:60%}
+        th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+        th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+        .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+        .line{border-top:1px dashed #000;margin:6px 0}
+        .pu{font-size:10px;color:#555;}
+      </style>
+      </head>
+      <body>${cont}</body></html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
+
+  function descargarPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 190] });
+    let y = 6;
+    const margen = 4;
+    const ancho = 80 - margen * 2;
+
+    doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
+    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
+    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
+    doc.line(margen, y, 80 - margen, y); y += 5;
+
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
+    y += 3;
+    doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(9); doc.setFont(undefined, 'bold');
+    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
+    doc.setFont(undefined, 'normal');
+    const filas = document.querySelectorAll('#fBody tr');
+    filas.forEach(fr => {
+      const c = fr.cells;
+      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
+      y += prod.length * 3 + 1;
+    });
+    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
+    const split = doc.splitTextToSize(msg, ancho);
+    split.forEach(l => { doc.text(l, margen, y); y += 3; });
+
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  function abrirModalTotales() {
+    document.getElementById('totalesModal').style.display = 'flex';
+  }
+
+  function cerrarModalTotales() {
+    document.getElementById('totalesModal').style.display = 'none';
+  }
+
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+
+  function cerrarImgModal() {
+    document.getElementById('imgModal').style.display = 'none';
+  }
 </script>
+
 </body>
 </html>

@@ -79,7 +79,9 @@
   <!-- INGRESOS (lista de transacciones) -->
   <section id="ingresos">
     <h2>Ingresos</h2>
+    <!-- BOTÓN DE ACTUALIZAR -->
     <div class="excel-bar">
+      <button onclick="actualizarDesdeVenta()">🔄 Actualizar desde venta</button>
       <button id="exportIngresos">Exportar Excel</button>
       <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
       <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
@@ -411,11 +413,26 @@ document.getElementById('importGastosDesdeIngresos').onchange=function(e){import
 document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
 document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
 
-/* ---------- CARGAR / ORDENAR INGRESOS AUTOMÁTICOS ---------- */
-function cargarIngresosAutom(){
-  const ingresos=JSON.parse(localStorage.getItem('ingresos')||'[]');
-  renderTable('tablaIngresos',ingresos,['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'],'ingresos');
+/* ---------- BOTÓN Y FUNCIÓN DE ACTUALIZAR ---------- */
+function actualizarDesdeVenta() {
+  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+  const tbody = document.querySelector('#tablaIngresos tbody');
+  tbody.innerHTML = ingresos.map(v => `
+    <tr>
+      <td>${v.fecha}</td>
+      <td>${v.descripcion}</td>
+      <td>${v.categoria}</td>
+      <td>$${parseFloat(v.monto).toFixed(2)}</td>
+      <td>${v.metodo_pago}</td>
+      <td>${v.responsable}</td>
+      <td>${v.observaciones}</td>
+    </tr>
+  `).join('');
+  actualizarDashboard();
+  console.log('✅ Datos actualizados desde venta.html');
 }
+
+/* ---------- CARGA INICIAL ---------- */
 cargarIngresosAutom();
 actualizarDashboard();
 </script>

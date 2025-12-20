@@ -323,16 +323,14 @@
       <option value="50">50</option>
     </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
-    <button onclick="location.href='Total.html'">📊 Total</button>
-    <button onclick="actualizarTodoEnLista()">🔄 Actualizar todo en lista</button>
+    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
   </div>
 
-  <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-    <label style="font-weight:600;font-size:.9rem;">
-      <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
-      Seleccionar todo
-    </label>
-    <button class="btn" onclick="actualizarSeleccionadosEnLista()">⬆️ Actualizar seleccionados en lista</button>
+  <div id="totalBox" style="display:none;">
+    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
   </div>
 
   <section class="cards-grid" id="soldInventoryList"></section>
@@ -432,6 +430,10 @@
 
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
     const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+
+    // ✅ Guardamos el total para finanzas.html
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
+
     document.getElementById('totalQty').textContent  = totalUnits;
     document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
     
@@ -444,9 +446,6 @@
 
     const container = document.getElementById('soldInventoryList');
     container.innerHTML = '';
-
-    const lista = JSON.parse(localStorage.getItem('lista') || '[]');
-    const codigosEnLista = new Set(lista.map(p => p.code));
 
     for (const item of paginated) {
       const card = document.createElement('div');
@@ -464,6 +463,7 @@
         img.style.display = 'none';
       }
 
+      // Imagen del código de barras
       const barcodeImg = document.createElement('img');
       barcodeImg.className = 'barcode';
       barcodeImg.style.width = '100%';
@@ -489,16 +489,14 @@
       }
       barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
 
+      // Texto del código de barras
       const barcodeText = document.createElement('div');
       barcodeText.className = 'barcode-text';
       barcodeText.textContent = `Código: ${item.barcode}`;
 
-      const yaEnLista = codigosEnLista.has(item.code);
-
       card.innerHTML = `
         <div class="card-header">
           <div class="card-title">${item.name}</div>
-          ${yaEnLista ? '<span style="font-size:11px;color:#10b981;font-weight:600;">✔ Ya en lista</span>' : ''}
         </div>
         <div class="card-price">$${Number(item.price).toFixed(2)}</div>
         <div>Cantidad vendida: ${item.quantity}</div>
@@ -506,10 +504,8 @@
           <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
           <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;" ${yaEnLista ? 'disabled' : ''}>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
       `;
-
-      if (yaEnLista) card.style.opacity = '0.7';
 
       card.insertBefore(img, card.firstChild);
       card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
@@ -519,15 +515,12 @@
   }
 
   window.deleteSoldItem = function (code) {
-    let venta = JSON.parse(localStorage.getItem('soldInventory')) || [];
-    venta = venta.filter(item => item.code !== code);
-    localStorage.setItem('soldInventory', JSON.stringify(venta));
-
-    let lista = JSON.parse(localStorage.getItem('lista')) || [];
-    lista = lista.filter(item => item.code !== code);
-    localStorage.setItem('lista', JSON.stringify(lista));
-
-    loadSoldInventory();
+    const index = soldInventory.findIndex(item => item.code === code);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      loadSoldInventory();
+    }
   };
 
   function toggleTheme() {
@@ -679,51 +672,6 @@
 
   function cerrarImgModal() {
     document.getElementById('imgModal').style.display = 'none';
-  }
-
-  /* ---------- SELECCIONAR / DESSELECCIONAR TODO ---------- */
-  function toggleSelectAll(source) {
-    const checks = document.querySelectorAll('.factCheck:not(:disabled)');
-    checks.forEach(ch => ch.checked = source.checked);
-  }
-
-  /* ---------- ACTUALIZAR SELECCIONADOS EN LISTA (SIN DUPLICAR) ---------- */
-  function actualizarSeleccionadosEnLista() {
-    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
-    if (seleccionados.length === 0) {
-      alert('No hay productos seleccionados.');
-      return;
-    }
-
-    let lista = JSON.parse(localStorage.getItem('lista') || '[]');
-    const codigosEnLista = new Set(lista.map(p => p.code));
-
-    let agregados = 0;
-
-    seleccionados.forEach(ch => {
-      const p = JSON.parse(ch.value);
-      if (!codigosEnLista.has(p.code)) {
-        lista.push({ ...p });
-        agregados++;
-      }
-    });
-
-    localStorage.setItem('lista', JSON.stringify(lista));
-    alert(`✅ ${agregados} productos nuevos agregados a lista.html`);
-  }
-
-  /* ---------- ACTUALIZAR TODO EN LISTA (SIN DUPLICAR) ---------- */
-  function actualizarTodoEnLista() {
-    const venta = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-    let lista = JSON.parse(localStorage.getItem('lista') || '[]');
-
-    const codigosEnLista = new Set(lista.map(p => p.code));
-    const nuevos = venta.filter(p => !codigosEnLista.has(p.code));
-
-    lista.push(...nuevos.map(p => ({ ...p })));
-    localStorage.setItem('lista', JSON.stringify(lista));
-
-    alert(`✅ ${nuevos.length} productos nuevos agregados a lista.html`);
   }
 </script>
 

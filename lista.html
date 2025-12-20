@@ -3,419 +3,125 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CONTABILIDAD A FAMILY COMPANY</title>
+  <title>Lista de Ingresos - KLOHESV</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    :root{
-      --color-bg:#f4f6f8;
-      --color-primary:#1a73e8;
-      --color-secondary:#0d47a1;
-      --color-text:#2c3e50;
-      --color-card:#ffffff;
-      --radius:12px;
-      --shadow:0 3px 10px rgba(0,0,0,.05);
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --shadow: 0 10px 15px -3px rgba(0,0,0,.05);
+      --radius: 16px;
     }
-    body{font-family:"Inter",Arial,sans-serif;background:var(--color-bg);color:var(--color-text);margin:0;padding:0}
-    header{background:var(--color-primary);color:#fff;padding:1rem 2rem;text-align:center;font-size:1.5rem;font-weight:600;letter-spacing:.5px;box-shadow:var(--shadow)}
-    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd;flex-wrap:wrap}
-    .tab{padding:1rem 1.5rem;cursor:pointer;font-weight:500;color:#666;transition:all .2s}
-    .tab.active{color:var(--color-primary);border-bottom:3px solid var(--color-primary);background:#f9fafc}
-    main{padding:2rem;max-width:1200px;margin:auto}
-    section{display:none;animation:fadeIn .3s ease-in-out}
-    section.active{display:block}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem}
-    .card{background:var(--color-card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}
-    .card:hover{transform:translateY(-3px)}
-    .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
-    .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
-    canvas{display:block;margin:2rem auto;max-width:350px}
-    form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
-    input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
-    textarea{resize:vertical;min-height:60px}
-    button{background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-weight:500;transition:background .2s}
-    button:hover{background:var(--color-secondary)}
-    table{width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.9rem}
-    th{background:#f8f9fa;color:#555;font-weight:600}
-    tr:hover td{background:#f3f6fa}
-    .acciones button{background:none;border:none;cursor:pointer;font-size:1rem;margin:0 5px}
-    .acciones .editar{color:#1a73e8}
-    .acciones .eliminar{color:#e53935}
-    footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
-    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
-    .excel-bar button{background:#388e3c}
-    .excel-bar button:hover{background:#2e7d32}
+    [data-theme="dark"] {
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --primary: #60a5fa;
+      --success: #34d399;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+    header { background: var(--primary); color: #fff; padding: 1.2rem 2rem; text-align: center; font-size: 1.6rem; font-weight: 700; letter-spacing: .5px; box-shadow: var(--shadow); }
+    main { flex: 1; max-width: 1200px; margin: 2rem auto; padding: 0 1rem; width: 100%; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .btn { background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: .6rem 1.2rem; cursor: pointer; font-weight: 600; transition: .2s; }
+    .btn:hover { opacity: .9; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); transition: .3s; }
+    .card:hover { transform: translateY(-4px); }
+    .card h3 { font-size: .9rem; color: #6b7280; margin-bottom: .5rem; }
+    .card p { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .section-title { font-size: 1.3rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    th, td { padding: .75rem 1rem; text-align: left; font-size: .9rem; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f3f4f6; font-weight: 600; color: #4b5563; }
+    tr:hover { background: #f9fafb; }
+    .theme-toggle { cursor: pointer; font-size: 1.4rem; padding: .5rem; border-radius: 50%; transition: .2s; }
+    .theme-toggle:hover { background: #00000011; }
+    @media (max-width: 768px) {
+      .top-bar { flex-direction: column; align-items: flex-start; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
 
-<header>📊 FINANZAS</header>
-
-<nav>
-  <div class="tab active" data-tab="dashboard">Dashboard</div>
-  <div class="tab" data-tab="ingresos">Ingresos</div>
-  <div class="tab" data-tab="gastos">Gastos</div>
-  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
-  <div class="tab" data-tab="proveedores">Proveedores</div>
-  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
-</nav>
+<header>
+  📊 Lista de Ingresos – KLOHESV
+  <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
+</header>
 
 <main>
-  <!-- DASHBOARD -->
-  <section id="dashboard" class="active">
-    <h2>Resumen General</h2>
-    <div class="dashboard">
-      <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
-      <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
-      <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
-      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
-      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
+  <!-- TARJETAS DE RESUMEN -->
+  <div class="top-bar">
+    <h2 style="margin:0;">Resumen de Ingresos</h2>
+    <div>
+      <button class="btn" onclick="actualizarDesdeVenta()">🔄 Actualizar</button>
+      <button class="btn" onclick="exportarExcel()">📥 Exportar Excel</button>
     </div>
-    <canvas id="chartResumen"></canvas>
-  </section>
+  </div>
 
-  <!-- INGRESOS (lista de transacciones) -->
-  <section id="ingresos">
-    <h2>Ingresos</h2>
-    <!-- BOTÓN DE ACTUALIZAR -->
-    <div class="excel-bar">
-      <button onclick="actualizarDesdeVenta()">🔄 Actualizar desde venta</button>
-      <button id="exportIngresos">Exportar Excel</button>
-      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
+  <div class="card-grid">
+    <div class="card">
+      <h3>Total Ingresos</h3>
+      <p id="totalIngresos">$0.00</p>
     </div>
-    <table id="tablaIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <div class="card">
+      <h3>Cantidad de Ventas</h3>
+      <p id="cantVentas">0</p>
+    </div>
+    <div class="card">
+      <h3>Promedio por Venta</h3>
+      <p id="promedioVenta">$0.00</p>
+    </div>
+  </div>
 
-  <!-- GASTOS (manual) -->
-  <section id="gastos">
-    <h2>Gastos</h2>
-    <form id="formGasto">
-      <input name="fecha" type="date" required>
-      <input name="proveedor" placeholder="Proveedor">
-      <input name="categoria" placeholder="Categoría">
-      <input name="descripcion" placeholder="Descripción">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportGastos">Exportar Excel</button>
-      <label for="importGastos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importGastos" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaGastos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+  <!-- GRÁFICO DE BARRAS -->
+  <div class="section-header">
+    <h2 class="section-title">Ventas por Día</h2>
+  </div>
+  <canvas id="chartVentas" style="max-height:300px"></canvas>
 
-  <!-- GASTOS DESDE INGRESOS (manual) -->
-  <section id="gastosDesdeIngresos">
-    <h2>Gastos desde Ingresos</h2>
-    <form id="formGastosDesdeIngresos">
-      <input name="fecha" type="date" required>
-      <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportGastosDesdeIngresos">Exportar Excel</button>
-      <label for="importGastosDesdeIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importGastosDesdeIngresos" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaGastosDesdeIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Responsable</th><th>Observaciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- PROVEEDORES (manual) -->
-  <section id="proveedores">
-    <h2>Proveedores</h2>
-    <form id="formProveedor">
-      <input name="nombre" placeholder="Nombre" required>
-      <input name="nit" placeholder="NIT">
-      <input name="telefono" placeholder="Teléfono">
-      <input name="email" type="email" placeholder="Email">
-      <input name="direccion" placeholder="Dirección">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportProveedores">Exportar Excel</button>
-      <label for="importProveedores" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importProveedores" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaProveedores">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <!-- CUENTAS (manual) -->
-  <section id="cuentas">
-    <h2>Cuentas Pendientes</h2>
-    <form id="formCuenta">
-      <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
-      <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
-      <input name="concepto" placeholder="Concepto">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
-      <input name="fecha_vencimiento" type="date">
-      <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportCuentas">Exportar Excel</button>
-      <label for="importCuentas" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importCuentas" accept=".xlsx,.xls" style="display:none">
-    </div>
-    <table id="tablaCuentas">
-      <thead>
-        <tr>
-          <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+  <!-- TABLA DE INGRESOS -->
+  <div class="section-header" style="margin-top:2rem">
+    <h2 class="section-title">Detalle de Ventas</h2>
+  </div>
+  <table id="tablaIngresos">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Descripción</th>
+        <th>Categoría</th>
+        <th>Monto</th>
+        <th>Método Pago</th>
+        <th>Responsable</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </main>
 
-<footer>© 2025 Panel Financiero Empresarial</footer>
-
 <script>
-/* ---------- NAVEGACIÓN ---------- */
-const tabs=document.querySelectorAll('.tab'),sections=document.querySelectorAll('section');
-tabs.forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    tabs.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const id=btn.dataset.tab;
-    sections.forEach(s=>s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  });
-});
-
-/* ---------- DATOS ---------- */
-const data={
-  gastos:JSON.parse(localStorage.getItem('gastos')||'[]'),
-  proveedores:JSON.parse(localStorage.getItem('proveedores')||'[]'),
-  cuentas:JSON.parse(localStorage.getItem('cuentas')||'[]')
-};
-const gastosDesdeIngresos=JSON.parse(localStorage.getItem('gastosDesdeIngresos')||'[]');
-
-function saveData(){
-  for(const k in data) localStorage.setItem(k,JSON.stringify(data[k]));
-  localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
-  actualizarDashboard();
+/* ---------- TEMA CLARO/OSCURO ---------- */
+function toggleTheme() {
+  const html = document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
 
-/* ---------- GRÁFICO ---------- */
-const ctx=document.getElementById('chartResumen').getContext('2d');
-const chart=new Chart(ctx,{
-  type:'doughnut',
-  data:{labels:['Ingreso Neto','Gastos','Saldo Neto'],datasets:[{data:[0,0,0],backgroundColor:['#1a73e8','#e53935','#43a047'],hoverOffset:10}]},
-  options:{responsive:true,plugins:{legend:{position:'bottom'}}}
-});
-
-// ✅ FUNCIÓN CORREGIDA: lee SIEMPRE desde localStorage.ingresos
-function actualizarDashboard(){
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-  const ti = ingresos.reduce((sum, item) => sum + parseFloat(item.monto || 0), 0);
-
-  const tg = data.gastos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const gdi = gastosDesdeIngresos.reduce((a,g)=>a+parseFloat(g.monto||0),0);
-  const ingresoNeto = ti - gdi;
-  const balance = ingresoNeto - tg;
-
-  document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
-  document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
-  document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2);
-  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
-
-  chart.data.datasets[0].data = [ingresoNeto, tg, Math.abs(balance)];
-  chart.update();
-}
-
-/* ---------- RENDER TABLA ---------- */
-function renderTable(id,arr,keys,keyName){
-  const tbody=document.querySelector(`#${id} tbody`);
-  tbody.innerHTML=arr.map((it,i)=>`
-    <tr>
-      ${keys.map(k=>`<td>${it[k]||''}</td>`).join('')}
-      <td class="acciones">
-        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
-      </td>
-    </tr>`).join('');
-}
-
-/* ---------- FORMULARIOS (solo gastos, proveedores, cuentas) ---------- */
-const forms=[
-  {id:'formGasto',key:'gastos',table:'tablaGastos',fields:['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']},
-  {id:'formProveedor',key:'proveedores',table:'tablaProveedores',fields:['nombre','nit','telefono','email','direccion','observaciones']},
-  {id:'formCuenta',key:'cuentas',table:'tablaCuentas',fields:['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']}
-];
-
-forms.forEach(f=>{
-  const form=document.getElementById(f.id);
-  form.addEventListener('submit',e=>{
-    e.preventDefault();
-    const item={};
-    f.fields.forEach(k=>item[k]=form[k].value);
-    data[f.key].push(item);
-    saveData();
-    renderTable(f.table,data[f.key],f.fields,f.key);
-    form.reset();
-  });
-  renderTable(f.table,data[f.key],f.fields,f.key);
-});
-
-/* ---------- GASTOS DESDE INGRESOS (manual) ---------- */
-const formGDI=document.getElementById('formGastosDesdeIngresos');
-formGDI.addEventListener('submit',e=>{
-  e.preventDefault();
-  const item={
-    fecha:formGDI.fecha.value,
-    descripcion:formGDI.descripcion.value,
-    categoria:formGDI.categoria.value,
-    monto:parseFloat(formGDI.monto.value),
-    responsable:formGDI.responsable.value,
-    observaciones:formGDI.observaciones.value
-  };
-  gastosDesdeIngresos.push(item);
-  saveData();
-  renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-  formGDI.reset();
-});
-renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-
-/* ---------- EDITAR / ELIMINAR ---------- */
-document.addEventListener('click',e=>{
-  if(e.target.classList.contains('eliminar')){
-    const {key,index}=e.target.dataset;
-    if(confirm('¿Eliminar este registro?')){
-      if(key==='gastosDesdeIngresos'){
-        gastosDesdeIngresos.splice(parseInt(index),1);
-        localStorage.setItem('gastosDesdeIngresos',JSON.stringify(gastosDesdeIngresos));
-        renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-      }else{
-        data[key].splice(parseInt(index),1);
-        saveData();
-        const f=forms.find(x=>x.key===key);
-        renderTable(f.table,data[key],f.fields,key);
-      }
-      actualizarDashboard();
-    }
-  }
-  if(e.target.classList.contains('editar')){
-    const {key,index}=e.target.dataset;
-    if(key==='gastosDesdeIngresos'){
-      const item=gastosDesdeIngresos[index];
-      formGDI.fecha.value=item.fecha;
-      formGDI.descripcion.value=item.descripcion;
-      formGDI.categoria.value=item.categoria;
-      formGDI.monto.value=item.monto;
-      formGDI.responsable.value=item.responsable;
-      formGDI.observaciones.value=item.observaciones;
-      gastosDesdeIngresos.splice(parseInt(index),1);
-      saveData();
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,['fecha','descripcion','categoria','monto','responsable','observaciones'],'gastosDesdeIngresos');
-    }else{
-      const f=forms.find(x=>x.key===key);
-      const form=document.getElementById(f.id);
-      const item=data[key][index];
-      f.fields.forEach(k=>form[k].value=item[k]||'');
-      data[key].splice(parseInt(index),1);
-      saveData();
-      renderTable(f.table,data[key],f.fields,key);
-    }
-    actualizarDashboard();
-  }
-});
-
-/* ---------- EXCEL ---------- */
-function exportExcel(key,filename){
-  let source=key==='gastosDesdeIngresos'?gastosDesdeIngresos:data[key];
-  const ws=XLSX.utils.json_to_sheet(source);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,key);
-  XLSX.writeFile(wb,filename);
-}
-function importExcel(file,key,fields){
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const wb=XLSX.read(e.target.result,{type:'binary'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-    rows.forEach(r=>{
-      const item={};
-      fields.forEach(f=>item[f]=r[f]||'');
-      if(key==='gastosDesdeIngresos') gastosDesdeIngresos.push(item);
-      else data[key].push(item);
-    });
-    saveData();
-    if(key==='gastosDesdeIngresos'){
-      renderTable('tablaGastosDesdeIngresos',gastosDesdeIngresos,fields,key);
-    }else{
-      const f=forms.find(x=>x.key===key);
-      renderTable(f.table,data[key],fields,key);
-    }
-  };
-  reader.readAsBinaryString(file);
-}
-
-/* botones exportar */
-document.getElementById('exportIngresos').onclick=()=>{
-  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
-  const ws = XLSX.utils.json_to_sheet(ingresos);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
-  XLSX.writeFile(wb, 'ingresos.xlsx');
-};
-document.getElementById('exportGastos').onclick=()=>exportExcel('gastos','gastos.xlsx');
-document.getElementById('exportGastosDesdeIngresos').onclick=()=>exportExcel('gastosDesdeIngresos','gastos_desde_ingresos.xlsx');
-document.getElementById('exportProveedores').onclick=()=>exportExcel('proveedores','proveedores.xlsx');
-document.getElementById('exportCuentas').onclick=()=>exportExcel('cuentas','cuentas.xlsx');
-
-/* inputs importar */
-document.getElementById('importIngresos').onchange=function(e){importExcel(e.target.files[0],'ingresos',['fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastos').onchange=function(e){importExcel(e.target.files[0],'gastos',['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']);this.value='';}
-document.getElementById('importGastosDesdeIngresos').onchange=function(e){importExcel(e.target.files[0],'gastosDesdeIngresos',['fecha','descripcion','categoria','monto','responsable','observaciones']);this.value='';}
-document.getElementById('importProveedores').onchange=function(e){importExcel(e.target.files[0],'proveedores',['nombre','nit','telefono','email','direccion','observaciones']);this.value='';}
-document.getElementById('importCuentas').onchange=function(e){importExcel(e.target.files[0],'cuentas',['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']);this.value='';}
-
-/* ---------- BOTÓN Y FUNCIÓN DE ACTUALIZAR ---------- */
+/* ---------- ACTUALIZAR DESDE VENTA ---------- */
 function actualizarDesdeVenta() {
   const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+
+  // Pinta tabla
   const tbody = document.querySelector('#tablaIngresos tbody');
   tbody.innerHTML = ingresos.map(v => `
     <tr>
@@ -428,13 +134,63 @@ function actualizarDesdeVenta() {
       <td>${v.observaciones}</td>
     </tr>
   `).join('');
-  actualizarDashboard();
+
+  // Calcula resumen
+  const total = ingresos.reduce((sum, v) => sum + parseFloat(v.monto || 0), 0);
+  const cantidad = ingresos.length;
+  const promedio = cantidad ? total / cantidad : 0;
+
+  document.getElementById('totalIngresos').textContent = '$' + total.toFixed(2);
+  document.getElementById('cantVentas').textContent = cantidad;
+  document.getElementById('promedioVenta').textContent = '$' + promedio.toFixed(2);
+
+  // Gráfico de barras por día
+  const porDia = {};
+  ingresos.forEach(v => {
+    porDia[v.fecha] = (porDia[v.fecha] || 0) + parseFloat(v.monto);
+  });
+
+  const etiquetas = Object.keys(porDia).sort();
+  const valores = etiquetas.map(d => porDia[d]);
+
+  const ctx = document.getElementById('chartVentas');
+  if (window.chartVentasInstance) window.chartVentasInstance.destroy();
+  window.chartVentasInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        label: 'Ventas por día',
+        data: valores,
+        backgroundColor: '#3b82f6',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
   console.log('✅ Datos actualizados desde venta.html');
 }
 
+/* ---------- EXPORTAR A EXCEL ---------- */
+function exportarExcel() {
+  const ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+  const ws = XLSX.utils.json_to_sheet(ingresos);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
+  XLSX.writeFile(wb, 'ingresos_desde_venta.xlsx');
+}
+
 /* ---------- CARGA INICIAL ---------- */
-cargarIngresosAutom();
-actualizarDashboard();
+(() => {
+  actualizarDesdeVenta();
+})();
 </script>
+
 </body>
 </html>

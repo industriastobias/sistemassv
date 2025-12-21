@@ -86,7 +86,6 @@
       flex-wrap: wrap;
     }
     .controls input,
-    .controls select,
     .controls button {
       padding: 10px 14px;
       border: none;
@@ -103,6 +102,21 @@
       font-weight: 600;
     }
     .controls button:hover { opacity: .9; }
+    .kpi-panel {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .kpi-box {
+      flex: 1 1 200px;
+      background: var(--bg);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-size: .9rem;
+    }
+    .kpi-box b { display: block; font-size: 1.5rem; margin-top: 4px; }
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -121,27 +135,52 @@
       min-height: 320px;
     }
     .card:hover { transform: translateY(-4px); }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .card img {
+      width: 100%;
+      height: 160px;
+      object-fit: contain;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 8px;
     }
-    .card-title { font-size: 1.1rem; font-weight: 600; }
-    .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .barcode {
+      width: 100%;
+      height: 40px;
+      object-fit: contain;
+      cursor: pointer;
       margin-top: auto;
     }
-    .card-delete {
-      background: var(--danger);
+    .barcode-text {
+      font-size: 10px;
+      text-align: center;
+      margin-top: 4px;
+      color: var(--text);
+    }
+    .highlight {
+      background: yellow;
+      color: #000;
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+    .etiqueta {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: var(--accent);
       color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: .75rem;
-      cursor: pointer;
+      font-size: .7rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+    }
+    .alta-rotacion {
+      background: #ff453a;
+      color: #fff;
+      font-size: .7rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
     }
     .pagination {
       display: flex;
@@ -184,7 +223,7 @@
       justify-content: center;
     }
     .fab-totals:hover { transform: scale(1.1); }
-    #totalesModal, #facturaModal, #imgModal, #pinModal, #scannerModal, #kpiModal, #cajaModal {
+    .modal {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,.45);
@@ -237,52 +276,12 @@
       object-fit: contain;
       border-radius: 8px;
     }
-    .card img {
+    #reader {
       width: 100%;
-      height: 160px;
-      object-fit: contain;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-bottom: 8px;
-    }
-    .barcode {
-      width: 100%;
-      height: 40px;
-      object-fit: contain;
-      cursor: pointer;
-      margin-top: auto;
-    }
-    .barcode-text {
-      font-size: 10px;
-      text-align: center;
-      margin-top: 4px;
-      color: var(--text);
-    }
-    .highlight {
-      background: yellow;
-      color: #000;
-      border-radius: 2px;
-      padding: 0 2px;
-    }
-    .etiqueta {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-    }
-    .alta-rotacion {
-      background: #ff453a;
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-      position: absolute;
-      top: 8px;
-      right: 8px;
+      max-width: 400px;
+      margin: 0 auto;
+      border-radius: var(--radius);
+      overflow: hidden;
     }
     .caja-mode body {
       padding: 0;
@@ -326,13 +325,6 @@
     .caja-mode .card-total {
       font-size: 1rem;
     }
-    #reader {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
   </style>
 </head>
 <body>
@@ -354,15 +346,10 @@
     <div class="kpi-box">Utilidad neta<b id="kpiUtilidad">$0.00</b></div>
   </div>
 
+  <!-- CONTROLES (sin selector de filas) -->
   <div class="controls">
     <input type="text" id="filterName" placeholder="Filtrar por nombre">
     <input type="text" id="filterCode" placeholder="Filtrar por código">
-    <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="10">10</option>
-      <option value="25">25</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
     <button onclick="location.href='lista.html'">📋 Ver lista completa</button>
     <button onclick="abrirEscanner()">📷 Escanear</button>
@@ -390,7 +377,7 @@
   <span id="fabQty">0</span>
 </button>
 
-<!-- Modales -->
+<!-- MODALES -->
 <div id="pinModal" class="modal">
   <div class="modal-card">
     <h3>Ingresa tu PIN</h3>
@@ -621,12 +608,11 @@
   // ---------- FUNCIONES ORIGINALES ----------
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
-  let rowsPerPage = 10;
+  const rowsPerPage = 100; // ✅ Siempre 100
 
   async function loadSoldInventory() {
     const nameFilter = document.getElementById('filterName').value.toLowerCase();
     const codeFilter = document.getElementById('filterCode').value.toLowerCase();
-    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
 
     let filtered = soldInventory.filter(item =>
       item.name.toLowerCase().includes(nameFilter) &&

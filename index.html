@@ -59,6 +59,21 @@
     }
     .button:hover { background-color: #3b5e38; transform: scale(1.05); }
     .logo { max-width: 80px; margin-bottom: .5em; margin-top: -30px; }
+
+    /* Botón modo kiosko */
+    #kioskBtn {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 9999;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      background: #00796b;
+      color: #fff;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -76,8 +91,11 @@
   <button class="button" onclick="login()">Login</button>
 </div>
 
+<!-- Botón modo kiosko (siempre visible) -->
+<button id="kioskBtn">Modo kiosko</button>
+
 <script>
-/* --- IndexedDB --- */
+/* ----------  IndexedDB  ---------- */
 const DB_NAME = 'sessionDB', STORE_NAME = 'sessions';
 let db;
 
@@ -99,13 +117,13 @@ async function guardarSesion(user) {
   tx.objectStore(STORE_NAME).put(user);
 }
 
-/* --- Usuarios --- */
+/* ----------  Usuarios  ---------- */
 const users = [
   { id: '2005', clave: 'admin2024', nombre: 'ERNESTO TOBIAS', foto: 'user2005.jpg' },
   { id: '1001', clave: 'viewer2024', nombre: 'PAOLA PALACIOS', foto: 'userpaola.jpg' }
 ];
 
-/* --- Login --- */
+/* ----------  Login  ---------- */
 async function login() {
   const userID = document.getElementById('userID').value.trim();
   const userClave = document.getElementById('userClave').value.trim();
@@ -122,7 +140,7 @@ async function login() {
   setTimeout(() => location.href = 'menu.html', 800);
 }
 
-/* --- Inicialización --- */
+/* ----------  Inicialización  ---------- */
 window.addEventListener('DOMContentLoaded', async () => {
   await openDB();
   document.querySelector('.container').style.display = 'block';
@@ -135,6 +153,53 @@ document.addEventListener('keypress', e => {
     else if (active.id === 'userClave') login();
   }
 });
+
+/* ----------  Modo Kiosko  ---------- */
+(() => {
+  const btn = document.getElementById('kioskBtn');
+  const KIOSK_KEY = 'kioskActivo';
+
+  function estaEnFullscreen() {
+    return !!(document.fullscreenElement ||
+              document.webkitFullscreenElement ||
+              document.mozFullScreenElement ||
+              document.msFullscreenElement);
+  }
+
+  function toggleFullscreen() {
+    if (!estaEnFullscreen()) {
+      const el = document.documentElement;
+      (el.requestFullscreen ||
+       el.webkitRequestFullscreen ||
+       el.mozRequestFullScreen ||
+       el.msRequestFullscreen).call(el);
+    } else {
+      (document.exitFullscreen ||
+       document.webkitExitFullscreen ||
+       document.mozCancelFullScreen ||
+       document.msExitFullscreen).call(document);
+    }
+  }
+
+  function actualizaUI() {
+    const activo = estaEnFullscreen();
+    btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+    localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+  }
+
+  btn.addEventListener('click', () => {
+    toggleFullscreen();
+    actualizaUI();
+  });
+
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange']
+    .forEach(ev => document.addEventListener(ev, actualizaUI));
+
+  if (localStorage.getItem(KIOSK_KEY) === '1') {
+    toggleFullscreen();
+    actualizaUI();
+  }
+})();
 </script>
 
 </body>

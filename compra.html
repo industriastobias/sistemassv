@@ -28,29 +28,54 @@
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
 
-    /* ---------- MENÚ PEGABLE SUPERIOR-DERECHA ---------- */
+    /* ---------- MENÚ HAMBURGUESA PEGABLE ---------- */
     .sticky-menu{
       position:fixed;
       top:1rem;
       right:1rem;
       z-index:9999;
-      display:flex;
-      gap:.6rem;
+    }
+    .menu-toggle{
       background:var(--card);
-      padding:.5rem .7rem;
+      border:none;
+      border-radius:var(--radius);
+      width:48px;
+      height:48px;
+      font-size:1.4rem;
+      cursor:pointer;
+      box-shadow:var(--shadow-hover);
+      transition:transform .2s;
+    }
+    .menu-toggle:hover{transform:scale(1.1)}
+    .menu-icons{
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      margin-top:.5rem;
+      background:var(--card);
+      padding:.75rem;
       border-radius:var(--radius);
       box-shadow:var(--shadow-hover);
+      display:none;          /* oculto por defecto */
     }
-    .sticky-menu a{
+    .menu-icons.show{display:flex}
+    .menu-icons a{
       color:var(--text);
       font-size:1.3rem;
-      transition:transform .2s, color .2s;
+      text-align:center;
+      padding:.4rem;
+      border-radius:8px;
+      transition:background .2s, color .2s;
     }
-    .sticky-menu a:hover{
-      transform:scale(1.15);
-      color:var(--accent);
-    }
-    /* ---------------------------------------------------- */
+    .menu-icons a:hover{background:var(--accent);color:#fff}
+
+    /* ---------- MODO KIOSCO (full-screen) ---------- */
+    body.kiosco .sticky-menu{top:unset; bottom:1rem; right:1rem}
+    body.kiosco .menu-toggle{background:rgba(0,0,0,.5); color:#fff}
+    body.kiosco .menu-icons{background:rgba(0,0,0,.5)}
+    body.kiosco .menu-icons a{color:#fff}
+    body.kiosco .menu-icons a:hover{background:var(--accent)}
+    /* ----------------------------------------------- */
 
     h1{font-size:2rem;font-weight:700;margin-bottom:2rem;letter-spacing:-.5px}
     .bubble{
@@ -138,20 +163,23 @@
 </head>
 <body>
 
-  <!-- ========= MENÚ PEGABLE (solo iconos) ========= -->
+  <!-- ========= MENÚ HAMBURGUESA PEGABLE ========= -->
   <nav class="sticky-menu" aria-label="Navegación principal">
-    <a href="compra.html" title="Compra"><i class="fa-solid fa-cart-plus"></i></a>
-    <a href="almacenamiento.html" title="Almacenamiento"><i class="fa-solid fa-warehouse"></i></a>
-    <a href="finanzas.html" title="Finanzas"><i class="fa-solid fa-dollar-sign"></i></a>
-    <a href="inventario.html" title="Inventario"><i class="fa-solid fa-boxes-stacked"></i></a>
-    <a href="catalogo.html" title="Catálogo"><i class="fa-solid fa-book"></i></a>
-    <a href="clientes.html" title="Clientes"><i class="fa-solid fa-users"></i></a>
-    <a href="descuentos.html" title="Descuentos"><i class="fa-solid fa-percent"></i></a>
-    <a href="facturas.html" title="Facturas"><i class="fa-solid fa-file-invoice"></i></a>
-    <a href="traslados.html" title="Traslados"><i class="fa-solid fa-truck-fast"></i></a>
-    <a href="venta.html" title="Venta"><i class="fa-solid fa-cash-register"></i></a>
+    <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
+    <div class="menu-icons" id="menuIcons">
+      <a href="compra.html" title="Compra"><i class="fa-solid fa-cart-plus"></i></a>
+      <a href="almacenamiento.html" title="Almacenamiento"><i class="fa-solid fa-warehouse"></i></a>
+      <a href="finanzas.html" title="Finanzas"><i class="fa-solid fa-dollar-sign"></i></a>
+      <a href="inventario.html" title="Inventario"><i class="fa-solid fa-boxes-stacked"></i></a>
+      <a href="catalogo.html" title="Catálogo"><i class="fa-solid fa-book"></i></a>
+      <a href="clientes.html" title="Clientes"><i class="fa-solid fa-users"></i></a>
+      <a href="descuentos.html" title="Descuentos"><i class="fa-solid fa-percent"></i></a>
+      <a href="facturas.html" title="Facturas"><i class="fa-solid fa-file-invoice"></i></a>
+      <a href="traslados.html" title="Traslados"><i class="fa-solid fa-truck-fast"></i></a>
+      <a href="venta.html" title="Venta"><i class="fa-solid fa-cash-register"></i></a>
+    </div>
   </nav>
-  <!-- ================================================= -->
+  <!-- ============================================== -->
 
   <h1>Compra</h1>
 
@@ -247,6 +275,21 @@
   let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
   let editIndex = -1;
   let loteTemporal = [];
+
+  // ---------- Control del menú ----------
+  const menuToggle = document.getElementById('menuToggle');
+  const menuIcons = document.getElementById('menuIcons');
+  menuToggle.addEventListener('click', () => menuIcons.classList.toggle('show'));
+
+  // ---------- Modo kiosco ----------
+  const urlParams = new URLSearchParams(location.search);
+  const kiosco = urlParams.has('kiosco') || localStorage.getItem('kiosco') === 'true';
+  if (kiosco) {
+    document.body.classList.add('kiosco');
+    localStorage.setItem('kiosco', 'true');
+    // Entrar en pantalla completa (si el navegador lo permite)
+    document.documentElement.requestFullscreen?.().catch(()=>{});
+  }
 
   // RENDER + TOTAL
   function calculateTotal(){

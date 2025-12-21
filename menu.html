@@ -59,13 +59,23 @@
     .nav::-webkit-scrollbar-track { background: transparent; }
     .nav::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
 
-    /* FIX: permitir scroll vertical completo en tablets */
+    /* Botón modo kiosko */
+    #kioskBtn {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 9999;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      background: #00796b;
+      color: #fff;
+      cursor: pointer;
+    }
+
     @media (max-width: 1024px) {
-      .sidebar {
-        height: 100dvh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
+      .sidebar { height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     }
 
     @media (max-width: 768px) {
@@ -101,7 +111,6 @@
     <a class="nav-link" href="venta.html" data-page="venta"><span class="material-icons" aria-hidden="true">point_of_sale</span><span>Venta</span></a>
     <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons" aria-hidden="true">verified</span><span>Verificación</span></a>
 
-    <!-- BOTONES NUEVOS -->
     <button id="exportBtn" class="nav-link" style="margin-top: auto;"><span class="material-icons" aria-hidden="true">archive</span><span>Exportar ZIP</span></button>
     <button id="importBtn" class="nav-link"><span class="material-icons" aria-hidden="true">unarchive</span><span>Importar ZIP</span></button>
     <input type="file" id="importFile" accept=".zip" style="display:none;" />
@@ -120,6 +129,9 @@
   <h1 class="welcome">TOBIAS PALACIOS</h1>
   <p class="subtitle">A FAMILY COMPANY</p>
 </main>
+
+<!-- Botón modo kiosko -->
+<button id="kioskBtn">Modo kiosko</button>
 
 <script>
   const CONFIG = { DB_NAME: 'menuDB', STORE_SESSION: 'userSession', DEFAULT_AVATAR: 'user2005.jpg', DEFAULT_USER: 'Usuario', REDIRECT_PAGE: 'index.html' };
@@ -150,7 +162,7 @@
   async function exportLocalForageBlobs(zipFolder) {
     const keys = await localforage.keys();
     for (const key of keys) {
-      if (key.startsWith('img_compra_')) continue; // ❌ Excluye imágenes de compra
+      if (key.startsWith('img_compra_')) continue;
       if (key.startsWith('img_')) {
         try {
           const blob = await localforage.getItem(key);
@@ -181,15 +193,13 @@
   async function exportZIP() {
     const zip = new JSZip();
 
-    // Filtrar localStorage
     for (let key in localStorage) {
-      if (key.startsWith('compra_')) continue; // ❌ Excluye claves de compra
+      if (key.startsWith('compra_')) continue;
       try {
         zip.file(`localStorage/${key}`, localStorage.getItem(key));
       } catch {}
     }
 
-    // Filtrar indexedDB
     const dbs = await window.indexedDB.databases?.() || [];
     for (const dbInfo of dbs) {
       const db = await new Promise((res, rej) => {
@@ -199,7 +209,7 @@
       });
       const tx = db.transaction(db.objectStoreNames, 'readonly');
       for (const storeName of db.objectStoreNames) {
-        if (storeName.toLowerCase().includes('compra')) continue; // ❌ Excluye tiendas de compra
+        if (storeName.toLowerCase().includes('compra')) continue;
         const store = tx.objectStore(storeName);
         const all = await store.getAll();
         zip.file(`indexedDB/${dbInfo.name}/${storeName}.json`, JSON.stringify(all));
@@ -245,6 +255,44 @@
   document.getElementById('exportBtn').addEventListener('click', exportZIP);
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', e => { const file = e.target.files[0]; if (file) importZIP(file); });
+
+  /* ----------  MODO KIOSKO  ---------- */
+  (() => {
+    const btn = document.getElementById('kioskBtn');
+    const KIOSK_KEY = 'kioskActivo';
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    function toggleFullscreen() {
+      if (!estaEnFullscreen()) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      }
+    }
+
+    function actualizaUI() {
+      const activo = estaEnFullscreen();
+      btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+      localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+    }
+
+    btn.addEventListener('click', () => {
+      toggleFullscreen();
+      actualizaUI();
+    });
+
+    ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange']
+      .forEach(ev => document.addEventListener(ev, actualizaUI));
+
+    if (localStorage.getItem(KIOSK_KEY) === '1') {
+      toggleFullscreen();
+      actualizaUI();
+    }
+  })();
 
   (function () {
     'use strict';

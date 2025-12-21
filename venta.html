@@ -8,12 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mark.js@8.11.1/dist/mark.min.js"></script>
-
-  <!-- Manifest para PWA -->
-  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiS0xPSEVTViIsInNob3J0X25hbWUiOiJLTE9IIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZmZmZmZiIsInRoZW1lX2NvbG9yIjoiIzAwN2FmZiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZmEvZm9udGF3ZXNvbWUvdjYuNS4wL3N2Z3MvY2FydC1zaG9wcGluZy5zdmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -72,14 +68,14 @@
       gap: 12px;
     }
     .header h1 { font-size: 2rem; font-weight: 700; }
-    .theme-toggle, .caja-toggle {
+    .theme-toggle {
       cursor: pointer;
       font-size: 1.4rem;
       padding: 8px;
       border-radius: 50%;
       transition: .2s;
     }
-    .theme-toggle:hover, .caja-toggle:hover { background: #00000011; }
+    .theme-toggle:hover { background: #00000011; }
     .controls {
       display: flex;
       gap: 12px;
@@ -102,21 +98,6 @@
       font-weight: 600;
     }
     .controls button:hover { opacity: .9; }
-    .kpi-panel {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-    .kpi-box {
-      flex: 1 1 200px;
-      background: var(--bg);
-      padding: 16px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      font-size: .9rem;
-    }
-    .kpi-box b { display: block; font-size: 1.5rem; margin-top: 4px; }
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -161,26 +142,6 @@
       color: #000;
       border-radius: 2px;
       padding: 0 2px;
-    }
-    .etiqueta {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-    }
-    .alta-rotacion {
-      background: #ff453a;
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-      position: absolute;
-      top: 8px;
-      right: 8px;
     }
     .pagination {
       display: flex;
@@ -276,93 +237,43 @@
       object-fit: contain;
       border-radius: 8px;
     }
-    #reader {
+    #pinModal input {
       width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .caja-mode body {
-      padding: 0;
-    }
-    .caja-mode .container {
-      max-width: 100%;
-      height: 100vh;
-      border-radius: 0;
-      padding: 20px;
-      box-shadow: none;
-    }
-    .caja-mode .controls,
-    .caja-mode .kpi-panel,
-    .caja-mode .pagination,
-    .caja-mode .fab-totals,
-    .caja-mode .theme-toggle,
-    .caja-mode .caja-toggle {
-      display: none;
-    }
-    .caja-mode .cards-grid {
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
-    .caja-mode .card {
-      min-height: auto;
       padding: 12px;
-    }
-    .caja-mode .card img,
-    .caja-mode .barcode,
-    .caja-mode .barcode-text,
-    .caja-mode .card-delete,
-    .caja-mode .factCheck {
-      display: none;
-    }
-    .caja-mode .card-title {
-      font-size: 1rem;
-    }
-    .caja-mode .card-price {
-      font-size: 1.2rem;
-    }
-    .caja-mode .card-total {
-      font-size: 1rem;
+      font-size: 1.5rem;
+      text-align: center;
+      letter-spacing: 4px;
+      border: 2px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
     }
   </style>
 </head>
 <body>
 
+<!-- LOGIN CON PIN -->
+<div id="pinModal" class="modal">
+  <div class="modal-card">
+    <h3>Ingresa tu PIN</h3>
+    <input type="password" id="pinInput" placeholder="****" maxlength="4" onkeypress="if(event.key==='Enter') validarPIN()">
+    <div class="modal-buttons">
+      <button class="btn-close" onclick="validarPIN()">Entrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <header class="header">
     <h1>Ventas Realizadas</h1>
-    <div>
-      <span class="caja-toggle" onclick="toggleCajaMode()" title="Modo Caja">🧾</span>
-      <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
-    </div>
+    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
   </header>
 
-  <!-- KPIs -->
-  <div class="kpi-panel" id="kpiPanel">
-    <div class="kpi-box">Producto más vendido<b id="kpiTopProduct">-</b></div>
-    <div class="kpi-box">Promedio por ticket<b id="kpiAvgTicket">$0.00</b></div>
-    <div class="kpi-box">Día con más ventas<b id="kpiTopDay">-</b></div>
-    <div class="kpi-box">Utilidad neta<b id="kpiUtilidad">$0.00</b></div>
-  </div>
-
-  <!-- CONTROLES (sin selector de filas) -->
   <div class="controls">
     <input type="text" id="filterName" placeholder="Filtrar por nombre">
     <input type="text" id="filterCode" placeholder="Filtrar por código">
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
     <button onclick="location.href='lista.html'">📋 Ver lista completa</button>
-    <button onclick="abrirEscanner()">📷 Escanear</button>
-    <label style="margin-left: auto;">
-      <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Seleccionar todos
-    </label>
-  </div>
-
-  <div id="totalBox" style="display:none;">
-    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
-    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
-    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
   </div>
 
   <section class="cards-grid" id="soldInventoryList"></section>
@@ -378,16 +289,6 @@
 </button>
 
 <!-- MODALES -->
-<div id="pinModal" class="modal">
-  <div class="modal-card">
-    <h3>Ingresa tu PIN</h3>
-    <input type="password" id="pinInput" placeholder="****" maxlength="4">
-    <div class="modal-buttons">
-      <button class="btn-close" onclick="validarPIN()">Entrar</button>
-    </div>
-  </div>
-</div>
-
 <div id="totalesModal" class="modal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarModalTotales()">×</button>
@@ -454,21 +355,11 @@
   <img id="imgModalImg" src="" alt="Imagen ampliada">
 </div>
 
-<div id="scannerModal" class="modal" onclick="if(event.target===this) cerrarScanner()">
-  <div class="modal-card">
-    <h3>Escanea el código</h3>
-    <div id="reader"></div>
-    <button class="btn-close" onclick="cerrarScanner()">Cerrar</button>
-  </div>
-</div>
-
 <script>
   // ---------- CONFIG ----------
-  const PIN = localStorage.getItem('pin') || '1234';
-  let costos = JSON.parse(localStorage.getItem('costos')) || {};
-  let etiquetas = JSON.parse(localStorage.getItem('etiquetas')) || {};
+  const PIN = '1234'; // ✅ PIN fijo
 
-  // ---------- MEJORAS ----------
+  // ---------- LOGIN ----------
   (function pedirPIN() {
     if (!sessionStorage.getItem('pinOk')) {
       document.getElementById('pinModal').style.display = 'flex';
@@ -476,133 +367,13 @@
   })();
 
   window.validarPIN = function () {
-    if (document.getElementById('pinInput').value === PIN) {
+    const input = document.getElementById('pinInput').value;
+    if (input === PIN) {
       sessionStorage.setItem('pinOk', '1');
       document.getElementById('pinModal').style.display = 'none';
     } else {
       alert('PIN incorrecto');
     }
-  };
-
-  // Backup automático
-  (function programarBackup() {
-    const ahora = new Date();
-    const horaBackup = new Date();
-    horaBackup.setHours(23, 59, 0, 0);
-    if (ahora > horaBackup) horaBackup.setDate(horaBackup.getDate() + 1);
-    const ms = horaBackup - ahora;
-    setTimeout(() => {
-      const blob = new Blob([JSON.stringify(soldInventory)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      programarBackup();
-    }, ms);
-  })();
-
-  // Sync entre pestañas
-  window.addEventListener('storage', e => {
-    if (e.key === 'soldInventory') {
-      soldInventory = JSON.parse(e.newValue);
-      loadSoldInventory();
-    }
-  });
-
-  // Highlight de búsqueda
-  function highlightSearch() {
-    const text = document.getElementById('filterName').value.toLowerCase();
-    const context = document.getElementById('soldInventoryList');
-    const instance = new Mark(context);
-    instance.unmark();
-    if (text) instance.mark(text, { className: 'highlight' });
-  }
-
-  document.getElementById('filterName').addEventListener('input', highlightSearch);
-
-  // KPIs
-  function calcularKPIs() {
-    const nameFilter = document.getElementById('filterName').value.toLowerCase();
-    const codeFilter = document.getElementById('filterCode').value.toLowerCase();
-    const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(nameFilter) &&
-      item.code.toLowerCase().includes(codeFilter)
-    );
-
-    // Producto más vendido
-    const map = {};
-    filtered.forEach(i => {
-      map[i.code] = (map[i.code] || 0) + Number(i.quantity);
-    });
-    const top = Object.entries(map).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById('kpiTopProduct').textContent = top ? `${top[0]} (${top[1]} uds)` : '-';
-
-    // Promedio por ticket
-    const total = filtered.reduce((sum, i) => sum + Number(i.total), 0);
-    const tickets = filtered.length || 1;
-    document.getElementById('kpiAvgTicket').textContent = `$${(total / tickets).toFixed(2)}`;
-
-    // Día con más ventas
-    const dias = {};
-    filtered.forEach(i => {
-      const dia = i.date?.split(' ')[0] || 'Desconocido';
-      dias[dia] = (dias[dia] || 0) + Number(i.total);
-    });
-    const topDay = Object.entries(dias).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById('kpiTopDay').textContent = topDay ? `${topDay[0]} ($${topDay[1].toFixed(2)})` : '-';
-
-    // Utilidad neta
-    let utilidad = 0;
-    filtered.forEach(i => {
-      const costo = costos[i.code] || 0;
-      utilidad += (Number(i.total) - (costo * Number(i.quantity)));
-    });
-    document.getElementById('kpiUtilidad').textContent = `$${utilidad.toFixed(2)}`;
-  }
-
-  // Alta rotación
-  function esAltaRotacion(code) {
-    const dias = 7;
-    const limite = 10;
-    const hace = Date.now() - dias * 24 * 60 * 60 * 1000;
-    const vendidas = soldInventory
-      .filter(i => i.code === code && new Date(i.date || Date.now()).getTime() > hace)
-      .reduce((sum, i) => sum + Number(i.quantity), 0);
-    return vendidas >= limite;
-  }
-
-  // Etiquetas
-  function renderEtiquetas(code) {
-    const ets = etiquetas[code] || [];
-    return ets.map(e => `<span class="etiqueta">${e}</span>`).join('');
-  }
-
-  // Escáner
-  window.abrirEscanner = function () {
-    document.getElementById('scannerModal').style.display = 'flex';
-    const reader = new Html5Qrcode('reader');
-    reader.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      (text) => {
-        document.getElementById('filterCode').value = text;
-        loadSoldInventory();
-        cerrarScanner();
-        reader.stop();
-      },
-      (err) => {}
-    );
-    window.readerInstance = reader;
-  };
-
-  window.cerrarScanner = function () {
-    document.getElementById('scannerModal').style.display = 'none';
-    if (window.readerInstance) window.readerInstance.stop();
-  };
-
-  // Modo Caja
-  window.toggleCajaMode = function () {
-    document.body.classList.toggle('caja-mode');
   };
 
   // ---------- FUNCIONES ORIGINALES ----------
@@ -633,24 +404,11 @@
     document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
     document.getElementById('fabQty').textContent = totalUnits;
 
-    calcularKPIs();
-
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
 
     const container = document.getElementById('soldInventoryList');
     container.innerHTML = '';
-
-    const observer = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          const src = img.dataset.src;
-          if (src) img.src = src;
-          obs.unobserve(img);
-        }
-      });
-    });
 
     for (const item of paginated) {
       const card = document.createElement('div');
@@ -659,17 +417,26 @@
       const img = document.createElement('img');
       img.alt = item.name;
       const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) img.dataset.src = URL.createObjectURL(blob);
-      else img.style.display = 'none';
-      img.onclick = () => abrirImgModal(img.src);
-      observer.observe(img);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
 
+      // ✅ Generar imagen de código de barras automáticamente
       const barcodeImg = document.createElement('img');
       barcodeImg.className = 'barcode';
       let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
       if (!barcodeBlob) {
         const canvas = document.createElement('canvas');
-        JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 40, displayValue: false });
+        JsBarcode(canvas, item.barcode, {
+          format: 'CODE128',
+          width: 2,
+          height: 40,
+          displayValue: false
+        });
         canvas.toBlob(async (blob) => {
           await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
           barcodeImg.src = URL.createObjectURL(blob);
@@ -683,10 +450,6 @@
       barcodeText.className = 'barcode-text';
       barcodeText.textContent = `Código: ${item.barcode}`;
 
-      // Etiquetas y alta rotación
-      const etiquetasHTML = renderEtiquetas(item.code);
-      const altaRotacion = esAltaRotacion(item.code) ? '<div class="alta-rotacion">🔥 Alta rotación</div>' : '';
-
       card.innerHTML = `
         <div class="card-header">
           <div class="card-title">${item.name}</div>
@@ -698,8 +461,6 @@
           <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
         </div>
         <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
-        ${etiquetasHTML}
-        ${altaRotacion}
       `;
 
       card.insertBefore(img, card.firstChild);
@@ -707,8 +468,6 @@
       card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
-
-    highlightSearch();
   }
 
   window.deleteSoldItem = function (code) {
@@ -735,11 +494,6 @@
       item.code.toLowerCase().includes(document.getElementById('filterCode').value.toLowerCase())
     );
     if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
-  }
-
-  function toggleSelectAll() {
-    const checked = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.factCheck').forEach(cb => cb.checked = checked);
   }
 
   window.abrirFactura = function () {

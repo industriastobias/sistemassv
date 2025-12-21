@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LISTA - INGRESOS Y VENTAS</title>
+  <title>FINANZAS A FAMILY COMPANY</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -55,10 +55,37 @@
       cursor: pointer;
       font-weight: 600;
     }
+    nav {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      background: var(--card);
+      border-bottom: 1px solid #ddd;
+    }
+    .tab {
+      padding: 1rem 1.4rem;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color .2s;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom: 3px solid var(--primary);
+    }
     main {
       padding: 2rem;
       max-width: 1200px;
       margin: auto;
+    }
+    section {
+      display: none;
+      animation: fadeIn .4s ease-in-out;
+    }
+    section.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .dashboard {
       display: grid;
@@ -88,7 +115,8 @@
       box-shadow: var(--shadow);
       margin-bottom: 1rem;
     }
-    input, button {
+    input, select, textarea {
+      width: 100%;
       padding: 8px 10px;
       border: 1px solid #ccc;
       border-radius: var(--radius);
@@ -97,10 +125,13 @@
       font-family: inherit;
       font-size: .9rem;
     }
+    textarea { resize: vertical; min-height: 60px; }
     button {
       background: var(--primary);
       color: #fff;
       border: none;
+      border-radius: var(--radius);
+      padding: 10px 16px;
       cursor: pointer;
       font-weight: 600;
       transition: background .2s;
@@ -133,58 +164,79 @@
     tr:hover td { background: #f3f6fa; }
     body.dark tr:hover td { background: #1f232a; }
     .acciones button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.1rem;
-      margin: 0 4px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        margin: 0 4px;
     }
     .acciones .editar { color: var(--primary); }
     .acciones .eliminar { color: #e53935; }
     .excel-bar {
-      display: flex;
-      gap: .5rem;
-      margin-bottom: .5rem;
+        display: flex;
+        gap: .5rem;
+        margin-bottom: .5rem;
     }
     .filtro {
-      width: 100%;
-      margin-bottom: .5rem;
+        width: 100%;
+        margin-bottom: .5rem;
     }
     .total-tabla {
-      text-align: right;
-      font-weight: 700;
-      margin-top: .5rem;
-      color: var(--primary);
+        text-align: right;
+        font-weight: 700;
+        margin-top: .5rem;
+        color: var(--primary);
+    }
+    .vencida {
+        background: #ffe5e5 !important;
+    }
+    body.dark .vencida {
+        background: #3a1e1e !important;
     }
     #toast {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      background: var(--primary);
-      color: #fff;
-      padding: .7rem 1.2rem;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      display: none;
-      font-weight: 600;
-      z-index: 999;
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--primary);
+        color: #fff;
+        padding: .7rem 1.2rem;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: none;
+        font-weight: 600;
+        z-index: 999;
     }
   </style>
 </head>
 <body>
 <header>
-  <span>LISTA - INGRESOS Y VENTAS</span>
+  <span>📊 FINANZAS A FAMILY COMPANY</span>
   <button id="toggleTheme">🌗 Toggle</button>
 </header>
 
+<nav>
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="ingresos">Ingresos</div>
+  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
+  <div class="tab" data-tab="proveedores">Proveedores</div>
+  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
+  <div class="tab" data-tab="inventarioVentas">Inventario & Ventas</div>
+</nav>
+
 <main>
   <!-- DASHBOARD -->
-  <section id="dashboard">
-    <h2>Dashboard</h2>
+  <section id="dashboard" class="active">
+    <h2>Resumen General</h2>
     <div class="dashboard">
       <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
+      <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
+      <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
+      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
+      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
+    <canvas id="chartMensual"></canvas>
   </section>
 
   <!-- INGRESOS -->
@@ -210,8 +262,157 @@
     <div class="total-tabla" id="totalIngresosTabla">Total: $0.00</div>
   </section>
 
-  <!-- INVENTARIO -->
-  <section id="inventario">
+  <!-- GASTOS -->
+  <section id="gastos">
+    <h2>Gastos</h2>
+    <form id="formGasto">
+      <input name="fecha" type="date" required>
+      <input name="proveedor" list="proveedoresList" placeholder="Proveedor">
+      <datalist id="proveedoresList"></datalist>
+      <input name="categoria" placeholder="Categoría">
+      <input name="descripcion" placeholder="Descripción">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="metodo_pago" placeholder="Método de pago">
+      <input name="responsable" placeholder="Responsable">
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportGastos">Exportar Excel</button>
+      <button id="exportGastosPDF">Exportar PDF</button>
+      <label for="importGastos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importGastos" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <input class="filtro" id="filtroGastos" placeholder="Filtrar...">
+    <table id="tablaGastos">
+      <thead>
+        <tr>
+          <th data-sort="fecha">Fecha</th>
+          <th data-sort="proveedor">Proveedor</th>
+          <th data-sort="categoria">Categoría</th>
+          <th data-sort="descripcion">Descripción</th>
+          <th data-sort="monto">Monto</th>
+          <th>Método Pago</th>
+          <th>Responsable</th>
+          <th>Observaciones</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="total-tabla" id="totalGastosTabla">Total: $0.00</div>
+  </section>
+
+  <!-- GASTOS DESDE INGRESOS -->
+  <section id="gastosDesdeIngresos">
+    <h2>Gastos desde Ingresos</h2>
+    <form id="formGastosDesdeIngresos">
+      <input name="fecha" type="date" required>
+      <input name="descripcion" placeholder="Descripción" required>
+      <input name="categoria" placeholder="Categoría">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="responsable" placeholder="Responsable">
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportGastosDesdeIngresos">Exportar Excel</button>
+      <button id="exportGastosDesdeIngresosPDF">Exportar PDF</button>
+      <label for="importGastosDesdeIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importGastosDesdeIngresos" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <input class="filtro" id="filtroGastosDesdeIngresos" placeholder="Filtrar...">
+    <table id="tablaGastosDesdeIngresos">
+      <thead>
+        <tr>
+          <th data-sort="fecha">Fecha</th>
+          <th data-sort="descripcion">Descripción</th>
+          <th data-sort="categoria">Categoría</th>
+          <th data-sort="monto">Monto</th>
+          <th>Responsable</th>
+          <th>Observaciones</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="total-tabla" id="totalGastosDesdeIngresosTabla">Total: $0.00</div>
+  </section>
+
+  <!-- PROVEEDORES -->
+  <section id="proveedores">
+    <h2>Proveedores</h2>
+    <form id="formProveedor">
+      <input name="nombre" placeholder="Nombre" required>
+      <input name="nit" placeholder="NIT">
+      <input name="telefono" placeholder="Teléfono">
+      <input name="email" type="email" placeholder="Email">
+      <input name="direccion" placeholder="Dirección">
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportProveedores">Exportar Excel</button>
+      <button id="exportProveedoresPDF">Exportar PDF</button>
+      <label for="importProveedores" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importProveedores" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <input class="filtro" id="filtroProveedores" placeholder="Filtrar...">
+    <table id="tablaProveedores">
+      <thead>
+        <tr>
+          <th data-sort="nombre">Nombre</th>
+          <th data-sort="nit">NIT</th>
+          <th data-sort="telefono">Teléfono</th>
+          <th data-sort="email">Email</th>
+          <th data-sort="direccion">Dirección</th>
+          <th>Observaciones</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- CUENTAS -->
+  <section id="cuentas">
+    <h2>Cuentas Pendientes</h2>
+    <form id="formCuenta">
+      <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
+      <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
+      <input name="concepto" placeholder="Concepto">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="fecha_vencimiento" type="date">
+      <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportCuentas">Exportar Excel</button>
+      <button id="exportCuentasPDF">Exportar PDF</button>
+      <label for="importCuentas" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importCuentas" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <input class="filtro" id="filtroCuentas" placeholder="Filtrar...">
+    <table id="tablaCuentas">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Cliente/Proveedor</th>
+          <th>Concepto</th>
+          <th>Monto</th>
+          <th>Fecha Vencimiento</th>
+          <th>Estado</th>
+          <th>Observaciones</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- INVENTARIO & VENTAS -->
+  <section id="inventarioVentas">
     <h2>Inventario</h2>
     <form id="formProducto">
       <input name="nombre" placeholder="Nombre del producto" required>
@@ -241,8 +442,16 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <div class="excel-bar" style="margin-top: 2rem;">
+      <button id="exportIngresosExcel">Exportar Ingresos (Excel)</button>
+      <button id="exportIngresosPDF">Exportar Ingresos (PDF)</button>
+    </div>
   </section>
 </main>
+
+<footer style="text-align:center;padding:1rem;color:#999;font-size:.8rem;">© 2025 Panel Financiero Empresarial</footer>
+<div id="toast"></div>
 
 <script>
 /* ---------- UTILS ---------- */
@@ -254,6 +463,15 @@ function toast(msg) {
   t.style.display = 'block';
   setTimeout(() => t.style.display = 'none', 2000);
 }
+function downloadObjectAsJson(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ---------- TEMA ---------- */
 $('#toggleTheme').onclick = () => {
@@ -261,38 +479,352 @@ $('#toggleTheme').onclick = () => {
   toast('Tema cambiado');
 };
 
+/* ---------- NAVEGACIÓN ---------- */
+$$('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.dataset.tab;
+    $$('section').forEach(s => s.classList.remove('active'));
+    $('#' + id).classList.add('active');
+  });
+});
+
 /* ---------- DATOS ---------- */
-let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
-let ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+const data = {
+  ingresos: [],
+  gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
+  proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
+  cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
+};
+let gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
 
-/* ---------- DASHBOARD ---------- */
+function saveData() {
+  for (const k in data) localStorage.setItem(k, JSON.stringify(data[k]));
+  localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
+  actualizarDashboard();
+  downloadObjectAsJson({ ...data, gastosDesdeIngresos }, 'backup_' + Date.now() + '.json');
+  toast('Guardado');
+}
+
+/* ---------- GRÁFICOS ---------- */
+const ctx = $('#chartResumen').getContext('2d');
+const chartResumen = new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Ingreso Neto', 'Gastos', 'Saldo Neto'],
+    datasets: [{
+      data: [0, 0, 0],
+      backgroundColor: ['#1a73e8', '#e53935', '#43a047'],
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' }
+    }
+  }
+});
+
+const ctxMensual = $('#chartMensual').getContext('2d');
+const chartMensual = new Chart(ctxMensual, {
+  type: 'bar',
+  data: {
+    labels: [],
+    datasets: [{
+      label: 'Ingresos',
+      data: [],
+      backgroundColor: '#1a73e8'
+    }, {
+      label: 'Gastos',
+      data: [],
+      backgroundColor: '#e53935'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' }
+    }
+  }
+});
+
 function actualizarDashboard() {
-  const total = ventas.reduce((a, v) => a + parseFloat(v.total), 0);
-  $('#totalIngresos').textContent = '$' + total.toFixed(2);
+  const ti = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
+  const tg = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  const gdi = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  const ingresoNeto = ti - gdi;
+  const balance = ingresoNeto - tg;
+
+  $('#totalIngresos').textContent = '$' + ti.toFixed(2);
+  $('#totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
+  $('#ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
+  $('#totalGastos').textContent = '$' + tg.toFixed(2);
+  $('#balance').textContent = '$' + balance.toFixed(2);
+
+  chartResumen.data.datasets[0].data = [ingresoNeto, tg, Math.abs(balance)];
+  chartResumen.update();
+
+  const meses = {};
+  data.ingresos.forEach(i => {
+    const m = i.fecha.slice(0, 7);
+    meses[m] = meses[m] || { ingresos: 0, gastos: 0 };
+    meses[m].ingresos += parseFloat(i.monto);
+  });
+  data.gastos.forEach(g => {
+    const m = g.fecha.slice(0, 7);
+    meses[m] = meses[m] || { ingresos: 0, gastos: 0 };
+    meses[m].gastos += parseFloat(g.monto);
+  });
+  const labels = Object.keys(meses).sort();
+  chartMensual.data.labels = labels;
+  chartMensual.data.datasets[0].data = labels.map(m => meses[m].ingresos);
+  chartMensual.data.datasets[1].data = labels.map(m => meses[m].gastos);
+  chartMensual.update();
 }
 
-/* ---------- INGRESOS ---------- */
-function renderIngresos() {
-  const tbody = $('#tablaIngresos tbody');
-  tbody.innerHTML = ventas.map((v, idx) => `
+/* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
+function cargarVentasComoIngresos() {
+  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  data.ingresos = ventas.map((v, idx) => ({
+    numero: idx + 1,
+    fecha: new Date().toISOString().split('T')[0],
+    descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
+    categoria: 'Venta',
+    monto: parseFloat(v.total).toFixed(2),
+    metodo_pago: 'Efectivo',
+    responsable: 'Sistema',
+    observaciones: `Cantidad vendida: ${v.quantity}`
+  }));
+  saveData();
+  renderTable('tablaIngresos', data.ingresos, ['numero','fecha','descripcion','categoria','monto','metodo_pago','responsable','observaciones'], 'ingresos');
+}
+
+/* ---------- RENDER + FILTRO + SORT ---------- */
+let sortDirection = {};
+
+function renderTable(id, arr, keys, keyName) {
+  const tbody = $('#' + id + ' tbody');
+  tbody.innerHTML = arr.map((it, i) => `
     <tr>
-      <td>${idx + 1}</td>
-      <td>${new Date().toISOString().split('T')[0]}</td>
-      <td>Venta: ${v.name} (Cód: ${v.code})</td>
-      <td>Venta</td>
-      <td>$${v.total.toFixed(2)}</td>
-      <td>Efectivo</td>
-      <td>Sistema</td>
-      <td>Cantidad: ${v.quantity}</td>
-      <td>Solo lectura</td>
+      ${keys.map(k => `<td>${it[k] || ''}</td>`).join('')}
+      <td class="acciones">${keyName === 'ingresos' ? 'Solo lectura' : `
+        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
+        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>`}
+      </td>
     </tr>`).join('');
-  const total = ventas.reduce((a, v) => a + parseFloat(v.total), 0);
-  $('#totalIngresosTabla').textContent = 'Total: $' + total.toFixed(2);
+  const total = arr.reduce((a, it) => a + parseFloat(it.monto || 0), 0);
+  $('#total' + id.replace('tabla', '') + 'Tabla').textContent = 'Total: $' + total.toFixed(2);
 }
 
-/* ---------- INVENTARIO ---------- */
+function filterTable(id, arr, keys, keyName) {
+  const filtro = $('#filtro' + id.replace('tabla', '')).value.toLowerCase();
+  const filtrado = arr.filter(it =>
+    keys.some(k => String(it[k] || '').toLowerCase().includes(filtro))
+  );
+  renderTable(id, filtrado, keys, keyName);
+}
+
+function sortTable(id, arr, keys, keyName, key) {
+  const dir = sortDirection[key] === 'asc' ? 'desc' : 'asc';
+  sortDirection[key] = dir;
+  arr.sort((a, b) => {
+    const va = String(a[key] || '').toLowerCase();
+    const vb = String(b[key] || '').toLowerCase();
+    return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+  renderTable(id, arr, keys, keyName);
+}
+
+/* ---------- FORMULARIOS ---------- */
+const forms = [
+  { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones'] },
+  { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre','nit','telefono','email','direccion','observaciones'] },
+  { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones'] }
+];
+
+forms.forEach(f => {
+  const form = $('#' + f.id);
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const item = {};
+    f.fields.forEach(k => item[k] = form[k].value);
+    const duplicado = data[f.key].some(it =>
+      it.descripcion === item.descripcion &&
+      it.monto === item.monto &&
+      it.fecha === item.fecha
+    );
+    if (duplicado) {
+      toast('Duplicado detectado');
+      return;
+    }
+    data[f.key].push(item);
+    saveData();
+    renderTable(f.table, data[f.key], f.fields, f.key);
+    form.reset();
+  });
+  renderTable(f.table, data[f.key], f.fields, f.key);
+  const filtroId = 'filtro' + f.table.replace('tabla', '');
+  $('#' + filtroId).addEventListener('input', () => filterTable(f.table, data[f.key], f.fields, f.key));
+  $$('#' + f.table + ' thead th').forEach(th => {
+    if (th.dataset.sort) {
+      th.addEventListener('click', () => sortTable(f.table, data[f.key], f.fields, f.key, th.dataset.sort));
+    }
+  });
+});
+
+/* ---------- GASTOS DESDE INGRESOS ---------- */
+const formGDI = $('#formGastosDesdeIngresos');
+formGDI.addEventListener('submit', e => {
+  e.preventDefault();
+  const item = {
+    fecha: formGDI.fecha.value,
+    descripcion: formGDI.descripcion.value,
+    categoria: formGDI.categoria.value,
+    monto: parseFloat(formGDI.monto.value),
+    responsable: formGDI.responsable.value,
+    observaciones: formGDI.observaciones.value
+  };
+  gastosDesdeIngresos.push(item);
+  saveData();
+  renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos');
+  formGDI.reset();
+});
+renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos');
+$('#filtroGastosDesdeIngresos').addEventListener('input', () => filterTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos'));
+$$('#tablaGastosDesdeIngresos thead th').forEach(th => {
+  if (th.dataset.sort) {
+    th.addEventListener('click', () => sortTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos', th.dataset.sort));
+  }
+});
+
+/* ---------- EDITAR / ELIMINAR ---------- */
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('eliminar')) {
+    const { key, index } = e.target.dataset;
+    if (key === 'ingresos') return;
+    if (confirm('¿Eliminar este registro?')) {
+      if (key === 'gastosDesdeIngresos') {
+        gastosDesdeIngresos.splice(index, 1);
+        localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
+        renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos');
+      } else {
+        data[key].splice(index, 1);
+        saveData();
+        const f = forms.find(x => x.key === key);
+        renderTable(f.table, data[key], f.fields, key);
+      }
+      actualizarDashboard();
+    }
+  }
+  if (e.target.classList.contains('editar')) {
+    const { key, index } = e.target.dataset;
+    if (key === 'ingresos') return;
+    if (key === 'gastosDesdeIngresos') {
+      const item = gastosDesdeIngresos[index];
+      formGDI.fecha.value = item.fecha;
+      formGDI.descripcion.value = item.descripcion;
+      formGDI.categoria.value = item.categoria;
+      formGDI.monto.value = item.monto;
+      formGDI.responsable.value = item.responsable;
+      formGDI.observaciones.value = item.observaciones;
+      gastosDesdeIngresos.splice(index, 1);
+      saveData();
+      renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha','descripcion','categoria','monto','responsable','observaciones'], 'gastosDesdeIngresos');
+    } else {
+      const f = forms.find(x => x.key === key);
+      const form = $('#' + f.id);
+      const item = data[key][index];
+      f.fields.forEach(k => form[k].value = item[k] || '');
+      data[key].splice(index, 1);
+      saveData();
+      renderTable(f.table, data[key], f.fields, key);
+    }
+    actualizarDashboard();
+  }
+});
+
+/* ---------- EXCEL ---------- */
+function exportExcel(key, filename) {
+  let source = key === 'gastosDesdeIngresos' ? gastosDesdeIngresos : data[key];
+  const ws = XLSX.utils.json_to_sheet(source);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, key);
+  XLSX.writeFile(wb, filename);
+}
+function importExcel(file, key, fields) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    rows.forEach(r => {
+      const item = {};
+      fields.forEach(f => item[f] = r[f] || '');
+      if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
+      else data[key].push(item);
+    });
+    saveData();
+    if (key === 'gastosDesdeIngresos') {
+      renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, fields, key);
+    } else {
+      const f = forms.find(x => x.key === key);
+      renderTable(f.table, data[key], fields, key);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+/* ---------- PDF ---------- */
+function exportPDF(key, filename, cols, rows) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text(filename, 14, 10);
+  doc.autoTable({
+    head: [cols],
+    body: rows
+  });
+  doc.save(filename + '.pdf');
+}
+$('#exportGastosPDF').onclick = () => {
+  const cols = ['Fecha','Proveedor','Categoría','Descripción','Monto','Método Pago','Responsable','Observaciones'];
+  const rows = data.gastos.map(g => cols.map(c => g[c.toLowerCase().replace(' ', '_')] || ''));
+  exportPDF('gastos', 'gastos', cols, rows);
+};
+$('#exportGastosDesdeIngresosPDF').onclick = () => {
+  const cols = ['Fecha','Descripción','Categoría','Monto','Responsable','Observaciones'];
+  const rows = gastosDesdeIngresos.map(g => cols.map(c => g[c.toLowerCase().replace(' ', '_')] || ''));
+  exportPDF('gastosDesdeIngresos', 'gastos_desde_ingresos', cols, rows);
+};
+$('#exportProveedoresPDF').onclick = () => {
+  const cols = ['Nombre','NIT','Teléfono','Email','Dirección','Observaciones'];
+  const rows = data.proveedores.map(p => cols.map(c => p[c.toLowerCase().replace(' ', '_')] || ''));
+  exportPDF('proveedores', 'proveedores', cols, rows);
+};
+$('#exportCuentasPDF').onclick = () => {
+  const cols = ['Tipo','Cliente/Proveedor','Concepto','Monto','Fecha Vencimiento','Estado','Observaciones'];
+  const rows = data.cuentas.map(c => cols.map(col => c[col.toLowerCase().replace(/ /g, '_')] || ''));
+  exportPDF('cuentas', 'cuentas_pendientes', cols, rows);
+};
+
+/* ---------- BOTONES EXPORTAR EXCEL ---------- */
+$('#exportGastos').onclick = () => exportExcel('gastos', 'gastos.xlsx');
+$('#exportGastosDesdeIngresos').onclick = () => exportExcel('gastosDesdeIngresos', 'gastos_desde_ingresos.xlsx');
+$('#exportProveedores').onclick = () => exportExcel('proveedores', 'proveedores.xlsx');
+$('#exportCuentas').onclick = () => exportExcel('cuentas', 'cuentas.xlsx');
+
+/* ---------- BOTONES IMPORTAR EXCEL ---------- */
+$('#importGastos').onchange = function (e) { importExcel(e.target.files[0], 'gastos', ['fecha','proveedor','categoria','descripcion','monto','metodo_pago','responsable','observaciones']); this.value = ''; };
+$('#importGastosDesdeIngresos').onchange = function (e) { importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha','descripcion','categoria','monto','responsable','observaciones']); this.value = ''; };
+$('#importProveedores').onchange = function (e) { importExcel(e.target.files[0], 'proveedores', ['nombre','nit','telefono','email','direccion','observaciones']); this.value = ''; };
+$('#importCuentas').onchange = function (e) { importExcel(e.target.files[0], 'cuentas', ['tipo','cliente_proveedor','concepto','monto','fecha_vencimiento','estado','observaciones']); this.value = ''; };
+
+/* ---------- INVENTARIO & VENTAS ---------- */
+let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+
 function renderInventario() {
-  const tbody = $('#tablaInventario tbody');
+  const tbody = document.querySelector('#tablaInventario tbody');
   tbody.innerHTML = inventario.map((p, i) => `
     <tr>
       <td>${p.nombre}</td>
@@ -306,7 +838,7 @@ function renderInventario() {
     </tr>`).join('');
 }
 
-$('#formProducto').addEventListener('submit', e => {
+document.querySelector('#formProducto').addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   inventario.push({
@@ -321,7 +853,7 @@ $('#formProducto').addEventListener('submit', e => {
   toast('Producto agregado');
 });
 
-$('#formVenta').addEventListener('submit', e => {
+document.querySelector('#formVenta').addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   const codigo = f.codigo.value;
@@ -342,17 +874,18 @@ $('#formVenta').addEventListener('submit', e => {
     quantity: cantidad,
     total: cantidad * prod.precio
   };
+  let ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
   ventas.push(venta);
   localStorage.setItem('soldInventory', JSON.stringify(ventas));
   localStorage.setItem('inventario', JSON.stringify(inventario));
   renderInventario();
-  renderIngresos();
+  cargarVentasComoIngresos();
   actualizarDashboard();
   f.reset();
   toast('Venta registrada');
 });
 
-$('#tablaInventario').addEventListener('click', e => {
+document.querySelector('#tablaInventario').addEventListener('click', e => {
   if (e.target.classList.contains('eliminar')) {
     const i = e.target.dataset.index;
     if (confirm('¿Eliminar producto?')) {
@@ -377,62 +910,23 @@ $('#tablaInventario').addEventListener('click', e => {
   }
 });
 
-/* ---------- FILTROS Y ORDEN ---------- */
-let sortDirection = {};
-
-function filterTable(id, arr, keys) {
-  const filtro = $('#filtro' + id.replace('tabla', '')).value.toLowerCase();
-  const filtrado = arr.filter(it =>
-    keys.some(k => String(it[k] || '').toLowerCase().includes(filtro))
-  );
-  renderIngresosFiltered(filtrado);
-}
-
-function sortTable(key) {
-  sortDirection[key] = sortDirection[key] === 'asc' ? 'desc' : 'asc';
-  ventas.sort((a, b) => {
-    const va = String(a[key] || '').toLowerCase();
-    const vb = String(b[key] || '').toLowerCase();
-    return sortDirection[key] === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-  });
-  renderIngresos();
-}
-
-function renderIngresosFiltered(filtered) {
-  const tbody = $('#tablaIngresos tbody');
-  tbody.innerHTML = filtered.map((v, idx) => `
-    <tr>
-      <td>${idx + 1}</td>
-      <td>${new Date().toISOString().split('T')[0]}</td>
-      <td>Venta: ${v.name} (Cód: ${v.code})</td>
-      <td>Venta</td>
-      <td>$${v.total.toFixed(2)}</td>
-      <td>Efectivo</td>
-      <td>Sistema</td>
-      <td>Cantidad: ${v.quantity}</td>
-      <td>Solo lectura</td>
-    </tr>`).join('');
-  const total = filtered.reduce((a, v) => a + parseFloat(v.total), 0);
-  $('#totalIngresosTabla').textContent = 'Total: $' + total.toFixed(2);
-}
-
-$('#filtroIngresos').addEventListener('input', () => filterTable('tablaIngresos', ventas, ['name', 'code', 'total']));
-$$('#tablaIngresos thead th').forEach(th => {
-  if (th.dataset.sort) {
-    th.addEventListener('click', () => sortTable(th.dataset.sort));
-  }
-});
-
-/* ---------- EXCEL ---------- */
-$('#exportIngresosExcel').onclick = () => {
-  const ws = XLSX.utils.json_to_sheet(ventas);
+/* ---------- EXPORTAR INGRESOS ---------- */
+document.querySelector('#exportIngresosExcel').onclick = () => {
+  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  const ws = XLSX.utils.json_to_sheet(ventas.map((v, i) => ({
+    '#': i + 1,
+    'Nombre': v.name,
+    'Código': v.code,
+    'Cantidad': v.quantity,
+    'Total': v.total.toFixed(2)
+  })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ingresos');
   XLSX.writeFile(wb, 'ingresos.xlsx');
 };
 
-/* ---------- PDF ---------- */
-$('#exportIngresosPDF').onclick = () => {
+document.querySelector('#exportIngresosPDF').onclick = () => {
+  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.text('Ingresos desde Ventas', 14, 10);
@@ -444,9 +938,14 @@ $('#exportIngresosPDF').onclick = () => {
 };
 
 /* ---------- INICIALIZAR ---------- */
-renderInventario();
-renderIngresos();
+cargarVentasComoIngresos();
 actualizarDashboard();
+renderInventario();
+document.title = '💰 Finanzas - ' + new Date().toLocaleDateString();
+window.addEventListener('storage', () => {
+  cargarVentasComoIngresos();
+  actualizarDashboard();
+});
 </script>
 </body>
 </html>

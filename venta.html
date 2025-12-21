@@ -3,18 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ventas Realizadas - KLOHESV</title>
+  <title>Lista de Ventas - KLOHESV</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mark.js@8.11.1/dist/mark.min.js"></script>
-
-  <!-- Manifest para PWA -->
-  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiS0xPSEVTViIsInNob3J0X25hbWUiOiJLTE9IIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZmZmZmZiIsInRoZW1lX2NvbG9yIjoiIzAwN2FmZiIsImljb25zIjpbeyJzcmMiOiJodHRwczovL2Nkbi5qc2RlbGl2ci5uZXQvZmEvZm9udHMvZm9udGF3ZXNvbWUvdjYuNS4wL3N2Z3MvY2FydC1zaG9wcGluZy5zdmciLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
@@ -59,236 +49,43 @@
       align-items: center;
     }
     .header h1 { font-size: 2rem; font-weight: 700; }
-    .theme-toggle, .caja-toggle {
+    .theme-toggle {
       cursor: pointer;
       font-size: 1.4rem;
       padding: 8px;
       border-radius: 50%;
       transition: .2s;
     }
-    .theme-toggle:hover, .caja-toggle:hover { background: #00000011; }
+    .theme-toggle:hover { background: #00000011; }
     .controls {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
     }
-    .controls input,
-    .controls select,
     .controls button {
       padding: 10px 14px;
       border: none;
       border-radius: var(--radius);
-      background: var(--bg);
-      color: var(--text);
-      box-shadow: var(--shadow);
-      font-size: .875rem;
-    }
-    .controls button {
       background: var(--accent);
       color: #fff;
       cursor: pointer;
       font-weight: 600;
     }
-    .kpi-panel {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-    .kpi-box {
-      flex: 1 1 200px;
+    .venta-item {
       background: var(--bg);
-      padding: 16px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      font-size: .9rem;
-    }
-    .kpi-box b { display: block; font-size: 1.5rem; margin-top: 4px; }
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
-    }
-    .card {
-      background: var(--bg);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: .3s;
-      position: relative;
-      min-height: 320px;
-    }
-    .card:hover { transform: translateY(-4px); }
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: contain;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .barcode {
-      width: 100%;
-      height: 40px;
-      object-fit: contain;
-      cursor: pointer;
-      margin-top: auto;
-    }
-    .barcode-text {
-      font-size: 10px;
-      text-align: center;
-      margin-top: 4px;
-      color: var(--text);
-    }
-    .highlight {
-      background: yellow;
-      color: #000;
-      border-radius: 2px;
-      padding: 0 2px;
-    }
-    .etiqueta {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: var(--accent);
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-    }
-    .alta-rotacion {
-      background: #ff453a;
-      color: #fff;
-      font-size: .7rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-      position: absolute;
-      top: 8px;
-      right: 8px;
-    }
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: auto;
-    }
-    .fab-totals {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-    .modal-card {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 24px;
-      width: 90vw;
-      max-width: 420px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .ticket-preview {
-      background: #fff;
-      color: #000;
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      padding: 8px 6px;
-      border: 1px dashed #999;
-    }
-    .total {
-      font-weight: 700;
-      font-size: 12px;
-      text-align: right;
-      margin-top: 6px;
-    }
-    .modal-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-    .modal-buttons button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-print { background: #16a34a; color: #fff; }
-    .btn-close { background: #6b7280; color: #fff; }
-    #imgModal img {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: 8px;
-    }
-    #reader {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .caja-mode body {
-      padding: 0;
-    }
-    .caja-mode .container {
-      max-width: 100%;
-      height: 100vh;
-      border-radius: 0;
-      padding: 20px;
-    }
-    .caja-mode .controls,
-    .caja-mode .kpi-panel,
-    .caja-mode .pagination,
-    .caja-mode .fab-totals,
-    .caja-mode .theme-toggle,
-    .caja-mode .caja-toggle {
-      display: none;
-    }
-    .caja-mode .cards-grid {
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-    }
-    .caja-mode .card {
-      min-height: auto;
       padding: 12px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .caja-mode .card img,
-    .caja-mode .barcode,
-    .caja-mode .barcode-text,
-    .caja-mode .card-delete,
-    .caja-mode .factCheck {
-      display: none;
-    }
-    .caja-mode .card-title {
-      font-size: 1rem;
-    }
-    .caja-mode .card-price {
-      font-size: 1.2rem;
-    }
-    .caja-mode .card-total {
-      font-size: 1rem;
+    .venta-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -296,545 +93,71 @@
 
 <div class="container">
   <header class="header">
-    <h1>Ventas Realizadas</h1>
-    <div>
-      <span class="caja-toggle" onclick="toggleCajaMode()" title="Modo Caja">🧾</span>
-      <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
-    </div>
+    <h1>Lista de Ventas</h1>
+    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
   </header>
 
-  <!-- KPIs -->
-  <div class="kpi-panel" id="kpiPanel">
-    <div class="kpi-box">Producto más vendido<b id="kpiTopProduct">-</b></div>
-    <div class="kpi-box">Promedio por ticket<b id="kpiAvgTicket">$0.00</b></div>
-    <div class="kpi-box">Día con más ventas<b id="kpiTopDay">-</b></div>
-    <div class="kpi-box">Utilidad neta<b id="kpiUtilidad">$0.00</b></div>
-  </div>
-
-  <!-- Controles -->
   <div class="controls">
-    <input type="text" id="filterName" placeholder="Filtrar por nombre">
-    <input type="text" id="filterCode" placeholder="Filtrar por código">
-    <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="10">10</option>
-      <option value="25">25</option>
-      <option value="50">50</option>
-    </select>
-    <button onclick="abrirFactura()">🧾 Generar Factura</button>
-    <button onclick="exportarExcel()">📊 Exportar Excel</button>
-    <button onclick="abrirEscanner()">📷 Escanear</button>
-    <label style="margin-left: auto;">
-      <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Seleccionar todos
-    </label>
+    <button onclick="location.href='ventas.html'">⬅ Regresar a Ventas</button>
   </div>
 
-  <!-- Grilla -->
-  <section class="cards-grid" id="soldInventoryList"></section>
-
-  <!-- Paginación -->
-  <div class="pagination">
-    <button onclick="prevPage()">← Anterior</button>
-    <button onclick="nextPage()">Siguiente →</button>
+  <!-- Total vendido -->
+  <div class="venta-item">
+    <div><strong>Total vendido:</strong></div>
+    <div id="totalVendido"><b>$0.00</b></div>
   </div>
+
+  <!-- Lista de ventas -->
+  <div id="listaVentas"></div>
 </div>
 
-<!-- FAB -->
-<button class="fab-totals" onclick="abrirModalTotales()">
-  <span id="fabQty">0</span>
-</button>
-
-<!-- Modales -->
-<div id="pinModal" class="modal">
-  <div class="modal-card">
-    <h3>Ingresa tu PIN</h3>
-    <input type="password" id="pinInput" placeholder="****" maxlength="4">
-    <div class="modal-buttons">
-      <button class="btn-close" onclick="validarPIN()">Entrar</button>
-    </div>
-  </div>
-</div>
-
-<div id="totalesModal" class="modal" onclick="if(event.target===this) cerrarModalTotales()">
-  <div class="modal-card">
-    <h3>Resumen de Ventas</h3>
-    <div>Unidades vendidas: <strong id="totalQtyModal">0</strong></div>
-    <div>Total vendido: <strong id="totalUSDModal">$0.00</strong></div>
-    <button class="btn-close" onclick="cerrarModalTotales()">Cerrar</button>
-  </div>
-</div>
-
-<div id="facturaModal" class="modal" onclick="if(event.target===this) cerrarFactura()">
-  <div class="modal-card">
-    <h2>Factura – Ticket</h2>
-    <label>Factura N°</label>
-    <input id="fNum" value="00015" oninput="actualizarTablaTicket()">
-    <label>Fecha</label>
-    <input id="fFecha" readonly>
-    <label>Cliente</label>
-    <input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
-
-    <div class="ticket-preview">
-      <header>
-        <div style="font-weight:700">KLOHESV</div>
-        <div>San Salvador, El Salvador</div>
-        <div>industriastobias@gmail.com</div>
-        <div>Instagram: @Klohesv</div>
-      </header>
-      <div class="line"></div>
-      <div>Factura N°: <span id="fNumTxt">0001</span></div>
-      <div>Fecha: <span id="fFechaTxt"></span></div>
-      <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
-      <div class="line"></div>
-      <table>
-        <thead><tr>
-          <th>Producto</th>
-          <th>Cant</th>
-          <th>Total</th>
-        </tr></thead>
-        <tbody id="fBody"></tbody>
-      </table>
-      <div class="line"></div>
-      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
-      <footer>¡Gracias por su compra!</footer>
-    </div>
-
-    <div class="modal-buttons">
-      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
-      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
-      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
-    </div>
-  </div>
-</div>
-
-<div id="imgModal" class="modal" onclick="cerrarImgModal()">
-  <img id="imgModalImg" src="" alt="Imagen ampliada">
-</div>
-
-<div id="scannerModal" class="modal" onclick="if(event.target===this) cerrarScanner()">
-  <div class="modal-card">
-    <h3>Escanea el código</h3>
-    <div id="reader"></div>
-    <button class="btn-close" onclick="cerrarScanner()">Cerrar</button>
-  </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
 <script>
-  // ---------- MEJORAS ADICIONALES ----------
-  const PIN = localStorage.getItem('pin') || '1234';
-  let costos = JSON.parse(localStorage.getItem('costos')) || {}; // {code: costo}
-  let etiquetas = JSON.parse(localStorage.getItem('etiquetas')) || {}; // {code: ['etiqueta1', 'etiqueta2']}
-
-  // 5. Login con PIN
-  (function pedirPIN() {
-    if (!sessionStorage.getItem('pinOk')) {
-      document.getElementById('pinModal').style.display = 'flex';
-    }
-  })();
-
-  window.validarPIN = function () {
-    if (document.getElementById('pinInput').value === PIN) {
-      sessionStorage.setItem('pinOk', '1');
-      document.getElementById('pinModal').style.display = 'none';
-    } else {
-      alert('PIN incorrecto');
-    }
-  };
-
-  // 10. Backup automático diario
-  (function programarBackup() {
-    const ahora = new Date();
-    const horaBackup = new Date();
-    horaBackup.setHours(23, 59, 0, 0);
-    if (ahora > horaBackup) horaBackup.setDate(horaBackup.getDate() + 1);
-    const ms = horaBackup - ahora;
-    setTimeout(() => {
-      const blob = new Blob([JSON.stringify(soldInventory)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      programarBackup(); // repetir al día siguiente
-    }, ms);
-  })();
-
-  // 6. Sync entre pestañas
-  window.addEventListener('storage', e => {
-    if (e.key === 'soldInventory') {
-      soldInventory = JSON.parse(e.newValue);
-      loadSoldInventory();
-    }
-  });
-
-  // 1. Highlight de búsqueda
-  function highlightSearch() {
-    const text = document.getElementById('filterName').value.toLowerCase();
-    const context = document.getElementById('soldInventoryList');
-    const instance = new Mark(context);
-    instance.unmark();
-    if (text) instance.mark(text, { className: 'highlight' });
-  }
-
-  document.getElementById('filterName').addEventListener('input', highlightSearch);
-
-  // 2. KPIs
-  function calcularKPIs() {
-    const nameFilter = document.getElementById('filterName').value.toLowerCase();
-    const codeFilter = document.getElementById('filterCode').value.toLowerCase();
-    const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(nameFilter) &&
-      item.code.toLowerCase().includes(codeFilter)
-    );
-
-    // Producto más vendido
-    const map = {};
-    filtered.forEach(i => {
-      map[i.code] = (map[i.code] || 0) + Number(i.quantity);
-    });
-    const top = Object.entries(map).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById('kpiTopProduct').textContent = top ? `${top[0]} (${top[1]} uds)` : '-';
-
-    // Promedio por ticket
-    const total = filtered.reduce((sum, i) => sum + Number(i.total), 0);
-    const tickets = filtered.length || 1;
-    document.getElementById('kpiAvgTicket').textContent = `$${(total / tickets).toFixed(2)}`;
-
-    // Día con más ventas
-    const dias = {};
-    filtered.forEach(i => {
-      const dia = i.date?.split(' ')[0] || 'Desconocido';
-      dias[dia] = (dias[dia] || 0) + Number(i.total);
-    });
-    const topDay = Object.entries(dias).sort((a, b) => b[1] - a[1])[0];
-    document.getElementById('kpiTopDay').textContent = topDay ? `${topDay[0]} ($${topDay[1].toFixed(2)})` : '-';
-
-    // Utilidad neta
-    let utilidad = 0;
-    filtered.forEach(i => {
-      const costo = costos[i.code] || 0;
-      utilidad += (Number(i.total) - (costo * Number(i.quantity)));
-    });
-    document.getElementById('kpiUtilidad').textContent = `$${utilidad.toFixed(2)}`;
-  }
-
-  // 3. Alta rotación
-  function esAltaRotacion(code) {
-    const dias = 7;
-    const limite = 10;
-    const hace = Date.now() - dias * 24 * 60 * 60 * 1000;
-    const vendidas = soldInventory
-      .filter(i => i.code === code && new Date(i.date || Date.now()).getTime() > hace)
-      .reduce((sum, i) => sum + Number(i.quantity), 0);
-    return vendidas >= limite;
-  }
-
-  // 8. Etiquetas
-  function renderEtiquetas(code) {
-    const ets = etiquetas[code] || [];
-    return ets.map(e => `<span class="etiqueta">${e}</span>`).join('');
-  }
-
-  // 9. Escáner
-  window.abrirEscanner = function () {
-    document.getElementById('scannerModal').style.display = 'flex';
-    const reader = new Html5Qrcode('reader');
-    reader.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      (text) => {
-        document.getElementById('filterCode').value = text;
-        loadSoldInventory();
-        cerrarScanner();
-        reader.stop();
-      },
-      (err) => {}
-    );
-    window.readerInstance = reader;
-  };
-
-  window.cerrarScanner = function () {
-    document.getElementById('scannerModal').style.display = 'none';
-    if (window.readerInstance) window.readerInstance.stop();
-  };
-
-  // 11. Modo Caja
-  window.toggleCajaMode = function () {
-    document.body.classList.toggle('caja-mode');
-  };
-
-  // ---------- FUNCIONES ORIGINALES (SIN TOCAR) ----------
-  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  let currentPage = 1;
-  let rowsPerPage = 10;
-
-  window.deleteSoldItem = function (code) {
-    soldInventory = soldInventory.filter(item => item.code !== code);
-    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-    loadSoldInventory();
-  };
-
-  window.toggleTheme = function () {
+  function toggleTheme() {
     const html = document.documentElement;
     html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  };
+  }
 
-  window.prevPage = function () {
-    if (currentPage > 1) { currentPage--; loadSoldInventory(); }
-  };
-
-  window.nextPage = function () {
-    let filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(document.getElementById('filterName').value.toLowerCase()) &&
-      item.code.toLowerCase().includes(document.getElementById('filterCode').value.toLowerCase())
-    );
-    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
-  };
-
-  window.toggleSelectAll = function () {
-    const checked = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.factCheck').forEach(cb => cb.checked = checked);
-  };
-
-  window.abrirFactura = function () {
-    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
-    if (seleccionados.length === 0) {
-      alert('Por favor selecciona al menos un producto para facturar.');
-      return;
-    }
-    document.getElementById('facturaModal').style.display = 'flex';
-    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
-    actualizarTablaTicket();
-  };
-
-  window.cerrarFactura = function () {
-    document.getElementById('facturaModal').style.display = 'none';
-  };
-
-  window.actualizarTablaTicket = function () {
-    const checks = [...document.querySelectorAll('.factCheck:checked')];
-    const body = document.getElementById('fBody');
-    body.innerHTML = '';
-    let sum = 0;
-    checks.forEach(ch => {
-      const p = JSON.parse(ch.value);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${p.name}<br><span style="font-size:10px;">P/U: $${Number(p.price).toFixed(2)}</span></td>
-        <td>${p.quantity}</td>
-        <td>$${Number(p.total).toFixed(2)}</td>`;
-      body.appendChild(tr);
-      sum += Number(p.total);
-    });
-    document.getElementById('fTotal').textContent = sum.toFixed(2);
-    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
-    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
-    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
-  };
-
-  window.imprimirTicket = function () {
-    const cont = document.querySelector('.ticket-preview').innerHTML;
-    const ventana = window.open('', '', 'width=360,height=600');
-    ventana.document.write(`
-      <html>
-      <head><title>Ticket</title>
-      <style>
-        body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
-        table{width:100%;border-collapse:collapse;table-layout:fixed}
-        th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        th:first-child,td:first-child{text-align:left;width:60%}
-        th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
-        th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
-        .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
-        .line{border-top:1px dashed #000;margin:6px 0}
-        .pu{font-size:10px;color:#555;}
-      </style>
-      </head>
-      <body>${cont}</body></html>
-    `);
-    ventana.document.close();
-    ventana.focus();
-    ventana.print();
-    ventana.close();
-  };
-
-  window.descargarPDF = function () {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: [80, 190] });
-    let y = 6;
-    const margen = 4;
-    const ancho = 80 - margen * 2;
-
-    doc.setFontSize(14); doc.setFont(undefined, 'bold');
-    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
-    doc.setFontSize(10); doc.setFont(undefined, 'normal');
-    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
-    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
-    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
-    doc.line(margen, y, 80 - margen, y); y += 5;
-
-    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
-    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
-    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
-    y += 3;
-    doc.line(margen, y, 80 - margen, y); y += 4;
-
-    doc.setFontSize(9); doc.setFont(undefined, 'bold');
-    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
-    doc.setFont(undefined, 'normal');
-    const filas = document.querySelectorAll('#fBody tr');
-    filas.forEach(fr => {
-      const c = fr.cells;
-      const prod = doc.splitTextToSize(c[0].textContent, 30);
-      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
-      y += prod.length * 3 + 1;
-    });
-    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
-
-    doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
-
-    doc.setFontSize(8); doc.setFont(undefined, 'normal');
-    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
-    const split = doc.splitTextToSize(msg, ancho);
-    split.forEach(l => { doc.text(l, margen, y); y += 3; });
-
-    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
-  };
-
-  window.abrirModalTotales = function () {
-    document.getElementById('totalesModal').style.display = 'flex';
-  };
-
-  window.cerrarModalTotales = function () {
-    document.getElementById('totalesModal').style.display = 'none';
-  };
-
-  window.abrirImgModal = function (src) {
-    const modal = document.getElementById('imgModal');
-    const img = document.getElementById('imgModalImg');
-    img.src = src;
-    modal.style.display = 'flex';
-  };
-
-  window.cerrarImgModal = function () {
-    document.getElementById('imgModal').style.display = 'none';
-  };
-
-  window.exportarExcel = function () {
-    const ws = XLSX.utils.json_to_sheet(soldInventory);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
-    XLSX.writeFile(wb, 'ventas_klohesv.xlsx');
-  };
-
-  // ---------- CARGA INICIAL ----------
-  document.getElementById('filterName').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
-  document.getElementById('filterCode').addEventListener('input', () => { currentPage = 1; loadSoldInventory(); });
-
-  window.addEventListener('DOMContentLoaded', () => {
-    loadSoldInventory();
-  });
-
-  // ---------- RENDER CON MEJORAS ----------
-  async function loadSoldInventory() {
-    const nameFilter = document.getElementById('filterName').value.toLowerCase();
-    const codeFilter = document.getElementById('filterCode').value.toLowerCase();
-    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
-
-    let filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(nameFilter) &&
-      item.code.toLowerCase().includes(codeFilter)
-    ).reverse();
-
-    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
-    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
-
-    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
-
-    document.getElementById('totalQtyModal').textContent = totalUnits;
-    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
-    document.getElementById('fabQty').textContent = totalUnits;
-
-    calcularKPIs();
-
-    const start = (currentPage - 1) * rowsPerPage;
-    const paginated = filtered.slice(start, start + rowsPerPage);
-
-    const container = document.getElementById('soldInventoryList');
+  async function cargarListaVentas() {
+    const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+    const container = document.getElementById('listaVentas');
     container.innerHTML = '';
 
-    const observer = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          const src = img.dataset.src;
-          if (src) img.src = src;
-          obs.unobserve(img);
-        }
-      });
-    });
+    let total = 0;
 
-    for (const item of paginated) {
-      const card = document.createElement('div');
-      card.className = 'card';
+    for (const item of ventas.reverse()) {
+      total += Number(item.total);
 
-      const img = document.createElement('img');
-      img.alt = item.name;
+      const div = document.createElement('div');
+      div.className = 'venta-item';
+
       const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) img.dataset.src = URL.createObjectURL(blob);
-      else img.style.display = 'none';
-      img.onclick = () => abrirImgModal(img.src);
-      observer.observe(img);
+      const imgSrc = blob ? URL.createObjectURL(blob) : '';
 
-      const barcodeImg = document.createElement('img');
-      barcodeImg.className = 'barcode';
-      let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
-      if (!barcodeBlob) {
-        const canvas = document.createElement('canvas');
-        JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 40, displayValue: false });
-        canvas.toBlob(async (blob) => {
-          await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
-          barcodeImg.src = URL.createObjectURL(blob);
-        });
-      } else {
-        barcodeImg.src = URL.createObjectURL(barcodeBlob);
-      }
-      barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
-
-      const barcodeText = document.createElement('div');
-      barcodeText.className = 'barcode-text';
-      barcodeText.textContent = `Código: ${item.barcode}`;
-
-      // Etiquetas
-      const etiquetasHTML = renderEtiquetas(item.code);
-
-      // Alta rotación
-      const altaRotacion = esAltaRotacion(item.code) ? '<div class="alta-rotacion">🔥 Alta rotación</div>' : '';
-
-      card.innerHTML = `
-        <div class="card-header">
-          <div class="card-title">${item.name}</div>
+      div.innerHTML = `
+        <div style="display:flex; gap:12px; align-items:center;">
+          ${imgSrc ? `<img src="${imgSrc}" alt="${item.name}">` : ''}
+          <div>
+            <div><strong>${item.name}</strong></div>
+            <div>Código: ${item.code}</div>
+            <div>Cantidad: ${item.quantity}</div>
+            <div>Precio: $${Number(item.price).toFixed(2)}</div>
+            <div>Total: $${Number(item.total).toFixed(2)}</div>
+            <div>Fecha: ${item.date || 'Sin fecha'}</div>
+          </div>
         </div>
-        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
-        <div>Cantidad vendida: ${item.quantity}</div>
-        <div class="card-footer">
-          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
-          <button class="card-delete" onclick="deleteSoldItem('${item.code}')">Eliminar</button>
-        </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
-        ${etiquetasHTML}
-        ${altaRotacion}
       `;
 
-      card.insertBefore(img, card.firstChild);
-      card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
-      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
-      container.appendChild(card);
+      container.appendChild(div);
     }
 
-    highlightSearch();
+    document.getElementById('totalVendido').textContent = `$${total.toFixed(2)}`;
   }
+
+  // Cargar al iniciar
+  window.addEventListener('DOMContentLoaded', () => {
+    cargarListaVentas();
+  });
 </script>
 
 </body>

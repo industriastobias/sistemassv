@@ -723,6 +723,47 @@
     document.getElementById('imgModal').style.display = 'none';
   }
 </script>
+<!-- MODO KIOSKO UNIVERSAL -->
+<button id="kioskBtn" style="position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;">Modo kiosko</button>
 
+<script>
+  (() => {
+    const KIOSK_KEY = 'kioskActivo';
+    const btn = document.getElementById('kioskBtn');
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    function toggleFullscreen() {
+      if (!estaEnFullscreen()) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      }
+    }
+
+    function actualizaUI() {
+      const activo = estaEnFullscreen();
+      btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+      localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+    }
+
+    btn.addEventListener('click', () => {
+      toggleFullscreen();
+      actualizaUI();
+    });
+
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange']
+      .forEach(ev => document.addEventListener(ev, actualizaUI));
+
+    // Auto-activar kiosko si está guardado
+    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) {
+      toggleFullscreen();
+      actualizaUI();
+    }
+  })();
+</script>
 </body>
 </html>

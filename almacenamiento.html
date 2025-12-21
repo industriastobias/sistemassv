@@ -118,6 +118,10 @@
     #historyTable { width: 100%; font-size: .8rem; }
     #historyTable th, #historyTable td { padding: .4rem; }
     #historySearch { margin-bottom: .8rem; }
+
+    /* NUEVO: Cierre de caja */
+    #cashModal .modal-content { max-width: 420px; }
+    #cashTotal { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: .5rem 0; }
   </style>
 </head>
 
@@ -133,6 +137,8 @@
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
       <button class="stamp" onclick="openHistoryModal()" title="Historial de ventas">📜 Historial</button>
+      <button class="stamp" onclick="openCashModal()" title="Cierre de caja">💰 Cierre</button>
+      <button class="stamp" onclick="toggleKiosk()" title="Pantalla completa">🔲 Kiosko</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
@@ -214,7 +220,7 @@
       <label for="soldQuantity">Cantidad vendida:</label>
       <input type="number" id="soldQuantity" min="1">
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500">
+      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500.50">
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
     </div>
@@ -226,7 +232,7 @@
       <span class="close" onclick="closePriceModal()">&times;</span>
       <h2>Editar precio</h2>
       <label>Nuevo precio:</label>
-      <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990">
+      <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990.99">
       <button class="stamp" onclick="saveNewPrice()">Guardar</button>
     </div>
   </div>
@@ -259,6 +265,20 @@
         </thead>
         <tbody id="historyBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- NUEVO: Modal Cierre de Caja -->
+  <div id="cashModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeCashModal()">&times;</span>
+      <h2>Cierre de Caja</h2>
+      <label>Total de ventas del día:</label>
+      <div id="cashTotal">$0.00</div>
+      <label>Ingresa el dinero físico en caja:</label>
+      <input type="number" id="physicalCash" step="0.01" placeholder="Ej: 1234.56">
+      <button class="stamp" onclick="closeCash()">Cerrar Caja</button>
+      <div id="cashResult" class="result-message" style="display:none; margin-top:1rem;"></div>
     </div>
   </div>
 
@@ -403,20 +423,19 @@
       }
     }
 
-    function beepOK() {
+    function beep(type = 'ok') {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       osc.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.start(); osc.stop(ctx.currentTime + 0.08);
+      switch (type) {
+        case 'ok': osc.frequency.value = 880; osc.stop(ctx.currentTime + 0.08); break;
+        case 'error': osc.frequency.value = 400; osc.stop(ctx.currentTime + 0.25); break;
+        case 'low': osc.frequency.value = 600; osc.stop(ctx.currentTime + 0.15); break;
+        case 'cash': osc.frequency.value = 1000; osc.stop(ctx.currentTime + 0.12); break;
+      }
+      osc.start();
     }
-    function beepError() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.frequency.value = 400;
-      osc.start(); osc.stop(ctx.currentTime + 0.25);
-    }
+
     function showNotExist() {
       const box = document.getElementById('notExistModal');
       box.style.display = 'block';
@@ -571,23 +590,32 @@
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
-      if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
-      if (isNaN(soldPrice) || soldPrice < 0) { alert('Precio inválido'); return; }
+      if (isNaN(soldQty) || soldQty <= 0) { beep('error'); alert('Cantidad inválida'); return; }
+      if (isNaN(soldPrice) || soldPrice < 0) { beep('error'); alert('Precio inválido'); return; }
       const item = inventory[currentSoldIndex];
-      if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
+      if (soldQty > item.quantity) { beep('error'); alert('Stock insuficiente'); return; }
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
       const now = new Date();
-      const fechaHora = now.toLocaleString('sv-SE').slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
-      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty, fechaHora };
+      const fechaHora = now.toLocaleString('sv-SE').slice(0, 19).replace('T', ' ');
+      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: (soldPrice * soldQty).toFixed(2), fechaHora };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
       filterInventory();
       closeSoldModal();
+      beep('ok');
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
+      // Impresión térmica automática
+      if (window.electronAPI && window.electronAPI.print) {
+        window.electronAPI.print(buildTicketText(soldItem));
+      }
+    }
+
+    function buildTicketText(item) {
+      return `KLOHESV\nFecha: ${item.fechaHora}\nProducto: ${item.name}\nCant: ${item.quantity} x $${item.price}\nTotal: $${item.total}\nGracias por tu compra!`;
     }
 
     function filterInventory() {
@@ -701,6 +729,42 @@
         v.code.toLowerCase().includes(q)
       );
       renderHistory(filtered);
+    }
+
+    function openCashModal() {
+      const today = new Date().toLocaleDateString('sv-SE');
+      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      const todaySales = soldInventory.filter(v => v.fechaHora.startsWith(today));
+      const total = todaySales.reduce((sum, v) => sum + parseFloat(v.total), 0);
+      document.getElementById('cashTotal').textContent = `$${total.toFixed(2)}`;
+      document.getElementById('physicalCash').value = '';
+      document.getElementById('cashResult').style.display = 'none';
+      document.getElementById('cashModal').style.display = 'block';
+    }
+
+    function closeCashModal() {
+      document.getElementById('cashModal').style.display = 'none';
+    }
+
+    function closeCash() {
+      const total = parseFloat(document.getElementById('cashTotal').textContent.replace('$', ''));
+      const physical = parseFloat(document.getElementById('physicalCash').value);
+      if (isNaN(physical)) { beep('error'); alert('Monto inválido'); return; }
+      const diff = (physical - total).toFixed(2);
+      const result = document.getElementById('cashResult');
+      result.style.display = 'block';
+      if (diff == 0) result.textContent = '✅ Cuadre perfecto';
+      else if (diff > 0) result.textContent = `✅ Sobrante: $${diff}`;
+      else result.textContent = `⚠️ Falta: $${Math.abs(diff)}`;
+      beep('cash');
+    }
+
+    function toggleKiosk() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen();
+      }
     }
 
     document.addEventListener('keydown', e => {

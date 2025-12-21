@@ -1,3 +1,14 @@
+Aquí tienes el **mismo código** con **tres ajustes rápidos** que pediste:
+
+1. **Elimina** el molesto “Producto no existente” al inicio.  
+2. **Scroll vertical** dentro del modal de historial para ver todas las ventas.  
+3. **Filtro en tiempo real** (mientras escribes) en el historial.
+
+---
+
+✅ **Copia y pega todo tal cual** – el resto queda idéntico.
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -114,14 +125,15 @@
     .btn-edit:hover { background: #6b7280; }
 
     /* NUEVO: Historial de ventas */
-    #historyModal .modal-content { max-width: 700px; }
+    #historyModal .modal-content { max-width: 700px; max-height: 80vh; overflow-y: auto; }
     #historyTable { width: 100%; font-size: .8rem; }
     #historyTable th, #historyTable td { padding: .4rem; }
+    #historySearch { margin-bottom: .8rem; }
   </style>
 </head>
 
 <body>
-  <div id="notExistModal">Producto no existente</div>
+  <div id="notExistModal" style="display:none;">Producto no existente</div>
 
   <h1>Inventario</h1>
 
@@ -239,6 +251,7 @@
     <div class="modal-content">
       <span class="close" onclick="closeHistoryModal()">&times;</span>
       <h2>Historial de Ventas</h2>
+      <input type="text" id="historySearch" placeholder="Buscar producto o código..." oninput="filterHistory()">
       <table id="historyTable">
         <thead>
           <tr>
@@ -657,7 +670,16 @@
     }
 
     function openHistoryModal() {
-      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      renderHistory();
+      document.getElementById('historyModal').style.display = 'block';
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').style.display = 'none';
+    }
+
+    function renderHistory(list = null) {
+      const soldInventory = list || JSON.parse(localStorage.getItem('soldInventory') || '[]');
       const body = document.getElementById('historyBody');
       body.innerHTML = soldInventory.map((v, i) => `
         <tr>
@@ -670,11 +692,17 @@
           <td>${v.fechaHora || '—'}</td>
         </tr>
       `).join('');
-      document.getElementById('historyModal').style.display = 'block';
     }
 
-    function closeHistoryModal() {
-      document.getElementById('historyModal').style.display = 'none';
+    function filterHistory() {
+      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      const q = document.getElementById('historySearch').value.trim().toLowerCase();
+      if (!q) return renderHistory(soldInventory);
+      const filtered = soldInventory.filter(v =>
+        v.name.toLowerCase().includes(q) ||
+        v.code.toLowerCase().includes(q)
+      );
+      renderHistory(filtered);
     }
 
     document.addEventListener('keydown', e => {
@@ -703,3 +731,4 @@
   </script>
 </body>
 </html>
+```

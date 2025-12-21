@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -52,7 +51,6 @@
       display: none;
     }
 
-    /* ---- visor SIEMPRE visible cuando se active ---- */
     #reader { width: 320px; margin: .6rem auto; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
@@ -115,21 +113,10 @@
     }
     .btn-edit:hover { background: #6b7280; }
 
-    /* --- Modal flotante "Producto no existente" --- */
-    #notExistModal {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--danger);
-        color: #fff;
-        padding: .6rem 1.2rem;
-        border-radius: 8px;
-        font-weight: 700;
-        z-index: 9999;
-        display: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,.25);
-    }
+    /* NUEVO: Historial de ventas */
+    #historyModal .modal-content { max-width: 700px; }
+    #historyTable { width: 100%; font-size: .8rem; }
+    #historyTable th, #historyTable td { padding: .4rem; }
   </style>
 </head>
 
@@ -144,10 +131,10 @@
       <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
+      <button class="stamp" onclick="openHistoryModal()" title="Historial de ventas">📜 Historial</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
-    <!-- Visor de cámara: ahora SIEMPRE visible cuando se active -->
     <div id="reader"></div>
 
     <div class="search-block">
@@ -247,6 +234,28 @@
     </div>
   </div>
 
+  <!-- NUEVO: Modal Historial de Ventas -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeHistoryModal()">&times;</span>
+      <h2>Historial de Ventas</h2>
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Producto</th>
+            <th>Código</th>
+            <th>Cantidad</th>
+            <th>Precio Unit.</th>
+            <th>Total</th>
+            <th>Fecha y Hora</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let currentSoldIndex = -1;
@@ -305,13 +314,12 @@
     }
 
     function startCameraScan() {
-      // Si ya está iniciado, no hacer nada (evita duplicados)
       if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
 
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: 300 },          // más lento, caja más grande
+        { fps: 5, qrbox: 300 },
         (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
           if (!found) {
@@ -323,7 +331,7 @@
           document.getElementById('searchCode').value = barcode;
           filterInventory();
         },
-        (error) => { /* silenciamos errores de frame vacío */ },
+        (error) => { },
         { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
                                Html5QrcodeSupportedFormats.CODE_39,
                                Html5QrcodeSupportedFormats.EAN_13,
@@ -334,13 +342,11 @@
           showTorchButtonIfSupported: true }
       ).catch(err => console.log(err));
 
-      // Muestro el visor y el botón Cancelar
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
 
     function cancelScan() {
-      // Paro y oculto
       if (html5QrCode) {
         html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
       }
@@ -348,9 +354,6 @@
       document.getElementById('cancelScanBtn').style.display = 'none';
     }
 
-    /* =========================================================
-       LECTOR USB-HID (aparato externo)
-       ========================================================= */
     let usbReaderReady = false;
     function initUSBReader() {
       if (usbReaderReady) {
@@ -393,7 +396,6 @@
         usbTimer = setTimeout(() => { usbBuffer = ''; }, 150);
       }
     }
-    /* ========================================================= */
 
     function beepOK() {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -569,7 +571,9 @@
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty };
+      const now = new Date();
+      const fechaHora = now.toLocaleString('sv-SE').slice(0, 19).replace('T', ' '); // YYYY-MM-DD HH:MM:SS
+      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty, fechaHora };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
@@ -650,6 +654,27 @@
     }
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
+    }
+
+    function openHistoryModal() {
+      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      const body = document.getElementById('historyBody');
+      body.innerHTML = soldInventory.map((v, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${v.name}</td>
+          <td>${v.code}</td>
+          <td>${v.quantity}</td>
+          <td>$${Number(v.price).toFixed(2)}</td>
+          <td>$${Number(v.total).toFixed(2)}</td>
+          <td>${v.fechaHora || '—'}</td>
+        </tr>
+      `).join('');
+      document.getElementById('historyModal').style.display = 'block';
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').style.display = 'none';
     }
 
     document.addEventListener('keydown', e => {

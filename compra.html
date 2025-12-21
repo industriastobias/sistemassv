@@ -56,7 +56,7 @@
       padding:.75rem;
       border-radius:var(--radius);
       box-shadow:var(--shadow-hover);
-      display:none;          /* oculto por defecto */
+      display:none;
     }
     .menu-icons.show{display:flex}
     .menu-icons a{
@@ -163,6 +163,17 @@
 </head>
 <body>
 
+<script>
+  // ✅ ACTIVA KIOSCO AUTOMÁTICAMENTE si está guardado
+  (function () {
+    const kiosco = localStorage.getItem('kiosco') === 'true';
+    if (kiosco) {
+      document.body.classList.add('kiosco');
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+  })();
+</script>
+
   <!-- ========= MENÚ HAMBURGUESA PEGABLE ========= -->
   <nav class="sticky-menu" aria-label="Navegación principal">
     <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
@@ -177,6 +188,8 @@
       <a href="facturas.html" title="Facturas"><i class="fa-solid fa-file-invoice"></i></a>
       <a href="traslados.html" title="Traslados"><i class="fa-solid fa-truck-fast"></i></a>
       <a href="venta.html" title="Venta"><i class="fa-solid fa-cash-register"></i></a>
+      <!-- Salir del modo kiosco -->
+      <a href="#" onclick="salirKiosco()" title="Salir modo kiosco"><i class="fa-solid fa-xmark"></i></a>
     </div>
   </nav>
   <!-- ============================================== -->
@@ -185,51 +198,51 @@
 
   <div class="bubble" id="formularioBubble">
     <h2><i class="fa fa-edit"></i> rápida de producto</h2>
-    <form id="purchaseForm" class="form-grid">
-      <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
-      <div><label>Código *</label><input type="text" id="code" name="code" required></div>
-      <div>
-        <label>Código de Barras *</label>
-        <input type="text" id="barcode" name="barcode" required>
-        <canvas id="barcodeCanvas"></canvas>
-      </div>
-      <div><label>Precio *</label><input type="number" id="price" name="price" step="0.01" required></div>
-      <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
-      <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
-      <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
-      <div><label>Categoría *</label>
-        <select id="category" name="category" required>
-          <option value="">-- Seleccione --</option>
-          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-          <option value="Anillos">Anillos</option>
-          <option value="Aritos">Aritos</option>
-          <option value="Billeteras">Billeteras</option>
-          <option value="Carteras">Carteras</option>
-          <option value="Case audífonos">Case audífonos</option>
-          <option value="Case teléfonos">Case teléfonos</option>
-          <option value="Chokers">Chokers</option>
-          <option value="Collares">Collares</option>
-          <option value="General">General</option>
-          <option value="Lentes de sol">Lentes de sol</option>
-          <option value="Otros">Otros</option>
-          <option value="Pulseras">Pulseras</option>
-          <option value="Relojes">Relojes</option>
-        </select>
-      </div>
-      <div style="grid-column:1/-1">
-        <label>Imagen del producto:</label>
-        <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
-        <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
-      </div>
-      <div style="grid-column:1/-1" class="actions">
-        <button type="submit" class="btn-primary">Guardar producto</button>
-        <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
-        <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
-        <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
-        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
-        <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
-      </div>
-    </form>
+  <form id="purchaseForm" class="form-grid">
+    <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
+    <div><label>Código *</label><input type="text" id="code" name="code" required></div>
+    <div>
+      <label>Código de Barras *</label>
+      <input type="text" id="barcode" name="barcode" required>
+      <canvas id="barcodeCanvas"></canvas>
+    </div>
+    <div><label>Precio *</label><input type="number" id="price" name="price" step="0.01" required></div>
+    <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
+    <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
+    <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
+    <div><label>Categoría *</label>
+      <select id="category" name="category" required>
+        <option value="">-- Seleccione --</option>
+        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+        <option value="Anillos">Anillos</option>
+        <option value="Aritos">Aritos</option>
+        <option value="Billeteras">Billeteras</option>
+        <option value="Carteras">Carteras</option>
+        <option value="Case audífonos">Case audífonos</option>
+        <option value="Case teléfonos">Case teléfonos</option>
+        <option value="Chokers">Chokers</option>
+        <option value="Collares">Collares</option>
+        <option value="General">General</option>
+        <option value="Lentes de sol">Lentes de sol</option>
+        <option value="Otros">Otros</option>
+        <option value="Pulseras">Pulseras</option>
+        <option value="Relojes">Relojes</option>
+      </select>
+    </div>
+    <div style="grid-column:1/-1">
+      <label>Imagen del producto:</label>
+      <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
+      <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
+    </div>
+    <div style="grid-column:1/-1" class="actions">
+      <button type="submit" class="btn-primary">Guardar producto</button>
+      <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
+      <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
+      <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
+      <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
+      <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
+    </div>
+  </form>
   </div>
 
   <!-- CARGA MASIVA -->
@@ -271,25 +284,23 @@
   </div>
 
   <script>
-  // GLOBAL
-  let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-  let editIndex = -1;
-  let loteTemporal = [];
-
   // ---------- Control del menú ----------
   const menuToggle = document.getElementById('menuToggle');
   const menuIcons = document.getElementById('menuIcons');
   menuToggle.addEventListener('click', () => menuIcons.classList.toggle('show'));
 
-  // ---------- Modo kiosco ----------
-  const urlParams = new URLSearchParams(location.search);
-  const kiosco = urlParams.has('kiosco') || localStorage.getItem('kiosco') === 'true';
-  if (kiosco) {
-    document.body.classList.add('kiosco');
-    localStorage.setItem('kiosco', 'true');
-    // Entrar en pantalla completa (si el navegador lo permite)
-    document.documentElement.requestFullscreen?.().catch(()=>{});
+  // ---------- Salir del modo kiosco ----------
+  function salirKiosco() {
+    localStorage.setItem('kiosco', 'false');
+    document.body.classList.remove('kiosco');
+    document.exitFullscreen?.();
+    location.reload();
   }
+
+  // GLOBAL
+  let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+  let editIndex = -1;
+  let loteTemporal = [];
 
   // RENDER + TOTAL
   function calculateTotal(){
@@ -328,7 +339,6 @@
         }
       }).catch(()=>{});
 
-      // Mostrar código de barras como imagen
       if (p.barcode) {
         const canvas = document.createElement('canvas');
         JsBarcode(canvas, p.barcode, {

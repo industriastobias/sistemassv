@@ -3,28 +3,29 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ventas Realizadas</title>
+  <title>Ventas Realizadas - KLOHESV</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
-      --bg: #fafafa;
-      --card: #fff;
-      --text: #000;
-      --accent: #2563eb;
-      --danger: #dc2626;
-      --radius: 12px;
-      --shadow: 0 4px 16px rgba(0,0,0,.06);
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1d1d1f;
+      --accent: #007aff;
+      --danger: #ff3b30;
+      --radius: 16px;
+      --shadow: 0 8px 24px rgba(0,0,0,.08);
     }
     [data-theme="dark"] {
-      --bg: #121212;
-      --card: #1e1e1e;
-      --text: #fff;
-      --accent: #3b82f6;
-      --danger: #ef4444;
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #f5f5f7;
+      --accent: #0a84ff;
+      --danger: #ff453a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     body {
@@ -32,7 +33,6 @@
       color: var(--text);
       display: flex;
       justify-content: center;
-      align-items: flex-start;
       padding: 40px 20px;
       min-height: 100vh;
     }
@@ -42,27 +42,15 @@
       background: var(--card);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 40px;
+      padding: 32px;
       display: flex;
       flex-direction: column;
       gap: 24px;
-    }
-    @media (max-width: 768px) {
-      body { padding: 0; }
-      .container {
-        max-width: 100%;
-        border-radius: 0;
-        padding: 20px;
-        min-height: 100vh;
-        box-shadow: none;
-      }
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
     }
     .header h1 { font-size: 2rem; font-weight: 700; }
     .theme-toggle {
@@ -95,7 +83,6 @@
       cursor: pointer;
       font-weight: 600;
     }
-    .controls button:hover { opacity: .9; }
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -114,182 +101,12 @@
       min-height: 320px;
     }
     .card:hover { transform: translateY(-4px); }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-title { font-size: 1.1rem; font-weight: 600; }
-    .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: auto;
-    }
-    .card-delete {
-      background: var(--danger);
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: .75rem;
-      cursor: pointer;
-    }
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: auto;
-    }
-    .pagination button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: var(--radius);
-      background: var(--bg);
-      color: var(--text);
-      box-shadow: var(--shadow);
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .pagination button:hover {
-      background: var(--accent);
-      color: #fff;
-    }
-    .fab-totals {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 1.5rem;
-      font-weight: 700;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      transition: transform 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .fab-totals:hover { transform: scale(1.1); }
-    #totalesModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-    .totales-card {
-      position: relative;
-      width: 90vw;
-      max-width: 320px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-    }
-    .close-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--text);
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #facturaModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 998;
-    }
-    .factura-card {
-      width: 90vw;
-      max-width: 420px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      max-height: 90vh;
-      overflow: auto;
-    }
-    .ticket-preview {
-      background: #fff;
-      color: #000;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 11px;
-      line-height: 1.3;
-      padding: 8px 6px;
-      border: 1px dashed #999;
-      width: 100%;
-      max-width: 360px;
-      margin: 0 auto;
-      box-sizing: border-box;
-    }
-    .ticket-preview .total {
-      font-weight: 700;
-      font-size: 12px;
-      text-align: right;
-      margin-top: 6px;
-      padding-right: 6px;
-    }
-    .modal-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 10px;
-    }
-    .modal-buttons button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-print { background: #16a34a; color: #fff; }
-    .btn-close { background: #6b7280; color: #fff; }
-    #imgModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1001;
-      cursor: pointer;
-    }
-    #imgModal img {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: 8px;
-    }
     .card img {
       width: 100%;
       height: 160px;
       object-fit: contain;
       border-radius: 8px;
       cursor: pointer;
-      margin-bottom: 8px;
     }
     .barcode {
       width: 100%;
@@ -303,6 +120,80 @@
       text-align: center;
       margin-top: 4px;
       color: var(--text);
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .fab-totals {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 90vw;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .ticket-preview {
+      background: #fff;
+      color: #000;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 8px 6px;
+      border: 1px dashed #999;
+    }
+    .total {
+      font-weight: 700;
+      font-size: 12px;
+      text-align: right;
+      margin-top: 6px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .modal-buttons button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-print { background: #16a34a; color: #fff; }
+    .btn-close { background: #6b7280; color: #fff; }
+    #imgModal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -323,14 +214,10 @@
       <option value="50">50</option>
     </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
-    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
-  </div>
-
-  <div id="totalBox" style="display:none;">
-    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
-    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
-    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+    <button onclick="exportarExcel()">📊 Exportar Excel</button>
+    <label style="margin-left: auto;">
+      <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Seleccionar todos
+    </label>
   </div>
 
   <section class="cards-grid" id="soldInventoryList"></section>
@@ -345,20 +232,18 @@
   <span id="fabQty">0</span>
 </button>
 
-<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
-  <div class="totales-card" onclick="event.stopPropagation()">
-    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
-    <div class="card" style="margin:0 auto;text-align:center;background:var(--bg);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
-      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
-      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
-      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
-    </div>
+<!-- Modales -->
+<div id="totalesModal" class="modal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="modal-card">
+    <h3>Resumen de Ventas</h3>
+    <div>Unidades vendidas: <strong id="totalQtyModal">0</strong></div>
+    <div>Total vendido: <strong id="totalUSDModal">$0.00</strong></div>
+    <button class="btn-close" onclick="cerrarModalTotales()">Cerrar</button>
   </div>
 </div>
 
-<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
-  <div class="factura-card" onclick="event.stopPropagation()">
+<div id="facturaModal" class="modal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="modal-card">
     <h2>Factura – Ticket</h2>
     <label>Factura N°</label>
     <input id="fNum" value="00015" oninput="actualizarTablaTicket()">
@@ -369,17 +254,15 @@
 
     <div class="ticket-preview">
       <header>
-        <div style="font-size:12px;font-weight:700">KLOHESV</div>
+        <div style="font-weight:700">KLOHESV</div>
         <div>San Salvador, El Salvador</div>
         <div>industriastobias@gmail.com</div>
         <div>Instagram: @Klohesv</div>
       </header>
       <div class="line"></div>
-      <div style="font-size:11px">
-        <div>Factura N°: <span id="fNumTxt">0001</span></div>
-        <div>Fecha: <span id="fFechaTxt"></span></div>
-        <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
-      </div>
+      <div>Factura N°: <span id="fNumTxt">0001</span></div>
+      <div>Fecha: <span id="fFechaTxt"></span></div>
+      <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
       <div class="line"></div>
       <table>
         <thead><tr>
@@ -391,12 +274,7 @@
       </table>
       <div class="line"></div>
       <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
-      <footer>
-        <div>¡Gracias por su compra!</div>
-        <div style="font-size:9px;margin-top:4px">
-          No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.
-        </div>
-      </footer>
+      <footer>¡Gracias por su compra!</footer>
     </div>
 
     <div class="modal-buttons">
@@ -407,7 +285,7 @@
   </div>
 </div>
 
-<div id="imgModal" onclick="cerrarImgModal()">
+<div id="imgModal" class="modal" onclick="cerrarImgModal()">
   <img id="imgModalImg" src="" alt="Imagen ampliada">
 </div>
 
@@ -424,19 +302,13 @@
     let filtered = soldInventory.filter(item =>
       item.name.toLowerCase().includes(nameFilter) &&
       item.code.toLowerCase().includes(codeFilter)
-    );
-
-    filtered.reverse();
+    ).reverse();
 
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
-    const totalUSD   = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
 
-    // ✅ Guardamos el total para finanzas.html
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
-    document.getElementById('totalQty').textContent  = totalUnits;
-    document.getElementById('totalUSD').textContent  = `$${totalUSD.toFixed(2)}`;
-    
     document.getElementById('totalQtyModal').textContent = totalUnits;
     document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
     document.getElementById('fabQty').textContent = totalUnits;
@@ -447,39 +319,35 @@
     const container = document.getElementById('soldInventoryList');
     container.innerHTML = '';
 
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          const src = img.dataset.src;
+          if (src) img.src = src;
+          obs.unobserve(img);
+        }
+      });
+    });
+
     for (const item of paginated) {
       const card = document.createElement('div');
       card.className = 'card';
 
       const img = document.createElement('img');
       img.alt = item.name;
-
       const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) {
-        img.src = URL.createObjectURL(blob);
-        img.onclick = () => abrirImgModal(img.src);
-      } else {
-        img.src = '';
-        img.style.display = 'none';
-      }
+      if (blob) img.dataset.src = URL.createObjectURL(blob);
+      else img.style.display = 'none';
+      img.onclick = () => abrirImgModal(img.src);
+      observer.observe(img);
 
-      // Imagen del código de barras
       const barcodeImg = document.createElement('img');
       barcodeImg.className = 'barcode';
-      barcodeImg.style.width = '100%';
-      barcodeImg.style.height = '40px';
-      barcodeImg.style.objectFit = 'contain';
-      barcodeImg.style.cursor = 'pointer';
-
       let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
       if (!barcodeBlob) {
         const canvas = document.createElement('canvas');
-        JsBarcode(canvas, item.barcode, {
-          format: 'CODE128',
-          width: 2,
-          height: 40,
-          displayValue: false
-        });
+        JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 40, displayValue: false });
         canvas.toBlob(async (blob) => {
           await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
           barcodeImg.src = URL.createObjectURL(blob);
@@ -489,7 +357,6 @@
       }
       barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
 
-      // Texto del código de barras
       const barcodeText = document.createElement('div');
       barcodeText.className = 'barcode-text';
       barcodeText.textContent = `Código: ${item.barcode}`;
@@ -515,12 +382,9 @@
   }
 
   window.deleteSoldItem = function (code) {
-    const index = soldInventory.findIndex(item => item.code === code);
-    if (index !== -1) {
-      soldInventory.splice(index, 1);
-      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-      loadSoldInventory();
-    }
+    soldInventory = soldInventory.filter(item => item.code !== code);
+    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+    loadSoldInventory();
   };
 
   function toggleTheme() {
@@ -546,6 +410,11 @@
   window.addEventListener('DOMContentLoaded', () => {
     loadSoldInventory();
   });
+
+  function toggleSelectAll() {
+    const checked = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.factCheck').forEach(cb => cb.checked = checked);
+  }
 
   function abrirFactura(){
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
@@ -672,6 +541,13 @@
 
   function cerrarImgModal() {
     document.getElementById('imgModal').style.display = 'none';
+  }
+
+  function exportarExcel() {
+    const ws = XLSX.utils.json_to_sheet(soldInventory);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    XLSX.writeFile(wb, 'ventas_klohesv.xlsx');
   }
 </script>
 

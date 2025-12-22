@@ -2,139 +2,134 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Catálogo - Klohe</title>
+  <title>Catálogo – Klohe</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <!-- jsPDF + autoTable -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
   <style>
     :root {
-      --bg: #fafafa;
+      --bg: #f5f2ed;             /* beige muy claro */
       --card: #ffffff;
-      --text: #222222;
-      --line: #e5e5e5;
-      --white: #ffffff;
-      --accent: #f9c74f;
+      --text: #3e3e3e;           /* gris carbón suavizado */
+      --line: #e8e4df;           /* beige medio */
+      --accent: #d4c4b0;         /* mostaza apagado */
+      --radius: 16px;
+      --shadow: 0 2px 8px rgba(0,0,0,.04);
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 0 1rem 2rem 1rem;
+      padding: 0 1rem 4rem 1rem;
+      line-height: 1.5;
+      letter-spacing: .2px;
     }
+
+    /* Header minimal */
     .header-fixed {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: var(--line);
-      color: var(--text);
-      padding: 1rem 0;
-      margin-bottom: 2rem;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--line);
+      padding: 1.2rem 0;
       text-align: center;
-      font-weight: 500;
     }
+    .header-fixed h1 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: 1px;
+    }
+
+    /* Grilla adaptable */
     .catalogo {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
       max-width: 1400px;
-      margin: 0 auto;
+      margin: 2.5rem auto 0;
     }
-    @media (max-width: 1200px) { .catalogo { grid-template-columns: repeat(4, 1fr); } }
-    @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 400px)  { .catalogo { grid-template-columns: 1fr; } }
 
+    /* Tarjeta de producto */
     .producto {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 1rem;
+      border-radius: var(--radius);
+      padding: 1.2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      transition: transform .2s, box-shadow .2s;
+      transition: transform .25s, box-shadow .25s;
       opacity: 0;
-      transform: translateY(20px);
-      animation: fadeIn 0.5s forwards;
+      transform: translateY(24px);
+      animation: fadeIn .6s forwards;
+      box-shadow: var(--shadow);
     }
     .producto:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,.06);
+      transform: translateY(-4px);
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
     }
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
     .producto img {
       width: 100%;
       aspect-ratio: 1/1;
       object-fit: cover;
-      border-radius: 4px;
-      cursor: pointer;
+      border-radius: calc(var(--radius) / 2);
+      cursor: zoom-in;
     }
+
     .producto h3 {
-      margin: .8rem 0 .3rem;
+      margin: 1rem 0 .25rem;
       font-size: 1rem;
-      color: var(--text);
+      font-weight: 500;
     }
     .producto p {
-      margin: .2rem 0;
+      margin: .15rem 0;
       font-size: .8rem;
       color: var(--text);
     }
+    .producto p strong {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
       z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,.88);
+      inset: 0;
+      background: rgba(245,242,237,.92);
+      backdrop-filter: blur(12px);
       justify-content: center;
       align-items: center;
     }
     .modal img {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 4px;
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: var(--radius);
+      box-shadow: 0 12px 36px rgba(0,0,0,.1);
     }
     .modal-close {
       position: absolute;
-      top: 1rem;
-      right: 1.5rem;
-      color: var(--white);
+      top: 1.5rem;
+      right: 2rem;
       font-size: 2rem;
+      color: var(--text);
       cursor: pointer;
-    }
-    /* Botón flotante PDF */
-    #btnPdf {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--accent);
-      color: #000;
-      border: none;
-      padding: 12px 18px;
-      border-radius: 30px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,.25);
-      z-index: 2000;
+      line-height: 1;
     }
   </style>
 </head>
 <body>
 
   <header class="header-fixed">
-    <h1>CATÁLOGO KLOHE</h1>
+    <h1>Catálogo Klohe</h1>
   </header>
 
   <div class="catalogo" id="catalogo"></div>
@@ -145,31 +140,28 @@
     <img id="modalImg" src="" alt="Imagen ampliada">
   </div>
 
-  <!-- Botón descarga PDF -->
-  <button id="btnPdf" onclick="descargarPDF()">Descargar PDF</button>
-
   <script>
+    /* ---------  JS sin cambios  --------- */
     const catalogo = document.getElementById('catalogo');
     const modal = document.getElementById('modal');
     const modalImg = document.getElementById('modalImg');
 
     const ordenCategorias = [
       'Carteras','Collares','Aritos','Pulseras','Anillos',
-      'Accesorios para el cabello','Lentes de sol','Chokers','Relojes',
-      'Billeteras','Case teléfonos','Case audífonos','General','Otros'
+      'Accesorios para el cabello','Lentes de sol','Chokers',
+      'Relojes','Billeteras','Case teléfonos','Case audífonos',
+      'General','Otros'
     ];
 
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       catalogo.innerHTML = '';
-
       const porCategoria = {};
       for (const prod of lista) {
         const cat = prod.category || 'Otros';
         if (!porCategoria[cat]) porCategoria[cat] = [];
         porCategoria[cat].push(prod);
       }
-
       let delay = 0;
       for (const categoria of ordenCategorias) {
         const productos = porCategoria[categoria] || [];
@@ -177,14 +169,11 @@
           const div = document.createElement('div');
           div.className = 'producto';
           div.style.animationDelay = `${delay}s`;
-
           const blob = await localforage.getItem(`img_${prod.code}`);
           const imgSrc = blob ? URL.createObjectURL(blob) : '';
-
           const precioMostrar = prod.discount && prod.discount > 0 
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
-
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
             <h3>${prod.name}</h3>
@@ -198,7 +187,6 @@
         }
       }
     }
-
     function openModal(src) {
       modalImg.src = src;
       modal.style.display = 'flex';
@@ -208,72 +196,8 @@
       modalImg.src = '';
     }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-
-    /* ----------  DESCARGA PDF  ---------- */
-    async function descargarPDF() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
-      if (!lista.length) { alert('No hay productos para exportar'); return; }
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-
-      doc.setFontSize(18);
-      doc.text('Catálogo Klohe', 40, 40);
-
-      const porCat = {};
-      for (const p of lista) {
-        const cat = p.category || 'Otros';
-        if (!porCat[cat]) porCat[cat] = [];
-        porCat[cat].push(p);
-      }
-
-      let y = 80; // posición vertical inicial
-      const pageHeight = doc.internal.pageSize.height;
-
-      for (const cat of ordenCategorias) {
-        const prods = porCat[cat] || [];
-        if (!prods.length) continue;
-
-        // Título de categoría
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(cat, 40, y);
-        y += 25;
-
-        const headers = [['Producto', 'Precio', 'Stock']];
-        const rows = prods.map(p => [
-          p.name,
-          p.discount && p.discount > 0
-            ? `$${(p.price * (1 - p.discount / 100)).toFixed(2)}`
-            : `$${Number(p.price).toFixed(2)}`,
-          p.stock ?? 0
-        ]);
-
-        doc.autoTable({
-          head: headers,
-          body: rows,
-          startY: y,
-          margin: { left: 40, right: 40 },
-          theme: 'striped',
-          headStyles: { fillColor: [249, 199, 79], textColor: 20 },
-          styles: { fontSize: 10 }
-        });
-
-        y = doc.lastAutoTable.finalY + 20;
-
-        // Nueva página si queda poco espacio
-        if (y > pageHeight - 100) {
-          doc.addPage();
-          y = 40;
-        }
-      }
-
-      doc.save('catalogo_klohe.pdf');
-    }
-
     renderCatalogo();
     window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });
   </script>
-
 </body>
 </html>

@@ -113,15 +113,26 @@
     }
     .btn-edit:hover { background: #6b7280; }
 
-    /* NUEVO: Historial de ventas */
-    #historyModal .modal-content { max-width: 700px; max-height: 80vh; overflow-y: auto; }
-    #historyTable { width: 100%; font-size: .8rem; }
-    #historyTable th, #historyTable td { padding: .4rem; }
-    #historySearch { margin-bottom: .8rem; }
-
-    /* NUEVO: Cierre de caja */
-    #cashModal .modal-content { max-width: 420px; }
-    #cashTotal { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: .5rem 0; }
+    /* Carrito */
+    #carritoUI {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--highlight);
+      display: none;
+    }
+    #carritoLista {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #carritoLista li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: .5rem;
+    }
   </style>
 </head>
 
@@ -136,7 +147,7 @@
       <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
-      <button class="stamp" onclick="openHistoryModal()" title="Historial de ventas">📜 Historial</button>
+      <button class="stamp" onclick="renderHistory()" title="Historial de ventas">📜 Historial</button>
       <button class="stamp" onclick="openCashModal()" title="Cierre de caja">💰 Cierre</button>
       <button class="stamp" onclick="toggleKiosk()" title="Pantalla completa">🔲 Kiosko</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
@@ -144,7 +155,6 @@
 
     <div id="reader"></div>
 
-    <!-- BLOQUE DE BÚSQUEDA CON AUTOCOMPLETE=OFF -->
     <form id="searchForm" autocomplete="off" onsubmit="event.preventDefault(); filterInventory();">
       <div class="search-block">
         <div>
@@ -187,7 +197,15 @@
         <button class="stamp" onclick="clearFilters()" type="button">Limpiar filtros</button>
       </div>
     </form>
-    <!-- FIN BLOQUE DE BÚSQUEDA -->
+
+    <!-- 🛒 Carrito de venta -->
+    <div id="carritoUI">
+      <h3>🛒 Carrito de Venta</h3>
+      <ul id="carritoLista"></ul>
+      <div style="margin-top: 1rem; font-weight: bold;">Total: $<span id="carritoTotal">0.00</span></div>
+      <button class="stamp" onclick="confirmarVenta()">✅ Confirmar Venta</button>
+      <button class="stamp" onclick="cancelarVenta()" style="background: var(--danger); border-color: var(--danger);">❌ Cancelar</button>
+    </div>
 
     <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
       <table>
@@ -216,31 +234,6 @@
     <div id="cardsView" class="cards-view"></div>
   </div>
 
-  <!-- Modal registrar venta -->
-  <div id="soldModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeSoldModal()">&times;</span>
-      <h2>Registrar Venta</h2>
-      <label for="soldQuantity">Cantidad vendida:</label>
-      <input type="number" id="soldQuantity" min="1">
-      <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500.50">
-      <button class="stamp" onclick="processSale()">Registrar</button>
-      <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
-    </div>
-  </div>
-
-  <!-- Modal editar precio -->
-  <div id="priceModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closePriceModal()">&times;</span>
-      <h2>Editar precio</h2>
-      <label>Nuevo precio:</label>
-      <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990.99">
-      <button class="stamp" onclick="saveNewPrice()">Guardar</button>
-    </div>
-  </div>
-
   <!-- Modal imagen grande -->
   <div id="imageModal" class="modal">
     <div class="modal-content">
@@ -249,9 +242,9 @@
     </div>
   </div>
 
-  <!-- NUEVO: Modal Historial de Ventas -->
+  <!-- Modal Historial -->
   <div id="historyModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 700px;">
       <span class="close" onclick="closeHistoryModal()">&times;</span>
       <h2>Historial de Ventas</h2>
       <input type="text" id="historySearch" placeholder="Buscar producto o código..." oninput="filterHistory()">
@@ -272,9 +265,9 @@
     </div>
   </div>
 
-  <!-- NUEVO: Modal Cierre de Caja -->
+  <!-- Modal Cierre de Caja -->
   <div id="cashModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 420px;">
       <span class="close" onclick="closeCashModal()">&times;</span>
       <h2>Cierre de Caja</h2>
       <label>Total de ventas del día:</label>
@@ -289,8 +282,7 @@
 
   <script>
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let currentSoldIndex = -1;
-    let currentPriceIndex = -1;
+    let carrito = [];
     let currentView = localStorage.getItem('preferredView') || 'table';
     let html5QrCode;
 
@@ -306,18 +298,18 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-      const w = 45;               // ancho etiqueta (mm)
-      const h = 21;               // alto etiqueta (mm)
-      const margLeft = 12;        // margen izquierdo
+      const w = 45;
+      const h = 21;
+      const margLeft = 12;
       const margTop = 10;
-      const dx = w + 3;           // separación horizontal
-      const dy = h + 3;           // separación vertical
+      const dx = w + 3;
+      const dy = h + 3;
 
       const list = inventory.filter(p => p.quantity > 0);
 
       let col = 0, fil = 0;
       list.forEach((p, i) => {
-        if (i > 0 && i % 40 === 0) {          // 40 por hoja (10 filas × 4 columnas)
+        if (i > 0 && i % 40 === 0) {
           doc.addPage();
           col = 0; fil = 0;
         }
@@ -338,7 +330,7 @@
         doc.addImage(imgData, 'PNG', x, y + 7, w, h * 0.45);
 
         col++;
-        if (col === 4) { col = 0; fil++; }   // 4 columnas
+        if (col === 4) { col = 0; fil++; }
       });
 
       doc.save('etiquetas.pdf');
@@ -433,7 +425,7 @@
       const osc = ctx.createOscillator();
       osc.connect(ctx.destination);
       switch (type) {
-        case 'ok': osc.frequency.value = 880; osc.stop(ctx.currentTime + 4); break; // 4 segundos
+        case 'ok': osc.frequency.value = 880; osc.stop(ctx.currentTime + 0.1); break;
         case 'error': osc.frequency.value = 400; osc.stop(ctx.currentTime + 0.25); break;
         case 'low': osc.frequency.value = 600; osc.stop(ctx.currentTime + 0.15); break;
         case 'cash': osc.frequency.value = 1000; osc.stop(ctx.currentTime + 0.12); break;
@@ -560,13 +552,94 @@
     }
 
     function markSold(index) {
-      currentSoldIndex = index;
-      document.getElementById('soldModal').style.display = 'block';
+      const item = inventory[index];
+      const qty = parseInt(prompt(`¿Cantidad a vender de "${item.name}"?`, '1'));
+      if (isNaN(qty) || qty <= 0 || qty > item.quantity) {
+        beep('error');
+        alert('Cantidad inválida o sin stock');
+        return;
+      }
+
+      const price = parseFloat(prompt(`Precio de venta por unidad (sugerido: ${(item.price * (1 - item.discount / 100)).toFixed(2)})`, (item.price * (1 - item.discount / 100)).toFixed(2)));
+      if (isNaN(price) || price < 0) {
+        beep('error');
+        alert('Precio inválido');
+        return;
+      }
+
+      carrito.push({
+        ...item,
+        qty,
+        price,
+        total: (qty * price).toFixed(2),
+        indexOriginal: index
+      });
+
+      beep('ok');
+      actualizarCarritoUI();
     }
 
-    function closeSoldModal() {
-      document.getElementById('soldModal').style.display = 'none';
-      document.getElementById('confirmationMessage').style.display = 'none';
+    function actualizarCarritoUI() {
+      const lista = document.getElementById('carritoLista');
+      const total = document.getElementById('carritoTotal');
+      const ui = document.getElementById('carritoUI');
+
+      if (carrito.length === 0) {
+        ui.style.display = 'none';
+        return;
+      }
+
+      ui.style.display = 'block';
+      lista.innerHTML = carrito.map((item, i) => `
+        <li>
+          <span>${item.qty}x ${item.name} - $${item.total}</span>
+          <button class="btn-edit" onclick="quitarDelCarrito(${i})">❌</button>
+        </li>
+      `).join('');
+
+      const suma = carrito.reduce((acc, item) => acc + parseFloat(item.total), 0);
+      total.textContent = suma.toFixed(2);
+    }
+
+    function quitarDelCarrito(index) {
+      carrito.splice(index, 1);
+      actualizarCarritoUI();
+    }
+
+    function confirmarVenta() {
+      if (carrito.length === 0) return;
+
+      for (const item of carrito) {
+        const original = inventory[item.indexOriginal];
+        original.quantity -= item.qty;
+
+        const soldItem = {
+          name: original.name,
+          code: original.code,
+          price: item.price,
+          quantity: item.qty,
+          total: item.total,
+          fechaHora: new Date().toLocaleString('sv-SE').slice(0, 19).replace('T', ' ')
+        };
+
+        let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+        soldInventory.push(soldItem);
+        localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      }
+
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      carrito = [];
+      actualizarCarritoUI();
+      loadInventory();
+      beep('ok');
+      document.getElementById('resultMessage').textContent = '✅ Venta registrada';
+      document.getElementById('resultMessage').style.display = 'block';
+      setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
+    }
+
+    function cancelarVenta() {
+      carrito = [];
+      actualizarCarritoUI();
     }
 
     function openPriceModal(index) {
@@ -592,117 +665,12 @@
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
     }
 
-    function processSale() {
-      const soldQty = parseInt(document.getElementById('soldQuantity').value);
-      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
-      if (isNaN(soldQty) || soldQty <= 0) { beep('error'); alert('Cantidad inválida'); return; }
-      if (isNaN(soldPrice) || soldPrice < 0) { beep('error'); alert('Precio inválido'); return; }
-      const item = inventory[currentSoldIndex];
-      if (soldQty > item.quantity) { beep('error'); alert('Stock insuficiente'); return; }
-      item.quantity -= soldQty;
-      localStorage.setItem('inventory', JSON.stringify(inventory));
-      const now = new Date();
-      const fechaHora = now.toLocaleString('sv-SE').slice(0, 19).replace('T', ' ');
-      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: (soldPrice * soldQty).toFixed(2), fechaHora };
-      let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      soldInventory.push(soldItem);
-      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-      filterInventory();
-      closeSoldModal();
-      beep('ok'); // 4 segundos
-      document.getElementById('resultMessage').textContent = '¡Venta registrada!';
-      document.getElementById('resultMessage').style.display = 'block';
-      setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
-    }
-
-    function buildTicketText(item) {
-      return `KLOHESV\nFecha: ${item.fechaHora}\nProducto: ${item.name}\nCant: ${item.quantity} x $${item.price}\nTotal: $${item.total}\nGracias por tu compra!`;
-    }
-
-    function filterInventory() {
-      const name = document.getElementById('searchName').value.trim().toLowerCase();
-      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
-      const code = document.getElementById('searchCode').value.trim().toLowerCase();
-      let filtered = inventory;
-      if (name) {
-        filtered = filtered.filter(item => item.name.toLowerCase().includes(name));
-      }
-      if (code) {
-        filtered = filtered.filter(item => item.barcode.trim().toLowerCase().includes(code));
-        if (filtered.length === 0) {
-          document.getElementById('inventoryList').innerHTML = '';
-          document.getElementById('cardsView').innerHTML = '';
-          document.getElementById('noResultsMessage').style.display = 'block';
-          document.getElementById('resultMessage').style.display = 'none';
-          return;
-        }
-        loadInventory(filtered);
-        document.getElementById('noResultsMessage').style.display = 'none';
-        setTimeout(() => {
-          const firstRow = document.querySelector('#inventoryList tr') || document.querySelector('.card');
-          if (firstRow) {
-            const filaNum = firstRow.querySelector('td')?.textContent || firstRow.querySelector('div')?.textContent || '1';
-            document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${filaNum}.`;
-            document.getElementById('resultMessage').style.display = 'block';
-            firstRow.classList.add('highlight');
-            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
-        return;
-      }
-      if (category) {
-        filtered = filtered.filter(item => item.category.trim().toLowerCase() === category);
-      }
-      loadInventory(filtered);
-      document.getElementById('resultMessage').style.display = 'none';
-    }
-
-    function goToRow() {
-      const row = parseInt(document.getElementById('goToRow').value);
-      if (currentView === 'table') {
-        const rows = document.querySelectorAll('#inventoryList tr');
-        rows.forEach(r => r.classList.remove('highlight'));
-        if (row >= 1 && row <= rows.length) {
-          const target = rows[row - 1];
-          target.classList.add('highlight');
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else alert('Fila fuera de rango.');
-      } else {
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(c => c.classList.remove('highlight'));
-        if (row >= 1 && row <= cards.length) {
-          const target = cards[row - 1];
-          target.classList.add('highlight');
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else alert('Fila fuera de rango.');
-      }
-    }
-
-    function clearFilters() {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchCategory').value = '';
-      document.getElementById('searchCode').value = '';
-      document.getElementById('goToRow').value = '';
-      document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
-      loadInventory();
-      document.getElementById('resultMessage').style.display = 'none';
-    }
-
     function openImageModal(src) {
       document.getElementById('modalImage').src = src;
       document.getElementById('imageModal').style.display = 'block';
     }
     function closeImageModal() {
       document.getElementById('imageModal').style.display = 'none';
-    }
-
-    function openHistoryModal() {
-      renderHistory();
-      document.getElementById('historyModal').style.display = 'block';
-    }
-
-    function closeHistoryModal() {
-      document.getElementById('historyModal').style.display = 'none';
     }
 
     function renderHistory(list = null) {
@@ -719,6 +687,11 @@
           <td>${v.fechaHora || '—'}</td>
         </tr>
       `).join('');
+      document.getElementById('historyModal').style.display = 'block';
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').style.display = 'none';
     }
 
     function filterHistory() {
@@ -788,12 +761,10 @@
       }
     }
 
-    // Atajos de teclado
     document.addEventListener('keydown', e => {
       if (e.ctrlKey) {
         switch (e.key.toLowerCase()) {
-          case 'v': e.preventDefault(); if (currentSoldIndex >= 0) document.getElementById('soldModal').style.display = 'block'; break;
-          case 'r': e.preventDefault(); openHistoryModal(); break;
+          case 'r': e.preventDefault(); renderHistory(); break;
           case 'c': e.preventDefault(); openCashModal(); break;
           case 'b': e.preventDefault(); document.getElementById('searchCode').focus(); break;
         }

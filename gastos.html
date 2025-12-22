@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Catálogo - Klohe</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <!-- jsPDF + autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
   <style>
     :root {
       --bg: #fafafa;
@@ -11,6 +15,7 @@
       --text: #222222;
       --line: #e5e5e5;
       --white: #ffffff;
+      --accent: #f9c74f;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -109,6 +114,21 @@
       font-size: 2rem;
       cursor: pointer;
     }
+    /* Botón flotante PDF */
+    #btnPdf {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      z-index: 2000;
+    }
   </style>
 </head>
 <body>
@@ -125,26 +145,18 @@
     <img id="modalImg" src="" alt="Imagen ampliada">
   </div>
 
+  <!-- Botón descarga PDF -->
+  <button id="btnPdf" onclick="descargarPDF()">Descargar PDF</button>
+
   <script>
     const catalogo = document.getElementById('catalogo');
     const modal = document.getElementById('modal');
     const modalImg = document.getElementById('modalImg');
 
     const ordenCategorias = [
-      'Carteras',
-      'Collares',
-      'Aritos',
-      'Pulseras',
-      'Anillos',
-      'Accesorios para el cabello',
-      'Lentes de sol',
-      'Chokers',
-      'Relojes',
-      'Billeteras',
-      'Case teléfonos',
-      'Case audífonos',
-      'General',
-      'Otros'
+      'Carteras','Collares','Aritos','Pulseras','Anillos',
+      'Accesorios para el cabello','Lentes de sol','Chokers','Relojes',
+      'Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
 
     async function renderCatalogo() {
@@ -196,6 +208,68 @@
       modalImg.src = '';
     }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    /* ----------  DESCARGA PDF  ---------- */
+    async function descargarPDF() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      if (!lista.length) { alert('No hay productos para exportar'); return; }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+
+      doc.setFontSize(18);
+      doc.text('Catálogo Klohe', 40, 40);
+
+      const porCat = {};
+      for (const p of lista) {
+        const cat = p.category || 'Otros';
+        if (!porCat[cat]) porCat[cat] = [];
+        porCat[cat].push(p);
+      }
+
+      let y = 80; // posición vertical inicial
+      const pageHeight = doc.internal.pageSize.height;
+
+      for (const cat of ordenCategorias) {
+        const prods = porCat[cat] || [];
+        if (!prods.length) continue;
+
+        // Título de categoría
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(cat, 40, y);
+        y += 25;
+
+        const headers = [['Producto', 'Precio', 'Stock']];
+        const rows = prods.map(p => [
+          p.name,
+          p.discount && p.discount > 0
+            ? `$${(p.price * (1 - p.discount / 100)).toFixed(2)}`
+            : `$${Number(p.price).toFixed(2)}`,
+          p.stock ?? 0
+        ]);
+
+        doc.autoTable({
+          head: headers,
+          body: rows,
+          startY: y,
+          margin: { left: 40, right: 40 },
+          theme: 'striped',
+          headStyles: { fillColor: [249, 199, 79], textColor: 20 },
+          styles: { fontSize: 10 }
+        });
+
+        y = doc.lastAutoTable.finalY + 20;
+
+        // Nueva página si queda poco espacio
+        if (y > pageHeight - 100) {
+          doc.addPage();
+          y = 40;
+        }
+      }
+
+      doc.save('catalogo_klohe.pdf');
+    }
 
     renderCatalogo();
     window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });

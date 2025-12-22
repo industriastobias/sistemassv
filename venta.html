@@ -4,703 +4,547 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ventas Realizadas</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
-    /* DISEÑO MINIMALISTA SIMPLE - PANTALLA COMPLETA */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    html, body {
-      height: 100vh;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #f9fafb;
-      color: #111827;
-      overflow: hidden;
+    /* ----------  (CSS sin cambios visuales importantes)  ---------- */
+    :root {
+      --bg:#ffffff;--card:#ffffff;--text:#000000;--accent:#ec4899;--danger:#dc2626;
+      --radius:12px;--shadow:0 4px 16px rgba(0,0,0,.06);
     }
-
-    .app {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* HEADER SIMPLE */
-    .header {
-      background: white;
-      padding: 20px;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .header h1 {
-      font-size: 24px;
-      font-weight: 600;
-    }
-
-    .theme-btns button {
-      padding: 8px 16px;
-      margin-left: 8px;
-      border: 1px solid #d1d5db;
-      background: white;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .theme-btns button.active {
-      background: #111827;
-      color: white;
-      border-color: #111827;
-    }
-
-    /* CONTROLS */
-    .controls {
-      padding: 20px;
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .search-input, select, button {
-      padding: 12px 16px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    button {
-      background: #111827;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    button:hover { background: #1f2937; }
-
-    /* TOTALS */
-    .totals {
-      padding: 24px;
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: center;
-      gap: 48px;
-    }
-
-    .total-box {
-      text-align: center;
-    }
-
-    .total-label {
-      font-size: 14px;
-      color: #6b7280;
-      margin-bottom: 8px;
-    }
-
-    .total-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #111827;
-    }
-
-    /* MAIN CONTENT */
-    .main {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 20px;
-      position: relative;
-    }
-
-    .card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .checkbox {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-    }
-
-    .card img {
-      width: 100%;
-      height: 140px;
-      object-fit: contain;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      cursor: pointer;
-    }
-
-    .card h3 {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .price {
-      font-size: 24px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 8px;
-    }
-
-    .info {
-      color: #6b7280;
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-
-    .delete-btn {
-      width: 100%;
-      padding: 10px;
-      background: #ef4444;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .delete-btn:hover {
-      background: #dc2626;
-    }
-
-    /* PAGINATION */
-    .pagination {
-      padding: 20px;
-      background: white;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    /* SPINNER */
-    .spinner {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255,255,255,0.9);
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-
-    .spinner.active { display: block; }
-
-    /* EMPTY */
-    .empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 60px 20px;
-      color: #6b7280;
-    }
-
-    /* LOGIN */
-    #loginOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: #f9fafb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    #loginBox {
-      background: white;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      text-align: center;
-      min-width: 300px;
-    }
-
-    #loginBox h2 {
-      margin-bottom: 24px;
-      font-size: 28px;
-    }
-
-    #pinInput {
-      width: 100%;
-      padding: 16px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 20px;
-      text-align: center;
-      margin-bottom: 16px;
-    }
-
-    @media (max-width: 768px) {
-      .totals { 
-        flex-direction: column; 
-        gap: 24px;
-        text-align: center;
-      }
-      
-      .main {
-        grid-template-columns: 1fr;
-        padding: 12px;
-      }
-      
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .controls > div {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-    }
+    [data-theme="white"]{--accent:#2563eb;}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+    body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:flex-start;padding:40px 20px;min-height:100vh;}
+    .container{width:100%;max-width:1200px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:40px;display:flex;flex-direction:column;gap:24px;}
+    @media(max-width:768px){body{padding:0;}.container{max-width:100%;border-radius:0;padding:20px;min-height:100vh;box-shadow:none;}}
+    .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+    .header h1{font-size:2rem;font-weight:700;}
+    .theme-switcher{display:flex;gap:8px;}
+    .theme-switcher button{border:1px solid #ccc;background:#fff;color:#000;padding:6px 12px;border-radius:20px;cursor:pointer;font-size:.75rem;}
+    .theme-switcher button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .controls{display:flex;gap:12px;flex-wrap:wrap;}
+    .controls input,.controls select,.controls button{padding:10px 14px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);font-size:.875rem;}
+    .controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:600;}
+    .controls button:hover{opacity:.9;}
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+    .card{background:#fafafa;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:.3s;position:relative;min-height:320px;opacity:0;transform:translateY(20px);animation:fadeIn .4s forwards;}
+    @keyframes fadeIn{to{opacity:1;transform:translateY(0);}}
+    .card:hover{transform:translateY(-4px);}
+    .card-header{display:flex;justify-content:space-between;align-items:center;}
+    .card-title{font-size:1.1rem;font-weight:600;}
+    .card-price{font-size:1.5rem;font-weight:700;color:var(--accent);}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}
+    .card-delete{background:var(--danger);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;}
+    .pagination{display:flex;justify-content:center;gap:12px;margin-top:auto;}
+    .pagination button{padding:8px 16px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:600;}
+    .pagination button:hover{background:var(--accent);color:#fff;}
+    .fab-totals{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:white;border:none;cursor:pointer;font-size:1.5rem;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;transition:transform .2s;display:flex;align-items:center;justify-content:center;}
+    .fab-totals:hover{transform:scale(1.1);}
+    #totalesModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999;}
+    .totales-card{position:relative;width:90vw;max-width:320px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;}
+    .close-btn{position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text);width:32px;height:32px;display:flex;align-items:center;justify-content:center;}
+    #facturaModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:998;}
+    .factura-card{width:90vw;max-width:420px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow:auto;}
+    .ticket-preview{background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.3;padding:8px 6px;border:1px dashed #999;width:100%;max-width:360px;margin:0 auto;box-sizing:border-box;}
+    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:6px;padding-right:6px;}
+    .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+    .modal-buttons button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}
+    .btn-print{background:#16a34a;color:#fff;}
+    .btn-close{background:#6b7280;color:#fff;}
+    #imgModal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:1001;cursor:pointer;}
+    #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;}
+    .card img{width:100%;height:160px;object-fit:contain;border-radius:8px;cursor:pointer;margin-bottom:8px;}
+    .barcode-text{font-size:10px;text-align:center;margin-top:4px;color:var(--text);}
+    #loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
+    #loginBox{background:var(--card);padding:32px;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;width:280px;}
+    #loginBox h2{margin-bottom:12px;}
+    #pinInput{width:100%;padding:10px;font-size:1.2rem;text-align:center;border:1px solid #ccc;border-radius:8px;margin-top:12px;}
+    .spinner{position:absolute;inset:0;display:none;place-items:center;background:var(--card);z-index:10;}
+    .spinner::after{content:"";width:32px;height:32px;border:4px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #btnTop{position:fixed;bottom:90px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:none;place-items:center;box-shadow:var(--shadow);z-index:999;}
+    #noResults{display:none;text-align:center;padding:40px;color:var(--text);}
+    #noResults svg{width:120px;margin-bottom:16px;fill:var(--accent);}
+    .new-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;padding:4px 8px;border-radius:12px;font-size:.65rem;font-weight:700;}
+    @media print{.header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,.card-delete,.factCheck,.sort-row,.theme-switcher{display:none!important;}}
   </style>
 </head>
-
 <body>
-  <!-- LOGIN -->
-  <div id="loginOverlay">
-    <div id="loginBox">
-      <h2>🔐 Acceso</h2>
-      <input id="pinInput" type="password" placeholder="Ingrese PIN (1234)" autocomplete="off">
-      <div id="loginMsg" style="color:#ef4444; font-size:14px; min-height:20px;"></div>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>Acceso</h2>
+    <label>Ingrese PIN</label>
+    <input id="pinInput" type="password" placeholder="1234" autocomplete="off">
+    <div id="loginMsg" style="color:var(--danger);font-size:.75rem;margin-top:6px;height:16px;"></div>
+  </div>
+</div>
+
+<div class="container" id="mainApp" style="display:none;">
+  <div class="spinner" id="spinner"></div>
+
+  <header class="header">
+    <h1>Ventas Realizadas</h1>
+    <div class="theme-switcher">
+      <button class="active" onclick="setTheme('white')">Blanco</button>
+      <button onclick="setTheme('rose')">Rosa</button>
     </div>
+  </header>
+
+  <div class="sort-row">
+    <button onclick="sortCards('name')">Ordenar Nombre</button>
+    <button onclick="sortCards('price')">Ordenar Precio</button>
+    <button onclick="sortCards('date')">Ordenar Fecha</button>
+    <!-- NUEVO BOTÓN -->
+    <button id="btnSortOldNew" onclick="toggleOldNew()">Más antiguo → Más nuevo</button>
   </div>
 
-  <div class="app" id="mainApp" style="display:none;">
-    <div class="spinner" id="spinner">
-      <i class="fas fa-spinner fa-spin" style="font-size:32px; color:#6b7280;"></i>
-      <div style="margin-top:12px; color:#6b7280;">Cargando...</div>
-    </div>
-
-    <!-- HEADER -->
-    <div class="header">
-      <h1>Ventas Realizadas</h1>
-      <div class="theme-btns">
-        <button class="active" onclick="setTheme('light')">Claro</button>
-        <button onclick="setTheme('dark')">Oscuro</button>
-      </div>
-    </div>
-
-    <!-- CONTROLS -->
-    <div class="controls">
-      <div style="display:flex; gap:12px; flex:1; flex-wrap:wrap;">
-        <input type="text" id="searchInput" placeholder="Buscar nombre / código / barcode">
-        <select id="rowsPerPage">
-          <option value="12">12 items</option>
-          <option value="24" selected>24 items</option>
-          <option value="48">48 items</option>
-          <option value="100">100 items</option>
-        </select>
-      </div>
-      <div style="display:flex; gap:12px;">
-        <button onclick="generateFactura()">
-          <i class="fas fa-receipt"></i> Generar Factura
-        </button>
-        <button onclick="window.location.href='lista.html'">
-          <i class="fas fa-chart-line"></i> Ver Ingresos
-        </button>
-      </div>
-    </div>
-
-    <!-- TOTALS -->
-    <div class="totals">
-      <div class="total-box">
-        <div class="total-label">Unidades Vendidas</div>
-        <div id="totalQty" class="total-value">0</div>
-      </div>
-      <div class="total-box">
-        <div class="total-label">Total Vendido</div>
-        <div id="totalUSD" class="total-value">$0.00</div>
-      </div>
-    </div>
-
-    <!-- GRID -->
-    <div class="main" id="soldInventoryList"></div>
-    <div class="empty" id="noResults" style="display:none;">
-      <i class="fas fa-inbox" style="font-size:64px; opacity:0.5; margin-bottom:20px;"></i>
-      <h3>No se encontraron ventas</h3>
-      <p>Registra tus primeras ventas para verlas aquí</p>
-    </div>
-
-    <!-- PAGINATION -->
-    <div class="pagination">
-      <button onclick="prevPage()" id="prevBtn">← Anterior</button>
-      <span id="pageInfo" style="padding:12px 20px; color:#6b7280;">Página 1</span>
-      <button onclick="nextPage()" id="nextBtn">Siguiente →</button>
-    </div>
+  <div class="controls">
+    <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode">
+    <select id="rowsPerPage" onchange="loadSoldInventory()">
+      <option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option>
+    </select>
+    <button onclick="abrirFactura()">🧾 Generar Factura</button>
+    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
   </div>
 
-  <!-- FACTURA MODAL -->
-  <div id="facturaModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; padding:20px; align-items:center; justify-content:center;">
-    <div style="background:white; padding:32px; border-radius:12px; max-width:500px; width:100%; max-height:90vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-        <h2>Factura</h2>
-        <button onclick="cerrarFactura()" style="background:none; border:none; font-size:28px; cursor:pointer; color:#6b7280;">×</button>
-      </div>
-      
-      <div style="margin-bottom:16px;">
-        <label>Factura N°</label>
-        <input id="fNum" value="00015" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
-      </div>
-      
-      <div style="margin-bottom:16px;">
-        <label>Fecha</label>
-        <input id="fFecha" readonly style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
-      </div>
-      
-      <div style="margin-bottom:24px;">
-        <label>Cliente</label>
-        <input id="fCliente" value="Consumidor Final" style="width:100%; padding:12px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
-      </div>
-
-      <div style="background:#f9fafb; padding:20px; border-radius:8px; margin-bottom:24px;">
-        <div style="font-weight:600; margin-bottom:12px;">Productos seleccionados:</div>
-        <div id="facturaPreview"></div>
-        <div style="font-size:24px; font-weight:700; text-align:right; margin-top:16px; color:#111827;">
-          TOTAL: $<span id="facturaTotal">0.00</span>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:12px; justify-content:flex-end;">
-        <button onclick="cerrarFactura()" style="padding:12px 24px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
-        <button onclick="imprimirFactura()" style="padding:12px 24px; background:#059669; color:white; border:none; border-radius:6px; cursor:pointer;">Imprimir</button>
-        <button onclick="descargarPDF()" style="padding:12px 24px; background:#dc2626; color:white; border:none; border-radius:6px; cursor:pointer;">PDF</button>
-      </div>
-    </div>
+  <div id="totalBox" style="display:none;">
+    <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+    <div id="totalQty" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+    <div id="totalUSD" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
   </div>
 
-  <script>
-    let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
-    let currentPage = 1;
-    let rowsPerPage = 24;
-    let filteredData = [];
+  <section class="cards-grid" id="soldInventoryList"></section>
 
-    // LOGIN
-    document.getElementById('pinInput').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        if (this.value === '1234') {
-          document.getElementById('loginOverlay').style.display = 'none';
-          document.getElementById('mainApp').style.display = 'flex';
-          loadSoldInventory();
+  <div id="noResults">
+    <svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
+    <div>No se encontraron productos</div>
+  </div>
+
+  <div class="pagination">
+    <button onclick="prevPage()">← Anterior</button>
+    <button onclick="nextPage()">Siguiente →</button>
+  </div>
+</div>
+
+<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn" style="display:none;"><span id="fabQty">0</span></button>
+
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="totales-card" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+    </div>
+  </div>
+</div>
+
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="factura-card" onclick="event.stopPropagation()">
+    <h2>Factura – Ticket</h2>
+    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label><input id="fFecha" readonly>
+    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+
+    <div class="ticket-preview">
+      <header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
+      <div class="line"></div>
+      <div style="font-size:11px"><div>Factura N°: <span id="fNumTxt">0001</span></div><div>Fecha: <span id="fFechaTxt"></span></div><div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div></div>
+      <div class="line"></div>
+      <table><thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead><tbody id="fBody"></tbody></table>
+      <div class="line"></div>
+      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
+      <footer><div>¡Gracias por su compra!</div><div style="font-size:9px;margin-top:4px">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div></footer>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
+      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
+      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
+    </div>
+  </div>
+</div>
+
+<div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
+
+<script>
+  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  let currentPage = 1;
+  let rowsPerPage = 100;
+  let sortOrder = { name:1, price:1, date:-1 };
+  let oldNewOrder = 1;   // 1 = nuevo→viejo, -1 = viejo→nuevo
+
+  /* ----------  LOGIN  ---------- */
+  const loginOverlay = document.getElementById('loginOverlay');
+  const pinInput = document.getElementById('pinInput');
+  const loginMsg = document.getElementById('loginMsg');
+  let pinAttempts = 0;
+  const MAX_ATTEMPTS = 3;
+  const LOCK_TIME = 30_000;
+  let lockTimeout;
+
+  pinInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const val = pinInput.value.trim();
+      if (val === '1234') {
+        loginOverlay.style.display = 'none';
+        document.getElementById('mainApp').style.display = 'flex';
+        document.getElementById('fabBtn').style.display = 'flex';
+        loadSoldInventory();
+      } else {
+        pinAttempts++;
+        pinInput.value = '';
+        if (pinAttempts >= MAX_ATTEMPTS) {
+          pinInput.disabled = true;
+          let t = LOCK_TIME / 1000;
+          loginMsg.textContent = `Bloqueado ${t}s`;
+          lockTimeout = setInterval(() => {
+            t--;
+            loginMsg.textContent = `Bloqueado ${t}s`;
+            if (t <= 0) {
+              clearInterval(lockTimeout);
+              pinInput.disabled = false;
+              pinAttempts = 0;
+              loginMsg.textContent = '';
+            }
+          }, 1000);
         } else {
-          document.getElementById('loginMsg').textContent = 'PIN incorrecto';
-          this.value = '';
-          setTimeout(() => document.getElementById('loginMsg').textContent = '', 2000);
+          loginMsg.textContent = `PIN incorrecto (${pinAttempts}/${MAX_ATTEMPTS})`;
         }
       }
-    });
+    }
+  });
 
-    // EVENT LISTENERS
-    document.getElementById('searchInput').addEventListener('input', function() {
-      clearTimeout(window.searchTimeout);
-      window.searchTimeout = setTimeout(loadSoldInventory, 300);
-    });
+  /* ----------  TEMA  ---------- */
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('.theme-switcher button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    localStorage.setItem('theme', t);
+  }
+  (() => {
+    const t = localStorage.getItem('theme') || 'rose';
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelector(`.theme-switcher button[onclick="setTheme('${t}')"]`).classList.add('active');
+  })();
 
-    document.getElementById('rowsPerPage').addEventListener('change', function() {
-      rowsPerPage = parseInt(this.value);
-      currentPage = 1;
-      loadSoldInventory();
-    });
+  /* ----------  FUNCIONES AUX  ---------- */
+  function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
+  function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
+  let searchTimeout;
+  document.getElementById('unifiedSearch').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
+  });
+  window.addEventListener('scroll', () => {
+    document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
+  });
 
-    function showSpinner() {
-      document.getElementById('spinner').classList.add('active');
+  /* ----------  ORDENAR  ---------- */
+  function sortCards(field) {
+    sortOrder[field] *= -1;
+    soldInventory.sort((a, b) => {
+      if (field === 'name') return a.name.localeCompare(b.name) * sortOrder[field];
+      if (field === 'price') return (Number(a.price) - Number(b.price)) * sortOrder[field];
+      if (field === 'date') return (new Date(a.soldAt || 0) - new Date(b.soldAt || 0)) * sortOrder[field];
+    });
+    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+    loadSoldInventory();
+  }
+
+  /* ----------  NUEVO: ORDENAR ANTIGUO→NUEVO  ---------- */
+  window.toggleOldNew = function () {
+    oldNewOrder *= -1;
+    soldInventory.sort((a, b) => (new Date(a.soldAt || 0) - new Date(b.soldAt || 0)) * oldNewOrder);
+    document.getElementById('btnSortOldNew').textContent = oldNewOrder === 1 ? 'Más antiguo → Más nuevo' : 'Más nuevo → Más antiguo';
+    loadSoldInventory();
+  };
+
+  /* ----------  PAGINACIÓN  ---------- */
+  function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
+  function nextPage() {
+    const filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      item.code.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase())
+    );
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
+  }
+
+  /* ----------  FACTURA / TICKET  ---------- */
+  function abrirFactura() {
+    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
+    if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
+    document.getElementById('facturaModal').style.display = 'flex';
+    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+    actualizarTablaTicket();
+  }
+  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
+  function actualizarTablaTicket() {
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    let sum = 0;
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
+        <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
+        <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
+      body.appendChild(tr);
+      sum += Number(p.total);
+    });
+    document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+  }
+  function imprimirTicket() {
+    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const ventana = window.open('', '', 'width=360,height=600');
+    ventana.document.write(`<html><head><title>Ticket</title><style>
+      body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      th:first-child,td:first-child{text-align:left;width:60%}
+      th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+      .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+      .line{border-top:1px dashed #000;margin:6px 0}
+      .pu{font-size:10px;color:#555;}
+      </style></head><body>${cont}</body></html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
+  function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:[80, 190] });
+    let y = 6;
+    const margen = 4;
+    const ancho = 80 - margen * 2;
+
+    doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
+    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
+    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
+    doc.line(margen, y, 80 - margen, y); y += 5;
+
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
+    y += 3;
+    doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(9); doc.setFont(undefined, 'bold');
+    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
+    doc.setFont(undefined, 'normal');
+    const filas = document.querySelectorAll('#fBody tr');
+    filas.forEach(fr => {
+      const c = fr.cells;
+      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
+      y += prod.length * 3 + 1;
+    });
+    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
+    const split = doc.splitTextToSize(msg, ancho);
+    split.forEach(l => { doc.text(l, margen, y); y += 3; });
+
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
+  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
+
+  /* ----------  CARGAR VENTAS  ---------- */
+  async function loadSoldInventory() {
+    showSpinner();
+    const search = document.getElementById('unifiedSearch').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
+
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(search) ||
+      item.code.toLowerCase().includes(search) ||
+      item.barcode.toLowerCase().includes(search)
+    );
+
+    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
+
+    document.getElementById('totalQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    document.getElementById('totalUSD').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
+    document.getElementById('totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    document.getElementById('totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
+    document.getElementById('fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(start, start + rowsPerPage);
+
+    const container = document.getElementById('soldInventoryList');
+    container.innerHTML = '';
+
+    if (paginated.length === 0) {
+      document.getElementById('noResults').style.display = 'block';
+    } else {
+      document.getElementById('noResults').style.display = 'none';
     }
 
-    function hideSpinner() {
-      document.getElementById('spinner').classList.remove('active');
-    }
-
-    function loadSoldInventory() {
-      showSpinner();
-      
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      filteredData = soldInventory.filter(item =>
-        item.name.toLowerCase().includes(search) ||
-        item.code.toLowerCase().includes(search) ||
-        (item.barcode || '').toLowerCase().includes(search)
-      );
-
-      // Update totals
-      const totalQty = filteredData.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
-      const totalUSD = filteredData.reduce((sum, item) => sum + parseFloat(item.total || 0), 0);
-      
-      document.getElementById('totalQty').textContent = new Intl.NumberFormat('es-SV').format(totalQty);
-      document.getElementById('totalUSD').textContent = '$' + new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2));
-
-      // Pagination
-      const start = (currentPage - 1) * rowsPerPage;
-      const end = start + rowsPerPage;
-      const pageData = filteredData.slice(start, end);
-
-      const container = document.getElementById('soldInventoryList');
-      container.innerHTML = '';
-
-      if (pageData.length === 0) {
-        document.getElementById('noResults').style.display = 'block';
-      } else {
-        document.getElementById('noResults').style.display = 'none';
-        pageData.forEach(item => {
-          const card = createCard(item);
-          container.appendChild(card);
-        });
-      }
-
-      updatePagination();
-      hideSpinner();
-    }
-
-    function createCard(item) {
+    for (const item of paginated) {
       const card = document.createElement('div');
       card.className = 'card';
 
       const img = document.createElement('img');
-      localforage.getItem(`img_${item.code}`).then(blob => {
-        if (blob) {
-          img.src = URL.createObjectURL(blob);
-          img.onclick = () => {
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
-            modal.innerHTML = `<img src="${img.src}" style="max-width:90%;max-height:90%;border-radius:8px;"><button onclick="this.parentNode.remove()" style="position:absolute;top:20px;right:20px;background:none;border:none;font-size:30px;color:white;cursor:pointer;">×</button>`;
-            document.body.appendChild(modal);
-          };
-        } else {
-          img.style.display = 'none';
-        }
-      });
+      img.alt = `${item.name} - ${item.code}`;
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'checkbox';
-      checkbox.value = JSON.stringify(item);
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      /* ----------  SOLO TEXTO: CÓDIGO DE BARRAS  ---------- */
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = `Código: ${item.barcode}`;
+
+      if (Number(item.price) > Number(item.cost || 0) * 1.3) {
+        card.style.borderLeft = '4px solid #16a34a';
+      }
+
+      if (isToday(item.soldAt)) {
+        const badge = document.createElement('div');
+        badge.className = 'new-badge';
+        badge.textContent = 'Nuevo';
+        card.appendChild(badge);
+      }
 
       card.innerHTML = `
-        ${img.outerHTML}
-        ${checkbox.outerHTML}
-        <h3>${item.name}</h3>
-        <div class="price">$${parseFloat(item.price).toLocaleString('es-SV', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-        <div class="info">Cantidad: ${parseInt(item.quantity).toLocaleString('es-SV')}</div>
-        <div class="info">Total: $${parseFloat(item.total).toLocaleString('es-SV', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-        <div style="font-size:12px; color:#6b7280; font-family:monospace; margin-top:8px;">${item.barcode || item.code}</div>
-        <button class="delete-btn" onclick="confirmDelete('${item.code}')">Eliminar Venta</button>
+        <div class="card-header">
+          <div class="card-title">${item.name}</div>
+        </div>
+        <div class="card-price">$${new Intl.NumberFormat('es-SV').format(Number(item.price).toFixed(2))}</div>
+        <div>Cantidad vendida: ${new Intl.NumberFormat('es-SV').format(item.quantity)}</div>
+        <div class="card-footer">
+          <div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div>
+          <button class="card-delete" onclick="confirmDelete('${item.code}')">Eliminar</button>
+        </div>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
       `;
 
-      return card;
+      card.insertBefore(img, card.firstChild);
+      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      container.appendChild(card);
     }
 
-    function updatePagination() {
-      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-      document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
-      
-      document.getElementById('prevBtn').disabled = currentPage === 1;
-      document.getElementById('nextBtn').disabled = currentPage === totalPages;
-    }
+    hideSpinner();
+    if (paginated.length >= rowsPerPage - 5) requestIdleCallback(preloadNextPage);
+  }
 
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        loadSoldInventory();
-      }
-    }
-
-    function nextPage() {
-      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-      if (currentPage < totalPages) {
-        currentPage++;
-        loadSoldInventory();
-      }
-    }
-
-    window.confirmDelete = function(code) {
-      if (confirm('¿Eliminar esta venta permanentemente?')) {
-        soldInventory = soldInventory.filter(item => item.code !== code);
-        localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-        loadSoldInventory();
-      }
-    }
-
-    // FACTURA FUNCTIONS
-    function generateFactura() {
-      const selected = Array.from(document.querySelectorAll('.checkbox:checked'))
-        .map(cb => JSON.parse(cb.value));
-      
-      if (selected.length === 0) {
-        alert('Selecciona al menos un producto marcando la casilla ✓');
-        return;
-      }
-
-      document.getElementById('facturaModal').style.display = 'flex';
-      document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
-      actualizarFacturaPreview(selected);
-    }
-
-    function cerrarFactura() {
-      document.getElementById('facturaModal').style.display = 'none';
-    }
-
-    function actualizarFacturaPreview(selected) {
-      let total = 0;
-      let html = '';
-      
-      selected.forEach(item => {
-        const itemTotal = parseFloat(item.total || 0);
-        total += itemTotal;
-        html += `
-          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #e5e7eb;">
-            <span>${item.name} (${parseInt(item.quantity).toLocaleString('es-SV')})</span>
-            <span>$${itemTotal.toLocaleString('es-SV', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+  /* ----------  ELIMINAR  ---------- */
+  window.confirmDelete = function (code) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:var(--card);padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);width:280px;text-align:center;">
+          <p>¿Eliminar este producto?</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+            <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
+            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${code}')">Eliminar</button>
           </div>
-        `;
-      });
-
-      document.getElementById('facturaPreview').innerHTML = html;
-      document.getElementById('facturaTotal').textContent = total.toLocaleString('es-SV', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    }
-
-    function imprimirFactura() {
-      const num = document.getElementById('fNum').value;
-      const fecha = document.getElementById('fFecha').value;
-      const cliente = document.getElementById('fCliente').value;
-      
-      const win = window.open('', '', 'width=400,height=600');
-      win.document.write(`
-        <html>
-          <head>
-            <title>Factura ${num}</title>
-            <style>
-              body { margin: 0; padding: 20px 15px; font-family: 'Courier New', monospace; font-size: 12px; width: 370px; }
-              .header { text-align: center; margin-bottom: 20px; }
-              .line { border-top: 2px dashed #000; margin: 10px 0; }
-              table { width: 100%; border-collapse: collapse; }
-              th, td { padding: 4px 2px; text-align: left; }
-              th:last-child, td:last-child { text-align: right; }
-              .total { font-size: 16px; font-weight: bold; text-align: right; margin-top: 15px; }
-              .footer { font-size: 10px; margin-top: 15px; line-height: 1.3; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div style="font-size:16px; font-weight:bold;">KLOHESV</div>
-              <div>San Salvador, El Salvador</div>
-              <div>industriastobias@gmail.com</div>
-              <div>Instagram: @Klohesv</div>
-            </div>
-            <div class="line"></div>
-            <table>
-              <tr><td>Factura:</td><td>${num}</td></tr>
-              <tr><td>Fecha:</td><td>${fecha}</td></tr>
-              <tr><td>Cliente:</td><td>${cliente}</td></tr>
-            </table>
-            <div class="line"></div>
-            <table>
-              <thead><tr><th>Producto</th><th style="width:50px;">Cant</th><th style="width:80px;">Total</th></tr></thead>
-              <tbody id="printBody"></tbody>
-            </table>
-            <div class="line"></div>
-            <div class="total">TOTAL: $${document.getElementById('facturaTotal').textContent}</div>
-            <div class="footer">
-              ¡Gracias por su compra!<br>
-              No se aceptan cambios ni devoluciones, salvo daño en producto dentro de 5 días.
-            </div>
-          </body>
-        </html>
-      `);
-      win.document.close();
-      win.focus();
-      win.print();
-      win.close();
-    }
-
-    function descargarPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
-      let y = 10;
-
-      // Header
-      doc.setFontSize(16);
-      doc.text('KLOHESV', 40, y, { align: 'center' });
-      y += 8;
-      doc.setFontSize(10);
-      doc.text('San Salvador, El Salvador', 40, y, { align: 'center' });
-      y += 5;
-      doc.text('industriastobias@gmail.com', 40, y, { align: 'center' });
-      y += 5;
-      doc.text('IG: @Klohesv', 40, y, { align: 'center' });
-      y += 8;
-
-      // Line
-      doc.line(5, y, 75, y);
-      y += 8;
-
-      // Data
-      doc.setFontSize(11);
-      doc.text(`Factura N°: ${document.getElementById('fNum').value}`, 5, y);
-      y += 6;
-      doc.text(`Fecha: ${document.getElementById('fFecha').value}`, 5, y);
-      y += 6;
-      doc.text(`Cliente: ${document.getElementById('fCliente').value}`, 5, y);
-      y += 8;
-
-      // Line
-      doc.line(5, y, 75, y);
-      y += 8;
-
-      // Products (simplified)
-      doc.text('Producto', 5, y);
-      doc.text('Cant', 45, y);
-      doc.text('Total', 65, y, { align: 'right' });
-      y += 6;
-
-      // Add your selected products logic here
-      doc.text('Productos seleccionados', 5, y);
-      y += 6;
-      doc.text(`TOTAL: $${document.getElementById('facturaTotal').textContent}`, 65, y, { align: 'right' });
-      
-      y += 10;
-      doc.setFontSize(9);
-      doc.text('¡Gracias por su compra! No se aceptan cambios salvo daño en 5 días.', 5, y, { maxWidth: 70 });
-
-      doc.save(`factura_${document.getElementById('fNum').value}.pdf`);
-    }
-
-    function setTheme(theme) {
-      document.querySelectorAll('.theme-btns button').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-    }
-
-    // INIT
-    function init() {
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrapper);
+  };
+  window.deleteSoldItem = function (code) {
+    const index = soldInventory.findIndex(item => item.code === code);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      document.querySelector('div[style*="position:fixed"]').remove();
       loadSoldInventory();
     }
+  };
 
-    // Auto-save on unload
-    window.addEventListener('beforeunload', () => {
-      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-    });
+  /* ----------  ATAJOS  ---------- */
+  window.addEventListener('keydown', e => {
+    if (e.ctrlKey) {
+      if (e.key === 'k') { e.preventDefault(); document.getElementById('unifiedSearch').focus(); }
+      if (e.key === 'p') { e.preventDefault(); imprimirTicket(); }
+      if (e.key === 'n') { e.preventDefault(); abrirFactura(); }
+    }
+  });
 
-    // Start
-    setTimeout(init, 500);
-  </script>
+  /* ----------  MODO KIOSKO  ---------- */
+  (() => {
+    const KIOSK_KEY = 'kioskActivo';
+    const btn = document.createElement('button');
+    btn.id = 'kioskBtn';
+    btn.style.cssText = 'position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;';
+    btn.textContent = 'Modo kiosko';
+    document.body.appendChild(btn);
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+    function toggleFullscreen() {
+      if (!estaEnFullscreen()) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      }
+    }
+    function actualizaUI() {
+      const activo = estaEnFullscreen();
+      btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+      localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+    }
+    btn.addEventListener('click', () => { toggleFullscreen(); actualizaUI(); });
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange'].forEach(ev => document.addEventListener(ev, actualizaUI));
+    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) { toggleFullscreen(); actualizaUI(); }
+  })();
+
+  /* ----------  HELPERS  ---------- */
+  function isToday(dateStr) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }
+
+  /* ----------  INICIO  ---------- */
+  loadSoldInventory();
+</script>
 </body>
 </html>

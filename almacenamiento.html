@@ -761,6 +761,75 @@
       }
     }
 
+    function filterInventory() {
+      const name = document.getElementById('searchName').value.trim().toLowerCase();
+      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
+      const code = document.getElementById('searchCode').value.trim().toLowerCase();
+      let filtered = inventory;
+      if (name) {
+        filtered = filtered.filter(item => item.name.toLowerCase().includes(name));
+      }
+      if (code) {
+        filtered = filtered.filter(item => item.barcode.trim().toLowerCase().includes(code));
+        if (filtered.length === 0) {
+          document.getElementById('inventoryList').innerHTML = '';
+          document.getElementById('cardsView').innerHTML = '';
+          document.getElementById('noResultsMessage').style.display = 'block';
+          document.getElementById('resultMessage').style.display = 'none';
+          return;
+        }
+        loadInventory(filtered);
+        document.getElementById('noResultsMessage').style.display = 'none';
+        setTimeout(() => {
+          const firstRow = document.querySelector('#inventoryList tr') || document.querySelector('.card');
+          if (firstRow) {
+            const filaNum = firstRow.querySelector('td')?.textContent || firstRow.querySelector('div')?.textContent || '1';
+            document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${filaNum}.`;
+            document.getElementById('resultMessage').style.display = 'block';
+            firstRow.classList.add('highlight');
+            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+        return;
+      }
+      if (category) {
+        filtered = filtered.filter(item => item.category.trim().toLowerCase() === category);
+      }
+      loadInventory(filtered);
+      document.getElementById('resultMessage').style.display = 'none';
+    }
+
+    function goToRow() {
+      const row = parseInt(document.getElementById('goToRow').value);
+      if (currentView === 'table') {
+        const rows = document.querySelectorAll('#inventoryList tr');
+        rows.forEach(r => r.classList.remove('highlight'));
+        if (row >= 1 && row <= rows.length) {
+          const target = rows[row - 1];
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else alert('Fila fuera de rango.');
+      } else {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(c => c.classList.remove('highlight'));
+        if (row >= 1 && row <= cards.length) {
+          const target = cards[row - 1];
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else alert('Fila fuera de rango.');
+      }
+    }
+
+    function clearFilters() {
+      document.getElementById('searchName').value = '';
+      document.getElementById('searchCategory').value = '';
+      document.getElementById('searchCode').value = '';
+      document.getElementById('goToRow').value = '';
+      document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
+      loadInventory();
+      document.getElementById('resultMessage').style.display = 'none';
+    }
+
     document.addEventListener('keydown', e => {
       if (e.ctrlKey) {
         switch (e.key.toLowerCase()) {

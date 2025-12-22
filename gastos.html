@@ -2,42 +2,110 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gastos - Klohe</title>
+  <title>Gastos & Catálogo - Klohe</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 2rem; }
     h1 { color: #c0392b; }
-    .controls { margin-bottom: 1rem; }
-    button { padding: .5rem 1rem; font-size: 1rem; cursor: pointer; }
+    button { padding: .5rem 1rem; font-size: 1rem; cursor: pointer; margin-top: 1rem; }
+    #btnPdf { background: #f9c74f; color: #000; border: none; border-radius: 20px; }
   </style>
 </head>
 <body>
-  <div class="controls">
-    <button id="toggleSound">🔊 Silenciar / Sonido</button>
-  </div>
-  <h1>Gastos Klohe</h1>
-  <p>Página de gastos con música navideña de fondo.</p>
+
+  <h1>Gastos & Catálogo - Klohe</h1>
+  <p>Página con música navideña y generador de PDF del catálogo.</p>
 
   <!-- Música navideña -->
-  <audio id="navAudio" loop autoplay>
+  <audio id="navAudio" loop>
     <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
-    Tu navegador no soporta audio.
   </audio>
+
+  <button id="toggleSound">🔊 Silenciar</button>
+  <button id="btnPdf" onclick="descargarPDF()">Descargar PDF del Catálogo</button>
 
   <script>
     const audio = document.getElementById('navAudio');
     const btn = document.getElementById('toggleSound');
-    let sonando = true;
+
+    // Activa el sonido al primer clic del usuario
+    document.addEventListener('click', function activarAudio() {
+      audio.play();
+      document.removeEventListener('click', activarAudio);
+    }, { once: true });
 
     btn.addEventListener('click', () => {
-      if (sonando) {
-        audio.pause();
-        btn.textContent = '🔊 Activar Sonido';
-      } else {
+      if (audio.paused) {
         audio.play();
         btn.textContent = '🔇 Silenciar';
+      } else {
+        audio.pause();
+        btn.textContent = '🔊 Activar';
       }
-      sonando = !sonando;
     });
+
+    /* ----------  PDF 4 TARJETAS / FILA (SIN CATEGORÍAS)  ---------- */
+    async function descargarPDF() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      if (!lista.length) { alert('No hay productos'); return; }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+      const marg = 40;
+      const anchoPag = doc.internal.pageSize.getWidth();
+      const altoPag  = doc.internal.pageSize.getHeight();
+
+      const tarjAncho = (anchoPag - 2*marg - 30) / 4; // 4 columnas
+      const tarjAlto  = 150;
+      const imgSize   = tarjAncho - 20;
+      let x = marg, y = 60; // sin título, arranca más arriba
+
+      // --- orden simple sin agrupar ---
+      for (let i = 0; i < lista.length; i++) {
+        const p = lista[i];
+
+        // salto de línea completa si no cabe horizontal
+        if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + 15; }
+        // salto de página si no cabe vertical
+        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 60; x = marg; }
+
+        const blob = await localforage.getItem('img_' + p.code);
+        const precio = p.discount && p.discount > 0
+          ? (p.price * (1 - p.discount / 100)).toFixed(2)
+          : Number(p.price).toFixed(2);
+
+        let imgData = '';
+        if (blob) imgData = await blobToBase64(blob);
+
+        // --- tarjeta ---
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(1);
+        doc.rect(x, y, tarjAncho, tarjAlto, 'D');
+        if (imgData) doc.addImage(imgData, 'JPEG', x + 10, y + 10, imgSize, imgSize);
+
+        doc.setFontSize(8.5);
+        const txtY = y + imgSize + 20;
+        doc.text(p.name.substring(0, 22) + (p.name.length > 22 ? '…' : ''), x + 5, txtY);
+        doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 13);
+        doc.text(`$${precio}`, x + 5, txtY + 26);
+
+        x += tarjAncho + 10;
+      }
+
+      doc.save('catalogo_klohe.pdf');
+    }
+
+    /* ---- helper blob → base64 ---- */
+    function blobToBase64(blob) {
+      return new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
   </script>
+
 </body>
 </html>

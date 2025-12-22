@@ -6,17 +6,56 @@
   <title>Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
-    /* ---------- tus estilos originales (sin cambios) ---------- */
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+
+    /* ---------- MENÚ KIOSKO ---------- */
+    #kioskoBar{
+      position:fixed;
+      top:0; right:0;
+      z-index: 9999;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      border-radius: 0 0 0 var(--radius);
+      padding: .4rem .6rem;
+      display: flex; gap: .5rem; flex-wrap: wrap;
+      /* oculto por defecto */
+      transform: translateX(100%);
+      transition: transform .3s ease;
+    }
+    #kioskoBar.show{ transform: translateX(0); }
+    #kioskoBar a{
+      color: var(--accent);
+      font-size: 1.3rem;
+      padding: .4rem;
+      border-radius: 50%;
+      transition: background .2s;
+    }
+    #kioskoBar a:hover{background: var(--highlight);}
+
+    /* botón hamburguesa fijo */
+    #menuToggle{
+      position: fixed;
+      top: 1rem; right: 1rem;
+      z-index: 10000;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: .5rem .7rem;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    /* ---------- TEMA / OTROS (igual que antes) ---------- */
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
-    #themeToggle{position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+    #themeToggle{position:fixed;top:1rem;left:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
     .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
     .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
     .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;width:100%;max-width:960px;}
@@ -53,14 +92,29 @@
     @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
-    #spinner{position:fixed;bottom:1rem;right:1rem;background:var(--accent);color:#fff;padding:.5rem 1rem;border-radius:8px;display:none;}
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   </style>
 </head>
 <body>
 
+<!-- Botón hamburguesa -->
+<button id="menuToggle" title="Abrir menú"><i class="fa fa-bars"></i></button>
+
+<!-- Menú oculto por defecto -->
+<nav id="kioskoBar">
+  <a href="compra.html" title="Compra"><i class="fa fa-shopping-cart"></i></a>
+  <a href="almacenamiento.html" title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
+  <a href="finanzas.html" title="Finanzas"><i class="fa fa-chart-line"></i></a>
+  <a href="inventario.html" title="Inventario"><i class="fa fa-boxes"></i></a>
+  <a href="catalogo.html" title="Catálogo"><i class="fa fa-book"></i></a>
+  <a href="clientes.html" title="Clientes"><i class="fa fa-users"></i></a>
+  <a href="descuentos.html" title="Descuentos"><i class="fa fa-percent"></i></a>
+  <a href="facturas.html" title="Facturas"><i class="fa fa-file-invoice"></i></a>
+  <a href="traslados.html" title="Traslados"><i class="fa fa-truck"></i></a>
+  <a href="venta.html" title="Venta"><i class="fa fa-cash-register"></i></a>
+  <a href="menu.html" title="Menú"><i class="fa fa-bars"></i></a>
+</nav>
+
 <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
-<div id="spinner">Guardando…</div>
 
 <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
 
@@ -72,20 +126,16 @@
 
 <!-- Rango de precio -->
 <div class="price-range">
-  <label><span class="sr-only">Precio mínimo</span><input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"></label>
-  <label><span class="sr-only">Precio máximo</span><input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"></label>
+  <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
+  <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
 </div>
-
-<!-- Filtro sin stock -->
-<label style="display:flex;align-items:center;gap:.3rem;margin-bottom:1rem;width:100%;max-width:960px">
-  <input type="checkbox" id="zeroStock"> Solo sin stock</label>
 
 <!-- Buscador -->
 <div class="search-bar">
-  <label><span class="sr-only">Buscar</span><input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría…"></label>
+  <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
 </div>
 
-<!-- Grid -->
+<!-- Tabla -->
 <div id="inventoryTable" class="table-grid"></div>
 
 <!-- Total USD -->
@@ -95,49 +145,32 @@
 <div id="printArea" style="display:none;"></div>
 
 <!-- Lightbox -->
-<div id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src="" alt="Imagen ampliada"></div>
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="Imagen ampliada"/>
+</div>
 
-<script type="module">
-/* ---------- MÓDULO inventory.js (inline) ---------- */
-export const CATEGORY_ORDER = [
+<script>
+/* ---------- MODO KIOSKO ---------- */
+function entrarKiosko(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+}
+window.addEventListener('load', entrarKiosko);
+
+/* ---------- CONTROL MENÚ ---------- */
+const menuToggle = document.getElementById('menuToggle');
+const kioskoBar  = document.getElementById('kioskoBar');
+menuToggle.addEventListener('click', () => kioskoBar.classList.toggle('show'));
+
+/* ---------- ORDEN CATEGORÍAS ---------- */
+const CATEGORY_ORDER = [
   "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
 ];
-export const sortByCustomCategory = (list) => {
-  return [...list].sort((a, b) => {
-    const catA = (a.category || "Otros").trim();
-    const catB = (b.category || "Otros").trim();
-    const indexA = CATEGORY_ORDER.indexOf(catA);
-    const indexB = CATEGORY_ORDER.indexOf(catB);
-    const posA = indexA === -1 ? 999 : indexA;
-    const posB = indexB === -1 ? 999 : indexB;
-    return posA - posB || a.name.localeCompare(b.name);
-  });
-};
-export const calculateTotal = (list) => list.reduce((sum,item)=>{
-  const price = parseFloat(item.price)||0;
-  const qty   = parseFloat(item.quantity)||0;
-  const disc  = parseFloat(item.discount)||0;
-  return sum + (price * (1 - disc/100)) * qty;
-},0);
-export const getUniqueCode = () => 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-/* ---------- FIN MÓDULO ---------- */
 
-/* ---------- UTILS ---------- */
-const escapeHTML = str => String(str)
-  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-  .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-
-const debounce = (fn,ms=300)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
-
-const sp = document.getElementById('spinner');
-const showSpinner = ()=> sp.style.display='block';
-const hideSpinner = ()=> sp.style.display='none';
-
-/* ---------- VARIABLES GLOBALES ---------- */
 let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 let filtered   = [...inventory];
 let searchTerm = '';
-let offlineQueue = [];
 
 /* ---------- TEMA OSCURO ---------- */
 const themeToggle = document.getElementById('themeToggle');
@@ -147,127 +180,146 @@ themeToggle.addEventListener('click', () => {
 });
 
 /* ---------- CÁLCULOS ---------- */
-const stockTotal = list => list.reduce((s,i)=>s+((parseInt(i.quantity))||0),0);
+function calculateTotal(list){
+  return list.reduce((sum,item)=>{
+    const price = parseFloat(item.price)||0;
+    const qty   = parseFloat(item.quantity)||0;
+    const disc  = parseFloat(item.discount)||0;
+    return sum + (price * (1 - disc/100)) * qty;
+  },0);
+}
+function stockTotal(list){
+  return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+}
 
-/* ---------- RESALTADO / COPIAR ---------- */
-const highlight = (text, query) => {
-  if(!query) return escapeHTML(text);
+/* ---------- ORDEN PERSONALIZADO ---------- */
+function sortByCustomCategory(list) {
+  return [...list].sort((a, b) => {
+    const catA = (a.category || "Otros").trim();
+    const catB = (b.category || "Otros").trim();
+    const indexA = CATEGORY_ORDER.indexOf(catA);
+    const indexB = CATEGORY_ORDER.indexOf(catB);
+    const posA = indexA === -1 ? 999 : indexA;
+    const posB = indexB === -1 ? 999 : indexB;
+    return posA - posB || a.name.localeCompare(b.name);
+  });
+}
+
+/* ---------- UTILIDADES ---------- */
+function highlight(text, query){
+  if(!query) return text;
   const re = new RegExp(`(${query})`, 'gi');
-  return escapeHTML(text).replace(re, '<mark>$1</mark>');
-};
-const copyToClipboard = text => navigator.clipboard.writeText(text)
-  .then(()=>alert('Copiado: '+text));
+  return text.replace(re, '<mark>$1</mark>');
+}
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('Código de barras copiado: ' + text);
+  });
+}
 
 /* ---------- LIGHTBOX ---------- */
-window.openLightbox = src => {
-  const lb = document.getElementById('lightbox');
-  document.getElementById('lightboxImg').src = src;
-  lb.style.display='flex';
-};
-window.closeLightbox = () => document.getElementById('lightbox').style.display='none';
+function openLightbox(src) {
+  const lightbox = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = src;
+  lightbox.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
 
 /* ---------- RENDER ---------- */
-const PAGE = 50; let page = 0;
-const renderTable = ()=>{
+function renderTable(){
   const container = document.getElementById('inventoryTable');
+
   document.getElementById('totalProducts').textContent = inventory.length;
   document.getElementById('totalStock').textContent = stockTotal(inventory);
 
   filtered = sortByCustomCategory(filtered);
+
   if(!filtered.length){
     container.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la búsqueda.</p>';
     document.getElementById('totalAmount').textContent = '$0.00';
     return;
   }
-  /* Virtualización simple */
-  const renderChunk = ()=>{
-    const slice = filtered.slice(page*PAGE,(page+1)*PAGE);
-    container.insertAdjacentHTML('beforeend', slice.map((item,idx)=>{
-      const globalIdx = page*PAGE+idx;
-      return `
-        <div class="line-item" id="card-${globalIdx}">
-          <img id="invImg${globalIdx}" loading="lazy" src="" alt="${escapeHTML(item.name)}" onclick="openLightbox(this.src)">
-          <h3>${highlight(item.name, searchTerm)}</h3>
-          <p>Código: ${highlight(item.code, searchTerm)}</p>
-          <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
-          ${typeof item.discount==='number' && item.discount>0 ? `
-            <p style="color:#ef4444;font-weight:600;">${item.discount}% OFF</p>
-            <p>Precio: <del style="color:#9ca3af;">$${item.price}</del> <strong>$${(item.price*(1-item.discount/100)).toFixed(2)}</strong></p>
-          `:`<p>Precio: $${item.price}</p>`}
-          <p>Categoría: ${highlight(item.category, searchTerm)}</p>
-          <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
-            <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${escapeHTML(item.barcode)}')" title="Copiar código"></i>
-          </p>
-          <div class="actions">
-            <button onclick="viewItem(${globalIdx})" class="btn-primary">Ver</button>
-            <button onclick="deleteItem(${globalIdx})" class="btn-danger">Eliminar</button>
-            <button onclick="editItem(${globalIdx})" class="btn-primary">Editar</button>
-            <button onclick="printLabel('${escapeHTML(item.code)}','${escapeHTML(item.name)}')" class="btn-primary">Etiqueta</button>
-          </div>
-        </div>`;
-    }).join(''));
-    slice.forEach((p,i)=>{
-      const img=document.getElementById(`invImg${page*PAGE+i}`);
-      localforage.getItem(`img_${p.code}`).then(blob=>{
-        if(blob){ img.src=URL.createObjectURL(blob); }
-      });
+
+  container.innerHTML = filtered.map((item,idx)=>`
+    <div class="line-item" id="card-${idx}">
+      <img id="invImg${idx}" src="" alt="${item.name}"/>
+      <h3>${highlight(item.name, searchTerm)}</h3>
+      <p>Código: ${highlight(item.code, searchTerm)}</p>
+      <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
+      ${typeof item.discount === 'number' && item.discount > 0 ? `
+        <p style="color:#ef4444;font-weight:600;">${item.discount}% OFF</p>
+        <p>Precio: <del style="color:#9ca3af;">$${item.price}</del> <strong>$${(item.price * (1 - item.discount / 100)).toFixed(2)}</strong></p>
+      ` : `
+        <p>Precio: $${item.price}</p>
+      `}
+      <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+      <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
+        <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+      </p>
+      <div class="actions">
+        <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+        <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+        <button onclick="editItem(${idx})" class="btn-primary">Editar</button>
+      </div>
+    </div>
+  `).join('');
+
+  filtered.forEach((p,i)=>{
+    localforage.getItem(`img_${p.code}`).then(blob=>{
+      if(blob){
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById(`invImg${i}`);
+        img.src = url;
+        img.onclick = () => openLightbox(url);
+      }
     });
-  };
-  container.innerHTML=''; page=0; renderChunk();
-  window.onscroll=()=>{
-    if(window.innerHeight+window.scrollY>=document.body.offsetHeight-200 && (page+1)*PAGE<filtered.length){
-      page++; renderChunk();
-    }
-  };
+  });
+
   document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
-};
+}
 
 /* ---------- ACCIONES ---------- */
-window.viewItem = idx => alert(`Detalles:\n\n${JSON.stringify(filtered[idx],null,2)}`);
-
-window.deleteItem = idx => {
-  if(!confirm('¿Eliminar producto?')) return;
-  const realIdx = inventory.findIndex(it=>it.code===filtered[idx].code);
-  const item = inventory[realIdx];
+function viewItem(index){
+  alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+}
+function deleteItem(index){
+  if(!confirm('¿Eliminar producto?'))return;
+  const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+  const item = inventory[realIndex];
   localforage.removeItem(`img_${item.code}`);
-  inventory.splice(realIdx,1);
-  try{ localStorage.setItem('inventory', JSON.stringify(inventory)); }catch(e){ alert('Espacio lleno.'); }
+  inventory.splice(realIndex,1);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
   doFilter();
-};
+}
 
-window.printLabel = (code,name) => {
-  const w=window.open('','etiqueta','width=300,height=150');
-  w.document.write(`<html><body style="text-align:center;font-family:sans-serif">
-    <h4>${name}</h4><svg id="barcode"></svg>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-    <script>JsBarcode("#barcode","${code}",{height:40});window.print();<\/script>
-    </body></html>`);
-  w.document.close();
-};
-
-window.editItem = idx => {
-  const card = document.getElementById(`card-${idx}`);
-  const p    = filtered[idx];
-  const realIdx = inventory.findIndex(it=>it.code===p.code);
+function editItem(index){
+  const card = document.getElementById(`card-${index}`);
+  const p    = filtered[index];
+  const realIndex = inventory.findIndex(it=> it.code === p.code);
   if(card.querySelector('.edit-form')) return;
-  const form = document.createElement('div');
-  form.className='edit-form';
-  form.innerHTML=`
-    <input id="editName${idx}" value="${escapeHTML(p.name)}" placeholder="Nombre">
-    <input id="editPrice${idx}" type="number" step="0.01" value="${p.price}" placeholder="Precio">
-    <input id="editQty${idx}" type="number" value="${p.quantity}" placeholder="Stock">
-    <input id="editCat${idx}" value="${escapeHTML(p.category)}" placeholder="Categoría">
-    <input id="editBar${idx}" value="${escapeHTML(p.barcode)}" placeholder="Código de barras">
-    <div style="display:flex;gap:.3rem">
-      <button onclick="saveEdit(${idx},${realIdx})" class="btn-primary">Guardar</button>
-      <button onclick="cancelEdit(${idx})" class="btn-danger">Cancelar</button>
-    </div>`;
-  card.appendChild(form);
-};
-window.cancelEdit = idx => document.getElementById(`card-${idx}`).querySelector('.edit-form').remove();
 
-window.saveEdit = (filterIdx,invIdx) => {
-  showSpinner();
+  const form = document.createElement('div');
+  form.className = 'edit-form';
+  form.innerHTML = `
+    <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
+    <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
+    <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
+    <input id="editCat${index}"  value="${p.category}" placeholder="Categoría"/>
+    <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
+    <div style="display:flex;gap:.3rem">
+      <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
+      <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
+    </div>
+  `;
+  card.appendChild(form);
+}
+function cancelEdit(index){
+  document.getElementById(`card-${index}`).querySelector('.edit-form').remove();
+}
+function saveEdit(filterIdx, invIdx){
   const newData = {
     name:     document.getElementById(`editName${filterIdx}`).value.trim(),
     price:    document.getElementById(`editPrice${filterIdx}`).value.trim(),
@@ -277,22 +329,16 @@ window.saveEdit = (filterIdx,invIdx) => {
     code:     filtered[filterIdx].code,
     discount: filtered[filterIdx].discount || 0
   };
-  const priceN = parseFloat(newData.price);
-  const qtyN   = parseInt(newData.quantity);
-  if(isNaN(priceN)||priceN<0||isNaN(qtyN)||qtyN<0){ hideSpinner(); return alert('Precio y cantidad deben ser ≥ 0'); }
-  if(!inventory[invIdx].history) inventory[invIdx].history=[];
-  inventory[invIdx].history.push({date:new Date().toISOString(), price:priceN, quantity:qtyN});
-  inventory[invIdx]=newData;
-  try{ localStorage.setItem('inventory', JSON.stringify(inventory)); }catch(e){ alert('Espacio lleno.'); }
-  hideSpinner(); doFilter();
-};
+  inventory[invIdx] = newData;
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  doFilter();
+}
 
-/* ---------- FILTROS ---------- */
-const doFilter = ()=>{
+/* ---------- FILTRO ---------- */
+function doFilter(){
   searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
   const minP = parseFloat(document.getElementById('minPrice').value) || 0;
   const maxP = parseFloat(document.getElementById('maxPrice').value) || Infinity;
-  const zeroOnly = document.getElementById('zeroStock').checked;
 
   filtered = inventory.filter(p=>{
     const price = parseFloat(p.price)||0;
@@ -302,46 +348,38 @@ const doFilter = ()=>{
       p.barcode.toLowerCase().includes(searchTerm) ||
       p.category.toLowerCase().includes(searchTerm);
     const matchPrice = price >= minP && price <= maxP;
-    const matchZero  = !zeroOnly || (parseInt(p.quantity)||0)===0;
-    return matchText && matchPrice && matchZero;
+    return matchText && matchPrice;
   });
   renderTable();
-};
-document.getElementById('searchInput').addEventListener('input', debounce(doFilter,300));
+}
+document.getElementById('searchInput').addEventListener('input',doFilter);
 document.getElementById('minPrice').addEventListener('input',doFilter);
 document.getElementById('maxPrice').addEventListener('input',doFilter);
-document.getElementById('zeroStock').addEventListener('change',doFilter);
-
-/* ---------- ATAJO CTRL+F ---------- */
-window.addEventListener('keydown', e=>{
-  if(e.ctrlKey && e.key==='f'){ e.preventDefault(); document.getElementById('searchInput').focus(); }
-});
 
 /* ---------- SINCRONIZACIÓN ---------- */
-window.addEventListener('storage', e=>{
-  if(e.key==='inventory'||e.key==='inventario'){
-    inventory=JSON.parse(e.newValue)||[];
-    try{ localStorage.setItem('inventory',JSON.stringify(inventory)); }catch(e){}
+window.addEventListener('storage', e => {
+  if(e.key === 'inventory'){
+    inventory = JSON.parse(e.newValue) || [];
+    doFilter();
+  }
+});
+window.addEventListener('storage', e => {
+  if (e.key === 'inventario') {
+    inventory = JSON.parse(e.newValue) || [];
+    localStorage.setItem('inventory', JSON.stringify(inventory));
     doFilter();
   }
 });
 const originalSetItem = localStorage.setItem;
-localStorage.setItem = function(key,value){
-  originalSetItem.call(this,key,value);
-  if(key==='inventory'){ originalSetItem.call(this,'inventario',value); }
-  offlineQueue.push({key,value,ts:Date.now()});
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(this, key, value);
+  if (key === 'inventory') {
+    originalSetItem.call(this, 'inventario', value);
+  }
 };
 
-/* ---------- ON-LINE / OFF-LINE ---------- */
-window.addEventListener('online',()=>{
-  while(offlineQueue.length){
-    const {key,value}=offlineQueue.shift();
-    navigator.sendBeacon('/sync',JSON.stringify({key,value}));
-  }
-});
-
 /* ---------- INICIO ---------- */
-window.addEventListener('DOMContentLoaded',doFilter);
+window.addEventListener('DOMContentLoaded',()=> doFilter());
 </script>
 </body>
 </html>

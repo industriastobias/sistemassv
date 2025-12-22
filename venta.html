@@ -14,7 +14,7 @@
       --bg: #ffffff;
       --card: #ffffff;
       --text: #000000;
-      --accent: #ec4899; /* rosa por defecto */
+      --accent: #ec4899;
       --danger: #dc2626;
       --radius: 12px;
       --shadow: 0 4px 16px rgba(0,0,0,.06);
@@ -295,27 +295,6 @@
       max-height: 90vh;
       object-fit: contain;
       border-radius: 8px;
-    }
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: contain;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-bottom: 8px;
-    }
-    .barcode {
-      width: 100%;
-      height: 40px;
-      object-fit: contain;
-      cursor: pointer;
-      margin-top: auto;
-    }
-    .barcode-text {
-      font-size: 10px;
-      text-align: center;
-      margin-top: 4px;
-      color: var(--text);
     }
     /* LOGIN */
     #loginOverlay {
@@ -837,42 +816,7 @@
       const card = document.createElement('div');
       card.className = 'card';
 
-      const img = document.createElement('img');
-      img.alt = `${item.name} - ${item.code}`;
-
-      const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) {
-        img.src = URL.createObjectURL(blob);
-        img.onclick = () => abrirImgModal(img.src);
-      } else {
-        img.src = '';
-        img.style.display = 'none';
-      }
-
-      const barcodeImg = document.createElement('img');
-      barcodeImg.className = 'barcode';
-
-      let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
-      if (!barcodeBlob) {
-        const canvas = document.createElement('canvas');
-        JsBarcode(canvas, item.barcode, {
-          format: 'CODE128',
-          width: 2,
-          height: 40,
-          displayValue: false
-        });
-        canvas.toBlob(async (blob) => {
-          await localforage.setItem(`barcodeimg_${item.barcode}`, blob);
-          barcodeImg.src = URL.createObjectURL(blob);
-        });
-      } else {
-        barcodeImg.src = URL.createObjectURL(barcodeBlob);
-      }
-      barcodeImg.onclick = () => abrirImgModal(barcodeImg.src);
-
-      const barcodeText = document.createElement('div');
-      barcodeText.className = 'barcode-text';
-      barcodeText.textContent = `Código: ${item.barcode}`;
+      // Sin imágenes: no se crean elementos img ni se cargan blobs
 
       if (Number(item.price) > Number(item.cost || 0) * 1.3) {
         card.style.borderLeft = '4px solid #16a34a';
@@ -898,9 +842,6 @@
         <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
       `;
 
-      card.insertBefore(img, card.firstChild);
-      card.insertBefore(barcodeImg, card.querySelector('.card-footer'));
-      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
 

@@ -8,7 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    /* ----------  REDISEÑO VISUAL  ---------- */
+    /* ----------  REDISEÑO VISUAL (SIN TOCAR FUNCIONES)  ---------- */
     :root {
       --bg: #ffffff;
       --card: #ffffff;
@@ -494,6 +494,36 @@
       if (e.key === 'n') { e.preventDefault(); abrirFactura(); }
     }
   });
+
+  /* ----------  MODO KIOSKO  ---------- */
+  (() => {
+    const KIOSK_KEY = 'kioskActivo';
+    const btn = document.createElement('button');
+    btn.id = 'kioskBtn';
+    btn.style.cssText = 'position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;';
+    btn.textContent = 'Modo kiosko';
+    document.body.appendChild(btn);
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+    function toggleFullscreen() {
+      if (!estaEnFullscreen()) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      }
+    }
+    function actualizaUI() {
+      const activo = estaEnFullscreen();
+      btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+      localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+    }
+    btn.addEventListener('click', () => { toggleFullscreen(); actualizaUI(); });
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange'].forEach(ev => document.addEventListener(ev, actualizaUI));
+    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) { toggleFullscreen(); actualizaUI(); }
+  })();
 
   /* ----------  HELPERS  ---------- */
   function isToday(dateStr) {

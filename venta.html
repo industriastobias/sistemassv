@@ -5,389 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ventas Realizadas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    /* ----------  (CSS sin cambios visuales importantes)  ---------- */
     :root {
-      --bg: #ffffff;
-      --card: #ffffff;
-      --text: #000000;
-      --accent: #ec4899;
-      --danger: #dc2626;
-      --radius: 12px;
-      --shadow: 0 4px 16px rgba(0,0,0,.06);
+      --bg:#ffffff;--card:#ffffff;--text:#000000;--accent:#ec4899;--danger:#dc2626;
+      --radius:12px;--shadow:0 4px 16px rgba(0,0,0,.06);
     }
-    [data-theme="white"] {
-      --bg: #ffffff;
-      --card: #ffffff;
-      --text: #000000;
-      --accent: #2563eb;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px 20px;
-      min-height: 100vh;
-    }
-    .container {
-      width: 100%;
-      max-width: 1200px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    @media (max-width: 768px) {
-      body { padding: 0; }
-      .container {
-        max-width: 100%;
-        border-radius: 0;
-        padding: 20px;
-        min-height: 100vh;
-        box-shadow: none;
-      }
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .header h1 { font-size: 2rem; font-weight: 700; }
-    .theme-switcher {
-      display: flex;
-      gap: 8px;
-    }
-    .theme-switcher button {
-      border: 1px solid #ccc;
-      background: #fff;
-      color: #000;
-      padding: 6px 12px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: .75rem;
-    }
-    .theme-switcher button.active {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-    .controls {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .controls input,
-    .controls select,
-    .controls button {
-      padding: 10px 14px;
-      border: none;
-      border-radius: var(--radius);
-      background: #f5f5f5;
-      color: var(--text);
-      box-shadow: var(--shadow);
-      font-size: .875rem;
-    }
-    .controls button {
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .controls button:hover { opacity: .9; }
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
-    }
-    .card {
-      background: #fafafa;
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: .3s;
-      position: relative;
-      min-height: 320px;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeIn .4s forwards;
-    }
-    @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
-    .card:hover { transform: translateY(-4px); }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-title { font-size: 1.1rem; font-weight: 600; }
-    .card-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: auto;
-    }
-    .card-delete {
-      background: var(--danger);
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: .75rem;
-      cursor: pointer;
-    }
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: auto;
-    }
-    .pagination button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: var(--radius);
-      background: #f5f5f5;
-      color: var(--text);
-      box-shadow: var(--shadow);
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .pagination button:hover {
-      background: var(--accent);
-      color: #fff;
-    }
-    .fab-totals {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 1.5rem;
-      font-weight: 700;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      transition: transform 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .fab-totals:hover { transform: scale(1.1); }
-    #totalesModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-    .totales-card {
-      position: relative;
-      width: 90vw;
-      max-width: 320px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-    }
-    .close-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--text);
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #facturaModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 998;
-    }
-    .factura-card {
-      width: 90vw;
-      max-width: 420px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      max-height: 90vh;
-      overflow: auto;
-    }
-    .ticket-preview {
-      background: #fff;
-      color: #000;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 11px;
-      line-height: 1.3;
-      padding: 8px 6px;
-      border: 1px dashed #999;
-      width: 100%;
-      max-width: 360px;
-      margin: 0 auto;
-      box-sizing: border-box;
-    }
-    .ticket-preview .total {
-      font-weight: 700;
-      font-size: 12px;
-      text-align: right;
-      margin-top: 6px;
-      padding-right: 6px;
-    }
-    .modal-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 10px;
-    }
-    .modal-buttons button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-print { background: #16a34a; color: #fff; }
-    .btn-close { background: #6b7280; color: #fff; }
-    #imgModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1001;
-      cursor: pointer;
-    }
-    #imgModal img {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: 8px;
-    }
-    /* LOGIN */
-    #loginOverlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    #loginBox {
-      background: var(--card);
-      padding: 32px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      text-align: center;
-      width: 280px;
-    }
-    #loginBox h2 { margin-bottom: 12px; }
-    #pinInput {
-      width: 100%;
-      padding: 10px;
-      font-size: 1.2rem;
-      text-align: center;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-top: 12px;
-    }
-    /* Spinner */
-    .spinner {
-      position: absolute;
-      inset: 0;
-      display: none;
-      place-items: center;
-      background: var(--card);
-      z-index: 10;
-    }
-    .spinner::after {
-      content: "";
-      width: 32px;
-      height: 32px;
-      border: 4px solid var(--accent);
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    /* Volver arriba */
-    #btnTop {
-      position: fixed;
-      bottom: 90px;
-      right: 20px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      display: none;
-      place-items: center;
-      box-shadow: var(--shadow);
-      z-index: 999;
-    }
-    /* Sin resultados */
-    #noResults {
-      display: none;
-      text-align: center;
-      padding: 40px;
-      color: var(--text);
-    }
-    #noResults svg {
-      width: 120px;
-      margin-bottom: 16px;
-      fill: var(--accent);
-    }
-    /* Etiqueta nuevo */
-    .new-badge {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      background: var(--accent);
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: .65rem;
-      font-weight: 700;
-    }
-    /* Print */
-    @media print {
-      .header, .controls, .pagination, .fab-totals, #kioskBtn, #btnTop, .card-delete, .factCheck, .sort-row, .theme-switcher { display: none !important; }
-    }
+    [data-theme="white"]{--accent:#2563eb;}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+    body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:flex-start;padding:40px 20px;min-height:100vh;}
+    .container{width:100%;max-width:1200px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:40px;display:flex;flex-direction:column;gap:24px;}
+    @media(max-width:768px){body{padding:0;}.container{max-width:100%;border-radius:0;padding:20px;min-height:100vh;box-shadow:none;}}
+    .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+    .header h1{font-size:2rem;font-weight:700;}
+    .theme-switcher{display:flex;gap:8px;}
+    .theme-switcher button{border:1px solid #ccc;background:#fff;color:#000;padding:6px 12px;border-radius:20px;cursor:pointer;font-size:.75rem;}
+    .theme-switcher button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .controls{display:flex;gap:12px;flex-wrap:wrap;}
+    .controls input,.controls select,.controls button{padding:10px 14px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);font-size:.875rem;}
+    .controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:600;}
+    .controls button:hover{opacity:.9;}
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+    .card{background:#fafafa;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:.3s;position:relative;min-height:320px;opacity:0;transform:translateY(20px);animation:fadeIn .4s forwards;}
+    @keyframes fadeIn{to{opacity:1;transform:translateY(0);}}
+    .card:hover{transform:translateY(-4px);}
+    .card-header{display:flex;justify-content:space-between;align-items:center;}
+    .card-title{font-size:1.1rem;font-weight:600;}
+    .card-price{font-size:1.5rem;font-weight:700;color:var(--accent);}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}
+    .card-delete{background:var(--danger);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;}
+    .pagination{display:flex;justify-content:center;gap:12px;margin-top:auto;}
+    .pagination button{padding:8px 16px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:600;}
+    .pagination button:hover{background:var(--accent);color:#fff;}
+    .fab-totals{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:white;border:none;cursor:pointer;font-size:1.5rem;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;transition:transform .2s;display:flex;align-items:center;justify-content:center;}
+    .fab-totals:hover{transform:scale(1.1);}
+    #totalesModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999;}
+    .totales-card{position:relative;width:90vw;max-width:320px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;}
+    .close-btn{position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text);width:32px;height:32px;display:flex;align-items:center;justify-content:center;}
+    #facturaModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:998;}
+    .factura-card{width:90vw;max-width:420px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow:auto;}
+    .ticket-preview{background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.3;padding:8px 6px;border:1px dashed #999;width:100%;max-width:360px;margin:0 auto;box-sizing:border-box;}
+    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:6px;padding-right:6px;}
+    .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+    .modal-buttons button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}
+    .btn-print{background:#16a34a;color:#fff;}
+    .btn-close{background:#6b7280;color:#fff;}
+    #imgModal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:1001;cursor:pointer;}
+    #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;}
+    .card img{width:100%;height:160px;object-fit:contain;border-radius:8px;cursor:pointer;margin-bottom:8px;}
+    .barcode-text{font-size:10px;text-align:center;margin-top:4px;color:var(--text);}
+    #loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
+    #loginBox{background:var(--card);padding:32px;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;width:280px;}
+    #loginBox h2{margin-bottom:12px;}
+    #pinInput{width:100%;padding:10px;font-size:1.2rem;text-align:center;border:1px solid #ccc;border-radius:8px;margin-top:12px;}
+    .spinner{position:absolute;inset:0;display:none;place-items:center;background:var(--card);z-index:10;}
+    .spinner::after{content:"";width:32px;height:32px;border:4px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #btnTop{position:fixed;bottom:90px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:none;place-items:center;box-shadow:var(--shadow);z-index:999;}
+    #noResults{display:none;text-align:center;padding:40px;color:var(--text);}
+    #noResults svg{width:120px;margin-bottom:16px;fill:var(--accent);}
+    .new-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;padding:4px 8px;border-radius:12px;font-size:.65rem;font-weight:700;}
+    @media print{.header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,.card-delete,.factCheck,.sort-row,.theme-switcher{display:none!important;}}
   </style>
 </head>
 <body>
@@ -417,15 +97,14 @@
     <button onclick="sortCards('name')">Ordenar Nombre</button>
     <button onclick="sortCards('price')">Ordenar Precio</button>
     <button onclick="sortCards('date')">Ordenar Fecha</button>
+    <!-- NUEVO BOTÓN -->
+    <button id="btnSortOldNew" onclick="toggleOldNew()">Más antiguo → Más nuevo</button>
   </div>
 
   <div class="controls">
     <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode">
     <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="10">10</option>
-      <option value="25">25</option>
-      <option value="50">50</option>
-      <option value="100" selected>100</option>
+      <option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option>
     </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
     <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
@@ -453,9 +132,7 @@
 
 <button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
-<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn" style="display:none;">
-  <span id="fabQty">0</span>
-</button>
+<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn" style="display:none;"><span id="fabQty">0</span></button>
 
 <div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
@@ -472,43 +149,19 @@
 <div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
   <div class="factura-card" onclick="event.stopPropagation()">
     <h2>Factura – Ticket</h2>
-    <label>Factura N°</label>
-    <input id="fNum" value="00015" oninput="actualizarTablaTicket()">
-    <label>Fecha</label>
-    <input id="fFecha" readonly>
-    <label>Cliente</label>
-    <input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label><input id="fFecha" readonly>
+    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
 
     <div class="ticket-preview">
-      <header>
-        <div style="font-size:12px;font-weight:700">KLOHESV</div>
-        <div>San Salvador, El Salvador</div>
-        <div>industriastobias@gmail.com</div>
-        <div>Instagram: @Klohesv</div>
-      </header>
+      <header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
       <div class="line"></div>
-      <div style="font-size:11px">
-        <div>Factura N°: <span id="fNumTxt">0001</span></div>
-        <div>Fecha: <span id="fFechaTxt"></span></div>
-        <div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div>
-      </div>
+      <div style="font-size:11px"><div>Factura N°: <span id="fNumTxt">0001</span></div><div>Fecha: <span id="fFechaTxt"></span></div><div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div></div>
       <div class="line"></div>
-      <table>
-        <thead><tr>
-          <th>Producto</th>
-          <th>Cant</th>
-          <th>Total</th>
-        </tr></thead>
-        <tbody id="fBody"></tbody>
-      </table>
+      <table><thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead><tbody id="fBody"></tbody></table>
       <div class="line"></div>
       <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
-      <footer>
-        <div>¡Gracias por su compra!</div>
-        <div style="font-size:9px;margin-top:4px">
-          No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.
-        </div>
-      </footer>
+      <footer><div>¡Gracias por su compra!</div><div style="font-size:9px;margin-top:4px">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div></footer>
     </div>
 
     <div class="modal-buttons">
@@ -519,17 +172,16 @@
   </div>
 </div>
 
-<div id="imgModal" onclick="cerrarImgModal()">
-  <img id="imgModalImg" src="" alt="Imagen ampliada">
-</div>
+<div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
 
 <script>
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
   let rowsPerPage = 100;
-  let sortOrder = { name: 1, price: 1, date: -1 };
+  let sortOrder = { name:1, price:1, date:-1 };
+  let oldNewOrder = 1;   // 1 = nuevo→viejo, -1 = viejo→nuevo
 
-  // LOGIN con bloqueo
+  /* ----------  LOGIN  ---------- */
   const loginOverlay = document.getElementById('loginOverlay');
   const pinInput = document.getElementById('pinInput');
   const loginMsg = document.getElementById('loginMsg');
@@ -570,7 +222,7 @@
     }
   });
 
-  // Tema: blanco o rosa
+  /* ----------  TEMA  ---------- */
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     document.querySelectorAll('.theme-switcher button').forEach(b => b.classList.remove('active'));
@@ -583,18 +235,19 @@
     document.querySelector(`.theme-switcher button[onclick="setTheme('${t}')"]`).classList.add('active');
   })();
 
-  // Spinner
+  /* ----------  FUNCIONES AUX  ---------- */
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
   function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
-
-  // Debounce búsqueda
   let searchTimeout;
   document.getElementById('unifiedSearch').addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
   });
+  window.addEventListener('scroll', () => {
+    document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
+  });
 
-  // Ordenar
+  /* ----------  ORDENAR  ---------- */
   function sortCards(field) {
     sortOrder[field] *= -1;
     soldInventory.sort((a, b) => {
@@ -606,63 +259,34 @@
     loadSoldInventory();
   }
 
-  // Volver arriba
-  window.addEventListener('scroll', () => {
-    document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
-  });
+  /* ----------  NUEVO: ORDENAR ANTIGUO→NUEVO  ---------- */
+  window.toggleOldNew = function () {
+    oldNewOrder *= -1;
+    soldInventory.sort((a, b) => (new Date(a.soldAt || 0) - new Date(b.soldAt || 0)) * oldNewOrder);
+    document.getElementById('btnSortOldNew').textContent = oldNewOrder === 1 ? 'Más antiguo → Más nuevo' : 'Más nuevo → Más antiguo';
+    loadSoldInventory();
+  };
 
-  // Service Worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('data:text/javascript,' + encodeURIComponent(`
-      self.addEventListener('install', e => {
-        e.waitUntil(caches.open('v1').then(c => c.addAll(['/', ...self.importScripts.map(u => u.href)])));
-      });
-      self.addEventListener('fetch', e => {
-        e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-      });
-    `));
-  }
-
-  // Cross-tab sync
-  window.addEventListener('storage', e => {
-    if (e.key === 'soldInventory') {
-      soldInventory = JSON.parse(e.newValue || '[]');
-      loadSoldInventory();
-    }
-  });
-
-  // Precarga siguiente página
-  let nextPagePreloaded = false;
-  async function preloadNextPage() {
-    if (nextPagePreloaded) return;
+  /* ----------  PAGINACIÓN  ---------- */
+  function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
+  function nextPage() {
     const filtered = soldInventory.filter(item =>
       item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
       item.code.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
       item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase())
     );
-    const start = currentPage * rowsPerPage;
-    const next = filtered.slice(start, start + rowsPerPage);
-    for (const item of next) {
-      const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) URL.createObjectURL(blob);
-    }
-    nextPagePreloaded = true;
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
   }
 
-  // Fecha actualizada
+  /* ----------  FACTURA / TICKET  ---------- */
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
-    if (seleccionados.length === 0) {
-      alert('Por favor selecciona al menos un producto para facturar.');
-      return;
-    }
+    if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
     document.getElementById('facturaModal').style.display = 'flex';
     document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
     actualizarTablaTicket();
   }
-
   function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
-
   function actualizarTablaTicket() {
     const checks = [...document.querySelectorAll('.factCheck:checked')];
     const body = document.getElementById('fBody');
@@ -683,36 +307,28 @@
     document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
     document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
   }
-
   function imprimirTicket() {
     const cont = document.querySelector('.ticket-preview').innerHTML;
     const ventana = window.open('', '', 'width=360,height=600');
-    ventana.document.write(`
-      <html>
-      <head><title>Ticket</title>
-      <style>
-        body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
-        table{width:100%;border-collapse:collapse;table-layout:fixed}
-        th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        th:first-child,td:first-child{text-align:left;width:60%}
-        th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
-        th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
-        .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
-        .line{border-top:1px dashed #000;margin:6px 0}
-        .pu{font-size:10px;color:#555;}
-      </style>
-      </head>
-      <body>${cont}</body></html>
-    `);
+    ventana.document.write(`<html><head><title>Ticket</title><style>
+      body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      th:first-child,td:first-child{text-align:left;width:60%}
+      th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+      .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+      .line{border-top:1px dashed #000;margin:6px 0}
+      .pu{font-size:10px;color:#555;}
+      </style></head><body>${cont}</body></html>`);
     ventana.document.close();
     ventana.focus();
     ventana.print();
     ventana.close();
   }
-
   function descargarPDF() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: [80, 190] });
+    const doc = new jsPDF({ unit:'mm', format:[80, 190] });
     let y = 6;
     const margen = 4;
     const ancho = 80 - margen * 2;
@@ -766,18 +382,7 @@
   }
   function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
 
-  // Paginación
-  function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
-  function nextPage() {
-    const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
-      item.code.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
-      item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase())
-    );
-    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
-  }
-
-  // Principal
+  /* ----------  CARGAR VENTAS  ---------- */
   async function loadSoldInventory() {
     showSpinner();
     const search = document.getElementById('unifiedSearch').value.toLowerCase();
@@ -816,7 +421,22 @@
       const card = document.createElement('div');
       card.className = 'card';
 
-      // Sin imágenes: no se crean elementos img ni se cargan blobs
+      const img = document.createElement('img');
+      img.alt = `${item.name} - ${item.code}`;
+
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      /* ----------  SOLO TEXTO: CÓDIGO DE BARRAS  ---------- */
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = `Código: ${item.barcode}`;
 
       if (Number(item.price) > Number(item.cost || 0) * 1.3) {
         card.style.borderLeft = '4px solid #16a34a';
@@ -842,6 +462,8 @@
         <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
       `;
 
+      card.insertBefore(img, card.firstChild);
+      card.insertBefore(barcodeText, card.querySelector('.card-footer'));
       container.appendChild(card);
     }
 
@@ -849,6 +471,7 @@
     if (paginated.length >= rowsPerPage - 5) requestIdleCallback(preloadNextPage);
   }
 
+  /* ----------  ELIMINAR  ---------- */
   window.confirmDelete = function (code) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
@@ -864,7 +487,6 @@
     `;
     document.body.appendChild(wrapper);
   };
-
   window.deleteSoldItem = function (code) {
     const index = soldInventory.findIndex(item => item.code === code);
     if (index !== -1) {
@@ -875,7 +497,7 @@
     }
   };
 
-  // Atajos
+  /* ----------  ATAJOS  ---------- */
   window.addEventListener('keydown', e => {
     if (e.ctrlKey) {
       if (e.key === 'k') { e.preventDefault(); document.getElementById('unifiedSearch').focus(); }
@@ -884,35 +506,18 @@
     }
   });
 
-  // Scroll-snap móvil
-  if (window.innerWidth <= 768) {
-    document.getElementById('soldInventoryList').style.scrollSnapType = 'y mandatory';
-    document.getElementById('soldInventoryList').style.overflowY = 'scroll';
-  }
-
-  // isToday
-  function isToday(dateStr) {
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
-  }
-
-  // Inicial
-  loadSoldInventory();
-</script>
-
-<!-- MODO KIOSKO -->
-<button id="kioskBtn" style="position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;">Modo kiosko</button>
-
-<script>
+  /* ----------  MODO KIOSKO  ---------- */
   (() => {
     const KIOSK_KEY = 'kioskActivo';
-    const btn = document.getElementById('kioskBtn');
+    const btn = document.createElement('button');
+    btn.id = 'kioskBtn';
+    btn.style.cssText = 'position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;';
+    btn.textContent = 'Modo kiosko';
+    document.body.appendChild(btn);
 
     function estaEnFullscreen() {
       return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
     }
-
     function toggleFullscreen() {
       if (!estaEnFullscreen()) {
         const el = document.documentElement;
@@ -921,26 +526,25 @@
         (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
       }
     }
-
     function actualizaUI() {
       const activo = estaEnFullscreen();
       btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
       localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
     }
-
-    btn.addEventListener('click', () => {
-      toggleFullscreen();
-      actualizaUI();
-    });
-
-    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange']
-      .forEach(ev => document.addEventListener(ev, actualizaUI));
-
-    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) {
-      toggleFullscreen();
-      actualizaUI();
-    }
+    btn.addEventListener('click', () => { toggleFullscreen(); actualizaUI(); });
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange'].forEach(ev => document.addEventListener(ev, actualizaUI));
+    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) { toggleFullscreen(); actualizaUI(); }
   })();
+
+  /* ----------  HELPERS  ---------- */
+  function isToday(dateStr) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }
+
+  /* ----------  INICIO  ---------- */
+  loadSoldInventory();
 </script>
 </body>
 </html>

@@ -21,8 +21,6 @@
       background: var(--bg);
       color: var(--text);
       padding: 0 1rem 4rem 1rem;
-      overflow-x: hidden;
-      position: relative;
     }
     .header-fixed {
       position: sticky;
@@ -42,8 +40,6 @@
       gap: 1.5rem;
       max-width: 1200px;
       margin: 0 auto;
-      position: relative;
-      z-index: 2;
     }
     @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
@@ -129,38 +125,9 @@
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
       z-index: 2000;
     }
-
-    /* --------- NIEVE WEB --------- */
-    .nieve {
-      position: fixed;
-      top: -10px;
-      width: 3px;
-      height: 3px;
-      background: white;
-      border-radius: 50%;
-      animation: caer 8s linear infinite;
-      z-index: 1;
-      pointer-events: none;
-    }
-    @keyframes caer {
-      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-    }
   </style>
 </head>
 <body>
-
-  <!-- Nieve web -->
-  <script>
-    for (let i = 0; i < 60; i++) {
-      const s = document.createElement('span');
-      s.className = 'nieve';
-      s.style.left = Math.random() * 100 + '%';
-      s.style.animationDelay = Math.random() * 8 + 's';
-      s.style.animationDuration = (6 + Math.random() * 4) + 's';
-      document.body.appendChild(s);
-    }
-  </script>
 
   <header class="header-fixed">
     <h1>CATÁLOGO KLOHE</h1>
@@ -260,28 +227,13 @@
         porCat[cat].push(p);
       }
 
-      // marca de agua navideña (bolitas) en TODAS las páginas
-      function marcaAgua() {
-        doc.setFillColor(255, 255, 255);
-        doc.setGState(new doc.GState({ opacity: 0.25 })); // semitransparente
-        for (let i = 0; i < 80; i++) {
-          const nx = marg + Math.random() * (anchoPag - 2*marg);
-          const ny = marg + Math.random() * (altoPag - 2*marg);
-          doc.circle(nx, ny, 1.2, 'F');
-        }
-        doc.setGState(new doc.GState({ opacity: 1 }));
-      }
-
-      marcaAgua(); // primera página
-
       for (const cat of ordenCategorias) {
         const prods = porCat[cat] || [];
         if (!prods.length) continue;
 
         // Título categoría
-        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; marcaAgua(); }
+        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
         doc.setFontSize(16); doc.setFont(undefined, 'bold');
-        doc.setTextColor(200, 0, 0); // rojo navideño
         const txtWidth = doc.getTextWidth(cat);
         doc.text(cat, (anchoPag - txtWidth) / 2, y - 15);
 
@@ -291,7 +243,7 @@
           // salto de línea completa si no cabe horizontal
           if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + 15; }
           // salto de página si no cabe vertical
-          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; marcaAgua(); }
+          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
 
           const blob = await localforage.getItem('img_' + p.code);
           const precio = p.discount && p.discount > 0
@@ -301,14 +253,13 @@
           let imgData = '';
           if (blob) imgData = await blobToBase64(blob);
 
-          // --- tarjeta navideña compacta ---
-          doc.setDrawColor(0, 150, 0); // verde
+          // --- tarjeta ---
+          doc.setDrawColor(0, 0, 0);
           doc.setLineWidth(1);
           doc.rect(x, y, tarjAncho, tarjAlto, 'D');
           if (imgData) doc.addImage(imgData, 'JPEG', x + 10, y + 10, imgSize, imgSize);
 
           doc.setFontSize(8.5);
-          doc.setTextColor(0, 0, 0);
           const txtY = y + imgSize + 20;
           doc.text(p.name.substring(0, 22) + (p.name.length > 22 ? '…' : ''), x + 5, txtY);
           doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 13);
@@ -320,7 +271,7 @@
         x = marg; y += tarjAlto + 20;
       }
 
-      doc.save('catalogo_klohe_navidad.pdf');
+      doc.save('catalogo_klohe.pdf');
     }
 
     /* ---- helper blob → base64 ---- */

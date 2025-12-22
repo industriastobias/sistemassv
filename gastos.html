@@ -24,20 +24,16 @@
       padding: 0 1rem 4rem 1rem;
     }
     .header-fixed {
-      position: sticky;
-      top: 0; z-index: 1000;
-      background: var(--line);
-      padding: 1rem 0;
-      margin-bottom: 2rem;
-      border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; z-index: 1000;
+      background: var(--line); padding: 1rem 0;
+      margin-bottom: 2rem; border-bottom: 1px solid var(--line);
       text-align: center; font-weight: 600;
     }
     .catalogo {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
-      max-width: 1200px;
-      margin: 0 auto;
+      max-width: 1200px; margin: 0 auto;
     }
     @media (max-width: 900px) { .catalogo { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 600px) { .catalogo { grid-template-columns: repeat(2, 1fr); } }
@@ -65,12 +61,14 @@
     .producto h3 { margin: .8rem 0 .3rem; font-size: 1rem; }
     .producto p { margin: .2rem 0; font-size: .8rem; }
 
-    /* MODAL */
-    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.88); justify-content: center; align-items: center; }
+    .modal {
+      display: none; position: fixed; z-index: 9999;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,.88); justify-content: center; align-items: center;
+    }
     .modal img { max-width: 95vw; max-height: 95vh; border-radius: 4px; }
     .modal-close { position: absolute; top: 1rem; right: 1.5rem; color: #fff; font-size: 2rem; cursor: pointer; }
 
-    /* BOTÓN PDF */
     #btnPdf {
       position: fixed; bottom: 20px; right: 20px; background: var(--accent);
       border: none; padding: 12px 18px; border-radius: 30px;
@@ -84,7 +82,6 @@
 
   <div class="catalogo" id="catalogo"></div>
 
-  <!-- Modal para imagen grande -->
   <div id="modal" class="modal">
     <span class="modal-close" onclick="closeModal()">&times;</span>
     <img id="modalImg" src="" alt="Imagen ampliada">
@@ -146,7 +143,7 @@
     function closeModal()  { modal.style.display = 'none'; modalImg.src = ''; }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    /* ---------- PDF IGUAL A LA WEB ---------- */
+    /* ---------- PDF SIN ENCABEZADOS ---------- */
     async function descargarPDF() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos'); return; }
@@ -154,15 +151,14 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-      const marg      = 40;
-      const anchoPag  = doc.internal.pageSize.getWidth();
-      const altoPag   = doc.internal.pageSize.getHeight();
+      const marg     = 40;
+      const anchoPag = doc.internal.pageSize.getWidth();
+      const altoPag  = doc.internal.pageSize.getHeight();
 
-      // tarjeta proporcional al diseño web
-      const gap       = 18; // separación entre tarjetas
-      const tarjAncho = (anchoPag - 2 * marg - 3 * gap) / 4; // 4 columnas
-      const tarjAlto  = tarjAncho + 70; // espacio para texto debajo
-      let x = marg, y = 90;
+      const gap      = 18;
+      const tarjAncho = (anchoPag - 2 * marg - 3 * gap) / 4;
+      const tarjAlto  = tarjAncho + 70;
+      let x = marg, y = 60;
 
       const porCat = {};
       for (const p of lista) {
@@ -173,24 +169,13 @@
 
       for (const cat of ordenCategorias) {
         const prods = porCat[cat] || [];
-        if (!prods.length) continue;
-
-        // título de categoría
-        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 90; x = marg; }
-        doc.setFontSize(16); doc.setFont(undefined, 'bold');
-        doc.setTextColor(34, 34, 34);
-        const tw = doc.getTextWidth(cat);
-        doc.text(cat, (anchoPag - tw) / 2, y - 20);
-
         for (let i = 0; i < prods.length; i++) {
           const p = prods[i];
 
-          // salto de fila
           if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + gap; }
-          // salto de página
-          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 90; x = marg; }
+          if (y + tarjAlto > altoPag - marg)   { doc.addPage(); y = 60; x = marg; }
 
-          const blob   = await localforage.getItem(`img_${p.code}`);
+          const blob = await localforage.getItem(`img_${p.code}`);
           const precio = (p.discount && p.discount > 0)
             ? (p.price * (1 - p.discount / 100)).toFixed(2)
             : Number(p.price).toFixed(2);
@@ -198,18 +183,14 @@
           let imgData = '';
           if (blob) imgData = await blobToBase64(blob);
 
-          /* ---------- tarjeta igual a la web ---------- */
-          doc.setDrawColor(229, 229, 229); // --line
-          doc.setFillColor(255, 255, 255);  // --card
+          /* tarjeta estilo web */
+          doc.setDrawColor(229, 229, 229);
+          doc.setFillColor(255, 255, 255);
           doc.setLineWidth(1);
           doc.roundedRect(x, y, tarjAncho, tarjAlto, 4, 4, 'FD');
 
-          // imagen
-          if (imgData) {
-            doc.addImage(imgData, 'JPEG', x + 8, y + 8, tarjAncho - 16, tarjAncho - 16);
-          }
+          if (imgData) doc.addImage(imgData, 'JPEG', x + 8, y + 8, tarjAncho - 16, tarjAncho - 16);
 
-          // texto
           doc.setFontSize(9);
           doc.setTextColor(34, 34, 34);
           const ty = y + tarjAncho + 20;
@@ -221,14 +202,11 @@
 
           x += tarjAncho + gap;
         }
-        // fin categoría → nueva línea completa
-        x = marg; y += tarjAlto + gap + 10;
       }
 
       doc.save('catalogo_klohe.pdf');
     }
 
-    /* ---- helper ---- */
     function blobToBase64(blob) {
       return new Promise((resolve, _) => {
         const r = new FileReader();

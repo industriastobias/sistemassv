@@ -11,20 +11,19 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
-      --bg: #fafafa;
-      --card: #fff;
-      --text: #000;
-      --accent: #2563eb;
+      --bg: #ffffff;
+      --card: #ffffff;
+      --text: #000000;
+      --accent: #ec4899; /* rosa por defecto */
       --danger: #dc2626;
       --radius: 12px;
       --shadow: 0 4px 16px rgba(0,0,0,.06);
     }
-    [data-theme="dark"] {
-      --bg: #121212;
-      --card: #1e1e1e;
-      --text: #fff;
-      --accent: #3b82f6;
-      --danger: #ef4444;
+    [data-theme="white"] {
+      --bg: #ffffff;
+      --card: #ffffff;
+      --text: #000000;
+      --accent: #2563eb;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     body {
@@ -65,14 +64,24 @@
       gap: 12px;
     }
     .header h1 { font-size: 2rem; font-weight: 700; }
-    .theme-toggle {
-      cursor: pointer;
-      font-size: 1.4rem;
-      padding: 8px;
-      border-radius: 50%;
-      transition: .2s;
+    .theme-switcher {
+      display: flex;
+      gap: 8px;
     }
-    .theme-toggle:hover { background: #00000011; }
+    .theme-switcher button {
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #000;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: .75rem;
+    }
+    .theme-switcher button.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
     .controls {
       display: flex;
       gap: 12px;
@@ -84,7 +93,7 @@
       padding: 10px 14px;
       border: none;
       border-radius: var(--radius);
-      background: var(--bg);
+      background: #f5f5f5;
       color: var(--text);
       box-shadow: var(--shadow);
       font-size: .875rem;
@@ -102,7 +111,7 @@
       gap: 20px;
     }
     .card {
-      background: var(--bg);
+      background: #fafafa;
       border-radius: var(--radius);
       padding: 20px;
       box-shadow: var(--shadow);
@@ -150,7 +159,7 @@
       padding: 8px 16px;
       border: none;
       border-radius: var(--radius);
-      background: var(--bg);
+      background: #f5f5f5;
       color: var(--text);
       box-shadow: var(--shadow);
       cursor: pointer;
@@ -294,7 +303,6 @@
       border-radius: 8px;
       cursor: pointer;
       margin-bottom: 8px;
-      loading: lazy;
     }
     .barcode {
       width: 100%;
@@ -337,7 +345,7 @@
       border-radius: 8px;
       margin-top: 12px;
     }
-    /* Spinner de carga */
+    /* Spinner */
     .spinner {
       position: absolute;
       inset: 0;
@@ -356,7 +364,7 @@
       animation: spin .6s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* Botón volver arriba */
+    /* Volver arriba */
     #btnTop {
       position: fixed;
       bottom: 90px;
@@ -373,42 +381,6 @@
       box-shadow: var(--shadow);
       z-index: 999;
     }
-    /* Orden */
-    .sort-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .sort-row button {
-      padding: 6px 10px;
-      font-size: .75rem;
-      border: none;
-      border-radius: var(--radius);
-      background: var(--bg);
-      cursor: pointer;
-    }
-    .sort-row button:hover {
-      background: var(--accent);
-      color: #fff;
-    }
-    /* Tooltip FAB */
-    #fabBtn::after {
-      content: "Ver totales";
-      position: absolute;
-      right: 65px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: var(--text);
-      color: var(--bg);
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: .75rem;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s;
-    }
-    #fabBtn:hover::after { opacity: 1; }
     /* Sin resultados */
     #noResults {
       display: none;
@@ -433,9 +405,9 @@
       font-size: .65rem;
       font-weight: 700;
     }
-    /* Media print */
+    /* Print */
     @media print {
-      .header, .controls, .pagination, .fab-totals, #kioskBtn, #btnTop, .card-delete, .factCheck { display: none !important; }
+      .header, .controls, .pagination, .fab-totals, #kioskBtn, #btnTop, .card-delete, .factCheck, .sort-row, .theme-switcher { display: none !important; }
     }
   </style>
 </head>
@@ -447,7 +419,6 @@
     <h2>Acceso</h2>
     <label>Ingrese PIN</label>
     <input id="pinInput" type="password" placeholder="1234" autocomplete="off">
-    <!-- Bloqueo temporal -->
     <div id="loginMsg" style="color:var(--danger);font-size:.75rem;margin-top:6px;height:16px;"></div>
   </div>
 </div>
@@ -457,17 +428,18 @@
 
   <header class="header">
     <h1>Ventas Realizadas</h1>
-    <span class="theme-toggle" onclick="toggleTheme()">🌗</span>
+    <div class="theme-switcher">
+      <button class="active" onclick="setTheme('white')">Blanco</button>
+      <button onclick="setTheme('rose')">Rosa</button>
+    </div>
   </header>
 
-  <!-- Ordenamiento -->
   <div class="sort-row">
     <button onclick="sortCards('name')">Ordenar Nombre</button>
     <button onclick="sortCards('price')">Ordenar Precio</button>
     <button onclick="sortCards('date')">Ordenar Fecha</button>
   </div>
 
-  <!-- Búsqueda unificada -->
   <div class="controls">
     <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode">
     <select id="rowsPerPage" onchange="loadSoldInventory()">
@@ -509,7 +481,7 @@
 <div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarModalTotales()">×</button>
-    <div class="card" style="margin:0 auto;text-align:center;background:var(--bg);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+    <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
       <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
       <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
       <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
@@ -576,15 +548,15 @@
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
   let rowsPerPage = 100;
-  let sortOrder = { name: 1, price: 1, date: -1 }; // 1 ascendente, -1 descendente
+  let sortOrder = { name: 1, price: 1, date: -1 };
 
-  // LOGIN con bloqueo temporal
+  // LOGIN con bloqueo
   const loginOverlay = document.getElementById('loginOverlay');
   const pinInput = document.getElementById('pinInput');
   const loginMsg = document.getElementById('loginMsg');
   let pinAttempts = 0;
   const MAX_ATTEMPTS = 3;
-  const LOCK_TIME = 30_000; // 30 s
+  const LOCK_TIME = 30_000;
   let lockTimeout;
 
   pinInput.addEventListener('keydown', e => {
@@ -619,36 +591,31 @@
     }
   });
 
-  // Persistencia tema
+  // Tema: blanco o rosa
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('.theme-switcher button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    localStorage.setItem('theme', t);
+  }
   (() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) document.documentElement.setAttribute('data-theme', saved);
+    const t = localStorage.getItem('theme') || 'rose';
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelector(`.theme-switcher button[onclick="setTheme('${t}')"]`).classList.add('active');
   })();
-  const originalToggle = toggleTheme;
-  toggleTheme = () => {
-    originalToggle();
-    localStorage.setItem('data-theme', document.documentElement.getAttribute('data-theme'));
-  };
 
   // Spinner
-  function showSpinner() {
-    document.getElementById('spinner').style.display = 'grid';
-  }
-  function hideSpinner() {
-    document.getElementById('spinner').style.display = 'none';
-  }
+  function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
+  function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
 
-  // Debounce unified search
+  // Debounce búsqueda
   let searchTimeout;
-  document.getElementById('unifiedSearch').addEventListener('input', e => {
+  document.getElementById('unifiedSearch').addEventListener('input', () => {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      currentPage = 1;
-      loadSoldInventory();
-    }, 250);
+    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
   });
 
-  // Ordenamiento
+  // Ordenar
   function sortCards(field) {
     sortOrder[field] *= -1;
     soldInventory.sort((a, b) => {
@@ -660,25 +627,16 @@
     loadSoldInventory();
   }
 
-  // Scroll top button
+  // Volver arriba
   window.addEventListener('scroll', () => {
-    const btn = document.getElementById('btnTop');
-    btn.style.display = window.scrollY > 300 ? 'grid' : 'none';
+    document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
   });
 
-  // Service Worker básico
+  // Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('data:text/javascript,' + encodeURIComponent(`
       self.addEventListener('install', e => {
-        e.waitUntil(
-          caches.open('v1').then(c => c.addAll([
-            '/',
-            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
-            'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js'
-          ]))
-        );
+        e.waitUntil(caches.open('v1').then(c => c.addAll(['/', ...self.importScripts.map(u => u.href)])));
       });
       self.addEventListener('fetch', e => {
         e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
@@ -686,7 +644,7 @@
     `));
   }
 
-  // Storage cross-tab sync
+  // Cross-tab sync
   window.addEventListener('storage', e => {
     if (e.key === 'soldInventory') {
       soldInventory = JSON.parse(e.newValue || '[]');
@@ -712,7 +670,7 @@
     nextPagePreloaded = true;
   }
 
-  // Fecha actualizada al abrir factura
+  // Fecha actualizada
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
     if (seleccionados.length === 0) {
@@ -724,14 +682,123 @@
     actualizarTablaTicket();
   }
 
-  // Etiqueta "Nuevo"
-  function isToday(dateStr) {
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
+  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
+
+  function actualizarTablaTicket() {
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    let sum = 0;
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
+        <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
+        <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
+      body.appendChild(tr);
+      sum += Number(p.total);
+    });
+    document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
   }
 
-  // Función principal
+  function imprimirTicket() {
+    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const ventana = window.open('', '', 'width=360,height=600');
+    ventana.document.write(`
+      <html>
+      <head><title>Ticket</title>
+      <style>
+        body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+        table{width:100%;border-collapse:collapse;table-layout:fixed}
+        th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        th:first-child,td:first-child{text-align:left;width:60%}
+        th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+        th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+        .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+        .line{border-top:1px dashed #000;margin:6px 0}
+        .pu{font-size:10px;color:#555;}
+      </style>
+      </head>
+      <body>${cont}</body></html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
+
+  function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 190] });
+    let y = 6;
+    const margen = 4;
+    const ancho = 80 - margen * 2;
+
+    doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
+    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
+    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
+    doc.line(margen, y, 80 - margen, y); y += 5;
+
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
+    y += 3;
+    doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(9); doc.setFont(undefined, 'bold');
+    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
+    doc.setFont(undefined, 'normal');
+    const filas = document.querySelectorAll('#fBody tr');
+    filas.forEach(fr => {
+      const c = fr.cells;
+      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
+      y += prod.length * 3 + 1;
+    });
+    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
+    const split = doc.splitTextToSize(msg, ancho);
+    split.forEach(l => { doc.text(l, margen, y); y += 3; });
+
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
+  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
+  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
+
+  // Paginación
+  function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
+  function nextPage() {
+    const filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      item.code.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase())
+    );
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
+  }
+
+  // Principal
   async function loadSoldInventory() {
     showSpinner();
     const search = document.getElementById('unifiedSearch').value.toLowerCase();
@@ -743,7 +810,6 @@
       item.barcode.toLowerCase().includes(search)
     );
 
-    // Formato miles
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
     const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
 
@@ -785,7 +851,6 @@
 
       const barcodeImg = document.createElement('img');
       barcodeImg.className = 'barcode';
-      barcodeImg.loading = 'lazy';
 
       let barcodeBlob = await localforage.getItem(`barcodeimg_${item.barcode}`);
       if (!barcodeBlob) {
@@ -809,12 +874,10 @@
       barcodeText.className = 'barcode-text';
       barcodeText.textContent = `Código: ${item.barcode}`;
 
-      // Color card según margen
       if (Number(item.price) > Number(item.cost || 0) * 1.3) {
         card.style.borderLeft = '4px solid #16a34a';
       }
 
-      // Etiqueta nuevo
       if (isToday(item.soldAt)) {
         const badge = document.createElement('div');
         badge.className = 'new-badge';
@@ -842,12 +905,9 @@
     }
 
     hideSpinner();
-    if (paginated.length >= rowsPerPage - 5) {
-      requestIdleCallback(preloadNextPage);
-    }
+    if (paginated.length >= rowsPerPage - 5) requestIdleCallback(preloadNextPage);
   }
 
-  // Confirmación antes de eliminar
   window.confirmDelete = function (code) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
@@ -874,21 +934,12 @@
     }
   };
 
-  // Atajos teclado
+  // Atajos
   window.addEventListener('keydown', e => {
     if (e.ctrlKey) {
-      if (e.key === 'k') {
-        e.preventDefault();
-        document.getElementById('unifiedSearch').focus();
-      }
-      if (e.key === 'p') {
-        e.preventDefault();
-        imprimirTicket();
-      }
-      if (e.key === 'n') {
-        e.preventDefault();
-        abrirFactura();
-      }
+      if (e.key === 'k') { e.preventDefault(); document.getElementById('unifiedSearch').focus(); }
+      if (e.key === 'p') { e.preventDefault(); imprimirTicket(); }
+      if (e.key === 'n') { e.preventDefault(); abrirFactura(); }
     }
   });
 
@@ -898,11 +949,18 @@
     document.getElementById('soldInventoryList').style.overflowY = 'scroll';
   }
 
-  // Llamada inicial
+  // isToday
+  function isToday(dateStr) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }
+
+  // Inicial
   loadSoldInventory();
 </script>
 
-<!-- MODO KIOSKO UNIVERSAL -->
+<!-- MODO KIOSKO -->
 <button id="kioskBtn" style="position:fixed; bottom:10px; right:10px; z-index:9999; padding:6px 10px; font-size:12px; border:none; border-radius:4px; background:#00796b; color:#fff; cursor:pointer;">Modo kiosko</button>
 
 <script>

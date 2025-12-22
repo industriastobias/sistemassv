@@ -182,15 +182,14 @@
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
 
-          // ✅ MISMA CLAVE QUE GUARDAS EN INVENTARIO.HTML
-          const cantidad = await localforage.getItem('stock_' + prod.code) ?? 0;
+          // (opcional) puedes ocultar stock de la web si quieres
+          // const cantidad = await localforage.getItem('stock_' + prod.code) ?? 0;
 
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
             <h3>${prod.name}</h3>
             <p><strong>Código:</strong> ${prod.barcode}</p>
             <p><strong>Precio:</strong> $${precioMostrar}</p>
-            <p><strong>Stock:</strong> ${cantidad}</p>
           `;
           catalogo.appendChild(div);
           delay += 0.05;
@@ -220,7 +219,7 @@
       const altoPag  = doc.internal.pageSize.getHeight();
 
       const tarjAncho = (anchoPag - 2*marg - 30) / 4; // 4 columnas
-      const tarjAlto  = 160;
+      const tarjAlto  = 150; // ligeramente más baja para evitar montón
       const imgSize   = tarjAncho - 20;
       let x = marg, y = 80;
 
@@ -250,8 +249,6 @@
           if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
 
           const blob = await localforage.getItem('img_' + p.code);
-          // ✅ MISMA CLAVE QUE ARRIBA
-          const cantidad = await localforage.getItem('stock_' + p.code) ?? 0;
           const precio = p.discount && p.discount > 0
             ? (p.price * (1 - p.discount / 100)).toFixed(2)
             : Number(p.price).toFixed(2);
@@ -264,12 +261,11 @@
           doc.rect(x, y, tarjAncho, tarjAlto, 'D');
           if (imgData) doc.addImage(imgData, 'JPEG', x + 10, y + 10, imgSize, imgSize);
 
-          doc.setFontSize(9);
-          const txtY = y + imgSize + 22;
-          doc.text(p.name.substring(0, 18) + (p.name.length > 18 ? '…' : ''), x + 5, txtY);
-          doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 14);
-          doc.text(`$${precio}`, x + 5, txtY + 28);
-          doc.text(`Stock: ${cantidad}`, x + 5, txtY + 42);
+          doc.setFontSize(8.5); // <-- un punto menos para evitar montón
+          const txtY = y + imgSize + 20;
+          doc.text(p.name.substring(0, 20) + (p.name.length > 20 ? '…' : ''), x + 5, txtY);
+          doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 13);
+          doc.text(`$${precio}`, x + 5, txtY + 26);
 
           x += tarjAncho + 10;
         }

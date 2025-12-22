@@ -182,9 +182,6 @@
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
 
-          // (opcional) puedes ocultar stock de la web si quieres
-          // const cantidad = await localforage.getItem('stock_' + prod.code) ?? 0;
-
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
             <h3>${prod.name}</h3>
@@ -219,7 +216,7 @@
       const altoPag  = doc.internal.pageSize.getHeight();
 
       const tarjAncho = (anchoPag - 2*marg - 30) / 4; // 4 columnas
-      const tarjAlto  = 150; // ligeramente más baja para evitar montón
+      const tarjAlto  = 165; // un poco más alta para separar líneas
       const imgSize   = tarjAncho - 20;
       let x = marg, y = 80;
 
@@ -234,17 +231,22 @@
         const prods = porCat[cat] || [];
         if (!prods.length) continue;
 
-        // Título categoría CENTRADO
+        // Título categoría con estilo navideño
         if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
-        doc.setFontSize(16); doc.setFont(undefined, 'bold');
+        doc.setFontSize(18); doc.setFont(undefined, 'bold');
+        doc.setTextColor(220, 0, 0); // rojo navideño
         const txtWidth = doc.getTextWidth(cat);
-        doc.text(cat, (anchoPag - txtWidth) / 2, y - 15);
+        doc.text(cat, (anchoPag - txtWidth) / 2, y - 20);
+
+        // fondo verde claro detrás del título
+        doc.setFillColor(200, 255, 200);
+        doc.rect((anchoPag - txtWidth) / 2 - 8, y - 32, txtWidth + 16, 20, 'F');
 
         for (let i = 0; i < prods.length; i++) {
           const p = prods[i];
 
           // salto de línea completa si no cabe horizontal
-          if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + 15; }
+          if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + 20; }
           // salto de página si no cabe vertical
           if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
 
@@ -256,24 +258,34 @@
           let imgData = '';
           if (blob) imgData = await blobToBase64(blob);
 
-          // --- tarjeta ---
-          doc.setDrawColor(200);
+          // --- tarjeta navideña ---
+          doc.setDrawColor(0, 150, 0); // verde
+          doc.setLineWidth(1.5);
           doc.rect(x, y, tarjAncho, tarjAlto, 'D');
           if (imgData) doc.addImage(imgData, 'JPEG', x + 10, y + 10, imgSize, imgSize);
 
-          doc.setFontSize(8.5); // <-- un punto menos para evitar montón
-          const txtY = y + imgSize + 20;
-          doc.text(p.name.substring(0, 20) + (p.name.length > 20 ? '…' : ''), x + 5, txtY);
-          doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 13);
-          doc.text(`$${precio}`, x + 5, txtY + 26);
+          doc.setFontSize(8.5);
+          doc.setTextColor(0, 0, 0);
+          const txtY = y + imgSize + 24;
+          doc.text(p.name.substring(0, 22) + (p.name.length > 22 ? '…' : ''), x + 5, txtY);
+          doc.text(`Cód: ${p.barcode}`, x + 5, txtY + 16);
+          doc.text(`$${precio}`, x + 5, txtY + 32);
 
           x += tarjAncho + 10;
         }
         // fin categoría → nueva línea
-        x = marg; y += tarjAlto + 25;
+        x = marg; y += tarjAlto + 30;
       }
 
-      doc.save('catalogo_klohe.pdf');
+      // nieve decorativa (círculos blancos)
+      doc.setFillColor(255, 255, 255);
+      for (let i = 0; i < 25; i++) {
+        const nx = anchoPag - 60 + Math.random() * 50;
+        const ny = 20 + Math.random() * 100;
+        doc.circle(nx, ny, 1.2, 'F');
+      }
+
+      doc.save('catalogo_klohe_navidad.pdf');
     }
 
     /* ---- helper blob → base64 ---- */

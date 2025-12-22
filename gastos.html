@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Catálogo - Klohe</title>
+  <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <!-- jsPDF + autoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
@@ -22,7 +22,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 0 1rem 2rem 1rem;
+      padding: 0 1rem 4rem 1rem;
     }
     .header-fixed {
       position: sticky;
@@ -159,6 +159,7 @@
       'Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
 
+    /* ----------  RENDER CATÁLOGO WEB  ---------- */
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       catalogo.innerHTML = '';
@@ -185,8 +186,8 @@
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
 
-          // ✅ STOCK LEÍDO DESDE ALMACENAMIENTO.HTML
-          const cantidad = localStorage.getItem('cantidad_' + prod.code) ?? 0;
+          // ✅ CANTIDAD DESDE LOCALFORAGE (compra.html)
+          const cantidad = await localforage.getItem('cantidad_' + prod.code) ?? 0;
 
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
@@ -202,6 +203,7 @@
       }
     }
 
+    /* ----------  MODAL  ---------- */
     function openModal(src) {
       modalImg.src = src;
       modal.style.display = 'flex';
@@ -212,7 +214,7 @@
     }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    /* ----------  DESCARGA PDF  ---------- */
+    /* ----------  DESCARGA PDF CON IMÁGENES  ---------- */
     async function descargarPDF() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos para exportar'); return; }
@@ -232,10 +234,17 @@
 
       let y = 80; // posición vertical inicial
       const pageHeight = doc.internal.pageSize.height;
+      const imgSide = 60; // tamaño de la imagen en la tabla
 
       for (const cat of ordenCategorias) {
         const prods = porCat[cat] || [];
         if (!prods.length) continue;
+
+        // Salto de página si no cabe la tabla completa (estimado)
+        if (y + prods.length * (imgSide + 10) > pageHeight - 100) {
+          doc.addPage();
+          y = 40;
+        }
 
         // Título de categoría
         doc.setFontSize(14);
@@ -243,17 +252,32 @@
         doc.text(cat, 40, y);
         y += 25;
 
-        const headers = [['Producto', 'Precio', 'Stock']];
-        const rows = prods.map(p => {
-          const cantidad = localStorage.getItem('cantidad_' + p.code) ?? 0;
-          return [
+        // Cabecera de la tabla
+        const headers = [['Imagen', 'Producto', 'Precio', 'Stock']];
+        const rows = [];
+
+        for (const p of prods) {
+          // leemos imagen y cantidad desde localforage
+          const blob = await localforage.getItem('img_' + p.code);
+          const cantidad = await localforage.getItem('cantidad_' + p.code) ?? 0;
+
+          // convertimos blob a base64 para incrustarla
+          let imgData = '';
+          if (blob) {
+            imgData = await blobToBase64(blob);
+          }
+
+          const precio = p.discount && p.discount > 0
+            ? `$${(p.price * (1 - p.discount / 100)).toFixed(2)}`
+            : `$${Number(p.price).toFixed(2)}`;
+
+          rows.push([
+            { content: '', image: imgData, imageWidth: imgSide, imageHeight: imgSide },
             p.name,
-            p.discount && p.discount > 0
-              ? `$${(p.price * (1 - p.discount / 100)).toFixed(2)}`
-              : `$${Number(p.price).toFixed(2)}`,
+            precio,
             cantidad
-          ];
-        });
+          ]);
+        }
 
         doc.autoTable({
           head: headers,
@@ -262,21 +286,33 @@
           margin: { left: 40, right: 40 },
           theme: 'striped',
           headStyles: { fillColor: [249, 199, 79], textColor: 20 },
-          styles: { fontSize: 10 }
+          styles: { fontSize: 10, cellPadding: 4, minCellHeight: imgSide + 10 },
+          columnStyles: {
+            0: { cellWidth: imgSide + 10, halign: 'center' }
+          },
+          didDrawCell: function (data) {
+            if (data.column.index === 0 && data.cell.raw.image) {
+              doc.addImage(data.cell.raw.image, 'JPEG', data.cell.x + 2, data.cell.y + 2, imgSide, imgSide);
+            }
+          }
         });
 
         y = doc.lastAutoTable.finalY + 20;
-
-        // Nueva página si queda poco espacio
-        if (y > pageHeight - 100) {
-          doc.addPage();
-          y = 40;
-        }
       }
 
       doc.save('catalogo_klohe.pdf');
     }
 
+    /* ----------  UTIL: BLOB → BASE64  ---------- */
+    function blobToBase64(blob) {
+      return new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    /* ----------  INIT  ---------- */
     renderCatalogo();
     window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });
   </script>

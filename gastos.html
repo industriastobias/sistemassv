@@ -2,139 +2,135 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Catálogo - Klohe</title>
-  <!-- Librerías -->
+  <title>Catálogo – Klohe</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root {
-      --bg: #fafafa;
+      --bg: #f5f2ed;
       --card: #ffffff;
-      --text: #222222;
-      --line: #e5e5e5;
-      --white: #ffffff;
-      --accent: #f9c74f;
+      --text: #3e3e3e;
+      --line: #e8e4df;
+      --accent: #d4c4b0;
+      --radius: 16px;
+      --shadow: 0 2px 8px rgba(0,0,0,.04);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 0 1rem 4rem 1rem;
+      line-height: 1.5;
+      letter-spacing: .2px;
     }
     .header-fixed {
       position: sticky;
       top: 0;
       z-index: 1000;
-      background: var(--line);
-      color: var(--text);
-      padding: 1rem 0;
-      margin-bottom: 2rem;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(8px);
       border-bottom: 1px solid var(--line);
+      padding: 1.2rem 0;
       text-align: center;
+    }
+    .header-fixed h1 {
+      font-size: 1.1rem;
       font-weight: 500;
+      letter-spacing: 1px;
     }
     .catalogo {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
       max-width: 1400px;
-      margin: 0 auto;
+      margin: 2.5rem auto 0;
     }
-    @media (max-width: 1200px) { .catalogo { grid-template-columns: repeat(4, 1fr); } }
-    @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 400px)  { .catalogo { grid-template-columns: 1fr; } }
-
     .producto {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 1rem;
+      border-radius: var(--radius);
+      padding: 1.2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      transition: transform .2s, box-shadow .2s;
+      transition: transform .25s, box-shadow .25s;
       opacity: 0;
-      transform: translateY(20px);
-      animation: fadeIn 0.5s forwards;
+      transform: translateY(24px);
+      animation: fadeIn .6s forwards;
+      box-shadow: var(--shadow);
     }
     .producto:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,.06);
+      transform: translateY(-4px);
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
     }
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
     .producto img {
       width: 100%;
       aspect-ratio: 1/1;
       object-fit: cover;
-      border-radius: 4px;
-      cursor: pointer;
+      border-radius: calc(var(--radius) / 2);
+      cursor: zoom-in;
     }
     .producto h3 {
-      margin: .8rem 0 .3rem;
+      margin: 1rem 0 .25rem;
       font-size: 1rem;
-      color: var(--text);
+      font-weight: 500;
     }
     .producto p {
-      margin: .2rem 0;
+      margin: .15rem 0;
       font-size: .8rem;
-      color: var(--text);
+    }
+    .producto p strong {
+      font-weight: 600;
+      color: var(--accent);
     }
     .modal {
       display: none;
       position: fixed;
+      inset: 0;
       z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,.88);
+      background: rgba(245,242,237,.92);
+      backdrop-filter: blur(12px);
       justify-content: center;
       align-items: center;
     }
     .modal img {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 4px;
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: var(--radius);
+      box-shadow: 0 12px 36px rgba(0,0,0,.1);
     }
     .modal-close {
       position: absolute;
-      top: 1rem;
-      right: 1.5rem;
-      color: var(--white);
+      top: 1.5rem;
+      right: 2rem;
       font-size: 2rem;
+      color: var(--text);
       cursor: pointer;
+      line-height: 1;
     }
-    /* Botón flotante PDF */
-    #btnPdf {
+    .pdf-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 2rem;
+      right: 2rem;
       background: var(--accent);
-      color: #000;
+      color: #fff;
       border: none;
-      padding: 12px 18px;
-      border-radius: 30px;
-      font-weight: 600;
+      padding: .75rem 1.5rem;
+      border-radius: var(--radius);
+      font-weight: 500;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,.25);
-      z-index: 2000;
+      box-shadow: var(--shadow);
     }
   </style>
 </head>
 <body>
 
   <header class="header-fixed">
-    <h1>CATÁLOGO KLOHE</h1>
+    <h1>Catálogo Klohe</h1>
   </header>
 
   <div class="catalogo" id="catalogo"></div>
@@ -145,8 +141,8 @@
     <img id="modalImg" src="" alt="Imagen ampliada">
   </div>
 
-  <!-- Botón descarga PDF -->
-  <button id="btnPdf" onclick="descargarPDF()">Descargar PDF</button>
+  <!-- Botón para descargar PDF -->
+  <button class="pdf-btn" onclick="descargarPDF()">Descargar PDF</button>
 
   <script>
     const catalogo = document.getElementById('catalogo');
@@ -155,13 +151,20 @@
 
     const ordenCategorias = [
       'Carteras','Collares','Aritos','Pulseras','Anillos',
-      'Accesorios para el cabello','Lentes de sol','Chokers','Relojes',
-      'Billeteras','Case teléfonos','Case audífonos','General','Otros'
+      'Accesorios para el cabello','Lentes de sol','Chokers',
+      'Relojes','Billeteras','Case teléfonos','Case audífonos',
+      'General','Otros'
     ];
 
-    /* ----------  RENDER CATÁLOGO WEB  ---------- */
+    // Leer stock desde compra.html (puedes cambiar 'compra' por 'indexbed' si usas esa)
+    async function obtenerStock(code) {
+      const compras = await localforage.getItem('compra') || [];
+      const item = compras.find(c => c.code === code);
+      return item ? item.quantity : 0;
+    }
+
     async function renderCatalogo() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      const lista = await localforage.getItem('inventory') || [];
       catalogo.innerHTML = '';
 
       const porCategoria = {};
@@ -179,23 +182,24 @@
           div.className = 'producto';
           div.style.animationDelay = `${delay}s`;
 
+          // Imagen por código interno
           const blob = await localforage.getItem(`img_${prod.code}`);
           const imgSrc = blob ? URL.createObjectURL(blob) : '';
 
-          const precioMostrar = prod.discount && prod.discount > 0 
-            ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
-            : Number(prod.price).toFixed(2);
+          // Stock desde compra.html
+          const stock = await obtenerStock(prod.code);
 
-          // ✅ CANTIDAD DESDE LOCALFORAGE (compra.html)
-          const cantidad = await localforage.getItem('cantidad_' + prod.code) ?? 0;
+          const precioMostrar = prod.discount && prod.discount > 0
+            ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2)
+            : Number(prod.price).toFixed(2);
 
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
             <h3>${prod.name}</h3>
             <p><strong>Precio:</strong> $${precioMostrar}</p>
             <p><strong>Categoría:</strong> ${prod.category}</p>
-            <p><strong>Código de barras:</strong> ${prod.barcode}</p>
-            <p><strong>Stock:</strong> ${cantidad}</p>
+            <p><strong>Código:</strong> ${prod.code}</p>
+            <p><strong>Stock:</strong> ${stock}</p>
           `;
           catalogo.appendChild(div);
           delay += 0.05;
@@ -203,7 +207,6 @@
       }
     }
 
-    /* ----------  MODAL  ---------- */
     function openModal(src) {
       modalImg.src = src;
       modal.style.display = 'flex';
@@ -214,108 +217,34 @@
     }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    /* ----------  DESCARGA PDF CON IMÁGENES  ---------- */
+    // Descargar PDF con imagen y stock
     async function descargarPDF() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
-      if (!lista.length) { alert('No hay productos para exportar'); return; }
-
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const productos = document.querySelectorAll('.producto');
 
-      doc.setFontSize(18);
-      doc.text('Catálogo Klohe', 40, 40);
+      for (let i = 0; i < productos.length; i++) {
+        const prod = productos[i];
+        const canvas = await html2canvas(prod, { backgroundColor: '#ffffff', scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 90;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      const porCat = {};
-      for (const p of lista) {
-        const cat = p.category || 'Otros';
-        if (!porCat[cat]) porCat[cat] = [];
-        porCat[cat].push(p);
-      }
-
-      let y = 80; // posición vertical inicial
-      const pageHeight = doc.internal.pageSize.height;
-      const imgSide = 60; // tamaño de la imagen en la tabla
-
-      for (const cat of ordenCategorias) {
-        const prods = porCat[cat] || [];
-        if (!prods.length) continue;
-
-        // Salto de página si no cabe la tabla completa (estimado)
-        if (y + prods.length * (imgSide + 10) > pageHeight - 100) {
-          doc.addPage();
-          y = 40;
+        if (i % 2 === 0 && i !== 0) {
+          pdf.addPage();
         }
 
-        // Título de categoría
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(cat, 40, y);
-        y += 25;
+        const x = i % 2 === 0 ? 10 : 110;
+        const y = i % 2 === 0 ? 10 : 110;
 
-        // Cabecera de la tabla
-        const headers = [['Imagen', 'Producto', 'Precio', 'Stock']];
-        const rows = [];
-
-        for (const p of prods) {
-          // leemos imagen y cantidad desde localforage
-          const blob = await localforage.getItem('img_' + p.code);
-          const cantidad = await localforage.getItem('cantidad_' + p.code) ?? 0;
-
-          // convertimos blob a base64 para incrustarla
-          let imgData = '';
-          if (blob) {
-            imgData = await blobToBase64(blob);
-          }
-
-          const precio = p.discount && p.discount > 0
-            ? `$${(p.price * (1 - p.discount / 100)).toFixed(2)}`
-            : `$${Number(p.price).toFixed(2)}`;
-
-          rows.push([
-            { content: '', image: imgData, imageWidth: imgSide, imageHeight: imgSide },
-            p.name,
-            precio,
-            cantidad
-          ]);
-        }
-
-        doc.autoTable({
-          head: headers,
-          body: rows,
-          startY: y,
-          margin: { left: 40, right: 40 },
-          theme: 'striped',
-          headStyles: { fillColor: [249, 199, 79], textColor: 20 },
-          styles: { fontSize: 10, cellPadding: 4, minCellHeight: imgSide + 10 },
-          columnStyles: {
-            0: { cellWidth: imgSide + 10, halign: 'center' }
-          },
-          didDrawCell: function (data) {
-            if (data.column.index === 0 && data.cell.raw.image) {
-              doc.addImage(data.cell.raw.image, 'JPEG', data.cell.x + 2, data.cell.y + 2, imgSide, imgSide);
-            }
-          }
-        });
-
-        y = doc.lastAutoTable.finalY + 20;
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
       }
 
-      doc.save('catalogo_klohe.pdf');
+      pdf.save('catalogo-klohe.pdf');
     }
 
-    /* ----------  UTIL: BLOB → BASE64  ---------- */
-    function blobToBase64(blob) {
-      return new Promise((resolve, _) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    /* ----------  INIT  ---------- */
     renderCatalogo();
     window.addEventListener('storage', e => { if (e.key === 'inventory') renderCatalogo(); });
   </script>
-
 </body>
 </html>

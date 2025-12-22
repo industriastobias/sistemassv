@@ -42,7 +42,7 @@
     .totales-card,.factura-card{background:var(--card);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.06);padding:24px;width:90vw;max-width:400px;}
     .close-btn{position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text);}
     .ticket-preview{background:#fff;color:#000;font:11px/1.3 'Courier New',monospace;padding:8px 6px;border:1px dashed #999;width:100%;max-width:360px;margin:0 auto;}
-    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px;}
+    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:6px;padding-right:6px;}
     .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
     .modal-buttons button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}
     .btn-print{background:#16a34a;color:#fff;}
@@ -208,119 +208,6 @@
     document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
   });
 
-  /* ----------  PAGINACIÓN  ---------- */
-  function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
-  function nextPage() {
-    const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
-      item.code.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase())
-    );
-    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
-  }
-
-  /* ----------  FACTURA / TICKET  ---------- */
-  function abrirFactura() {
-    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
-    if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
-    document.getElementById('facturaModal').style.display = 'flex';
-    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
-    actualizarTablaTicket();
-  }
-  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
-  function actualizarTablaTicket() {
-    const checks = [...document.querySelectorAll('.factCheck:checked')];
-    const body = document.getElementById('fBody');
-    body.innerHTML = '';
-    let sum = 0;
-    checks.forEach(ch => {
-      const p = JSON.parse(ch.value);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
-        <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
-        <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
-      body.appendChild(tr);
-      sum += Number(p.total);
-    });
-    document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
-    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
-    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
-    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
-  }
-  function imprimirTicket() {
-    const cont = document.querySelector('.ticket-preview').innerHTML;
-    const ventana = window.open('', '', 'width=360,height=600');
-    ventana.document.write(`<html><head><title>Ticket</title><style>
-      body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
-      table{width:100%;border-collapse:collapse;table-layout:fixed}
-      th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      th:first-child,td:first-child{text-align:left;width:60%}
-      th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
-      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
-      .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
-      .line{border-top:1px dashed #999;margin:6px 0}
-      </style></head><body>${cont}</body></html>`);
-    ventana.document.close();
-    ventana.focus();
-    ventana.print();
-    ventana.close();
-  }
-  function descargarPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit:'mm', format:[80, 190] });
-    let y = 6;
-    const margen = 4;
-    const ancho = 80 - margen * 2;
-
-    doc.setFontSize(14); doc.setFont(undefined, 'bold');
-    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
-    doc.setFontSize(10); doc.setFont(undefined, 'normal');
-    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
-    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
-    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
-    doc.line(margen, y, 80 - margen, y); y += 5;
-
-    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
-    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
-    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
-    y += 3;
-    doc.line(margen, y, 80 - margen, y); y += 4;
-
-    doc.setFontSize(9); doc.setFont(undefined, 'bold');
-    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
-    doc.setFont(undefined, 'normal');
-    const filas = document.querySelectorAll('#fBody tr');
-    filas.forEach(fr => {
-      const c = fr.cells;
-      const prod = doc.splitTextToSize(c[0].textContent, 30);
-      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
-      y += prod.length * 3 + 1;
-    });
-    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
-
-    doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
-
-    doc.setFontSize(8); doc.setFont(undefined, 'normal');
-    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
-    const split = doc.splitTextToSize(msg, ancho);
-    split.forEach(l => { doc.text(l, margen, y); y += 3; });
-
-    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
-  }
-
-  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
-  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
-  function abrirImgModal(src) {
-    const modal = document.getElementById('imgModal');
-    const img = document.getElementById('imgModalImg');
-    img.src = src;
-    modal.style.display = 'flex';
-  }
-  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
-
   /* ----------  CARGAR VENTAS (más nuevo primero)  ---------- */
   async function loadSoldInventory() {
     showSpinner();
@@ -332,7 +219,7 @@
       item.code.toLowerCase().includes(search)
     );
 
-    // Ordenar: más nuevo primero
+    // ✅ ORDENAR POR fechaHora (más nuevo primero)
     filtered.sort((a, b) => new Date(b.fechaHora || 0) - new Date(a.fechaHora || 0));
 
     const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);

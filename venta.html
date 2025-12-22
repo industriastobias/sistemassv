@@ -130,6 +130,8 @@
       justify-content:center;
     }
     .fab-totals:hover{transform:scale(1.1);}
+
+    /* ---------- MODALES ---------- */
     #totalesModal,#facturaModal,#imgModal{
       position:fixed;
       inset:0;
@@ -146,6 +148,15 @@
       padding:24px;
       width:90vw;
       max-width:420px;
+    }
+    /* MODAL A PANTALLA COMPLETA */
+    #facturaModal .factura-card{
+      width:100vw;
+      height:100vh;
+      max-width:none;
+      border-radius:0;
+      margin:0;
+      overflow:auto;
     }
     .ticket-preview{
       background:#fff;
@@ -200,6 +211,21 @@
     @media print{
       .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,.card-delete,.factCheck,.sort-row{display:none!important;}
     }
+
+    /* ---------- MODO KIOSCO ---------- */
+    #kioskBtn{
+      position:fixed;
+      bottom:10px;
+      right:10px;
+      z-index:9999;
+      padding:6px 10px;
+      font-size:12px;
+      border:none;
+      border-radius:4px;
+      background:#00796b;
+      color:#fff;
+      cursor:pointer;
+    }
   </style>
 </head>
 <body>
@@ -237,6 +263,7 @@
 
 <button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
 
+<!-- Modal totales -->
 <div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarModalTotales()">×</button>
@@ -249,6 +276,7 @@
   </div>
 </div>
 
+<!-- Modal factura pantalla completa -->
 <div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
   <div class="factura-card" onclick="event.stopPropagation()">
     <h2>Factura – Ticket</h2>
@@ -412,6 +440,9 @@
     const search = document.getElementById('unifiedSearch').value.toLowerCase();
     rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
 
+    // 🔁 ORDEN: MÁS RECIENTES PRIMERO
+    soldInventory.sort((a,b)=> new Date(b.soldAt||0) - new Date(a.soldAt||0));
+
     let filtered = soldInventory.filter(item =>
       item.name.toLowerCase().includes(search) ||
       item.code.toLowerCase().includes(search) ||
@@ -423,8 +454,6 @@
 
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
-    document.getElementById('totalQty') && (document.getElementById('totalQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits));
-    document.getElementById('totalUSD') && (document.getElementById('totalUSD').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`);
     document.getElementById('totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
     document.getElementById('totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
     document.getElementById('fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
@@ -519,6 +548,35 @@
     const today = new Date();
     return d.toDateString() === today.toDateString();
   }
+
+  /* ---------- MODO KIOSCO ---------- */
+  (() => {
+    const KIOSK_KEY = 'kioskActivo';
+    const btn = document.createElement('button');
+    btn.id = 'kioskBtn';
+    btn.textContent = 'Modo kiosco';
+    document.body.appendChild(btn);
+
+    function estaEnFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+    function toggleFullscreen() {
+      if (!estaEnFullscreen()) {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      }
+    }
+    function actualizaUI() {
+      const activo = estaEnFullscreen();
+      btn.textContent = activo ? 'Salir kiosco' : 'Modo kiosco';
+      localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+    }
+    btn.addEventListener('click', () => { toggleFullscreen(); actualizaUI(); });
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'msfullscreenchange'].forEach(ev => document.addEventListener(ev, actualizaUI));
+    if (localStorage.getItem(KIOSK_KEY) === '1' && !estaEnFullscreen()) { toggleFullscreen(); actualizaUI(); }
+  })();
 
   loadSoldInventory();
 </script>

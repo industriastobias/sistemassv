@@ -182,8 +182,9 @@
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
 
-          // ✅ CAMBIA AQUÍ si tu clave es distinta
-          const cantidad = await localforage.getItem('cantidad_' + prod.code) ?? 0;
+          // ✅ LEE LA CANTIDAD DESDE LA CLAVE QUE USES EN INVENTARIO.HTML
+          // Si guardas como "stock", "quantity", etc. cambia aquí:
+          const cantidad = await localforage.getItem('stock_' + prod.code) ?? 0;
 
           div.innerHTML = `
             <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
@@ -216,17 +217,14 @@
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const marg = 30;
+      const marg = 40;
       const anchoPag = doc.internal.pageSize.getWidth();
       const altoPag  = doc.internal.pageSize.getHeight();
 
       const tarjAncho = (anchoPag - 2*marg - 30) / 4; // 4 columnas
-      const tarjAlto  = 160; // altura fija tarjeta
-      const imgSize   = tarjAncho - 20; // imagen cuadrada
-      let x = marg, y = 60;
-
-      doc.setFontSize(18);
-      doc.text('Catálogo Klohe', marg, 40);
+      const tarjAlto  = 160;
+      const imgSize   = tarjAncho - 20;
+      let x = marg, y = 80;
 
       const porCat = {};
       for (const p of lista) {
@@ -239,10 +237,11 @@
         const prods = porCat[cat] || [];
         if (!prods.length) continue;
 
-        // Título categoría
-        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 60; }
-        doc.setFontSize(14); doc.setFont(undefined, 'bold');
-        doc.text(cat, marg, y - 15);
+        // Título categoría CENTRADO
+        if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
+        doc.setFontSize(16); doc.setFont(undefined, 'bold');
+        const txtWidth = doc.getTextWidth(cat);
+        doc.text(cat, (anchoPag - txtWidth) / 2, y - 15);
 
         for (let i = 0; i < prods.length; i++) {
           const p = prods[i];
@@ -250,10 +249,11 @@
           // salto de línea completa si no cabe horizontal
           if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + 15; }
           // salto de página si no cabe vertical
-          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 60; x = marg; }
+          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 80; x = marg; }
 
           const blob = await localforage.getItem('img_' + p.code);
-          const cantidad = await localforage.getItem('cantidad_' + p.code) ?? 0;
+          // ✅ MISMA CLAVE QUE ARRIBA
+          const cantidad = await localforage.getItem('stock_' + p.code) ?? 0;
           const precio = p.discount && p.discount > 0
             ? (p.price * (1 - p.discount / 100)).toFixed(2)
             : Number(p.price).toFixed(2);
@@ -261,18 +261,18 @@
           let imgData = '';
           if (blob) imgData = await blobToBase64(blob);
 
-          // --- dibujamos tarjeta ---
+          // --- tarjeta ---
           doc.setDrawColor(200);
-          doc.rect(x, y, tarjAncho, tarjAlto, 'D');     // borde
+          doc.rect(x, y, tarjAncho, tarjAlto, 'D');
           if (imgData) doc.addImage(imgData, 'JPEG', x + 10, y + 10, imgSize, imgSize);
 
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           const txtY = y + imgSize + 22;
           doc.text(p.name.substring(0, 18) + (p.name.length > 18 ? '…' : ''), x + 5, txtY);
           doc.text(`$${precio}`, x + 5, txtY + 14);
           doc.text(`Stock: ${cantidad}`, x + 5, txtY + 28);
 
-          x += tarjAncho + 10; // siguiente columna
+          x += tarjAncho + 10;
         }
         // fin categoría → nueva línea
         x = marg; y += tarjAlto + 25;

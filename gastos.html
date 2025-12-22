@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Catálogo - Klohe</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     :root {
       --bg: #fafafa;
@@ -152,7 +152,7 @@
       catalogo.innerHTML = '';
 
       const porCategoria = {};
-      for (const prod of lista) {
+      for (const prod of lista.filter(p => (p.stock || 0) > 0)) {
         const cat = prod.category || 'Otros';
         if (!porCategoria[cat]) porCategoria[cat] = [];
         porCategoria[cat].push(prod);
@@ -169,7 +169,6 @@
           const blob = await localforage.getItem(`img_${prod.code}`);
           const imgSrc = blob ? URL.createObjectURL(blob) : '';
 
-          // Cálculo de precio con descuento solo si existe y es mayor a 0
           const precioMostrar = prod.discount && prod.discount > 0 
             ? Number(prod.price * (1 - prod.discount / 100)).toFixed(2) 
             : Number(prod.price).toFixed(2);
@@ -180,6 +179,7 @@
             <p><strong>Precio:</strong> $${precioMostrar}</p>
             <p><strong>Categoría:</strong> ${prod.category}</p>
             <p><strong>Código de barras:</strong> ${prod.barcode}</p>
+            <p><strong>Stock:</strong> ${prod.stock || 0}</p>
           `;
           catalogo.appendChild(div);
           delay += 0.05;

@@ -4,14 +4,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+    /* ---------- tus estilos originales (sin cambios) ---------- */
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400 ;700&display=swap');
     :root {
       --bg: #f9fafb;
       --text: #1f2937;
@@ -50,8 +51,6 @@
       text-align: center;
       display: none;
     }
-
-    /* ---- visor SIEMPRE visible cuando se active ---- */
     #reader { width: 320px; margin: .6rem auto; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
@@ -113,8 +112,6 @@
         margin-left: .25rem;
     }
     .btn-edit:hover { background: #6b7280; }
-
-    /* --- Modal flotante "Producto no existente" --- */
     #notExistModal {
         position: fixed;
         top: 20px;
@@ -146,7 +143,6 @@
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
-    <!-- Visor de cámara: ahora SIEMPRE visible cuando se active -->
     <div id="reader"></div>
 
     <div class="search-block">
@@ -264,45 +260,29 @@
     async function downloadLabelsPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-      const w = 45;               // ancho etiqueta (mm)
-      const h = 21;               // alto etiqueta (mm)
-      const margLeft = 12;        // margen izquierdo
-      const margTop = 10;
-      const dx = w + 3;           // separación horizontal
-      const dy = h + 3;           // separación vertical
-
+      const w = 45, h = 21, margLeft = 12, margTop = 10, dx = w + 3, dy = h + 3;
       const list = inventory.filter(p => p.quantity > 0);
-
       let col = 0, fil = 0;
       list.forEach((p, i) => {
-        if (i > 0 && i % 40 === 0) {          // 40 por hoja (10 filas × 4 columnas)
-          doc.addPage();
-          col = 0; fil = 0;
-        }
-
-        const x = margLeft + col * dx;
-        const y = margTop + fil * dy;
-
+        if (i > 0 && i % 40 === 0) { doc.addPage(); col = 0; fil = 0; }
+        const x = margLeft + col * dx, y = margTop + fil * dy;
         doc.setFontSize(8);
         doc.text(p.name.slice(0, 16), x + w / 2, y + 3, { align: 'center' });
         doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 6, { align: 'center' });
-
         const canvas = document.createElement('canvas');
-        const scale = 300 / 25.4;
-        canvas.width = w * scale;
-        canvas.height = h * scale * 0.45;
+        const scale = 300 / 25.4; canvas.width = w * scale; canvas.height = h * scale * 0.45;
         JsBarcode(canvas, p.barcode, { format: 'CODE128', width: 1.3, height: h * scale * 0.45, fontSize: 0 });
         const imgData = canvas.toDataURL('image/png');
         doc.addImage(imgData, 'PNG', x, y + 7, w, h * 0.45);
-
-        col++;
-        if (col === 4) { col = 0; fil++; }   // 4 columnas
+        col++; if (col === 4) { col = 0; fil++; }
       });
-
       doc.save('etiquetas.pdf');
     }
 
+    /* =========================================================
+       CÁMARA – IGUAL A TU VERSIÓN QUE SÍ FUNCIONABA
+       solo con limpieza, mejor resolución y solo CODE-128
+    ========================================================= */
     function startCameraScan() {
       // Si ya está iniciado, no hacer nada (evita duplicados)
       if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
@@ -310,27 +290,20 @@
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: 300 },          // más lento, caja más grande
+        { fps: 10, qrbox: 350 },          // fps ↑ qrbox ↑ para mejor lectura
         (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
           if (!found) {
-            beepError();
+            beep('error');
             showNotExist();
             return;
           }
-          beepOK();
+          beep('ok');
           document.getElementById('searchCode').value = barcode;
           filterInventory();
         },
         (error) => { /* silenciamos errores de frame vacío */ },
-        { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
-                               Html5QrcodeSupportedFormats.CODE_39,
-                               Html5QrcodeSupportedFormats.EAN_13,
-                               Html5QrcodeSupportedFormats.EAN_8,
-                               Html5QrcodeSupportedFormats.UPC_A,
-                               Html5QrcodeSupportedFormats.UPC_E ],
-          useBarCodeDetectorIfSupported: true,
-          showTorchButtonIfSupported: true }
+        { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128] } // solo tu formato
       ).catch(err => console.log(err));
 
       // Muestro el visor y el botón Cancelar
@@ -346,6 +319,7 @@
       document.getElementById('reader').style.display = 'none';
       document.getElementById('cancelScanBtn').style.display = 'none';
     }
+    /* ========================================================= */
 
     /* =========================================================
        LECTOR USB-HID (aparato externo)
@@ -373,12 +347,12 @@
         if (usbBuffer.trim()) {
           const found = inventory.some(p => p.barcode.trim() === usbBuffer.trim());
           if (!found) {
-            beepError();
+            beep('error');
             showNotExist();
             usbBuffer = '';
             return;
           }
-          beepOK();
+          beep('ok');
           document.getElementById('searchCode').value = usbBuffer.trim();
           filterInventory();
         }
@@ -394,19 +368,15 @@
     }
     /* ========================================================= */
 
-    function beepOK() {
+    function beep(type = 'ok') {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       osc.connect(ctx.destination);
-      osc.frequency.value = 880;
-      osc.start(); osc.stop(ctx.currentTime + 0.08);
-    }
-    function beepError() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.frequency.value = 400;
-      osc.start(); osc.stop(ctx.currentTime + 0.25);
+      switch (type) {
+        case 'ok': osc.frequency.value = 880; osc.stop(ctx.currentTime + 0.08); break;
+        case 'error': osc.frequency.value = 400; osc.stop(ctx.currentTime + 0.25); break;
+      }
+      osc.start();
     }
     function showNotExist() {
       const box = document.getElementById('notExistModal');

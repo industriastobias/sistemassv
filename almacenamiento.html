@@ -13,7 +13,7 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
-      --bg: #f9fafb;
+      --bg: #ffffff;
       --text: #1f2937;
       --border: #e5e7eb;
       --accent: #3b82f6;
@@ -27,21 +27,16 @@
     html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); }
     body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 16px; }
 
-    /* MODO KIOSCO */
-    body.kiosco {
-      overflow: hidden;
-    }
-    body.kiosco .container {
+    h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin: .8rem 0 .6rem; letter-spacing: 1px; text-transform: uppercase; }
+    .container {
       width: 100vw;
       height: 100vh;
-      max-width: none;
-      border-radius: 0;
-      border: none;
+      background: var(--white);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    body.kiosco h1 { display: none; }
-
-    h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin: .8rem 0 .6rem; letter-spacing: 1px; text-transform: uppercase; }
-    .container { width: 98vw; height: 96vh; background: var(--white); border: 1px solid var(--border); padding: 1.2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.05); display: flex; flex-direction: column; overflow: hidden; }
 
     .top-bar {
       display: flex;
@@ -111,7 +106,6 @@
     .card-footer span { font-weight: 700; }
     .card.highlight { background: #fef08a !important; }
 
-    /* IMAGEN GRANDE SIN MODAL */
     .full-image-overlay {
       position: fixed;
       top: 0; left: 0;
@@ -145,7 +139,6 @@
     }
     .btn-edit:hover { background: #6b7280; }
 
-    /* --- Panel Historial --- */
     #salesPanel {
       display: none;
       flex-direction: column;
@@ -168,10 +161,7 @@
 </head>
 
 <body>
-  <!-- Mensaje flotante solo cuando se necesita -->
   <div id="notExistModal" style="display:none;">Producto no existente</div>
-
-  <h1>Inventario</h1>
 
   <div class="container">
     <div class="top-bar">
@@ -463,9 +453,6 @@
       setTimeout(() => box.style.display = 'none', 3000);
     }
 
-    /* =========================================================
-       HISTORIAL DE VENTAS (SIN CAMBIOS)
-    ========================================================= */
     function toggleSalesPanel() {
       const panel = document.getElementById('salesPanel');
       const normalBlock = document.getElementById('normalSearchBlock');
@@ -542,9 +529,6 @@
       URL.revokeObjectURL(url);
     }
 
-    /* =========================================================
-       MODO KIOSCO (AHORA SÍ PANTALLA COMPLETA)
-    ========================================================= */
     function toggleKiosco() {
       const body = document.body;
       const btn = document.getElementById('kioscoBtn');
@@ -564,9 +548,6 @@
       }
     }
 
-    /* =========================================================
-       VISUALIZACIÓN DE IMÁGENES EN GRANDE (SIN MODAL)
-    ========================================================= */
     function openImageModal(src) {
       const overlay = document.createElement('div');
       overlay.className = 'full-image-overlay';
@@ -580,9 +561,6 @@
       });
     }
 
-    /* =========================================================
-       FUNCIONES YA EXISTENTES (SIN CAMBIOS)
-    ========================================================= */
     function loadInventory(filteredInventory = inventory) {
       const list = document.getElementById('inventoryList');
       const cards = document.getElementById('cardsView');
@@ -811,6 +789,19 @@
       loadInventory();
       document.getElementById('resultMessage').style.display = 'none';
     }
+
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        document.getElementById('searchCode').focus();
+      }
+    });
+
+    document.getElementById('searchCategory').addEventListener('change', filterInventory);
+    document.getElementById('searchCode').addEventListener('input', () => {
+      clearTimeout(window.filterTimeout);
+      window.filterTimeout = setTimeout(filterInventory, 300);
+    });
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';

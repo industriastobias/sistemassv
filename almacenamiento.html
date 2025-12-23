@@ -157,6 +157,15 @@
     #salesTable {
       margin: 0;
     }
+
+    /* NUEVO: Resaltado de búsqueda */
+    mark {
+      background-color: #fef08a;
+      color: #1f2937;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
   </style>
 </head>
 
@@ -176,7 +185,12 @@
 
     <div id="reader"></div>
 
+    <!-- BLOQUE DE BÚSQUEDA MEJORADO -->
     <div id="normalSearchBlock" class="search-block">
+      <div>
+        <label for="searchName">Buscar por nombre:</label>
+        <input type="text" id="searchName" placeholder="Escribe parte del nombre">
+      </div>
       <div>
         <label for="searchCategory">Filtrar por categoría:</label>
         <select id="searchCategory">
@@ -201,6 +215,19 @@
         <label for="searchCode">Buscar por código de barras:</label>
         <input type="text" id="searchCode" placeholder="Ej: 123456" style="padding-right: 3rem;">
         <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:#9ca3af; pointer-events:none;">Ctrl+B</span>
+      </div>
+      <!-- Filtros nuevos -->
+      <div>
+        <label for="minPrice">Precio mín:</label>
+        <input type="number" id="minPrice" placeholder="0" min="0" step="0.01">
+      </div>
+      <div>
+        <label for="maxPrice">Precio max:</label>
+        <input type="number" id="maxPrice" placeholder="999999" min="0" step="0.01">
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:.5rem;">
+        <label for="lowStockOnly">Stock bajo</label>
+        <input type="checkbox" id="lowStockOnly">
       </div>
       <button class="stamp" onclick="filterInventory()">Buscar</button>
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
@@ -299,6 +326,11 @@
     let currentView = localStorage.getItem('preferredView') || 'table';
     let html5QrCode;
 
+    const PASSWORD_EDIT = 'admin123'; // Cambia aquí la contraseña
+
+    /* =========================================================
+       FUNCIONES YA EXISTENTES (SIN CAMBIOS)
+    ========================================================= */
     function updateDash() {
       const low = inventory.filter(p => p.quantity <= (p.stockMin || 0)).length;
       const box = document.getElementById('lowStockBox');
@@ -561,17 +593,78 @@
       });
     }
 
-    function loadInventory(filteredInventory = inventory) {
+    /* =========================================================
+       NUEVAS FUNCIONES: BLOQUEO DE EDICIÓN Y BÚSQUEDA AVANZADA
+    ========================================================= */
+    function openPriceModal(index) {
+      const pwd = prompt('Ingrese la contraseña para editar precios:');
+      if (pwd !== PASSWORD_EDIT) {
+        alert('Contraseña incorrecta');
+        return;
+      }
+      currentPriceIndex = index;
+      const item = inventory[index];
+      document.getElementById('newPrice').value = item.price;
+      document.getElementById('priceModal').style.display = 'block';
+    }
+
+    function closePriceModal() {
+      document.getElementById('priceModal').style.display = 'none';
+    }
+
+    function saveNewPrice() {
+      const newPrice = parseFloat(document.getElementById('newPrice').value);
+      if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
+      inventory[currentPriceIndex].price = newPrice;
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      closePriceModal();
+      loadInventory();
+      document.getElementById('resultMessage').textContent = 'Precio actualizado';
+      document.getElementById('resultMessage').style.display = 'block';
+      setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
+    }
+
+    function highlightText(text, search) {
+      if (!search) return text;
+      const regex = new RegExp(`(${search})`, 'gi');
+      return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    function filterInventory() {
+      const name = document.getElementById('searchName').value.trim().toLowerCase();
+      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
+      const code = document.getElementById('searchCode').value.trim().toLowerCase();
+      const minPrice = parseFloat(document.getElementById('minPrice').value) || 0;
+      const maxPrice = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+      const lowStockOnly = document.getElementById('lowStockOnly').checked;
+
+      let filtered = inventory.filter(item => {
+        const matchesName = !name || item.name.toLowerCase().includes(name);
+        const matchesCategory = !category || item.category.toLowerCase() === category;
+        const matchesCode = !code || item.barcode.trim().toLowerCase().includes(code);
+        const price = item.price * (1 - item.discount / 100);
+        const matchesPrice = price >= minPrice && price <= maxPrice;
+        const matchesStock = !lowStockOnly || item.quantity <= (item.stockMin || 0);
+        return matchesName && matchesCategory && matchesCode && matchesPrice && matchesStock;
+      });
+
+      renderInventoryWithHighlight(filtered, name);
+      document.getElementById('resultMessage').style.display = 'none';
+    }
+
+    function renderInventoryWithHighlight(filteredInventory, searchName) {
       const list = document.getElementById('inventoryList');
       const cards = document.getElementById('cardsView');
       const noResults = document.getElementById('noResultsMessage');
       const resultMsg = document.getElementById('resultMessage');
+
       if (filteredInventory.length === 0) {
         list.innerHTML = ''; cards.innerHTML = '';
         noResults.style.display = 'block'; resultMsg.style.display = 'none'; return;
       }
       noResults.style.display = 'none';
       const sorted = [...filteredInventory].sort((a, b) => b.quantity - a.quantity);
+
       list.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         const desc = item.description?.trim() || '---';
@@ -579,14 +672,14 @@
           <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
             <td>${idx + 1}</td>
             <td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
-            <td>${item.name}</td>
+            <td>${highlightText(item.name, searchName)}</td>
             <td>${item.barcode}</td>
             <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
             <td>${desc}</td>
-            <td>${item.category}</td>
+            <td>${highlightText(item.category, searchName)}</td>
             <td>${item.quantity}</td>
             <td>
               <button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button>
@@ -602,12 +695,12 @@
         return `
           <div class="card" data-real-index="${inventory.indexOf(item)}">
             <img id="card-img-${idx}" onclick="openImageModal(this.src)" />
-            <div><strong>${item.name}</strong></div>
+            <div><strong>${highlightText(item.name, searchName)}</strong></div>
             <div>Barras: ${item.barcode}</div>
             <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
-            <div>Cat: ${item.category}</div>
+            <div>Cat: ${highlightText(item.category, searchName)}</div>
             <div>Desc: ${desc}</div>
             <div class="card-footer">
               <button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button>
@@ -683,27 +776,8 @@
       document.getElementById('confirmationMessage').style.display = 'none';
     }
 
-    function openPriceModal(index) {
-      currentPriceIndex = index;
-      const item = inventory[index];
-      document.getElementById('newPrice').value = item.price;
-      document.getElementById('priceModal').style.display = 'block';
-    }
-
     function closePriceModal() {
       document.getElementById('priceModal').style.display = 'none';
-    }
-
-    function saveNewPrice() {
-      const newPrice = parseFloat(document.getElementById('newPrice').value);
-      if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
-      inventory[currentPriceIndex].price = newPrice;
-      localStorage.setItem('inventory', JSON.stringify(inventory));
-      closePriceModal();
-      loadInventory();
-      document.getElementById('resultMessage').textContent = 'Precio actualizado';
-      document.getElementById('resultMessage').style.display = 'block';
-      setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
     }
 
     function processSale() {
@@ -724,40 +798,6 @@
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
-    }
-
-    function filterInventory() {
-      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
-      const code = document.getElementById('searchCode').value.trim().toLowerCase();
-      let filtered = inventory;
-      if (code) {
-        filtered = inventory.filter(item => item.barcode.trim().toLowerCase().includes(code));
-        if (filtered.length === 0) {
-          document.getElementById('inventoryList').innerHTML = '';
-          document.getElementById('cardsView').innerHTML = '';
-          document.getElementById('noResultsMessage').style.display = 'block';
-          document.getElementById('resultMessage').style.display = 'none';
-          return;
-        }
-        loadInventory(filtered);
-        document.getElementById('noResultsMessage').style.display = 'none';
-        setTimeout(() => {
-          const firstRow = document.querySelector('#inventoryList tr') || document.querySelector('.card');
-          if (firstRow) {
-            const filaNum = firstRow.querySelector('td')?.textContent || firstRow.querySelector('div')?.textContent || '1';
-            document.getElementById('resultMessage').textContent = `Producto encontrado en la fila ${filaNum}.`;
-            document.getElementById('resultMessage').style.display = 'block';
-            firstRow.classList.add('highlight');
-            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
-        return;
-      }
-      if (category) {
-        filtered = inventory.filter(item => item.category.trim().toLowerCase() === category);
-      }
-      loadInventory(filtered);
-      document.getElementById('resultMessage').style.display = 'none';
     }
 
     function goToRow() {
@@ -782,11 +822,15 @@
     }
 
     function clearFilters() {
+      document.getElementById('searchName').value = '';
       document.getElementById('searchCategory').value = '';
       document.getElementById('searchCode').value = '';
+      document.getElementById('minPrice').value = '';
+      document.getElementById('maxPrice').value = '';
+      document.getElementById('lowStockOnly').checked = false;
       document.getElementById('goToRow').value = '';
       document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
-      loadInventory();
+      filterInventory();
       document.getElementById('resultMessage').style.display = 'none';
     }
 
@@ -802,6 +846,13 @@
       clearTimeout(window.filterTimeout);
       window.filterTimeout = setTimeout(filterInventory, 300);
     });
+    document.getElementById('searchName').addEventListener('input', () => {
+      clearTimeout(window.filterTimeout);
+      window.filterTimeout = setTimeout(filterInventory, 300);
+    });
+    document.getElementById('minPrice').addEventListener('input', filterInventory);
+    document.getElementById('maxPrice').addEventListener('input', filterInventory);
+    document.getElementById('lowStockOnly').addEventListener('change', filterInventory);
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';

@@ -51,7 +51,7 @@
       display: none;
     }
 
-    #reader { width: 320px; margin: .6rem auto; }
+    #reader { width: 100%; max-width: 420px; margin: .6rem auto; background: #000; border-radius: 8px; overflow: hidden; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
     label { font-weight: 700; font-size: .9rem; }
@@ -126,10 +126,9 @@
 </head>
 
 <body>
-<div id="notExistModal" style="display:none;">Producto no existente</div>
+<div id="notExistModal" style="display:none;position:fixed;z-index:30;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:#fff;padding:1rem 2rem;border-radius:8px;">Producto no existente</div>
 
 <h1>Inventario</h1>
-
 <div class="container">
   <div class="top-bar">
     <div id="lowStockBox" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
@@ -144,7 +143,6 @@
 
   <div id="reader"></div>
 
-  <!-- BLOQUE DE BÚSQUEDA CON AUTOCOMPLETE=OFF -->
   <form id="searchForm" autocomplete="off" onsubmit="event.preventDefault(); filterInventory();">
     <div class="search-block">
       <div>
@@ -187,7 +185,6 @@
       <button class="stamp" onclick="clearFilters()" type="button">Limpiar filtros</button>
     </div>
   </form>
-  <!-- FIN BLOQUE DE BÚSQUEDA -->
 
   <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
     <table>
@@ -328,16 +325,17 @@
   }
 
   /* ============================================================
-     CÁMARA – PARA QUE LEA LA IMAGEN DEL CÓDIGO
+     CÁMARA – PARA QUE ABRA Y LEA LA IMAGEN DEL CÓDIGO
   ============================================================ */
   async function startCameraScan() {
-    if (html5QrCode && html5QrCode.getState() === 2) return; // ya está corriendo
+    console.log('🔘 Botón Cámara presionado');
+    if (html5QrCode && html5QrCode.getState() === 2) { console.warn('Ya está activa'); return; }
     try {
       if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); html5QrCode = null; }
+      const readerDiv = document.getElementById('reader');
+      readerDiv.style.display = 'block'; readerDiv.style.width = '100%'; readerDiv.style.maxWidth = '420px'; readerDiv.style.background = '#000';
       html5QrCode = new Html5Qrcode("reader");
-      const config = {
-        videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-      };
+      const config = { videoConstraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
       await html5QrCode.start(
         config,
         { fps: 10, qrbox: 350 },
@@ -345,10 +343,10 @@
         () => {},
         { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128] }
       );
-      document.getElementById('reader').style.display = 'block';
+      console.log('✅ Cámara iniciada');
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     } catch (err) {
-      console.error(err);
+      console.error('❌ Error al iniciar cámara:', err);
       alert('No se pudo abrir la cámara.\n' + err.message);
       cancelScan();
     }
@@ -363,10 +361,7 @@
     cancelScan();
   }
   function cancelScan() {
-    if (html5QrCode) {
-      html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
-      html5QrCode = null;
-    }
+    if (html5QrCode) { html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {}); html5QrCode = null; }
     document.getElementById('reader').style.display = 'none';
     document.getElementById('cancelScanBtn').style.display = 'none';
   }

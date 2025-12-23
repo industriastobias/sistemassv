@@ -110,11 +110,29 @@
     .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
     .card-footer span { font-weight: 700; }
     .card.highlight { background: #fef08a !important; }
+
+    /* IMAGEN GRANDE SIN MODAL */
+    .full-image-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      cursor: pointer;
+    }
+    .full-image-overlay img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 12px;
+    }
+
     .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
     .modal-content { position: relative; margin: 5vh auto; background: #ffffff; border-radius: 16px; width: 90vw; max-width: 400px; padding: 1.5rem; display: flex; flex-direction: column; gap: .8rem; }
     .close { position: absolute; top: 12px; right: 12px; color: #6b7280; font-size: 24px; font-weight: 300; cursor: pointer; line-height: 1; }
     .close:hover { color: #111827; }
-    #modalImage { width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 12px; margin-top: 1rem; }
     .btn-edit {
         background: #9ca3af;
         border: none;
@@ -150,7 +168,8 @@
 </head>
 
 <body>
-  <div id="notExistModal">Producto no existente</div>
+  <!-- Mensaje flotante solo cuando se necesita -->
+  <div id="notExistModal" style="display:none;">Producto no existente</div>
 
   <h1>Inventario</h1>
 
@@ -161,17 +180,12 @@
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
-
-      <!-- NUEVO BOTÓN KIOSCO -->
       <button class="stamp" id="kioscoBtn" onclick="toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
-
-      <!-- NUEVO BOTÓN HISTORIAL -->
       <button class="stamp" id="salesBtn" onclick="toggleSalesPanel()" title="Ver historial de ventas">📋 Historial</button>
     </div>
 
     <div id="reader"></div>
 
-    <!-- BLOQUE DE BÚSQUEDA NORMAL -->
     <div id="normalSearchBlock" class="search-block">
       <div>
         <label for="searchCategory">Filtrar por categoría:</label>
@@ -202,7 +216,6 @@
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
     </div>
 
-    <!-- PANEL HISTORIAL DE VENTAS -->
     <div id="salesPanel">
       <div style="display:flex;gap:.8rem;flex-wrap: wrap;align-items:flex-end;">
         <div>
@@ -289,25 +302,13 @@
     </div>
   </div>
 
-  <!-- Modal imagen grande -->
-  <div id="imageModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeImageModal()">&times;</span>
-      <img id="modalImage" src="" alt="Imagen grande">
-    </div>
-  </div>
-
   <script>
-    /* ========== VARIABLES GLOBALES ========== */
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let currentSoldIndex = -1;
     let currentPriceIndex = -1;
     let currentView = localStorage.getItem('preferredView') || 'table';
     let html5QrCode;
 
-    /* =========================================================
-       FUNCIONES YA EXISTENTES (sin cambios de lógica)
-    ========================================================= */
     function updateDash() {
       const low = inventory.filter(p => p.quantity <= (p.stockMin || 0)).length;
       const box = document.getElementById('lowStockBox');
@@ -463,7 +464,7 @@
     }
 
     /* =========================================================
-       HISTORIAL DE VENTAS (NUEVO)
+       HISTORIAL DE VENTAS (SIN CAMBIOS)
     ========================================================= */
     function toggleSalesPanel() {
       const panel = document.getElementById('salesPanel');
@@ -542,17 +543,45 @@
     }
 
     /* =========================================================
-       MODO KIOSCO (NUEVO)
+       MODO KIOSCO (AHORA SÍ PANTALLA COMPLETA)
     ========================================================= */
     function toggleKiosco() {
       const body = document.body;
-      body.classList.toggle('kiosco');
       const btn = document.getElementById('kioscoBtn');
-      btn.textContent = body.classList.contains('kiosco') ? '🔲 Salir Kiosco' : '🖥️ Kiosco';
+
+      if (!document.fullscreenElement) {
+        body.requestFullscreen().then(() => {
+          body.classList.add('kiosco');
+          btn.textContent = '🔲 Salir Kiosco';
+        }).catch(err => {
+          alert('No se pudo activar pantalla completa: ' + err.message);
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          body.classList.remove('kiosco');
+          btn.textContent = '🖥️ Kiosco';
+        });
+      }
     }
 
     /* =========================================================
-       FUNCIONES YA EXISTENTES (CONTINUACIÓN)
+       VISUALIZACIÓN DE IMÁGENES EN GRANDE (SIN MODAL)
+    ========================================================= */
+    function openImageModal(src) {
+      const overlay = document.createElement('div');
+      overlay.className = 'full-image-overlay';
+      const img = document.createElement('img');
+      img.src = src;
+      overlay.appendChild(img);
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+    }
+
+    /* =========================================================
+       FUNCIONES YA EXISTENTES (SIN CAMBIOS)
     ========================================================= */
     function loadInventory(filteredInventory = inventory) {
       const list = document.getElementById('inventoryList');
@@ -571,10 +600,10 @@
         return `
           <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
             <td>${idx + 1}</td>
-            <td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" /></td>
+            <td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>${item.name}</td>
             <td>${item.barcode}</td>
-            <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" /></td>
+            <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td>
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
@@ -594,10 +623,10 @@
         const desc = item.description?.trim() || '---';
         return `
           <div class="card" data-real-index="${inventory.indexOf(item)}">
-            <img id="card-img-${idx}" />
+            <img id="card-img-${idx}" onclick="openImageModal(this.src)" />
             <div><strong>${item.name}</strong></div>
             <div>Barras: ${item.barcode}</div>
-            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" /></div>
+            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${item.category}</div>
@@ -782,27 +811,6 @@
       loadInventory();
       document.getElementById('resultMessage').style.display = 'none';
     }
-
-    function openImageModal(src) {
-      document.getElementById('modalImage').src = src;
-      document.getElementById('imageModal').style.display = 'block';
-    }
-    function closeImageModal() {
-      document.getElementById('imageModal').style.display = 'none';
-    }
-
-    document.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.key === 'b') {
-        e.preventDefault();
-        document.getElementById('searchCode').focus();
-      }
-    });
-
-    document.getElementById('searchCategory').addEventListener('change', filterInventory);
-    document.getElementById('searchCode').addEventListener('input', () => {
-      clearTimeout(window.filterTimeout);
-      window.filterTimeout = setTimeout(filterInventory, 300);
-    });
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';

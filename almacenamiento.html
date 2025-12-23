@@ -2,67 +2,134 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=0.9"/>
-  <title>Inventario – Lector fixed</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventario</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
 
   <style>
-    /* --- tus estilos anteriores (sin cambios) --- */
-    :root{--bg:#f9fafb;--text:#1f2937;--border:#e5e7eb;--accent:#3b82f6;--accent-hover:#2563eb;--highlight:#f3f4f6;--white:#ffffff;--danger:#f87171;--card-shadow:0 2px 8px rgba(0,0,0,.08);}
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Courier Prime',monospace;}
-    html,body{height:100%;width:100%;background:var(--bg);color:var(--text);}
-    body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;font-size:16px;}
-    h1{font-size:1.8rem;font-weight:700;text-align:center;margin:.8rem 0 .6rem;letter-spacing:1px;text-transform:uppercase;}
-    .container{width:98vw;height:96vw;max-height:96vh;background:var(--white);border:1px solid var(--border);padding:1.2rem;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden;}
-    .top-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.6rem;font-size:.9rem;}
-    .top-bar>*{white-space:nowrap;}
-    #lowStockBox{background:var(--danger);color:#fff;padding:.3rem .6rem;border-radius:6px;font-weight:700;font-size:.8rem;min-width:40px;text-align:center;display:none;}
-    #reader{width:100%;max-width:420px;margin:.6rem auto;background:#000;border-radius:8px;overflow:hidden;}
-    .search-block{display:flex;flex-wrap:wrap;gap:.8rem;margin-bottom:1rem;align-items:flex-end;}
-    label{font-weight:700;font-size:.9rem;}
-    input,select{padding:.55rem .65rem;border:1px solid var(--border);border-radius:6px;font-size:.95rem;}
-    button.stamp{padding:.55rem 1rem;border:1px solid var(--accent);background:var(--accent);color:var(--white);font-weight:700;font-size:.9rem;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:background .2s ease;white-space:nowrap;}
-    button.stamp:hover{background:var(--accent-hover);}
-    table{width:100%;border-collapse:collapse;margin-top:.6rem;}
-    thead{background:var(--highlight);}
-    th,td{padding:.55rem .65rem;border:1px solid var(--border);text-align:left;font-size:.9rem;}
-    th{font-weight:700;letter-spacing:.5px;}
-    tbody tr:nth-child(odd){background:var(--highlight);}
-    td img{max-height:48px;border-radius:4px;object-fit:cover;cursor:pointer;}
-    .no-results,.result-message{font-weight:700;text-align:center;margin-top:.6rem;font-size:.9rem;}
-    .no-results{color:var(--danger);}
-    .result-message{color:var(--text);}
-    tr.highlight td{background:#fef08a !important;color:#1f2937 !important;}
-    .cards-view{display:none;flex-wrap:wrap;gap:1rem;overflow-y:auto;padding-right:.4rem;margin-top:.6rem;}
-    .card{background:var(--white);border:1px solid var(--border);border-radius:12px;box-shadow:var(--card-shadow);width:260px;display:flex;flex-direction:column;padding:.8rem;gap:.5rem;}
-    .card img{width:100%;height:160px;object-fit:cover;border-radius:8px;cursor:pointer;}
-    .card-footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;}
-    .card-footer span{font-weight:700;}
-    .card.highlight{background:#fef08a !important;}
-    .modal{display:none;position:fixed;z-index:20;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);}
-    .modal-content{position:relative;margin:5vh auto;background:#ffffff;border-radius:16px;width:90vw;max-width:400px;padding:1.5rem;display:flex;flex-direction:column;gap:.8rem;}
-    .close{position:absolute;top:12px;right:12px;color:#6b7280;font-size:24px;font-weight:300;cursor:pointer;line-height:1;}
-    .close:hover{color:#111827;}
-    #modalImage{width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:12px;margin-top:1rem;}
-    .btn-edit{background:#9ca3af;border:none;color:#fff;padding:.15rem .3rem;font-size:.65rem;border-radius:4px;cursor:pointer;margin-left:.25rem;}
-    .btn-edit:hover{background:#6b7280;}
-    #historyModal .modal-content{max-width:700px;max-height:80vh;overflow-y:auto;}
-    #historyTable{width:100%;font-size:.8rem;}
-    #historyTable th,#historyTable td{padding:.4rem;}
-    #historySearch{margin-bottom:.8rem;}
-    #cashModal .modal-content{max-width:420px;}
-    #cashTotal{font-size:1.5rem;font-weight:700;color:var(--accent);margin:.5rem 0;}
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400 ;700&display=swap');
+    :root {
+      --bg: #f9fafb;
+      --text: #1f2937;
+      --border: #e5e7eb;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --highlight: #f3f4f6;
+      --white: #ffffff;
+      --danger: #f87171;
+      --card-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier Prime', monospace; }
+    html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-size: 16px; }
+    h1 { font-size: 1.8rem; font-weight: 700; text-align: center; margin: .8rem 0 .6rem; letter-spacing: 1px; text-transform: uppercase; }
+    .container { width: 98vw; height: 96vh; background: var(--white); border: 1px solid var(--border); padding: 1.2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,.05); display: flex; flex-direction: column; overflow: hidden; }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: .6rem;
+      font-size: .9rem;
+    }
+    .top-bar > * { white-space: nowrap; }
+
+    #lowStockBox {
+      background: var(--danger);
+      color: #fff;
+      padding: .3rem .6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: .8rem;
+      min-width: 40px;
+      text-align: center;
+      display: none;
+    }
+
+    #reader { width: 320px; margin: .6rem auto; }
+
+    .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
+    label { font-weight: 700; font-size: .9rem; }
+    input, select { padding: .55rem .65rem; border: 1px solid var(--border); border-radius: 6px; font-size: .95rem; }
+    button.stamp {
+      padding: .55rem 1rem;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: var(--white);
+      font-weight: 700;
+      font-size: .9rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background .2s ease;
+      white-space: nowrap;
+    }
+    button.stamp:hover { background: var(--accent-hover); }
+    table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
+    thead { background: var(--highlight); }
+    th, td { padding: .55rem .65rem; border: 1px solid var(--border); text-align: left; font-size: .9rem; }
+    th { font-weight: 700; letter-spacing: .5px; }
+    tbody tr:nth-child(odd) { background: var(--highlight); }
+    td img { max-height: 48px; border-radius: 4px; object-fit: cover; cursor: pointer; }
+    .no-results, .result-message { font-weight: 700; text-align: center; margin-top: .6rem; font-size: .9rem; }
+    .no-results { color: var(--danger); }
+    .result-message { color: var(--text); }
+    tr.highlight td { background: #fef08a !important; color: #1f2937 !important; }
+    .cards-view { display: none; flex-wrap: wrap; gap: 1rem; overflow-y: auto; padding-right: .4rem; margin-top: .6rem; }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      padding: .8rem;
+      gap: .5rem;
+    }
+    .card img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+    .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+    .card-footer span { font-weight: 700; }
+    .card.highlight { background: #fef08a !important; }
+    .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
+    .modal-content { position: relative; margin: 5vh auto; background: #ffffff; border-radius: 16px; width: 90vw; max-width: 400px; padding: 1.5rem; display: flex; flex-direction: column; gap: .8rem; }
+    .close { position: absolute; top: 12px; right: 12px; color: #6b7280; font-size: 24px; font-weight: 300; cursor: pointer; line-height: 1; }
+    .close:hover { color: #111827; }
+    #modalImage { width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 12px; margin-top: 1rem; }
+    .btn-edit {
+        background: #9ca3af;
+        border: none;
+        color: #fff;
+        padding: .15rem .3rem;
+        font-size: .65rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: .25rem;
+    }
+    .btn-edit:hover { background: #6b7280; }
+
+    /* NUEVO: Historial de ventas */
+    #historyModal .modal-content { max-width: 700px; max-height: 80vh; overflow-y: auto; }
+    #historyTable { width: 100%; font-size: .8rem; }
+    #historyTable th, #historyTable td { padding: .4rem; }
+    #historySearch { margin-bottom: .8rem; }
+
+    /* NUEVO: Cierre de caja */
+    #cashModal .modal-content { max-width: 420px; }
+    #cashTotal { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: .5rem 0; }
   </style>
 </head>
 
 <body>
-<div id="notExistModal" style="display:none;position:fixed;z-index:30;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:#fff;padding:1rem 2rem;border-radius:8px;">Producto no existente</div>
+<div id="notExistModal" style="display:none;">Producto no existente</div>
 
 <h1>Inventario</h1>
+
 <div class="container">
   <div class="top-bar">
     <div id="lowStockBox" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
@@ -77,6 +144,7 @@
 
   <div id="reader"></div>
 
+  <!-- BLOQUE DE BÚSQUEDA CON AUTOCOMPLETE=OFF -->
   <form id="searchForm" autocomplete="off" onsubmit="event.preventDefault(); filterInventory();">
     <div class="search-block">
       <div>
@@ -119,24 +187,25 @@
       <button class="stamp" onclick="clearFilters()" type="button">Limpiar filtros</button>
     </div>
   </form>
+  <!-- FIN BLOQUE DE BÚSQUEDA -->
 
   <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
     <table>
       <thead>
-      <tr>
-        <th>#</th>
-        <th>Imagen</th>
-        <th>Nombre</th>
-        <th>Código de Barras</th>
-        <th>Código de Barras (img)</th>
-        <th>Precio</th>
-        <th>Desc(%)</th>
-        <th>Precio c/Desc</th>
-        <th>Descripción</th>
-        <th>Categoría</th>
-        <th>Stock</th>
-        <th>Acciones</th>
-      </tr>
+        <tr>
+          <th>#</th>
+          <th>Imagen</th>
+          <th>Nombre</th>
+          <th>Código de Barras</th>
+          <th>Código de Barras (img)</th>
+          <th>Precio</th>
+          <th>Desc(%)</th>
+          <th>Precio c/Desc</th>
+          <th>Descripción</th>
+          <th>Categoría</th>
+          <th>Stock</th>
+          <th>Acciones</th>
+        </tr>
       </thead>
       <tbody id="inventoryList"></tbody>
     </table>
@@ -180,7 +249,7 @@
   </div>
 </div>
 
-<!-- Modal Historial -->
+<!-- NUEVO: Modal Historial de Ventas -->
 <div id="historyModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeHistoryModal()">&times;</span>
@@ -188,22 +257,22 @@
     <input type="text" id="historySearch" placeholder="Buscar producto o código..." oninput="filterHistory()">
     <table id="historyTable">
       <thead>
-      <tr>
-        <th>#</th>
-        <th>Producto</th>
-        <th>Código</th>
-        <th>Cantidad</th>
-        <th>Precio Unit.</th>
-        <th>Total</th>
-        <th>Fecha y Hora</th>
-      </tr>
+        <tr>
+          <th>#</th>
+          <th>Producto</th>
+          <th>Código</th>
+          <th>Cantidad</th>
+          <th>Precio Unit.</th>
+          <th>Total</th>
+          <th>Fecha y Hora</th>
+        </tr>
       </thead>
       <tbody id="historyBody"></tbody>
     </table>
   </div>
 </div>
 
-<!-- Modal Cierre -->
+<!-- NUEVO: Modal Cierre de Caja -->
 <div id="cashModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeCashModal()">&times;</span>
@@ -258,19 +327,20 @@
     doc.save('etiquetas.pdf');
   }
 
-  /* =========  CÁMARA  ========= */
+  /* ============================================================
+     CÁMARA – PARA QUE LEA LA IMAGEN DEL CÓDIGO
+  ============================================================ */
   async function startCameraScan() {
-    if (html5QrCode && html5QrCode.getState() === 2) return; // 2 = SCANNING
+    if (html5QrCode && html5QrCode.getState() === 2) return; // ya está corriendo
     try {
-      if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); }
+      if (html5QrCode) { await html5QrCode.stop(); html5QrCode.clear(); html5QrCode = null; }
       html5QrCode = new Html5Qrcode("reader");
       const config = {
-        videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        fps: 10,
-        qrbox: 350
+        videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
       };
       await html5QrCode.start(
         config,
+        { fps: 10, qrbox: 350 },
         onScanCamera,
         () => {},
         { formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128] }
@@ -283,16 +353,6 @@
       cancelScan();
     }
   }
-
-  function cancelScan() {
-    if (html5QrCode) {
-      html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
-      html5QrCode = null;
-    }
-    document.getElementById('reader').style.display = 'none';
-    document.getElementById('cancelScanBtn').style.display = 'none';
-  }
-
   function onScanCamera(barcode) {
     console.clear(); console.log('🔍 Cámara detectó:', barcode);
     const found = inventory.some(p => p.barcode.trim() === barcode.trim());
@@ -302,6 +362,15 @@
     filterInventory();
     cancelScan();
   }
+  function cancelScan() {
+    if (html5QrCode) {
+      html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+      html5QrCode = null;
+    }
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('cancelScanBtn').style.display = 'none';
+  }
+  /* ============================================================ */
 
   /* =========  USB HID  ========= */
   let usbReaderReady = false;
@@ -355,7 +424,7 @@
   function showNotExist() {
     const box = document.getElementById('notExistModal');
     box.style.display = 'block';
-    setTimeout(() => box.style.display = 'none', 2000);
+    setTimeout(() => box.style.display = 'none', 3000);
   }
 
   /* =========  CARGAR INVENTARIO  ========= */
@@ -598,6 +667,7 @@
     const total = todaySales.reduce((sum, v) => sum + parseFloat(v.total), 0);
     const physical = parseFloat(document.getElementById('physicalCash').value) || 0;
     const diff = (physical - total).toFixed(2);
+
     doc.setFontSize(16);
     doc.text('Cierre de Caja - KLOHESV', 14, 20);
     doc.setFontSize(12);
@@ -667,7 +737,7 @@
       if (row >= 1 && row <= cards.length) {
         const target = cards[row - 1];
         target.classList.add('highlight');
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' );
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else alert('Fila fuera de rango.');
     }
   }

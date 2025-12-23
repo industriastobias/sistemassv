@@ -51,6 +51,7 @@
       display: none;
     }
 
+    /* ---- visor SIEMPRE visible cuando se active ---- */
     #reader { width: 320px; margin: .6rem auto; }
 
     .search-block { display: flex; flex-wrap: wrap; gap: .8rem; margin-bottom: 1rem; align-items: flex-end; }
@@ -113,20 +114,26 @@
     }
     .btn-edit:hover { background: #6b7280; }
 
-    /* NUEVO: Historial de ventas */
-    #historyModal .modal-content { max-width: 700px; max-height: 80vh; overflow-y: auto; }
-    #historyTable { width: 100%; font-size: .8rem; }
-    #historyTable th, #historyTable td { padding: .4rem; }
-    #historySearch { margin-bottom: .8rem; }
-
-    /* NUEVO: Cierre de caja */
-    #cashModal .modal-content { max-width: 420px; }
-    #cashTotal { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: .5rem 0; }
+    /* --- Modal flotante "Producto no existente" --- */
+    #notExistModal {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--danger);
+        color: #fff;
+        padding: .6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 700;
+        z-index: 9999;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
   </style>
 </head>
 
 <body>
-  <div id="notExistModal" style="display:none;">Producto no existente</div>
+  <div id="notExistModal">Producto no existente</div>
 
   <h1>Inventario</h1>
 
@@ -136,19 +143,13 @@
       <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
       <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
-      <button class="stamp" onclick="openHistoryModal()" title="Historial de ventas">📜 Historial</button>
-      <button class="stamp" onclick="openCashModal()" title="Cierre de caja">💰 Cierre</button>
-      <button class="stamp" onclick="toggleKiosk()" title="Pantalla completa">🔲 Kiosko</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
     </div>
 
+    <!-- Visor de cámara: ahora SIEMPRE visible cuando se active -->
     <div id="reader"></div>
 
     <div class="search-block">
-      <div>
-        <label for="searchName">Buscar por nombre:</label>
-        <input type="text" id="searchName" placeholder="Ej: Anillo" oninput="filterInventory()">
-      </div>
       <div>
         <label for="searchCategory">Filtrar por categoría:</label>
         <select id="searchCategory">
@@ -220,7 +221,7 @@
       <label for="soldQuantity">Cantidad vendida:</label>
       <input type="number" id="soldQuantity" min="1">
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500.50">
+      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500">
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
     </div>
@@ -232,7 +233,7 @@
       <span class="close" onclick="closePriceModal()">&times;</span>
       <h2>Editar precio</h2>
       <label>Nuevo precio:</label>
-      <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990.99">
+      <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990">
       <button class="stamp" onclick="saveNewPrice()">Guardar</button>
     </div>
   </div>
@@ -242,44 +243,6 @@
     <div class="modal-content">
       <span class="close" onclick="closeImageModal()">&times;</span>
       <img id="modalImage" src="" alt="Imagen grande">
-    </div>
-  </div>
-
-  <!-- NUEVO: Modal Historial de Ventas -->
-  <div id="historyModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeHistoryModal()">&times;</span>
-      <h2>Historial de Ventas</h2>
-      <input type="text" id="historySearch" placeholder="Buscar producto o código..." oninput="filterHistory()">
-      <table id="historyTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Producto</th>
-            <th>Código</th>
-            <th>Cantidad</th>
-            <th>Precio Unit.</th>
-            <th>Total</th>
-            <th>Fecha y Hora</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- NUEVO: Modal Cierre de Caja -->
-  <div id="cashModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeCashModal()">&times;</span>
-      <h2>Cierre de Caja</h2>
-      <label>Total de ventas del día:</label>
-      <div id="cashTotal">$0.00</div>
-      <label>Ingresa el dinero físico en caja:</label>
-      <input type="number" id="physicalCash" step="0.01" placeholder="Ej: 1234.56">
-      <button class="stamp" onclick="closeCash()">Cerrar Caja</button>
-      <button class="stamp" onclick="downloadCashPDF()" style="background:#16a34a;margin-top:.5rem;">📄 Descargar PDF</button>
-      <div id="cashResult" class="result-message" style="display:none; margin-top:1rem;"></div>
     </div>
   </div>
 
@@ -341,24 +304,25 @@
     }
 
     function startCameraScan() {
+      // Si ya está iniciado, no hacer nada (evita duplicados)
       if (html5QrCode && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) return;
 
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: 300 },
+        { fps: 5, qrbox: 300 },          // más lento, caja más grande
         (barcode) => {
           const found = inventory.some(p => p.barcode.trim() === barcode.trim());
           if (!found) {
-            beep('error');
+            beepError();
             showNotExist();
             return;
           }
-          beep('ok');
+          beepOK();
           document.getElementById('searchCode').value = barcode;
           filterInventory();
         },
-        (error) => { },
+        (error) => { /* silenciamos errores de frame vacío */ },
         { formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128,
                                Html5QrcodeSupportedFormats.CODE_39,
                                Html5QrcodeSupportedFormats.EAN_13,
@@ -369,11 +333,13 @@
           showTorchButtonIfSupported: true }
       ).catch(err => console.log(err));
 
+      // Muestro el visor y el botón Cancelar
       document.getElementById('reader').style.display = 'block';
       document.getElementById('cancelScanBtn').style.display = 'inline-block';
     }
 
     function cancelScan() {
+      // Paro y oculto
       if (html5QrCode) {
         html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
       }
@@ -381,6 +347,9 @@
       document.getElementById('cancelScanBtn').style.display = 'none';
     }
 
+    /* =========================================================
+       LECTOR USB-HID (aparato externo)
+       ========================================================= */
     let usbReaderReady = false;
     function initUSBReader() {
       if (usbReaderReady) {
@@ -404,12 +373,12 @@
         if (usbBuffer.trim()) {
           const found = inventory.some(p => p.barcode.trim() === usbBuffer.trim());
           if (!found) {
-            beep('error');
+            beepError();
             showNotExist();
             usbBuffer = '';
             return;
           }
-          beep('ok');
+          beepOK();
           document.getElementById('searchCode').value = usbBuffer.trim();
           filterInventory();
         }
@@ -423,20 +392,22 @@
         usbTimer = setTimeout(() => { usbBuffer = ''; }, 150);
       }
     }
+    /* ========================================================= */
 
-    function beep(type = 'ok') {
+    function beepOK() {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       osc.connect(ctx.destination);
-      switch (type) {
-        case 'ok': osc.frequency.value = 880; osc.stop(ctx.currentTime + 4); break; // 4 segundos
-        case 'error': osc.frequency.value = 400; osc.stop(ctx.currentTime + 0.25); break;
-        case 'low': osc.frequency.value = 600; osc.stop(ctx.currentTime + 0.15); break;
-        case 'cash': osc.frequency.value = 1000; osc.stop(ctx.currentTime + 0.12); break;
-      }
-      osc.start();
+      osc.frequency.value = 880;
+      osc.start(); osc.stop(ctx.currentTime + 0.08);
     }
-
+    function beepError() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.frequency.value = 400;
+      osc.start(); osc.stop(ctx.currentTime + 0.25);
+    }
     function showNotExist() {
       const box = document.getElementById('notExistModal');
       box.style.display = 'block';
@@ -591,40 +562,29 @@
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
-      if (isNaN(soldQty) || soldQty <= 0) { beep('error'); alert('Cantidad inválida'); return; }
-      if (isNaN(soldPrice) || soldPrice < 0) { beep('error'); alert('Precio inválido'); return; }
+      if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
+      if (isNaN(soldPrice) || soldPrice < 0) { alert('Precio inválido'); return; }
       const item = inventory[currentSoldIndex];
-      if (soldQty > item.quantity) { beep('error'); alert('Stock insuficiente'); return; }
+      if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-      const now = new Date();
-      const fechaHora = now.toLocaleString('sv-SE').slice(0, 19).replace('T', ' ');
-      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: (soldPrice * soldQty).toFixed(2), fechaHora };
+      const soldItem = { name: item.name, code: item.code, price: soldPrice, quantity: soldQty, total: soldPrice * soldQty };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
       filterInventory();
       closeSoldModal();
-      beep('ok'); // 4 segundos
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
     }
 
-    function buildTicketText(item) {
-      return `KLOHESV\nFecha: ${item.fechaHora}\nProducto: ${item.name}\nCant: ${item.quantity} x $${item.price}\nTotal: $${item.total}\nGracias por tu compra!`;
-    }
-
     function filterInventory() {
-      const name = document.getElementById('searchName').value.trim().toLowerCase();
       const category = document.getElementById('searchCategory').value.trim().toLowerCase();
       const code = document.getElementById('searchCode').value.trim().toLowerCase();
       let filtered = inventory;
-      if (name) {
-        filtered = filtered.filter(item => item.name.toLowerCase().includes(name));
-      }
       if (code) {
-        filtered = filtered.filter(item => item.barcode.trim().toLowerCase().includes(code));
+        filtered = inventory.filter(item => item.barcode.trim().toLowerCase().includes(code));
         if (filtered.length === 0) {
           document.getElementById('inventoryList').innerHTML = '';
           document.getElementById('cardsView').innerHTML = '';
@@ -647,7 +607,7 @@
         return;
       }
       if (category) {
-        filtered = filtered.filter(item => item.category.trim().toLowerCase() === category);
+        filtered = inventory.filter(item => item.category.trim().toLowerCase() === category);
       }
       loadInventory(filtered);
       document.getElementById('resultMessage').style.display = 'none';
@@ -675,7 +635,6 @@
     }
 
     function clearFilters() {
-      document.getElementById('searchName').value = '';
       document.getElementById('searchCategory').value = '';
       document.getElementById('searchCode').value = '';
       document.getElementById('goToRow').value = '';
@@ -692,107 +651,10 @@
       document.getElementById('imageModal').style.display = 'none';
     }
 
-    function openHistoryModal() {
-      renderHistory();
-      document.getElementById('historyModal').style.display = 'block';
-    }
-
-    function closeHistoryModal() {
-      document.getElementById('historyModal').style.display = 'none';
-    }
-
-    function renderHistory(list = null) {
-      const soldInventory = list || JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      const body = document.getElementById('historyBody');
-      body.innerHTML = soldInventory.map((v, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${v.name}</td>
-          <td>${v.code}</td>
-          <td>${v.quantity}</td>
-          <td>$${Number(v.price).toFixed(2)}</td>
-          <td>$${Number(v.total).toFixed(2)}</td>
-          <td>${v.fechaHora || '—'}</td>
-        </tr>
-      `).join('');
-    }
-
-    function filterHistory() {
-      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      const q = document.getElementById('historySearch').value.trim().toLowerCase();
-      if (!q) return renderHistory(soldInventory);
-      const filtered = soldInventory.filter(v =>
-        v.name.toLowerCase().includes(q) ||
-        v.code.toLowerCase().includes(q)
-      );
-      renderHistory(filtered);
-    }
-
-    function openCashModal() {
-      const today = new Date().toLocaleDateString('sv-SE');
-      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      const todaySales = soldInventory.filter(v => v.fechaHora.startsWith(today));
-      const total = todaySales.reduce((sum, v) => sum + parseFloat(v.total), 0);
-      document.getElementById('cashTotal').textContent = `$${total.toFixed(2)}`;
-      document.getElementById('physicalCash').value = '';
-      document.getElementById('cashResult').style.display = 'none';
-      document.getElementById('cashModal').style.display = 'block';
-    }
-
-    function closeCashModal() {
-      document.getElementById('cashModal').style.display = 'none';
-    }
-
-    function closeCash() {
-      const total = parseFloat(document.getElementById('cashTotal').textContent.replace('$', ''));
-      const physical = parseFloat(document.getElementById('physicalCash').value);
-      if (isNaN(physical)) { beep('error'); alert('Monto inválido'); return; }
-      const diff = (physical - total).toFixed(2);
-      const result = document.getElementById('cashResult');
-      result.style.display = 'block';
-      if (diff == 0) result.textContent = '✅ Cuadre perfecto';
-      else if (diff > 0) result.textContent = `✅ Sobrante: $${diff}`;
-      else result.textContent = `⚠️ Falta: $${Math.abs(diff)}`;
-      beep('cash');
-    }
-
-    function downloadCashPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const today = new Date().toLocaleDateString('sv-SE');
-      const soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      const todaySales = soldInventory.filter(v => v.fechaHora.startsWith(today));
-      const total = todaySales.reduce((sum, v) => sum + parseFloat(v.total), 0);
-      const physical = parseFloat(document.getElementById('physicalCash').value) || 0;
-      const diff = (physical - total).toFixed(2);
-
-      doc.setFontSize(16);
-      doc.text('Cierre de Caja - KLOHESV', 14, 20);
-      doc.setFontSize(12);
-      doc.text(`Fecha: ${today}`, 14, 30);
-      doc.text(`Total ventas: $${total.toFixed(2)}`, 14, 40);
-      doc.text(`Dinero físico: $${physical.toFixed(2)}`, 14, 50);
-      doc.text(`Diferencia: $${diff}`, 14, 60);
-      doc.save(`cierre_${today}.pdf`);
-    }
-
-    function toggleKiosk() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen();
-      }
-    }
-
-    // Atajos de teclado
     document.addEventListener('keydown', e => {
-      if (e.ctrlKey) {
-        switch (e.key.toLowerCase()) {
-          case 'v': e.preventDefault(); if (currentSoldIndex >= 0) document.getElementById('soldModal').style.display = 'block'; break;
-          case 'r': e.preventDefault(); openHistoryModal(); break;
-          case 'c': e.preventDefault(); openCashModal(); break;
-          case 'b': e.preventDefault(); document.getElementById('searchCode').focus(); break;
-        }
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        document.getElementById('searchCode').focus();
       }
     });
 

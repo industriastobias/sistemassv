@@ -165,11 +165,80 @@
       border-radius: 3px;
       font-weight: 700;
     }
+
+    /* ===== MENÚ LATERAL ===== */
+    #sideMenu {
+      position: fixed;
+      top: 0;
+      right: -65px;
+      width: 200px;
+      height: 100vh;
+      background: var(--highlight);
+      border-left: 1px solid var(--border);
+      box-shadow: -2px 0 8px rgba(0,0,0,.1);
+      transition: right .3s ease;
+      z-index: 1000;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    #sideMenu.show {
+      right: 0;
+    }
+    #sideMenu a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: .9rem;
+      padding: .4rem .6rem;
+      border-radius: 6px;
+      transition: background .2s ease;
+    }
+    #sideMenu a:hover {
+      background: var(--white);
+    }
+
+    /* Botón flotante ☰ */
+    #menuToggleBtn {
+      position: fixed;
+      bottom: 1.2rem;
+      right: 1.2rem;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: var(--white);
+      font-size: 1.4rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      z-index: 1001;
+    }
   </style>
 </head>
 
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
+
+  <!-- Botón flotante ☰ -->
+  <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
+
+  <!-- Menú lateral -->
+  <nav id="sideMenu">
+    <a href="#menu">Menú</a>
+    <a href="#compra">Compra</a>
+    <a href="#almacenamiento">Almacenamiento</a>
+    <a href="#lista">Lista</a>
+    <a href="#inventario">Inventario</a>
+    <a href="#gastos">Gastos</a>
+    <a href="#clientes">Clientes</a>
+    <a href="#descuentos">Descuentos</a>
+    <a href="#facturas">Facturas</a>
+    <a href="#traslados">Traslados</a>
+    <a href="#venta">Venta</a>
+    <a href="#" onclick="toggleKiosco(); return false;">Pantalla completa (modo kiosco)</a>
+  </nav>
 
   <div class="container">
     <div class="top-bar">
@@ -276,7 +345,6 @@
             <th>Precio</th>
             <th>Desc(%)</th>
             <th>Precio c/Desc</th>
-            <!-- <th>Descripción</th> -->
             <th>Fecha / Hora</th>
             <th>Categoría</th>
             <th>Stock</th>
@@ -669,7 +737,6 @@
 
       list.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-        const desc = item.description?.trim() || '---';
         return `
           <tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}">
             <td>${idx + 1}</td>
@@ -680,7 +747,6 @@
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
-            <!-- <td>${desc}</td> -->
             <td>${item.date || '—'}</td>
             <td>${highlightText(item.category, searchName)}</td>
             <td>${item.quantity}</td>
@@ -694,7 +760,6 @@
 
       cards.innerHTML = sorted.map((item, idx) => {
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
-        const desc = item.description?.trim() || '---';
         return `
           <div class="card" data-real-index="${inventory.indexOf(item)}">
             <img id="card-img-${idx}" />
@@ -704,7 +769,6 @@
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${highlightText(item.category, searchName)}</div>
-            <!-- <div>Desc: ${desc}</div> -->
             <div>Fecha: ${item.date || '—'}</div>
             <div class="card-footer">
               <button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button>
@@ -866,11 +930,15 @@
       document.getElementById('toggleViewBtn').textContent = 'Ver Tarjetas';
     }
 
-    // Asegurar fecha a productos antiguos
     inventory = inventory.map(ensureDateTime);
     localStorage.setItem('inventory', JSON.stringify(inventory));
 
     filterInventory();
+
+    /* ===== MENÚ LATERAL ===== */
+    function toggleMenu() {
+      document.getElementById('sideMenu').classList.toggle('show');
+    }
   </script>
 </body>
 </html>

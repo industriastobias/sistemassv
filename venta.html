@@ -3,43 +3,275 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ventas – Vieja a Nueva</title>
+  <title>Ventas Realizadas – Blanco Hueso</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    :root{--bg:#f5f5f5;--card:#ffffff;--text:#222;--accent:#444;--danger:#d63384;--radius:14px;--shadow:0 4px 20px rgba(0,0,0,.05);}
+    :root{
+      --bg:#f5f5f5;
+      --card:#ffffff;
+      --text:#222;
+      --accent:#444;
+      --danger:#d63384;
+      --radius:14px;
+      --shadow:0 4px 20px rgba(0,0,0,.05);
+    }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
-    body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:flex-start;padding:40px 20px;min-height:100vh;}
-    .container{width:100%;max-width:1200px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:40px;display:flex;flex-direction:column;gap:24px;}
-    @media(max-width:768px){body{padding:0;}.container{max-width:100%;border-radius:0;padding:20px;min-height:100vh;box-shadow:none;}}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      padding:40px 20px;
+      min-height:100vh;
+    }
+    .container{
+      width:100%;
+      max-width:1200px;
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:40px;
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+    @media(max-width:768px){
+      body{padding:0;}
+      .container{max-width:100%;border-radius:0;padding:20px;min-height:100vh;box-shadow:none;}
+    }
     .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
     .header h1{font-size:2rem;font-weight:700;color:var(--accent);}
-    #menuToggle{position:fixed;top:20px;right:20px;z-index:1001;background:var(--accent);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;box-shadow:var(--shadow);}
-    #sideMenu{position:fixed;top:0;right:-60px;width:60px;height:100vh;background:#ffffff;box-shadow:-2px 0 8px rgba(0,0,0,.05);display:flex;flex-direction:column;align-items:center;padding-top:80px;gap:20px;transition:right .3s;z-index:1000;}#sideMenu.show{right:0;}
-    #sideMenu a{color:var(--accent);font-size:1.4rem;text-decoration:none;position:relative;}#sideMenu a:hover::after{content:attr(data-title);position:absolute;right:45px;top:50%;transform:translateY(-50%);background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:.75rem;white-space:nowrap;}
-    .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;}.controls input,.controls select,.controls button{padding:10px 14px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);font-size:.875rem;}.controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:600;}.controls button:hover{opacity:.9;}
-    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
-    .card{background:#fafafa;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:.3s;position:relative;min-height:320px;opacity:0;transform:translateY(20px);animation:fadeIn .5s forwards;}@keyframes fadeIn{to{opacity:1;transform:translateY(0);}}.card:hover{transform:translateY(-4px);}
-    .card-header{display:flex;justify-content:space-between;align-items:center;}.card-title{font-size:1.1rem;font-weight:600;}.card-price{font-size:1.5rem;font-weight:700;color:var(--accent);}.card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}
-    .card-delete{background:var(--danger);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;}
-    .pagination{display:flex;justify-content:center;gap:12px;margin-top:auto;}.pagination button{padding:8px 16px;border:none;border-radius:var(--radius);background:#f5f5f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:600;}.pagination button:hover{background:var(--accent);color:#fff;}
-    .fab-totals{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.5rem;font-weight:700;box-shadow:var(--shadow);z-index:1000;transition:transform .2s;display:flex;align-items:center;justify-content:center;}.fab-totals:hover{transform:scale(1.1);}
-    #totalesModal,#facturaModal,#imgModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999;}
-    .totales-card,.factura-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;width:90vw;max-width:420px;}#facturaModal .factura-card{width:100vw;height:100vh;max-width:none;border-radius:0;margin:0;overflow:auto;}
-    .ticket-preview{background:#fff;color:#000;font-family:'Courier New',monospace;font-size:11px;line-height:1.3;padding:8px 6px;border:1px dashed #999;border-radius:6px;width:100%;max-width:360px;margin:0 auto;}.ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:6px;padding-right:6px;}
-    .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}.modal-buttons button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}.btn-print{background:#16a34a;color:#fff;}.btn-close{background:#6b7280;color:#fff;}
-    #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;}.card img{width:100%;height:160px;object-fit:contain;border-radius:8px;cursor:pointer;margin-bottom:8px;border:1px solid #eee;}
-    .barcode-text{font-size:10px;text-align:center;margin-top:4px;color:#666;}#btnTop{position:fixed;bottom:90px;right:20px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:none;place-items:center;box-shadow:var(--shadow);z-index:999;}
-    #noResults{display:none;text-align:center;padding:40px;color:var(--text);}#noResults svg{width:120px;margin-bottom:16px;fill:var(--accent);}
-    .new-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;padding:4px 8px;border-radius:12px;font-size:.65rem;font-weight:700;}
-    @media print{.header,.controls,.pagination,.fab-totals,#btnTop,.card-delete,.factCheck,#menuToggle,#sideMenu{display:none!important;}}
+
+    /* ---------- MENÚ PEGABLE ---------- */
+    #menuToggle{
+      position:fixed;
+      top:20px;
+      right:20px;
+      z-index:1001;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:50%;
+      width:40px;
+      height:40px;
+      font-size:1.2rem;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+    }
+    #sideMenu{
+      position:fixed;
+      top:0;
+      right:-60px;
+      width:60px;
+      height:100vh;
+      background:#ffffff;
+      box-shadow:-2px 0 8px rgba(0,0,0,.05);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding-top:80px;
+      gap:20px;
+      transition:right .3s;
+      z-index:1000;
+    }
+    #sideMenu.show{right:0;}
+    #sideMenu a{
+      color:var(--accent);
+      font-size:1.4rem;
+      text-decoration:none;
+      position:relative;
+    }
+    #sideMenu a:hover::after{
+      content:attr(data-title);
+      position:absolute;
+      right:45px;
+      top:50%;
+      transform:translateY(-50%);
+      background:#333;
+      color:#fff;
+      padding:4px 8px;
+      border-radius:4px;
+      font-size:.75rem;
+      white-space:nowrap;
+    }
+
+    .controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+    .controls input,.controls select,.controls button{
+      padding:10px 14px;
+      border:none;
+      border-radius:var(--radius);
+      background:#f5f5f5;
+      color:var(--text);
+      box-shadow:var(--shadow);
+      font-size:.875rem;
+    }
+    .controls button{
+      background:var(--accent);
+      color:#fff;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .controls button:hover{opacity:.9;}
+    .cards-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+      gap:20px;
+    }
+    .card{
+      background:#fafafa;
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      transition:.3s;
+      position:relative;
+      min-height:320px;
+      opacity:0;
+      transform:translateY(20px);
+      animation:fadeIn .5s forwards;
+    }
+    @keyframes fadeIn{to{opacity:1;transform:translateY(0);}}
+    .card:hover{transform:translateY(-4px);}
+    .card-header{display:flex;justify-content:space-between;align-items:center;}
+    .card-title{font-size:1.1rem;font-weight:600;}
+    .card-price{font-size:1.5rem;font-weight:700;color:var(--accent);}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto;}
+    .card-delete{
+      background:var(--danger);
+      color:#fff;
+      border:none;
+      padding:6px 12px;
+      border-radius:8px;
+      font-size:.75rem;
+      cursor:pointer;
+    }
+    .pagination{display:flex;justify-content:center;gap:12px;margin-top:auto;}
+    .pagination button{
+      padding:8px 16px;
+      border:none;
+      border-radius:var(--radius);
+      background:#f5f5f5;
+      color:var(--text);
+      box-shadow:var(--shadow);
+      cursor:pointer;
+      font-weight:600;
+    }
+    .pagination button:hover{background:var(--accent);color:#fff;}
+    .fab-totals{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      width:56px;
+      height:56px;
+      border-radius:50%;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      cursor:pointer;
+      font-size:1.5rem;
+      font-weight:700;
+      box-shadow:var(--shadow);
+      z-index:1000;
+      transition:transform .2s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .fab-totals:hover{transform:scale(1.1);}
+
+    /* ---------- MODALES ---------- */
+    #totalesModal,#facturaModal,#imgModal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+    }
+    .totales-card,.factura-card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:24px;
+      width:90vw;
+      max-width:420px;
+    }
+    #facturaModal .factura-card{
+      width:100vw;
+      height:100vh;
+      max-width:none;
+      border-radius:0;
+      margin:0;
+      overflow:auto;
+    }
+    .ticket-preview{
+      background:#fff;
+      color:#000;
+      font-family:'Courier New',monospace;
+      font-size:11px;
+      line-height:1.3;
+      padding:8px 6px;
+      border:1px dashed #999;
+      border-radius:6px;
+      width:100%;
+      max-width:360px;
+      margin:0 auto;
+    }
+    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:6px;padding-right:6px;}
+    .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+    .modal-buttons button{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}
+    .btn-print{background:#16a34a;color:#fff;}
+    .btn-close{background:#6b7280;color:#fff;}
+    #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;}
+    .card img{width:100%;height:160px;object-fit:contain;border-radius:8px;cursor:pointer;margin-bottom:8px;border:1px solid #eee;}
+    .barcode-text{font-size:10px;text-align:center;margin-top:4px;color:#666;}
+    #btnTop{
+      position:fixed;
+      bottom:90px;
+      right:20px;
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      cursor:pointer;
+      display:none;
+      place-items:center;
+      box-shadow:var(--shadow);
+      z-index:999;
+    }
+    #noResults{display:none;text-align:center;padding:40px;color:var(--text);}
+    #noResults svg{width:120px;margin-bottom:16px;fill:var(--accent);}
+    .new-badge{
+      position:absolute;
+      top:8px;
+      left:8px;
+      background:var(--accent);
+      color:#fff;
+      padding:4px 8px;
+      border-radius:12px;
+      font-size:.65rem;
+      font-weight:700;
+    }
+    @media print{
+      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu{display:none!important;}
+    }
   </style>
 </head>
 <body>
 
+<!-- Botón para mostrar/ocultar menú -->
 <button id="menuToggle" onclick="toggleMenu()">☰</button>
+
+<!-- Menú lateral pegable -->
 <nav id="sideMenu">
   <a href="compra.html" data-title="Compra"><i class="fa fa-shopping-cart"></i></a>
   <a href="almacenamiento.html" data-title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
@@ -55,64 +287,329 @@
 
 <div class="container">
   <div class="spinner" id="spinner"></div>
-  <header class="header"><h1>Ventas – Vieja a Nueva</h1></header>
+
+  <header class="header">
+    <h1>Ventas Realizadas</h1>
+  </header>
+
   <div class="controls">
     <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode">
-    <select id="rowsPerPage" onchange="loadSoldInventory()"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option></select>
+    <select id="rowsPerPage" onchange="loadSoldInventory()">
+      <option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option>
+    </select>
     <button onclick="abrirFactura()">🧾 Generar Factura</button>
     <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
   </div>
+
   <section class="cards-grid" id="soldInventoryList"></section>
-  <div id="noResults"><svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg><div>No se encontraron productos</div></div>
-  <div class="pagination"><button onclick="prevPage()">← Anterior</button><button onclick="nextPage()">Siguiente →</button></div>
+
+  <div id="noResults">
+    <svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
+    <div>No se encontraron productos</div>
+  </div>
+
+  <div class="pagination">
+    <button onclick="prevPage()">← Anterior</button>
+    <button onclick="nextPage()">Siguiente →</button>
+  </div>
 </div>
 
 <button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
 
-<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()"><div class="totales-card" onclick="event.stopPropagation()"><button class="close-btn" onclick="cerrarModalTotales()">×</button><div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);"><div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div><div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div><div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div><div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div></div></div></div>
+<!-- Modal totales -->
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="totales-card" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
+      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
+      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
+      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
+    </div>
+  </div>
+</div>
 
-<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()"><div class="factura-card" onclick="event.stopPropagation()"><h2>Factura – Ticket</h2><label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()"><label>Fecha</label><input id="fFecha" readonly><label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()"><div class="ticket-preview"><header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header><div class="line"></div><div style="font-size:11px"><div>Factura N°: <span id="fNumTxt">0001</span></div><div>Fecha: <span id="fFechaTxt"></span></div><div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div></div><div class="line"></div><table><thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead><tbody id="fBody"></tbody></table><div class="line"></div><div class="total">TOTAL: $<span id="fTotal">0.00</span></div><footer><div>¡Gracias por su compra!</div><div style="font-size:9px;margin-top:4px">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div></footer></div><div class="modal-buttons"><button class="btn-close" onclick="cerrarFactura()">Cerrar</button><button class="btn-print" onclick="imprimirTicket()">Imprimir</button><button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button></div></div></div>
+<!-- Modal factura pantalla completa -->
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="factura-card" onclick="event.stopPropagation()">
+    <h2>Factura – Ticket</h2>
+    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label><input id="fFecha" readonly>
+    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+
+    <div class="ticket-preview">
+      <header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
+      <div class="line"></div>
+      <div style="font-size:11px"><div>Factura N°: <span id="fNumTxt">0001</span></div><div>Fecha: <span id="fFechaTxt"></span></div><div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div></div>
+      <div class="line"></div>
+      <table><thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead><tbody id="fBody"></tbody></table>
+      <div class="line"></div>
+      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
+      <footer><div>¡Gracias por su compra!</div><div style="font-size:9px;margin-top:4px">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div></footer>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
+      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
+      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
+    </div>
+  </div>
+</div>
 
 <div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
 
 <script>
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  let currentPage = 1; let rowsPerPage = 100;
+  let currentPage = 1;
+  let rowsPerPage = 100;
+
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
   function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
-  function toggleMenu() { document.getElementById('sideMenu').classList.toggle('show'); }
-  let searchTimeout; document.getElementById('unifiedSearch').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250); });
-  window.addEventListener('scroll', () => { document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none'; });
+
+  function toggleMenu() {
+    document.getElementById('sideMenu').classList.toggle('show');
+  }
+
+  let searchTimeout;
+  document.getElementById('unifiedSearch').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
+  });
+  window.addEventListener('scroll', () => {
+    document.getElementById('btnTop').style.display = window.scrollY > 300 ? 'grid' : 'none';
+  });
+
   function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
-  function nextPage() { const filtered = soldInventory.filter(item => item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) || (item.barcode && item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()))); if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); } }
-  function abrirFactura() { const seleccionados = [...document.querySelectorAll('.factCheck:checked')]; if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; } document.getElementById('facturaModal').style.display = 'flex'; document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV'); actualizarTablaTicket(); }
+  function nextPage() {
+    const filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      (item.barcode && item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()))
+    );
+    if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
+  }
+
+  function abrirFactura() {
+    const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
+    if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
+    document.getElementById('facturaModal').style.display = 'flex';
+    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+    actualizarTablaTicket();
+  }
   function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
-  function actualizarTablaTicket() { const checks = [...document.querySelectorAll('.factCheck:checked')]; const body = document.getElementById('fBody'); body.innerHTML = ''; let sum = 0; checks.forEach(ch => { const p = JSON.parse(ch.value); const tr = document.createElement('tr'); tr.innerHTML = `<td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td><td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td><td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`; body.appendChild(tr); sum += Number(p.total); }); document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2)); document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value; document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value; document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value; }
-  function imprimirTicket() { const cont = document.querySelector('.ticket-preview').innerHTML; const ventana = window.open('', '', 'width=360,height=600'); ventana.document.write(`<html><head><title>Ticket</title><style>body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th:first-child,td:first-child{text-align:left;width:60%}th:nth-child(2),td:nth-child(2){text-align:center;width:15%}th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}.total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}.line{border-top:1px dashed #000;margin:6px 0}.pu{font-size:10px;color:#555;}</style></head><body>${cont}</body></html>`); ventana.document.close(); ventana.focus(); ventana.print(); ventana.close(); }
-  function descargarPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit:'mm', format:[80, 190] }); let y = 6; const margen = 4; const ancho = 80 - margen * 2; doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8; doc.setFontSize(10); doc.setFont(undefined, 'normal'); doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5; doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5; doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5; doc.line(margen, y, 80 - margen, y); y += 5; doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5; doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5; doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal'); const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22); cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; }); y += 3; doc.line(margen, y, 80 - margen, y); y += 4; doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4; doc.setFont(undefined, 'normal'); const filas = document.querySelectorAll('#fBody tr'); filas.forEach(fr => { const c = fr.cells; const prod = doc.splitTextToSize(c[0].textContent, 30); doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right'); y += prod.length * 3 + 1; }); y += 3; doc.line(margen, y, 80 - margen, y); y += 4; doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6; doc.setFontSize(8); doc.setFont(undefined, 'normal'); const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.'; const split = doc.splitTextToSize(msg, ancho); split.forEach(l => { doc.text(l, margen, y); y += 3; }); doc.save(`ticket_${document.getElementById('fNum').value}.pdf`); }
+  function actualizarTablaTicket() {
+    const checks = [...document.querySelectorAll('.factCheck:checked')];
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    let sum = 0;
+    checks.forEach(ch => {
+      const p = JSON.parse(ch.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
+        <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
+        <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
+      body.appendChild(tr);
+      sum += Number(p.total);
+    });
+    document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+  }
+  function imprimirTicket() {
+    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const ventana = window.open('', '', 'width=360,height=600');
+    ventana.document.write(`<html><head><title>Ticket</title><style>
+      body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      th:first-child,td:first-child{text-align:left;width:60%}
+      th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
+      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
+      .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
+      .line{border-top:1px dashed #000;margin:6px 0}
+      .pu{font-size:10px;color:#555;}
+      </style></head><body>${cont}</body></html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
+  function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'mm', format:[80, 190] });
+    let y = 6;
+    const margen = 4;
+    const ancho = 80 - margen * 2;
+
+    doc.setFontSize(14); doc.setFont(undefined, 'bold');
+    doc.text('KLOHESV', margen + ((ancho - doc.getTextWidth('KLOHESV')) / 2), y); y += 8;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text('San Salvador, El Salvador', margen + ((ancho - doc.getTextWidth('San Salvador, El Salvador')) / 2), y); y += 5;
+    doc.text('industriastobias@gmail.com', margen + ((ancho - doc.getTextWidth('industriastobias@gmail.com')) / 2), y); y += 5;
+    doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
+    doc.line(margen, y, 80 - margen, y); y += 5;
+
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
+    y += 3;
+    doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(9); doc.setFont(undefined, 'bold');
+    doc.text('Producto', margen, y); doc.text('Cant', margen + 38, y); doc.text('Total', margen + 62, y, 'right'); y += 4;
+    doc.setFont(undefined, 'normal');
+    const filas = document.querySelectorAll('#fBody tr');
+    filas.forEach(fr => {
+      const c = fr.cells;
+      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
+      y += prod.length * 3 + 1;
+    });
+    y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
+
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal');
+    const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
+    const split = doc.splitTextToSize(msg, ancho);
+    split.forEach(l => { doc.text(l, margen, y); y += 3; });
+
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+  }
+
   function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
   function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
-  function abrirImgModal(src) { const modal = document.getElementById('imgModal'); const img = document.getElementById('imgModalImg'); img.src = src; modal.style.display = 'flex'; }
+  function abrirImgModal(src) {
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
+    img.src = src;
+    modal.style.display = 'flex';
+  }
   function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
-  async function loadSoldInventory() { showSpinner(); const search = document.getElementById('unifiedSearch').value.toLowerCase(); rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
-  // ✅ ORDEN: MÁS VIEJAS PRIMERO
-  soldInventory.sort((a, b) => { const dateA = new Date(a.soldAt || 0); const dateB = new Date(b.soldAt || 0); return dateA - dateB; });
-  let filtered = soldInventory.filter(item => item.name.toLowerCase().includes(search) || (item.barcode && item.barcode.toLowerCase().includes(search)));
-  const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0); const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
-  localStorage.setItem('totalVendido', totalUSD.toFixed(2)); document.getElementById('totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits); document.getElementById('totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`; document.getElementById('fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
-  const start = (currentPage - 1) * rowsPerPage; const paginated = filtered.slice(start, start + rowsPerPage); const container = document.getElementById('soldInventoryList'); container.innerHTML = '';
-  if (paginated.length === 0) { document.getElementById('noResults').style.display = 'block'; } else { document.getElementById('noResults').style.display = 'none'; }
-  for (const item of paginated) { const card = document.createElement('div'); card.className = 'card'; const img = document.createElement('img'); img.alt = item.name;
-  const blob = await localforage.getItem(`img_${item.code}`); if (blob) { img.src = URL.createObjectURL(blob); img.onclick = () => abrirImgModal(img.src); } else { img.src = ''; img.style.display = 'none'; }
-  const barcodeText = document.createElement('div'); barcodeText.className = 'barcode-text'; barcodeText.textContent = item.barcode ? `Código: ${item.barcode}` : '';
-  if (isToday(item.soldAt)) { const badge = document.createElement('div'); badge.className = 'new-badge'; badge.textContent = 'Nuevo'; card.appendChild(badge); }
-  card.innerHTML = `<div class="card-header"><div class="card-title">${item.name}</div></div><div class="card-price">$${new Intl.NumberFormat('es-SV').format(Number(item.price).toFixed(2))}</div><div>Cantidad vendida: ${new Intl.NumberFormat('es-SV').format(item.quantity)}</div><div class="card-footer"><div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div><button class="card-delete" onclick="confirmDelete('${item.code}')">Eliminar</button></div><input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">`;
-  card.insertBefore(img, card.firstChild); if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer')); container.appendChild(card); }
-  hideSpinner(); }
-  window.confirmDelete = function (code) { const wrapper = document.createElement('div'); wrapper.innerHTML = `<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);width:280px;text-align:center;"><p>¿Eliminar este producto?</p><div style="display:flex;gap:12px;justify-content:center;margin-top:16px;"><button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button><button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${code}')">Eliminar</button></div></div></div>`; document.body.appendChild(wrapper); };
-  window.deleteSoldItem = function (code) { const index = soldInventory.findIndex(item => item.code === code); if (index !== -1) { soldInventory.splice(index, 1); localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); document.querySelector('div[style*="position:fixed"]').remove(); loadSoldInventory(); } };
-  function isToday(dateStr) { const d = new Date(dateStr); const today = new Date(); return d.toDateString() === today.toDateString(); }
+
+  async function loadSoldInventory() {
+    showSpinner();
+    const search = document.getElementById('unifiedSearch').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
+
+    // ✅ ORDEN: MÁS RECIENTES PRIMERO (fecha ISO)
+    soldInventory.sort((a, b) => {
+      const dateA = new Date(a.soldAt || 0);
+      const dateB = new Date(b.soldAt || 0);
+      return dateB - dateA;
+    });
+
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(search) ||
+      (item.barcode && item.barcode.toLowerCase().includes(search))
+    );
+
+    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
+
+    document.getElementById('totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    document.getElementById('totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
+    document.getElementById('fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(start, start + rowsPerPage);
+
+    const container = document.getElementById('soldInventoryList');
+    container.innerHTML = '';
+
+    if (paginated.length === 0) {
+      document.getElementById('noResults').style.display = 'block';
+    } else {
+      document.getElementById('noResults').style.display = 'none';
+    }
+
+    for (const item of paginated) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const img = document.createElement('img');
+      img.alt = `${item.name}`;
+
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = item.barcode ? `Código: ${item.barcode}` : '';
+
+      if (isToday(item.soldAt)) {
+        const badge = document.createElement('div');
+        badge.className = 'new-badge';
+        badge.textContent = 'Nuevo';
+        card.appendChild(badge);
+      }
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${item.name}</div>
+        </div>
+        <div class="card-price">$${new Intl.NumberFormat('es-SV').format(Number(item.price).toFixed(2))}</div>
+        <div>Cantidad vendida: ${new Intl.NumberFormat('es-SV').format(item.quantity)}</div>
+        <div class="card-footer">
+          <div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div>
+          <button class="card-delete" onclick="confirmDelete('${item.code}')">Eliminar</button>
+        </div>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
+      `;
+
+      card.insertBefore(img, card.firstChild);
+      if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      container.appendChild(card);
+    }
+
+    hideSpinner();
+  }
+
+  window.confirmDelete = function (code) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);width:280px;text-align:center;">
+          <p>¿Eliminar este producto?</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+            <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
+            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${code}')">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrapper);
+  };
+  window.deleteSoldItem = function (code) {
+    const index = soldInventory.findIndex(item => item.code === code);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      document.querySelector('div[style*="position:fixed"]').remove();
+      loadSoldInventory();
+    }
+  };
+
+  function isToday(dateStr) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }
+
   loadSoldInventory();
 </script>
 </body>

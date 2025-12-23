@@ -19,29 +19,29 @@
       --shadow:0 4px 20px rgba(0,0,0,.05);
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+    html,body{height:100%;}
     body{
       background:var(--bg);
       color:var(--text);
       display:flex;
       justify-content:center;
       align-items:flex-start;
-      padding:40px 20px;
+      padding:0;
       min-height:100vh;
     }
     .container{
       width:100%;
-      max-width:1200px;
+      height:100vh;
       background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
+      border-radius:0;
+      box-shadow:none;
       padding:40px;
       display:flex;
       flex-direction:column;
       gap:24px;
     }
     @media(max-width:768px){
-      body{padding:0;}
-      .container{max-width:100%;border-radius:0;padding:20px;min-height:100vh;box-shadow:none;}
+      .container{padding:20px;}
     }
     .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
     .header h1{font-size:2rem;font-weight:700;color:var(--accent);}
@@ -120,6 +120,7 @@
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
       gap:20px;
+      overflow:auto;
     }
     .card{
       background:#fafafa;
@@ -243,7 +244,23 @@
       color:#fff;
       border:none;
       cursor:pointer;
-      display:none;
+      display:grid;
+      place-items:center;
+      box-shadow:var(--shadow);
+      z-index:999;
+    }
+    #btnDown{
+      position:fixed;
+      bottom:140px;
+      right:20px;
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      cursor:pointer;
+      display:grid;
       place-items:center;
       box-shadow:var(--shadow);
       z-index:999;
@@ -262,7 +279,7 @@
       font-weight:700;
     }
     @media print{
-      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu{display:none!important;}
+      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,#btnDown,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu{display:none!important;}
     }
   </style>
 </head>
@@ -283,6 +300,8 @@
   <a href="facturas.html" data-title="Facturas"><i class="fa fa-file-invoice"></i></a>
   <a href="traslados.html" data-title="Traslados"><i class="fa fa-truck"></i></a>
   <a href="venta.html" data-title="Venta"><i class="fa fa-cash-register"></i></a>
+  <!-- MODO KIOSCO -->
+  <a id="kioskBtn" href="#" data-title="Pantalla completa" onclick="toggleKiosk();return false;"><i class="fa fa-expand"></i></a>
 </nav>
 
 <div class="container">
@@ -314,7 +333,9 @@
   </div>
 </div>
 
+<!-- Flechas -->
 <button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">↓</button>
 
 <button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
 
@@ -370,6 +391,15 @@
 
   function toggleMenu() {
     document.getElementById('sideMenu').classList.toggle('show');
+  }
+
+  /* ---------- MODO KIOSCO ---------- */
+  function toggleKiosk(){
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen();
+    }
   }
 
   let searchTimeout;

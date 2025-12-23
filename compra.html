@@ -325,6 +325,7 @@
         <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none; width:100%; margin-top:0.5rem;" />
         <p>Precio: $${Number(item.price).toFixed(2)}</p>
         <p>Stock: ${Number(item.quantity)}</p>
+        <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
         <div class="actions">
           <button class="btn-primary" onclick="editProduct(${idx})"><i class="fa fa-edit"></i> Editar</button>
           <button class="btn-danger" onclick="deleteProduct(${idx})"><i class="fa fa-trash"></i> Eliminar</button>
@@ -391,7 +392,8 @@
       discount: Number(form.get('discount')) || 0,
       quantity: Number(form.get('quantity')) || 0,
       description: form.get('description') || '',
-      category: form.get('category') || ''
+      category: form.get('category') || '',
+      addedAt: new Date().toLocaleString('es-ES')
     };
     if(editIndex === -1){
       const exists = inventory.find(i=>i.code === item.code);
@@ -489,6 +491,7 @@
           if((!inventory[idx].price || inventory[idx].price===0) && p.price) inventory[idx].price = p.price;
           if(!inventory[idx].description && p.description) inventory[idx].description = p.description;
           if(!inventory[idx].category && p.category) inventory[idx].category = p.category;
+          if(!inventory[idx].addedAt && p.addedAt) inventory[idx].addedAt = p.addedAt;
         } else {
           const nuevo = {
             name: p.name || p.code,
@@ -498,7 +501,8 @@
             discount: Number(p.discount) || 0,
             quantity: Number(p.quantity) || 0,
             description: p.description || '',
-            category: p.category || ''
+            category: p.category || '',
+            addedAt: p.addedAt || new Date().toLocaleString('es-ES')
           };
           inventory.push(nuevo);
         }
@@ -619,7 +623,7 @@
               mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
               preview.appendChild(mini);
               localforage.setItem(`img_${codigo}`, result);
-              loteTemporal.push({name:'',code:codigo,barcode:'',price:0,discount:0,quantity:0,description:'',category:''});
+              loteTemporal.push({name:'',code:codigo,barcode:'',price:0,discount:0,quantity:0,description:'',category:'',addedAt:new Date().toLocaleString('es-ES')});
               res();
             };
             reader.readAsDataURL(result);
@@ -692,6 +696,7 @@
       p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
       p.description = document.getElementById(`loteDescription${i}`).value.trim();
       p.category = document.getElementById(`loteCategory${i}`).value;
+      if(!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
     });
     inventory = inventory.concat(loteTemporal);
     localStorage.setItem('inventory', JSON.stringify(inventory));

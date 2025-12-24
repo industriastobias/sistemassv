@@ -262,10 +262,10 @@ function closeLightbox() {
 }
 
 /* ---------- MODAL CONTRASEÑA ---------- */
-let pendingAction = null;
+let pendingAction = null;   // {type:'edit'|'del', idx:number}
 
-function askPwd(onOk){
-  pendingAction = onOk;
+function askPwd(type, idx){
+  pendingAction = {type, idx};
   document.getElementById('pwdModal').style.display = 'flex';
   document.getElementById('pwdInput').value = '';
   document.getElementById('pwdInput').focus();
@@ -277,7 +277,9 @@ function closePwdModal(){
 function checkPwd(){
   if(document.getElementById('pwdInput').value === 'admin123'){
     closePwdModal();
-    if(pendingAction) pendingAction();
+    if(!pendingAction) return;
+    if(pendingAction.type === 'del') deleteConfirmed(pendingAction.idx);
+    if(pendingAction.type === 'edit') editConfirmed(pendingAction.idx);
   }else{
     alert('Contraseña incorrecta');
     document.getElementById('pwdInput').value = '';
@@ -346,42 +348,44 @@ function viewItem(index){
 }
 
 function deleteItem(index){
-  askPwd(() => {
-    if(!confirm('¿Eliminar producto?')) return;
-    const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
-    const item = inventory[realIndex];
-    localforage.removeItem(`img_${item.code}`);
-    inventory.splice(realIndex,1);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    doFilter();
-  });
+  askPwd('del', index);
+}
+function deleteConfirmed(index){
+  if(!confirm('¿Eliminar producto?')) return;
+  const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+  const item = inventory[realIndex];
+  localforage.removeItem(`img_${item.code}`);
+  inventory.splice(realIndex,1);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  doFilter();
 }
 
 function editItem(index){
-  askPwd(() => {
-    const card = document.getElementById(`card-${index}`);
-    const p    = filtered[index];
-    const realIndex = inventory.findIndex(it=> it.code === p.code);
-    if(card.querySelector('.edit-form')) return;
+  askPwd('edit', index);
+}
+function editConfirmed(index){
+  const card = document.getElementById(`card-${index}`);
+  const p    = filtered[index];
+  const realIndex = inventory.findIndex(it=> it.code === p.code);
+  if(!card || card.querySelector('.edit-form')) return;
 
-    const catOptions = CATEGORY_ORDER.map(c =>
-      `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('');
+  const catOptions = CATEGORY_ORDER.map(c =>
+    `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('');
 
-    const form = document.createElement('div');
-    form.className = 'edit-form';
-    form.innerHTML = `
-      <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
-      <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
-      <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
-      <select id="editCat${index}">${catOptions}</select>
-      <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
-      <div style="display:flex;gap:.3rem">
-        <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
-        <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
-      </div>
-    `;
-    card.appendChild(form);
-  });
+  const form = document.createElement('div');
+  form.className = 'edit-form';
+  form.innerHTML = `
+    <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
+    <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
+    <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
+    <select id="editCat${index}">${catOptions}</select>
+    <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
+    <div style="display:flex;gap:.3rem">
+      <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
+      <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
+    </div>
+  `;
+  card.appendChild(form);
 }
 
 function cancelEdit(index){

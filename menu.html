@@ -79,12 +79,25 @@
     }
     .modal-overlay.show .modal { transform: scale(1); }
     .modal h3 { margin-bottom: 1rem; font-weight: 600; }
-    .modal input {
-      width: 100%; padding: .75rem 1rem;
+    .pass-wrapper {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    .pass-wrapper input {
+      width: 100%; padding: .75rem 2.8rem .75rem 1rem;
       border: 1px solid var(--color-border);
       border-radius: var(--radius);
       font-size: 1rem;
-      margin-bottom: 1rem;
+    }
+    .pass-wrapper .toggle-eye {
+      position: absolute;
+      right: .6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      user-select: none;
+      color: var(--color-muted);
+      font-size: 22px;
     }
     .modal-buttons {
       display: flex; gap: .75rem; justify-content: flex-end;
@@ -177,7 +190,10 @@
 <div id="passModal" class="modal-overlay">
   <div class="modal" role="dialog" aria-labelledby="passTitle">
     <h3 id="passTitle">Acceso restringido</h3>
-    <input id="passInput" type="password" placeholder="Contraseña" autocomplete="off">
+    <div class="pass-wrapper">
+      <input id="passInput" type="password" placeholder="Contraseña" autocomplete="off">
+      <span class="material-icons toggle-eye" id="toggleEye">visibility</span>
+    </div>
     <div class="modal-buttons">
       <button class="cancel" id="passCancel">Cancelar</button>
       <button class="ok" id="passOk">Aceptar</button>
@@ -187,7 +203,7 @@
 
 <script>
   /* ---------- HASH SHA-256 (ADMIN123) ---------- */
-  const ADMIN_HASH = '0192023a7bbd73250516f069df18b500a098a1f2b8dd9708420c55c5d134cefb'; // admin123
+  const ADMIN_HASH = '8be3c943b1609fffbfc51aad666d0a04adf83c9d7b81a8cdc00a6fb570a6d5e2'; // admin123
 
   async function sha256(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -197,6 +213,7 @@
   /* ---------- MODAL ---------- */
   const modal = document.getElementById('passModal');
   const input = document.getElementById('passInput');
+  const toggleEye = document.getElementById('toggleEye');
   let targetHref = '';
 
   function showModal(href) {
@@ -209,6 +226,13 @@
     modal.classList.remove('show');
     targetHref = '';
   }
+
+  // Mostrar/ocultar contraseña
+  toggleEye.addEventListener('click', () => {
+    const type = input.type === 'password' ? 'text' : 'password';
+    input.type = type;
+    toggleEye.textContent = type === 'password' ? 'visibility' : 'visibility_off';
+  });
 
   document.getElementById('passCancel').addEventListener('click', hideModal);
   modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });

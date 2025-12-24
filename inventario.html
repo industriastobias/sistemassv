@@ -23,7 +23,6 @@
       border-radius: 0 0 0 var(--radius);
       padding: .4rem .6rem;
       display: flex; gap: .5rem; flex-wrap: wrap;
-      /* oculto por defecto */
       transform: translateX(100%);
       transition: transform .3s ease;
     }
@@ -37,7 +36,6 @@
     }
     #kioskoBar a:hover{background: var(--highlight);}
 
-    /* botón hamburguesa fijo */
     #menuToggle{
       position: fixed;
       top: 1rem; right: 1rem;
@@ -52,7 +50,6 @@
       box-shadow: var(--shadow);
     }
 
-    /* ---------- TEMA / OTROS (igual que antes) ---------- */
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
     #themeToggle{position:fixed;top:1rem;left:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
@@ -92,35 +89,12 @@
     @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
-
-    /* ---------- MODAL CONTRASEÑA ---------- */
-    .modal-pwd{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.6);
-      display:flex; align-items:center; justify-content:center;
-      z-index:99999;
-    }
-    .modal-pwd > div{
-      background:var(--card); color:var(--text);
-      padding:1.5rem; border-radius:var(--radius);
-      box-shadow:var(--shadow-hover);
-      width:90%; max-width:320px;
-      display:flex; flex-direction:column; gap:.8rem;
-    }
-    .modal-pwd input{
-      padding:.6rem; border:1px solid #e5e7eb; border-radius:8px;
-    }
-    .modal-pwd button{
-      padding:.5rem; font-size:.8rem;
-    }
   </style>
 </head>
 <body>
 
-<!-- Botón hamburguesa -->
 <button id="menuToggle" title="Abrir menú"><i class="fa fa-bars"></i></button>
 
-<!-- Menú oculto por defecto -->
 <nav id="kioskoBar">
   <a href="compra.html" title="Compra"><i class="fa fa-shopping-cart"></i></a>
   <a href="almacenamiento.html" title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
@@ -139,51 +113,31 @@
 
 <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
 
-<!-- Resumen -->
 <div class="summary-cards">
   <div class="summary-card"><h3>Total de productos</h3><p id="totalProducts">0</p></div>
   <div class="summary-card"><h3>Stock total</h3><p id="totalStock">0</p></div>
 </div>
 
-<!-- Rango de precio -->
 <div class="price-range">
   <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
   <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
 </div>
 
-<!-- Buscador -->
 <div class="search-bar">
   <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
 </div>
 
-<!-- Tabla -->
 <div id="inventoryTable" class="table-grid"></div>
 
-<!-- Total USD -->
 <div class="total-box"><h2>Total en USD</h2><p id="totalAmount">$0.00</p></div>
 
-<!-- Área impresión -->
 <div id="printArea" style="display:none;"></div>
 
-<!-- Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
 
-<!-- Modal contraseña -->
-<div id="pwdModal" class="modal-pwd" style="display:none">
-  <div>
-    <h3>Autorización requerida</h3>
-    <input id="pwdInput" type="password" placeholder="Contraseña" />
-    <div style="display:flex;gap:.5rem">
-      <button onclick="checkPwd()" class="btn-primary">Aceptar</button>
-      <button onclick="closePwdModal()" class="btn-danger">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <script>
-/* ---------- MODO KIOSKO ---------- */
 function entrarKiosko(){
   if(!document.fullscreenElement){
     document.documentElement.requestFullscreen().catch(()=>{});
@@ -191,12 +145,10 @@ function entrarKiosko(){
 }
 window.addEventListener('load', entrarKiosko);
 
-/* ---------- CONTROL MENÚ ---------- */
 const menuToggle = document.getElementById('menuToggle');
 const kioskoBar  = document.getElementById('kioskoBar');
 menuToggle.addEventListener('click', () => kioskoBar.classList.toggle('show'));
 
-/* ---------- ORDEN CATEGORÍAS ---------- */
 const CATEGORY_ORDER = [
   "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
 ];
@@ -205,14 +157,12 @@ let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 let filtered   = [...inventory];
 let searchTerm = '';
 
-/* ---------- TEMA OSCURO ---------- */
 const themeToggle = document.getElementById('themeToggle');
 themeToggle.addEventListener('click', () => {
   document.body.classList.toggle('dark');
   themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
 });
 
-/* ---------- CÁLCULOS ---------- */
 function calculateTotal(list){
   return list.reduce((sum,item)=>{
     const price = parseFloat(item.price)||0;
@@ -225,7 +175,6 @@ function stockTotal(list){
   return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
 }
 
-/* ---------- ORDEN PERSONALIZADO ---------- */
 function sortByCustomCategory(list) {
   return [...list].sort((a, b) => {
     const catA = (a.category || "Otros").trim();
@@ -238,7 +187,6 @@ function sortByCustomCategory(list) {
   });
 }
 
-/* ---------- UTILIDADES ---------- */
 function highlight(text, query){
   if(!query) return text;
   const re = new RegExp(`(${query})`, 'gi');
@@ -250,7 +198,6 @@ function copyToClipboard(text){
   });
 }
 
-/* ---------- LIGHTBOX ---------- */
 function openLightbox(src) {
   const lightbox = document.getElementById('lightbox');
   const img = document.getElementById('lightboxImg');
@@ -261,35 +208,6 @@ function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
 }
 
-/* ---------- MODAL CONTRASEÑA ---------- */
-let pendingAction = null;   // {type:'edit'|'del', idx:number}
-
-function askPwd(type, idx){
-  pendingAction = {type, idx};
-  document.getElementById('pwdModal').style.display = 'flex';
-  document.getElementById('pwdInput').value = '';
-  document.getElementById('pwdInput').focus();
-}
-function closePwdModal(){
-  document.getElementById('pwdModal').style.display = 'none';
-  pendingAction = null;
-}
-function checkPwd(){
-  if(document.getElementById('pwdInput').value === 'admin123'){
-    closePwdModal();
-    if(!pendingAction) return;
-    if(pendingAction.type === 'del') deleteConfirmed(pendingAction.idx);
-    if(pendingAction.type === 'edit') editConfirmed(pendingAction.idx);
-  }else{
-    alert('Contraseña incorrecta');
-    document.getElementById('pwdInput').value = '';
-  }
-}
-document.addEventListener('keydown', e => {
-  if(e.key === 'Escape') closePwdModal();
-});
-
-/* ---------- RENDER ---------- */
 function renderTable(){
   const container = document.getElementById('inventoryTable');
 
@@ -342,16 +260,11 @@ function renderTable(){
   document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
 }
 
-/* ---------- ACCIONES ---------- */
 function viewItem(index){
   alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
 }
-
 function deleteItem(index){
-  askPwd('del', index);
-}
-function deleteConfirmed(index){
-  if(!confirm('¿Eliminar producto?')) return;
+  if(!confirm('¿Eliminar producto?'))return;
   const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
   const item = inventory[realIndex];
   localforage.removeItem(`img_${item.code}`);
@@ -361,16 +274,10 @@ function deleteConfirmed(index){
 }
 
 function editItem(index){
-  askPwd('edit', index);
-}
-function editConfirmed(index){
   const card = document.getElementById(`card-${index}`);
   const p    = filtered[index];
   const realIndex = inventory.findIndex(it=> it.code === p.code);
-  if(!card || card.querySelector('.edit-form')) return;
-
-  const catOptions = CATEGORY_ORDER.map(c =>
-    `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('');
+  if(card.querySelector('.edit-form')) return;
 
   const form = document.createElement('div');
   form.className = 'edit-form';
@@ -378,7 +285,22 @@ function editConfirmed(index){
     <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
     <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
     <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
-    <select id="editCat${index}">${catOptions}</select>
+    <select id="editCat${index}">
+      <option value="Accesorios para el cabello" ${p.category === 'Accesorios para el cabello' ? 'selected' : ''}>Accesorios para el cabello</option>
+      <option value="Anillos" ${p.category === 'Anillos' ? 'selected' : ''}>Anillos</option>
+      <option value="Aritos" ${p.category === 'Aritos' ? 'selected' : ''}>Aritos</option>
+      <option value="Billetera" ${p.category === 'Billetera' ? 'selected' : ''}>Billetera</option>
+      <option value="Carteras" ${p.category === 'Carteras' ? 'selected' : ''}>Carteras</option>
+      <option value="Case audífonos" ${p.category === 'Case audífonos' ? 'selected' : ''}>Case audífonos</option>
+      <option value="Case teléfonos" ${p.category === 'Case teléfonos' ? 'selected' : ''}>Case teléfonos</option>
+      <option value="Chokers" ${p.category === 'Chokers' ? 'selected' : ''}>Chokers</option>
+      <option value="Collares" ${p.category === 'Collares' ? 'selected' : ''}>Collares</option>
+      <option value="General" ${p.category === 'General' ? 'selected' : ''}>General</option>
+      <option value="Lentes de sol" ${p.category === 'Lentes de sol' ? 'selected' : ''}>Lentes de sol</option>
+      <option value="Pulseras" ${p.category === 'Pulseras' ? 'selected' : ''}>Pulseras</option>
+      <option value="Relojes" ${p.category === 'Relojes' ? 'selected' : ''}>Relojes</option>
+      <option value="Otros" ${p.category === 'Otros' ? 'selected' : ''}>Otros</option>
+    </select>
     <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
     <div style="display:flex;gap:.3rem">
       <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
@@ -387,7 +309,6 @@ function editConfirmed(index){
   `;
   card.appendChild(form);
 }
-
 function cancelEdit(index){
   document.getElementById(`card-${index}`).querySelector('.edit-form').remove();
 }
@@ -406,7 +327,6 @@ function saveEdit(filterIdx, invIdx){
   doFilter();
 }
 
-/* ---------- FILTRO ---------- */
 function doFilter(){
   searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
   const minP = parseFloat(document.getElementById('minPrice').value) || 0;
@@ -428,7 +348,6 @@ document.getElementById('searchInput').addEventListener('input',doFilter);
 document.getElementById('minPrice').addEventListener('input',doFilter);
 document.getElementById('maxPrice').addEventListener('input',doFilter);
 
-/* ---------- SINCRONIZACIÓN ---------- */
 window.addEventListener('storage', e => {
   if(e.key === 'inventory'){
     inventory = JSON.parse(e.newValue) || [];
@@ -450,7 +369,6 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-/* ---------- INICIO ---------- */
 window.addEventListener('DOMContentLoaded',()=> doFilter());
 </script>
 </body>

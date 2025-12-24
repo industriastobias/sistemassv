@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -87,11 +87,32 @@
     .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
     .copy-barcode:hover{color:var(--accent-hover)}
     .edit-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem;font-size:.75rem;}
-    .edit-form input{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
+    .edit-form input, .edit-form select{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
     .edit-form button{padding:.3rem .6rem;font-size:.7rem;}
     @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
+
+    /* ---------- MODAL CONTRASEÑA ---------- */
+    .modal-pwd{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.6);
+      display:flex; align-items:center; justify-content:center;
+      z-index:99999;
+    }
+    .modal-pwd > div{
+      background:var(--card); color:var(--text);
+      padding:1.5rem; border-radius:var(--radius);
+      box-shadow:var(--shadow-hover);
+      width:90%; max-width:320px;
+      display:flex; flex-direction:column; gap:.8rem;
+    }
+    .modal-pwd input{
+      padding:.6rem; border:1px solid #e5e7eb; border-radius:8px;
+    }
+    .modal-pwd button{
+      padding:.5rem; font-size:.8rem;
+    }
   </style>
 </head>
 <body>
@@ -147,6 +168,18 @@
 <!-- Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
+</div>
+
+<!-- Modal contraseña -->
+<div id="pwdModal" class="modal-pwd" style="display:none">
+  <div>
+    <h3>Autorización requerida</h3>
+    <input id="pwdInput" type="password" placeholder="Contraseña" />
+    <div style="display:flex;gap:.5rem">
+      <button onclick="checkPwd()" class="btn-primary">Aceptar</button>
+      <button onclick="closePwdModal()" class="btn-danger">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -228,6 +261,32 @@ function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
 }
 
+/* ---------- MODAL CONTRASEÑA ---------- */
+let pendingAction = null;
+
+function askPwd(onOk){
+  pendingAction = onOk;
+  document.getElementById('pwdModal').style.display = 'flex';
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('pwdInput').focus();
+}
+function closePwdModal(){
+  document.getElementById('pwdModal').style.display = 'none';
+  pendingAction = null;
+}
+function checkPwd(){
+  if(document.getElementById('pwdInput').value === 'admin123'){
+    closePwdModal();
+    if(pendingAction) pendingAction();
+  }else{
+    alert('Contraseña incorrecta');
+    document.getElementById('pwdInput').value = '';
+  }
+}
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closePwdModal();
+});
+
 /* ---------- RENDER ---------- */
 function renderTable(){
   const container = document.getElementById('inventoryTable');
@@ -285,37 +344,46 @@ function renderTable(){
 function viewItem(index){
   alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
 }
+
 function deleteItem(index){
-  if(!confirm('¿Eliminar producto?'))return;
-  const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
-  const item = inventory[realIndex];
-  localforage.removeItem(`img_${item.code}`);
-  inventory.splice(realIndex,1);
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  doFilter();
+  askPwd(() => {
+    if(!confirm('¿Eliminar producto?')) return;
+    const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+    const item = inventory[realIndex];
+    localforage.removeItem(`img_${item.code}`);
+    inventory.splice(realIndex,1);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    doFilter();
+  });
 }
 
 function editItem(index){
-  const card = document.getElementById(`card-${index}`);
-  const p    = filtered[index];
-  const realIndex = inventory.findIndex(it=> it.code === p.code);
-  if(card.querySelector('.edit-form')) return;
+  askPwd(() => {
+    const card = document.getElementById(`card-${index}`);
+    const p    = filtered[index];
+    const realIndex = inventory.findIndex(it=> it.code === p.code);
+    if(card.querySelector('.edit-form')) return;
 
-  const form = document.createElement('div');
-  form.className = 'edit-form';
-  form.innerHTML = `
-    <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
-    <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
-    <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
-    <input id="editCat${index}"  value="${p.category}" placeholder="Categoría"/>
-    <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
-    <div style="display:flex;gap:.3rem">
-      <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
-      <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
-    </div>
-  `;
-  card.appendChild(form);
+    const catOptions = CATEGORY_ORDER.map(c =>
+      `<option value="${c}" ${c===p.category?'selected':''}>${c}</option>`).join('');
+
+    const form = document.createElement('div');
+    form.className = 'edit-form';
+    form.innerHTML = `
+      <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
+      <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
+      <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
+      <select id="editCat${index}">${catOptions}</select>
+      <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
+      <div style="display:flex;gap:.3rem">
+        <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
+        <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
+      </div>
+    `;
+    card.appendChild(form);
+  });
 }
+
 function cancelEdit(index){
   document.getElementById(`card-${index}`).querySelector('.edit-form').remove();
 }

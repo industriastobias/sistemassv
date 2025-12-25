@@ -697,9 +697,9 @@
 
       const updatedItem = inventory[currentPriceIndex];
       updatedItem.price = newPrice;
+      updatedItem.priceUpdated = true; // ✅ Marcar como actualizado
       localStorage.setItem('inventory', JSON.stringify(inventory));
 
-      // ✅ Sincroniza con almacenamiento.html
       syncPriceWithStorage(updatedItem);
 
       closePriceModal();
@@ -869,7 +869,9 @@
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
       const authBox = document.getElementById('authBox');
 
-      if (soldPrice !== item.price) {
+      if (item.priceUpdated && soldPrice === item.price) {
+        authBox.style.display = 'none'; // ✅ No pide autorización
+      } else if (soldPrice !== item.price) {
         authBox.style.display = 'block';
       } else {
         authBox.style.display = 'none';
@@ -885,7 +887,10 @@
       if (isNaN(soldPrice) || soldPrice < 0) { alert('Precio inválido'); return; }
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
 
-      if (soldPrice !== item.price) {
+      // ✅ Si el precio fue actualizado desde inventario/compra, no pide autorización
+      if (item.priceUpdated && soldPrice === item.price) {
+        // ✅ No pide autorización
+      } else if (soldPrice !== item.price) {
         const authName = document.getElementById('authSelect').value.trim().toLowerCase();
         const authPass = document.getElementById('authPass').value;
 

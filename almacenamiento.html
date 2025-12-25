@@ -166,7 +166,6 @@
       font-weight: 700;
     }
 
-    /* ===== MENÚ LATERAL ===== */
     #sideMenu {
       position: fixed;
       top: 0;
@@ -202,7 +201,6 @@
       background: var(--white);
     }
 
-    /* Botón flotante ☰ */
     #menuToggleBtn {
       position: fixed;
       bottom: 1.2rem;
@@ -224,10 +222,8 @@
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
 
-  <!-- Botón flotante ☰ -->
   <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
 
-  <!-- Menú lateral con iconos y enlaces .html -->
   <nav id="sideMenu">
     <a href="menu.html"><i class="fa-solid fa-bars"></i></a>
     <a href="compra.html"><i class="fa-solid fa-cart-shopping"></i></a>
@@ -376,13 +372,18 @@
       </label>
 
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500">
+      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500" oninput="checkPriceChange()">
 
       <!-- Autorización (se muestra sólo si cambian el precio) -->
       <div id="authBox" style="display:none;margin-top:1rem;">
-        <label>Autorización requerida</label>
-        <input type="text" id="authName" placeholder="Nombre (Paola o Ernesto)" style="margin-bottom:.4rem;">
-        <input type="password" id="authPass" placeholder="Contraseña" style="margin-bottom:.4rem;">
+        <label>Seleccione quién autoriza:</label>
+        <select id="authSelect" style="margin-bottom:.4rem;">
+          <option value="">-- Elija --</option>
+          <option value="paola">Paola</option>
+          <option value="ernesto">Ernesto</option>
+        </select>
+
+        <input type="password" id="authPass" placeholder="Contraseña de acceso" style="margin-bottom:.4rem;">
       </div>
 
       <button class="stamp" onclick="processSale()">Registrar</button>
@@ -845,6 +846,18 @@
       document.getElementById('confirmationMessage').style.display = 'none';
     }
 
+    function checkPriceChange() {
+      const item = inventory[currentSoldIndex];
+      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
+      const authBox = document.getElementById('authBox');
+
+      if (soldPrice !== item.price) {
+        authBox.style.display = 'block';
+      } else {
+        authBox.style.display = 'none';
+      }
+    }
+
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
@@ -855,12 +868,11 @@
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
 
       if (soldPrice !== item.price) {
-        document.getElementById('authBox').style.display = 'block';
-        const name = document.getElementById('authName').value.trim().toLowerCase();
-        const pass = document.getElementById('authPass').value;
+        const authName = document.getElementById('authSelect').value.trim().toLowerCase();
+        const authPass = document.getElementById('authPass').value;
 
-        if (!AUTH_USERS.includes(name) || pass !== AUTH_PASSWORD) {
-          alert('Autorización incorrecta.\nNombre válido: Paola o Ernesto\nContraseña: 159753');
+        if (!AUTH_USERS.includes(authName) || authPass !== AUTH_PASSWORD) {
+          alert('Autorización incorrecta.\nUsuarios válidos: Paola o Ernesto\nContraseña: 159753');
           document.getElementById('soldPrice').value = item.price;
           document.getElementById('authBox').style.display = 'none';
           return;
@@ -957,12 +969,10 @@
 
     filterInventory();
 
-    /* ===== MENÚ LATERAL ===== */
     function toggleMenu() {
       document.getElementById('sideMenu').classList.toggle('show');
     }
 
-    /* Cerrar menú al hacer clic fuera o en un enlace */
     document.addEventListener('click', function (e) {
       const menu = document.getElementById('sideMenu');
       const btn = document.getElementById('menuToggleBtn');
@@ -979,7 +989,6 @@
       });
     });
 
-    /* ===== MODO KIOSCO ===== */
     function toggleKiosco() {
       const body = document.body;
       const btn = document.getElementById('kioscoBtn');

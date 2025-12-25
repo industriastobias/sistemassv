@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js  "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js  "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js  "></script>
 
   <style>
     :root{
@@ -154,6 +154,28 @@
       border-radius: 12px;
       background: #fff;
     }
+
+    /* ---------- CÍRCULO DE CARGA ---------- */
+    #loadingOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(255,255,255,.6);
+      backdrop-filter:blur(4px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:99999;
+    }
+    #loadingOverlay.show{display:flex}
+    .spinner{
+      width:60px;
+      height:60px;
+      border:6px solid #e5e7eb;
+      border-top-color:var(--success);
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
@@ -188,6 +210,12 @@
     </div>
   </nav>
   <!-- ============================================== -->
+
+  <!-- ========= CÍRCULO DE CARGA ========= -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+  <!-- ===================================== -->
 
   <h1>Compra</h1>
 
@@ -375,51 +403,57 @@
 
   document.getElementById('purchaseForm').addEventListener('submit',function(e){
     e.preventDefault();
-    const form = new FormData(e.target);
-    const item = {
-      name: form.get('name') || '',
-      code: form.get('code') || '',
-      barcode: form.get('barcode') || '',
-      price: Number(form.get('price')) || 0,
-      discount: Number(form.get('discount')) || 0,
-      quantity: Number(form.get('quantity')) || 0,
-      description: form.get('description') || '',
-      category: form.get('category') || '',
-      addedAt: new Date().toLocaleString('es-ES')
-    };
-    if(editIndex === -1){
-      const exists = inventory.find(i=>i.code === item.code);
-      if(exists){
-        if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
-          item.code = `${item.code}_${Date.now()}`;
-        } else {
-          exists.quantity = Number(exists.quantity) + Number(item.quantity);
-          localStorage.setItem('inventory', JSON.stringify(inventory));
-          renderTable(); calculateTotal();
-          e.target.reset();
-          document.getElementById('imagePreview').style.display = 'none';
-          barcodeCanvas.style.display = 'none';
-          return;
+    // MOSTRAR CARGA
+    document.getElementById('loadingOverlay').classList.add('show');
+    setTimeout(()=>{
+      const form = new FormData(e.target);
+      const item = {
+        name: form.get('name') || '',
+        code: form.get('code') || '',
+        barcode: form.get('barcode') || '',
+        price: Number(form.get('price')) || 0,
+        discount: Number(form.get('discount')) || 0,
+        quantity: Number(form.get('quantity')) || 0,
+        description: form.get('description') || '',
+        category: form.get('category') || '',
+        addedAt: new Date().toLocaleString('es-ES')
+      };
+      if(editIndex === -1){
+        const exists = inventory.find(i=>i.code === item.code);
+        if(exists){
+          if(!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')){
+            item.code = `${item.code}_${Date.now()}`;
+          } else {
+            exists.quantity = Number(exists.quantity) + Number(item.quantity);
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            renderTable(); calculateTotal();
+            e.target.reset();
+            document.getElementById('imagePreview').style.display = 'none';
+            barcodeCanvas.style.display = 'none';
+            document.getElementById('loadingOverlay').classList.remove('show');
+            return;
+          }
         }
+        inventory.push(item);
+      } else {
+        inventory[editIndex] = item;
+        editIndex = -1;
       }
-      inventory.push(item);
-    } else {
-      inventory[editIndex] = item;
-      editIndex = -1;
-    }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    const imgFile = document.getElementById('imageFile').files[0];
-    if(imgFile){
-      new Compressor(imgFile,{quality:0.6,maxWidth:800,maxHeight:800,
-        success(result){
-          localforage.setItem(`img_${item.code}`, result).catch(()=>{});
-        }
-      });
-    }
-    e.target.reset();
-    document.getElementById('imagePreview').style.display = 'none';
-    barcodeCanvas.style.display = 'none';
-    renderTable(); calculateTotal();
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      const imgFile = document.getElementById('imageFile').files[0];
+      if(imgFile){
+        new Compressor(imgFile,{quality:0.6,maxWidth:800,maxHeight:800,
+          success(result){
+            localforage.setItem(`img_${item.code}`, result).catch(()=>{});
+          }
+        });
+      }
+      e.target.reset();
+      document.getElementById('imagePreview').style.display = 'none';
+      barcodeCanvas.style.display = 'none';
+      renderTable(); calculateTotal();
+      document.getElementById('loadingOverlay').classList.remove('show');
+    },5000);
   });
 
   function vaciarInventario(){

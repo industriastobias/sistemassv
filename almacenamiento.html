@@ -374,16 +374,18 @@
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
       <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500" oninput="checkPriceChange()">
 
-      <!-- Autorización (se muestra sólo si cambian el precio) -->
+      <!-- Autorización (solo mensaje inicial) -->
       <div id="authBox" style="display:none;margin-top:1rem;">
-        <label>Seleccione quién autoriza:</label>
+        <label style="color:#d97706;font-weight:700;">⚠️ Necesitas autorización para cambiar el precio.</label>
+        <br><br>
+        <label>Usuario:</label>
         <select id="authSelect" style="margin-bottom:.4rem;">
           <option value="">-- Elija --</option>
           <option value="paola">Paola</option>
           <option value="ernesto">Ernesto</option>
         </select>
 
-        <input type="password" id="authPass" placeholder="Contraseña de acceso" style="margin-bottom:.4rem;">
+        <input type="password" id="authPass" placeholder="Contraseña" style="margin-bottom:.4rem;">
       </div>
 
       <button class="stamp" onclick="processSale()">Registrar</button>
@@ -679,14 +681,30 @@
       document.getElementById('priceModal').style.display = 'none';
     }
 
+    // ✅ Sincroniza precios con almacenamiento.html sin autorización
+    function syncPriceWithStorage(updatedItem) {
+      const storage = JSON.parse(localStorage.getItem('almacenamiento') || '[]');
+      const found = storage.find(p => p.barcode === updatedItem.barcode);
+      if (found) {
+        found.price = updatedItem.price;
+        localStorage.setItem('almacenamiento', JSON.stringify(storage));
+      }
+    }
+
     function saveNewPrice() {
       const newPrice = parseFloat(document.getElementById('newPrice').value);
       if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
-      inventory[currentPriceIndex].price = newPrice;
+
+      const updatedItem = inventory[currentPriceIndex];
+      updatedItem.price = newPrice;
       localStorage.setItem('inventory', JSON.stringify(inventory));
+
+      // ✅ Sincroniza con almacenamiento.html
+      syncPriceWithStorage(updatedItem);
+
       closePriceModal();
       filterInventory();
-      document.getElementById('resultMessage').textContent = 'Precio actualizado';
+      document.getElementById('resultMessage').textContent = 'Precio actualizado y sincronizado';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
     }

@@ -724,22 +724,27 @@
 
   function guardarLoteCompleto(){
     if(!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
-    loteTemporal.forEach((p,i)=>{
-      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
-      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
-      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
-      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
-      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
-      p.description = document.getElementById(`loteDescription${i}`).value.trim();
-      p.category = document.getElementById(`loteCategory${i}`).value;
-      if(!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
-    });
-    inventory = inventory.concat(loteTemporal);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    alert('Lote guardado ✅');
-    loteTemporal = [];
-    document.getElementById('editLoteBubble').style.display = 'none';
-    renderTable(); calculateTotal();
+    // MOSTRAR CARGA
+    document.getElementById('loadingOverlay').classList.add('show');
+    setTimeout(()=>{
+      loteTemporal.forEach((p,i)=>{
+        p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+        p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+        p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
+        p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+        p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
+        p.description = document.getElementById(`loteDescription${i}`).value.trim();
+        p.category = document.getElementById(`loteCategory${i}`).value;
+        if(!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
+      });
+      inventory = inventory.concat(loteTemporal);
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+      alert('Lote guardado ✅');
+      loteTemporal = [];
+      document.getElementById('editLoteBubble').style.display = 'none';
+      renderTable(); calculateTotal();
+      document.getElementById('loadingOverlay').classList.remove('show');
+    },5000);
   }
 
   // ===== CÓDIGO DE BARRAS EN TIEMPO REAL =====

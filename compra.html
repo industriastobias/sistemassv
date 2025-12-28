@@ -12,19 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
   <style>
-    :root{
-      --bg:#f5f7fa;
-      --card:#ffffff;
-      --text:#1f2937;
-      --accent:#3b82f6;
-      --accent-hover:#2563eb;
-      --danger:#ef4444;
-      --success:#10b981;
-      --radius:16px;
-      --shadow:0 6px 20px rgba(0,0,0,.08);
-      --shadow-hover:0 8px 24px rgba(0,0,0,.12);
-      --transition:.3s ease;
-    }
+    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
     .sticky-menu{position:fixed;top:1rem;right:1rem;z-index:9999;}
@@ -142,7 +130,7 @@
   <!-- Fecha de compra -->
   <div><label>Fecha de compra *</label><input type="date" id="fechaCompra" name="fechaCompra" required></div>
 
-  <!-- Sugerencia de venta (60 %) – solo lectura -->
+  <!-- Sugerencia venta (60 %) – solo lectura -->
   <div>
     <label>Sugerencia venta (60 %)</label>
     <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background:#e5e7eb;color:#333">
@@ -565,6 +553,128 @@ function generarBarcode(value) {
   JsBarcode(barcodeCanvas, value, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: true, fontSize: 14, margin: 5 });
 }
 barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
+
+/* ============================================================
+   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
+============================================================ */
+async function procesarLote() {
+  const files = document.getElementById('loteFiles').files;
+  if (!files.length) { alert('Selecciona imágenes'); return; }
+  if (files.length < 1 || files.length > 130) { alert('Elige entre 1 y 130 imágenes'); return; }
+  const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
+  loteTemporal = [];
+  const preview = document.getElementById('lotePreview');
+  preview.innerHTML = '';
+  document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const codigo = `${prefix}${Date.now()}${i}`;
+    await new Promise(res => {
+      new Compressor(file, {
+        quality: 0.6, maxWidth: 800, maxHeight: 800,
+        success(result) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            const mini = document.createElement('div');
+            mini.className = 'mini-item';
+            mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+            preview.appendChild(mini);
+            localforage.setItem(`img_${codigo}`, result);
+            loteTemporal.push({
+              name: '', code: codigo, barcode: '', price: 0, valorReal: 0, fechaCompra: '',
+              discount: 0, quantity: 0, description: '', category: '',
+              addedAt: new Date().toLocaleString('es-ES'), tipoCompra: 'lote'
+            });
+            res();
+          };
+          reader.readAsDataURL(result);
+        },
+        error(err) { console.error(err); res(); }
+      });
+    });
+  }
+  document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+  mostrarEditorLote();
+}
+
+function vaciarLote() {
+  if (!confirm('¿Vaciar lote actual?')) return;
+  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
+  loteTemporal = [];
+  document.getElementById('lotePreview').innerHTML = '';
+  document.getElementById('loteStatus').textContent = '';
+  document.getElementById('editLoteBubble').style.display = 'none';
+}
+
+function mostrarEditorLote() {
+  const grid = document.getElementById('editLoteGrid');
+  grid.innerHTML = '';
+  document.getElementById('editLoteBubble').style.display = 'block';
+  loteTemporal.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'card-item';
+    card.innerHTML = `
+      <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
+      <h3>${p.code}</h3>
+      <input placeholder="Nombre" id="loteName${i}" value="${escapeHtml(p.name)}">
+      <input placeholder="Barras" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
+      <input placeholder="Precio venta" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
+      <input placeholder="Costo" id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
+      <input placeholder="Fecha compra" id="loteFecha${i}" type="date" value="${p.fechaCompra}">
+      <input placeholder="Desc(%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
+      <input placeholder="Stock" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
+      <input placeholder="Descripción" id="loteDescription${i}" value="${escapeHtml(p.description)}">
+      <select id="loteCategory${i}">
+        <option value="">-- Categoría --</option>
+        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+        <option value="Anillos">Anillos</option>
+        <option value="Aritos">Aritos</option>
+        <option value="Billeteras">Billeteras</option>
+        <option value="Carteras">Carteras</option>
+        <option value="Case audífonos">Case audífonos</option>
+        <option value="Case teléfonos">Case teléfonos</option>
+        <option value="Chokers">Chokers</option>
+        <option value="Collares">Collares</option>
+        <option value="General">General</option>
+        <option value="Lentes de sol">Lentes de sol</option>
+        <option value="Otros">Otros</option>
+        <option value="Pulseras">Pulseras</option>
+        <option value="Relojes">Relojes</option>
+      </select>
+    `;
+    grid.appendChild(card);
+    localforage.getItem(`img_${p.code}`).then(blob => {
+      if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
+    }).catch(() => {});
+  });
+}
+
+function guardarLoteCompleto() {
+  if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+  document.getElementById('loadingOverlay').classList.add('show');
+  setTimeout(() => {
+    loteTemporal.forEach((p, i) => {
+      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
+      p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
+      p.fechaCompra = document.getElementById(`loteFecha${i}`).value;
+      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
+      p.description = document.getElementById(`loteDescription${i}`).value.trim();
+      p.category = document.getElementById(`loteCategory${i}`).value;
+      if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
+    });
+    inventory = inventory.concat(loteTemporal);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    alert('Lote guardado ✅');
+    loteTemporal = [];
+    document.getElementById('editLoteBubble').style.display = 'none';
+    renderTable(); calculateTotal();
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }, 500);
+}
 
 /* ----------  Inicializar  ---------- */
 window.addEventListener('DOMContentLoaded', () => {

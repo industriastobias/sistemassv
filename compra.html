@@ -318,28 +318,48 @@ function calcularSugerencia() {
 valorRealInput.addEventListener('input', calcularSugerencia);
 porcentajeInput.addEventListener('input', calcularSugerencia);
 
+/* ============================================================
+   VALIDACIÓN #9 ANTES DE GUARDAR
+============================================================ */
+function validarAntesDeGuardar(item) {
+  // 1. Valor real > precio venta
+  if (item.valorReal && item.price && Number(item.valorReal) > Number(item.price)) {
+    if (!confirm('⚠️ El costo es MAYOR que el precio de venta. ¿Seguro de guardar?')) return false;
+  }
+  // 2. Fecha futura
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (item.fechaCompra > hoy) {
+    alert('❌ No puedes guardar una fecha futura.');
+    return false;
+  }
+  return true;
+}
+
 /* ----------  Guardar producto  ---------- */
 document.getElementById('purchaseForm').addEventListener('submit', function (e) {
   e.preventDefault();
+  const form = new FormData(e.target);
+  const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
+  const item = {
+    name: form.get('name') || '',
+    code: form.get('code') || '',
+    barcode: form.get('barcode') || '',
+    price: Number(form.get('price')) || 0,
+    valorReal: Number(form.get('valorReal')) || 0,
+    fechaCompra: form.get('fechaCompra') || '',
+    discount: Number(form.get('discount')) || 0,
+    quantity: Number(form.get('quantity')) || 0,
+    description: form.get('description') || '',
+    category: form.get('category') || '',
+    addedAt: new Date().toLocaleString('es-ES'),
+    tipoCompra: esLote ? 'lote' : 'normal'
+  };
+
+  // VALIDACIÓN
+  if (!validarAntesDeGuardar(item)) return;
+
   document.getElementById('loadingOverlay').classList.add('show');
   setTimeout(() => {
-    const form = new FormData(e.target);
-    const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
-    const item = {
-      name: form.get('name') || '',
-      code: form.get('code') || '',
-      barcode: form.get('barcode') || '',
-      price: Number(form.get('price')) || 0,
-      valorReal: Number(form.get('valorReal')) || 0,
-      fechaCompra: form.get('fechaCompra') || '',
-      discount: Number(form.get('discount')) || 0,
-      quantity: Number(form.get('quantity')) || 0,
-      description: form.get('description') || '',
-      category: form.get('category') || '',
-      addedAt: new Date().toLocaleString('es-ES'),
-      tipoCompra: esLote ? 'lote' : 'normal'
-    };
-
     if (editIndex === -1) {
       const exists = inventory.find(i => i.code === item.code);
       if (exists) {
@@ -697,9 +717,25 @@ function calcSugLote(i) {
   document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
 }
 
-/* ----------  Guardar lote completo  ---------- */
+/* ----------  Guardar lote completo con validación  ---------- */
 function guardarLoteCompleto() {
   if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+
+  // Validación por item
+  for (let i = 0; i < loteTemporal.length; i++) {
+    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
+    const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
+    const fecha = document.getElementById(`loteFecha${i}`).value;
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (costo > precio) {
+      if (!confirm(`⚠️ Producto ${i + 1}: el costo es mayor que el precio de venta. ¿Sigues?`)) return;
+    }
+    if (fecha > hoy) {
+      alert(`❌ Producto ${i + 1}: fecha futura no permitida.`);
+      return;
+    }
+  }
+
   document.getElementById('loadingOverlay').classList.add('show');
   setTimeout(() => {
     loteTemporal.forEach((p, i) => {

@@ -196,12 +196,12 @@
   <div class="mini-lote" id="lotePreview"></div>
 </div>
 
-<!-- EDICIÓN INDIVIDUAL POR PRODUCTO (mismo formato que compra individual) -->
-<div id="loteIndividualEditor" style="display:none">
-  <h2><i class="fa fa-edit"></i> Edita cada producto</h2>
-  <div id="loteFormsContainer"></div>
+<!-- EDITOR DE LOTE -->
+<div id="editLoteBubble" style="display:none">
+  <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
+  <div class="table-cards" id="editLoteGrid"></div>
   <div class="actions">
-    <button class="btn-success" onclick="guardarLoteIndividual()">💾 Guardar todos</button>
+    <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
   </div>
 </div>
 
@@ -230,7 +230,7 @@ function salirKiosco() {
 /* ----------  Globales  ---------- */
 let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 let editIndex = -1;
-let loteTemporal = []; // [{code, imgBlob, name:'', price:0, ...}]
+let loteTemporal = [];
 
 /* ----------  Total inventario  ---------- */
 function calculateTotal() {
@@ -319,194 +319,85 @@ valorRealInput.addEventListener('input', calcularSugerencia);
 porcentajeInput.addEventListener('input', calcularSugerencia);
 
 /* ============================================================
-   CARGA MASIVA → FORMULARIO INDIVIDUAL POR PRODUCTO
+   VALIDACIÓN #9 ANTES DE GUARDAR
 ============================================================ */
-async function procesarLote() {
-  const files = document.getElementById('loteFiles').files;
-  if (!files.length) { alert('Selecciona imágenes'); return; }
-  if (files.length < 1 || files.length > 130) { alert('Elige entre 1 y 130 imágenes'); return; }
-  const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
-  loteTemporal = [];
-  const preview = document.getElementById('lotePreview');
-  preview.innerHTML = '';
-  document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const codigo = `${prefix}${Date.now()}${i}`;
-    await new Promise(res => {
-      new Compressor(file, {
-        quality: 0.6, maxWidth: 800, maxHeight: 800,
-        success(result) {
-          const reader = new FileReader();
-          reader.onload = e => {
-            // Guarda blob y crea objeto limpio
-            localforage.setItem(`img_${codigo}`, result);
-            loteTemporal.push({
-              code: codigo,
-              name: '',
-              barcode: '',
-              price: 0,
-              valorReal: 0,
-              fechaCompra: '',
-              discount: 0,
-              quantity: 0,
-              description: '',
-              category: '',
-              addedAt: new Date().toLocaleString('es-ES'),
-              tipoCompra: 'lote'
-            });
-            res();
-          };
-          reader.readAsDataURL(result);
-        },
-        error(err) { console.error(err); res(); }
-      });
-    });
+function validarAntesDeGuardar(item) {
+  // 1. Valor real > precio venta
+  if (item.valorReal && item.price && Number(item.valorReal) > Number(item.price)) {
+    if (!confirm('⚠️ El costo es MAYOR que el precio de venta. ¿Seguro de guardar?')) return false;
   }
-  document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos como compra individual.`;
-  mostrarFormulariosIndividuales();
-}
-
-function vaciarLote() {
-  if (!confirm('¿Vaciar lote actual?')) return;
-  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
-  loteTemporal = [];
-  document.getElementById('lotePreview').innerHTML = '';
-  document.getElementById('loteStatus').textContent = '';
-  document.getElementById('loteIndividualEditor').style.display = 'none';
-}
-
-/* ============================================================
-   MUESTRA FORMULARIOS INDIVIDUALES POR PRODUCTO
-============================================================ */
-function mostrarFormulariosIndividuales() {
-  const container = document.getElementById('loteFormsContainer');
-  container.innerHTML = '';
-  document.getElementById('loteIndividualEditor').style.display = 'block';
-
-  loteTemporal.forEach((p, i) => {
-    const form = document.createElement('div');
-    form.className = 'card-item';
-    form.style.marginBottom = '2rem';
-    form.innerHTML = `
-      <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
-      <h3>${p.code}</h3>
-
-      <!-- Mismo orden que compra individual -->
-      <input placeholder="Nombre *" id="loteName${i}" value="${escapeHtml(p.name)}" required>
-      <input value="${p.code}" readonly style="background:#e5e7eb">
-      <input placeholder="Código de Barras *" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}" required>
-      <input placeholder="Precio de venta *" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}" required>
-      <input placeholder="Valor real (costo)" id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
-      <input placeholder="% ganancia" id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
-      <input placeholder="Sugerencia venta" id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
-      <input placeholder="dd/mm/aaaa" id="loteFecha${i}" type="text" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}" required>
-      <input placeholder="Descuento (%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
-      <input placeholder="Cantidad en Stock *" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}" required>
-      <textarea placeholder="Descripción *" id="loteDescription${i}" rows="2" required>${escapeHtml(p.description)}</textarea>
-      <select id="loteCategory${i}" required>
-        <option value="">-- Categoría * --</option>
-        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-        <option value="Anillos">Anillos</option>
-        <option value="Aritos">Aritos</option>
-        <option value="Billeteras">Billeteras</option>
-        <option value="Carteras">Carteras</option>
-        <option value="Case audífonos">Case audífonos</option>
-        <option value="Case teléfonos">Case teléfonos</option>
-        <option value="Chokers">Chokers</option>
-        <option value="Collares">Collares</option>
-        <option value="General">General</option>
-        <option value="Lentes de sol">Lentes de sol</option>
-        <option value="Otros">Otros</option>
-        <option value="Pulseras">Pulseras</option>
-        <option value="Relojes">Relojes</option>
-      </select>
-    `;
-    container.appendChild(form);
-    localforage.getItem(`img_${p.code}`).then(blob => {
-      if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
-    }).catch(() => {});
-    calcSugLote(i);
-  });
-}
-
-/* ----------  Calcula sugerencia por item del lote  ---------- */
-function calcSugLote(i) {
-  const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
-  const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
-  document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
-}
-
-/* ----------  Guardar lote individual con validación  ---------- */
-function guardarLoteIndividual() {
-  if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
-
-  // Validación por item
-  for (let i = 0; i < loteTemporal.length; i++) {
-    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
-    const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
-    const fecha = document.getElementById(`loteFecha${i}`).value;
-    const hoy = new Date().toISOString().slice(0, 10);
-    if (costo > precio) {
-      if (!confirm(`⚠️ Producto ${i + 1}: el costo es mayor que el precio de venta. ¿Sigues?`)) return;
-    }
-    if (fecha > hoy) {
-      alert(`❌ Producto ${i + 1}: fecha futura no permitida.`);
-      return;
-    }
+  // 2. Fecha futura
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (item.fechaCompra > hoy) {
+    alert('❌ No puedes guardar una fecha futura.');
+    return false;
   }
+  return true;
+}
+
+/* ----------  Guardar producto  ---------- */
+document.getElementById('purchaseForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
+  const item = {
+    name: form.get('name') || '',
+    code: form.get('code') || '',
+    barcode: form.get('barcode') || '',
+    price: Number(form.get('price')) || 0,
+    valorReal: Number(form.get('valorReal')) || 0,
+    fechaCompra: form.get('fechaCompra') || '',
+    discount: Number(form.get('discount')) || 0,
+    quantity: Number(form.get('quantity')) || 0,
+    description: form.get('description') || '',
+    category: form.get('category') || '',
+    addedAt: new Date().toLocaleString('es-ES'),
+    tipoCompra: esLote ? 'lote' : 'normal'
+  };
+
+  // VALIDACIÓN
+  if (!validarAntesDeGuardar(item)) return;
 
   document.getElementById('loadingOverlay').classList.add('show');
   setTimeout(() => {
-    loteTemporal.forEach((p, i) => {
-      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
-      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
-      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
-      p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
-      p.fechaCompra = document.getElementById(`loteFecha${i}`).value;
-      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
-      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
-      p.description = document.getElementById(`loteDescription${i}`).value.trim();
-      p.category = document.getElementById(`loteCategory${i}`).value;
-      if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
-    });
-    inventory = inventory.concat(loteTemporal);
+    if (editIndex === -1) {
+      const exists = inventory.find(i => i.code === item.code);
+      if (exists) {
+        if (!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')) {
+          item.code = `${item.code}_${Date.now()}`;
+        } else {
+          exists.quantity = Number(exists.quantity) + Number(item.quantity);
+          localStorage.setItem('inventory', JSON.stringify(inventory));
+          renderTable(); calculateTotal();
+          e.target.reset();
+          document.getElementById('imagePreview').style.display = 'none';
+          barcodeCanvas.style.display = 'none';
+          document.getElementById('loadingOverlay').classList.remove('show');
+          return;
+        }
+      }
+      inventory.push(item);
+    } else {
+      inventory[editIndex] = item;
+      editIndex = -1;
+    }
     localStorage.setItem('inventory', JSON.stringify(inventory));
-    alert('Lote guardado ✅');
-    loteTemporal = [];
-    document.getElementById('loteIndividualEditor').style.display = 'none';
+    const imgFile = document.getElementById('imageFile').files[0];
+    if (imgFile) {
+      new Compressor(imgFile, {
+        quality: 0.6, maxWidth: 800, maxHeight: 800,
+        success(result) {
+          localforage.setItem(`img_${item.code}`, result).catch(() => {});
+        }
+      });
+    }
+    e.target.reset();
+    document.getElementById('imagePreview').style.display = 'none';
+    barcodeCanvas.style.display = 'none';
     renderTable(); calculateTotal();
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
-}
-
-/* ----------  Editar producto individual (modo normal)  ---------- */
-function editProduct(idx) {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  const p = inventory[idx];
-  document.getElementById('name').value = p.name;
-  document.getElementById('code').value = p.code;
-  document.getElementById('barcode').value = p.barcode;
-  document.getElementById('price').value = p.price;
-  document.getElementById('valorReal').value = p.valorReal || '';
-  document.getElementById('fechaCompra').value = p.fechaCompra || '';
-  document.getElementById('porcentajeGanancia').value = 60;
-  calcularSugerencia();
-  document.getElementById('discount').value = p.discount;
-  document.getElementById('quantity').value = p.quantity;
-  document.getElementById('description').value = p.description;
-  document.getElementById('category').value = p.category;
-  editIndex = idx;
-  document.querySelector(`input[name="tipoCompra"][value="${p.tipoCompra || 'normal'}"]`).checked = true;
-  localforage.getItem(`img_${p.code}`).then(blob => {
-    if (blob) {
-      document.getElementById('imagePreview').src = URL.createObjectURL(blob);
-      document.getElementById('imagePreview').style.display = 'block';
-    }
-  }).catch(() => {});
-  generarBarcode(p.barcode);
-}
+});
 
 /* ----------  Eliminar producto  ---------- */
 function deleteProduct(idx) {
@@ -656,6 +547,33 @@ function blobToDataURL(blob) {
   });
 }
 
+/* ----------  Editar producto  ---------- */
+function editProduct(idx) {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const p = inventory[idx];
+  document.getElementById('name').value = p.name;
+  document.getElementById('code').value = p.code;
+  document.getElementById('barcode').value = p.barcode;
+  document.getElementById('price').value = p.price;
+  document.getElementById('valorReal').value = p.valorReal || '';
+  document.getElementById('fechaCompra').value = p.fechaCompra || '';
+  document.getElementById('porcentajeGanancia').value = 60;
+  calcularSugerencia();
+  document.getElementById('discount').value = p.discount;
+  document.getElementById('quantity').value = p.quantity;
+  document.getElementById('description').value = p.description;
+  document.getElementById('category').value = p.category;
+  editIndex = idx;
+  document.querySelector(`input[name="tipoCompra"][value="${p.tipoCompra || 'normal'}"]`).checked = true;
+  localforage.getItem(`img_${p.code}`).then(blob => {
+    if (blob) {
+      document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+      document.getElementById('imagePreview').style.display = 'block';
+    }
+  }).catch(() => {});
+  generarBarcode(p.barcode);
+}
+
 /* ----------  Código de barras  ---------- */
 const barcodeInput = document.getElementById('barcode');
 const barcodeCanvas = document.getElementById('barcodeCanvas');
@@ -665,6 +583,182 @@ function generarBarcode(value) {
   JsBarcode(barcodeCanvas, value, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: true, fontSize: 14, margin: 5 });
 }
 barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
+
+/* ============================================================
+   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
+============================================================ */
+async function procesarLote() {
+  const files = document.getElementById('loteFiles').files;
+  if (!files.length) { alert('Selecciona imágenes'); return; }
+  if (files.length < 1 || files.length > 130) { alert('Elige entre 1 y 130 imágenes'); return; }
+  const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
+  loteTemporal = [];
+  const preview = document.getElementById('lotePreview');
+  preview.innerHTML = '';
+  document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const codigo = `${prefix}${Date.now()}${i}`;
+    await new Promise(res => {
+      new Compressor(file, {
+        quality: 0.6, maxWidth: 800, maxHeight: 800,
+        success(result) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            const mini = document.createElement('div');
+            mini.className = 'mini-item';
+            mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+            preview.appendChild(mini);
+            localforage.setItem(`img_${codigo}`, result);
+            loteTemporal.push({
+              name: '', code: codigo, barcode: '', price: 0, valorReal: 0, fechaCompra: '',
+              discount: 0, quantity: 0, description: '', category: '',
+              addedAt: new Date().toLocaleString('es-ES'), tipoCompra: 'lote'
+            });
+            res();
+          };
+          reader.readAsDataURL(result);
+        },
+        error(err) { console.error(err); res(); }
+      });
+    });
+  }
+  document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+  mostrarEditorLote();
+}
+
+function vaciarLote() {
+  if (!confirm('¿Vaciar lote actual?')) return;
+  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
+  loteTemporal = [];
+  document.getElementById('lotePreview').innerHTML = '';
+  document.getElementById('loteStatus').textContent = '';
+  document.getElementById('editLoteBubble').style.display = 'none';
+}
+
+/* ----------  Editor de lote con campos en el orden pedido  ---------- */
+function mostrarEditorLote() {
+  const grid = document.getElementById('editLoteGrid');
+  grid.innerHTML = '';
+  document.getElementById('editLoteBubble').style.display = 'block';
+  loteTemporal.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'card-item';
+    card.innerHTML = `
+      <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
+      <h3>${p.code}</h3>
+
+      <!-- 1. Nombre -->
+      <input placeholder="Nombre *" id="loteName${i}" value="${escapeHtml(p.name)}">
+
+      <!-- 2. Código (solo lectura) -->
+      <input value="${p.code}" readonly style="background:#e5e7eb">
+
+      <!-- 3. Barras -->
+      <input placeholder="Código de Barras *" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
+
+      <!-- 4. Precio venta -->
+      <input placeholder="Precio de venta *" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
+
+      <!-- 5. Costo -->
+      <input placeholder="Valor real (costo)" id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
+
+      <!-- 6. Fecha compra con placeholder -->
+      <input placeholder="dd/mm/aaaa" id="loteFecha${i}" type="text" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}">
+
+      <!-- 7. % Ganancia -->
+      <input placeholder="% ganancia" id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
+
+      <!-- 8. Sugerencia venta -->
+      <input placeholder="Sugerencia venta" id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
+
+      <!-- 9. Descuento -->
+      <input placeholder="Descuento (%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
+
+      <!-- 10. Stock -->
+      <input placeholder="Cantidad en Stock *" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
+
+      <!-- 11. Descripción -->
+      <textarea placeholder="Descripción *" id="loteDescription${i}" rows="2">${escapeHtml(p.description)}</textarea>
+
+      <!-- 12. Categoría -->
+      <select id="loteCategory${i}">
+        <option value="">-- Categoría * --</option>
+        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+        <option value="Anillos">Anillos</option>
+        <option value="Aritos">Aritos</option>
+        <option value="Billeteras">Billeteras</option>
+        <option value="Carteras">Carteras</option>
+        <option value="Case audífonos">Case audífonos</option>
+        <option value="Case teléfonos">Case teléfonos</option>
+        <option value="Chokers">Chokers</option>
+        <option value="Collares">Collares</option>
+        <option value="General">General</option>
+        <option value="Lentes de sol">Lentes de sol</option>
+        <option value="Otros">Otros</option>
+        <option value="Pulseras">Pulseras</option>
+        <option value="Relojes">Relojes</option>
+      </select>
+    `;
+    grid.appendChild(card);
+    localforage.getItem(`img_${p.code}`).then(blob => {
+      if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
+    }).catch(() => {});
+    // Calcula sugerencia inicial
+    calcSugLote(i);
+  });
+}
+
+/* ----------  Calcula sugerencia por item del lote  ---------- */
+function calcSugLote(i) {
+  const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
+  const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
+  document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
+}
+
+/* ----------  Guardar lote completo con validación  ---------- */
+function guardarLoteCompleto() {
+  if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+
+  // Validación por item
+  for (let i = 0; i < loteTemporal.length; i++) {
+    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
+    const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
+    const fecha = document.getElementById(`loteFecha${i}`).value;
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (costo > precio) {
+      if (!confirm(`⚠️ Producto ${i + 1}: el costo es mayor que el precio de venta. ¿Sigues?`)) return;
+    }
+    if (fecha > hoy) {
+      alert(`❌ Producto ${i + 1}: fecha futura no permitida.`);
+      return;
+    }
+  }
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  setTimeout(() => {
+    loteTemporal.forEach((p, i) => {
+      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
+      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
+      p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
+      p.fechaCompra = document.getElementById(`loteFecha${i}`).value;
+      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
+      p.description = document.getElementById(`loteDescription${i}`).value.trim();
+      p.category = document.getElementById(`loteCategory${i}`).value;
+      if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
+    });
+    inventory = inventory.concat(loteTemporal);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    alert('Lote guardado ✅');
+    loteTemporal = [];
+    document.getElementById('editLoteBubble').style.display = 'none';
+    renderTable(); calculateTotal();
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }, 500);
+}
 
 /* ----------  Inicializar  ---------- */
 window.addEventListener('DOMContentLoaded', () => {

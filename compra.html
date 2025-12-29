@@ -124,17 +124,23 @@
   <!-- Precio de venta -->
   <div><label>Precio de venta *</label><input type="number" id="price" name="price" step="0.01" required></div>
 
-  <!-- Valor real (costo) – SIEMPRE visible -->
-  <div><label>Valor real (costo) *</label><input type="number" id="valorReal" name="valorReal" step="0.01" required></div>
+  <!-- Valor real (costo) – OPCIONAL -->
+  <div><label>Valor real (costo)</label><input type="number" id="valorReal" name="valorReal" step="0.01"></div>
+
+  <!-- % de ganancia (editable) -->
+  <div>
+    <label>% ganancia sugerida</label>
+    <input type="number" id="porcentajeGanancia" value="60" step="1" min="0" max="999">
+  </div>
+
+  <!-- Sugerencia venta – solo lectura -->
+  <div>
+    <label>Sugerencia venta</label>
+    <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background:#e5e7eb;color:#333">
+  </div>
 
   <!-- Fecha de compra -->
   <div><label>Fecha de compra *</label><input type="date" id="fechaCompra" name="fechaCompra" required></div>
-
-  <!-- Sugerencia venta (60 %) – solo lectura -->
-  <div>
-    <label>Sugerencia venta (60 %)</label>
-    <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background:#e5e7eb;color:#333">
-  </div>
 
   <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
   <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
@@ -249,7 +255,7 @@ function renderTable() {
       <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
       <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none;width:100%;margin-top:.5rem"/>
       <p>Precio: $${Number(item.price).toFixed(2)}</p>
-      <p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal || 0).toFixed(2)}</p>
+      ${item.valorReal ? `<p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal).toFixed(2)}</p>` : ''}
       <p>Stock: ${Number(item.quantity)}</p>
       <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
       <div class="actions">
@@ -299,15 +305,18 @@ function previewImage(evt) {
   });
 }
 
-/* ----------  Cálculo sugerencia 60 %  ---------- */
+/* ----------  Cálculo sugerencia con % editable  ---------- */
 const valorRealInput = document.getElementById('valorReal');
+const porcentajeInput = document.getElementById('porcentajeGanancia');
 const sugerenciaInput = document.getElementById('sugerenciaVenta');
 function calcularSugerencia() {
   const costo = parseFloat(valorRealInput.value) || 0;
-  const sugerencia = costo * 1.6;
+  const porcentaje = parseFloat(porcentajeInput.value) || 60;
+  const sugerencia = costo * (1 + porcentaje / 100);
   sugerenciaInput.value = sugerencia.toFixed(2);
 }
 valorRealInput.addEventListener('input', calcularSugerencia);
+porcentajeInput.addEventListener('input', calcularSugerencia);
 
 /* ----------  Guardar producto  ---------- */
 document.getElementById('purchaseForm').addEventListener('submit', function (e) {
@@ -528,6 +537,7 @@ function editProduct(idx) {
   document.getElementById('price').value = p.price;
   document.getElementById('valorReal').value = p.valorReal || '';
   document.getElementById('fechaCompra').value = p.fechaCompra || '';
+  document.getElementById('porcentajeGanancia').value = 60;
   calcularSugerencia();
   document.getElementById('discount').value = p.discount;
   document.getElementById('quantity').value = p.quantity;
@@ -554,9 +564,7 @@ function generarBarcode(value) {
 }
 barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
 
-/* ============================================================
-   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
-============================================================ */
+/* ----------  Carga masiva de imágenes  ---------- */
 async function procesarLote() {
   const files = document.getElementById('loteFiles').files;
   if (!files.length) { alert('Selecciona imágenes'); return; }

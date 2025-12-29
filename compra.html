@@ -564,7 +564,9 @@ function generarBarcode(value) {
 }
 barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
 
-/* ----------  Carga masiva de imágenes  ---------- */
+/* ============================================================
+   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
+============================================================ */
 async function procesarLote() {
   const files = document.getElementById('loteFiles').files;
   if (!files.length) { alert('Selecciona imágenes'); return; }
@@ -615,6 +617,7 @@ function vaciarLote() {
   document.getElementById('editLoteBubble').style.display = 'none';
 }
 
+/* ----------  Editor de lote con campos en el orden pedido  ---------- */
 function mostrarEditorLote() {
   const grid = document.getElementById('editLoteGrid');
   grid.innerHTML = '';
@@ -625,16 +628,43 @@ function mostrarEditorLote() {
     card.innerHTML = `
       <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
       <h3>${p.code}</h3>
-      <input placeholder="Nombre" id="loteName${i}" value="${escapeHtml(p.name)}">
-      <input placeholder="Barras" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
-      <input placeholder="Precio venta" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
-      <input placeholder="Costo" id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
-      <input placeholder="Fecha compra" id="loteFecha${i}" type="date" value="${p.fechaCompra}">
-      <input placeholder="Desc(%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
-      <input placeholder="Stock" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
-      <input placeholder="Descripción" id="loteDescription${i}" value="${escapeHtml(p.description)}">
+
+      <!-- 1. Nombre -->
+      <input placeholder="Nombre *" id="loteName${i}" value="${escapeHtml(p.name)}">
+
+      <!-- 2. Código (solo lectura) -->
+      <input value="${p.code}" readonly style="background:#e5e7eb">
+
+      <!-- 3. Barras -->
+      <input placeholder="Código de Barras *" id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
+
+      <!-- 4. Precio venta -->
+      <input placeholder="Precio de venta *" id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
+
+      <!-- 5. Costo -->
+      <input placeholder="Valor real (costo)" id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
+
+      <!-- 6. Fecha compra con placeholder -->
+      <input placeholder="dd/mm/aaaa" id="loteFecha${i}" type="text" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}">
+
+      <!-- 7. % Ganancia -->
+      <input placeholder="% ganancia" id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
+
+      <!-- 8. Sugerencia venta -->
+      <input placeholder="Sugerencia venta" id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
+
+      <!-- 9. Descuento -->
+      <input placeholder="Descuento (%)" id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
+
+      <!-- 10. Stock -->
+      <input placeholder="Cantidad en Stock *" id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
+
+      <!-- 11. Descripción -->
+      <textarea placeholder="Descripción *" id="loteDescription${i}" rows="2">${escapeHtml(p.description)}</textarea>
+
+      <!-- 12. Categoría -->
       <select id="loteCategory${i}">
-        <option value="">-- Categoría --</option>
+        <option value="">-- Categoría * --</option>
         <option value="Accesorios para el cabello">Accesorios para el cabello</option>
         <option value="Anillos">Anillos</option>
         <option value="Aritos">Aritos</option>
@@ -655,9 +685,19 @@ function mostrarEditorLote() {
     localforage.getItem(`img_${p.code}`).then(blob => {
       if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
     }).catch(() => {});
+    // Calcula sugerencia inicial
+    calcSugLote(i);
   });
 }
 
+/* ----------  Calcula sugerencia por item del lote  ---------- */
+function calcSugLote(i) {
+  const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
+  const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
+  document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
+}
+
+/* ----------  Guardar lote completo  ---------- */
 function guardarLoteCompleto() {
   if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
   document.getElementById('loadingOverlay').classList.add('show');

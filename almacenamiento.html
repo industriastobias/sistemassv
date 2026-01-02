@@ -4,14 +4,14 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400 ;700&display=swap');
     :root {
       --bg: #ffffff;
       --text: #1f2937;
@@ -246,6 +246,7 @@
       <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
       <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
       <button class="stamp" id="salesBtn" onclick="toggleSalesPanel()" title="Ver historial de ventas">📋 Historial</button>
+      <button class="stamp" onclick="openSalesHistoryModal()" title="Ventas con imagen y filtros">🖼️ Ventas Detalle</button>
       <button class="stamp" id="kioscoBtn" onclick="toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
     </div>
 
@@ -401,6 +402,41 @@
       <label>Nuevo precio:</label>
       <input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990">
       <button class="stamp" onclick="saveNewPrice()">Guardar</button>
+    </div>
+  </div>
+
+  <!-- Modal de ventas con imagen y filtros -->
+  <div id="salesHistoryModal" class="modal">
+    <div class="modal-content" style="width: 90vw; max-width: 1000px;">
+      <span class="close" onclick="closeSalesHistoryModal()">&times;</span>
+      <h2>Historial de Ventas Detallado</h2>
+
+      <div style="display:flex;gap:.8rem;flex-wrap: wrap;align-items:flex-end;margin-bottom:1rem;">
+        <div>
+          <label for="filterMonth">Mes:</label>
+          <input type="month" id="filterMonth">
+        </div>
+        <div>
+          <label for="filterSeller">Vendedor:</label>
+          <select id="filterSeller">
+            <option value="">Todos</option>
+            <option value="paola">Paola</option>
+            <option value="ernesto">Ernesto</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterDateFrom">Desde:</label>
+          <input type="date" id="filterDateFrom">
+        </div>
+        <div>
+          <label for="filterDateTo">Hasta:</label>
+          <input type="date" id="filterDateTo">
+        </div>
+        <button class="stamp" onclick="applySalesFilters()">Filtrar</button>
+        <button class="stamp" onclick="clearSalesFilters()">Limpiar</button>
+      </div>
+
+      <div id="salesHistoryContent" style="max-height: 60vh; overflow-y: auto;"></div>
     </div>
   </div>
 
@@ -910,7 +946,9 @@
         code: item.code,
         price: soldPrice,
         quantity: soldQty,
-        total: soldPrice * soldQty
+        total: soldPrice * soldQty,
+        seller: document.getElementById('authSelect')?.value || 'Desconocido',
+        date: new Date().toLocaleString('es-ES')
       };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
@@ -956,6 +994,81 @@
       filterInventory();
       document.getElementById('resultMessage').style.display = 'none';
     }
+
+    // --- NUEVAS FUNCIONES PARA VENTAS DETALLADAS CON IMAGEN ---
+    function openSalesHistoryModal() {
+      document.getElementById('salesHistoryModal').style.display = 'block';
+      renderSalesHistory();
+    }
+
+    function closeSalesHistoryModal() {
+      document.getElementById('salesHistoryModal').style.display = 'none';
+    }
+
+    function renderSalesHistory(filtered = null) {
+      const sales = filtered || JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      const container = document.getElementById('salesHistoryContent');
+      if (!sales.length) {
+        container.innerHTML = '<p style="text-align:center;">No hay ventas registradas.</p>';
+        return;
+      }
+
+      container.innerHTML = sales.map((s, i) => {
+        const img = localStorage.getItem(`img_${s.code}`);
+        return `
+          <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
+            <img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'">
+            <div style="flex:1;">
+              <strong>${s.name}</strong><br>
+              Código: ${s.code}<br>
+              Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
+              <small>Fecha: ${s.date || '—'} | Vendedor: ${s.seller || 'Desconocido'}</small>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function applySalesFilters() {
+      const month = document.getElementById('filterMonth').value;
+      const seller = document.getElementById('filterSeller').value;
+      const from = document.getElementById('filterDateFrom').value;
+      const to = document.getElementById('filterDateTo').value;
+
+      let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+
+      if (month) {
+        const [y, m] = month.split('-');
+        sales = sales.filter(s => {
+          const d = new Date(s.date);
+          return d.getFullYear() == y && d.getMonth() + 1 == m;
+        });
+      }
+
+      if (seller) {
+        sales = sales.filter(s => (s.seller || '').toLowerCase() === seller);
+      }
+
+      if (from) {
+        sales = sales.filter(s => new Date(s.date) >= new Date(from));
+      }
+
+      if (to) {
+        sales = sales.filter(s => new Date(s.date) <= new Date(to));
+      }
+
+      renderSalesHistory(sales);
+    }
+
+    function clearSalesFilters() {
+      document.getElementById('filterMonth').value = '';
+      document.getElementById('filterSeller').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      renderSalesHistory();
+    }
+
+    // --- FIN NUEVAS FUNCIONES ---
 
     document.addEventListener('keydown', e => {
       if (e.ctrlKey && e.key === 'b') {

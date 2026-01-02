@@ -831,7 +831,7 @@
 
       setTimeout(() => {
         sorted.forEach((item, idx) => {
-          localforage.getItem(`img_${item.code}`).then(blob => {
+          localforage.getItem(`img_${item.barcode}`).then(blob => {
             if (blob) {
               const url = URL.createObjectURL(blob);
               const imgTbl = document.getElementById(`img-${idx}`);
@@ -944,11 +944,13 @@
       const soldItem = {
         name: item.name,
         code: item.code,
+        barcode: item.barcode,
+        category: item.category,
         price: soldPrice,
         quantity: soldQty,
         total: soldPrice * soldQty,
         seller: document.getElementById('authSelect')?.value || 'Desconocido',
-        date: new Date().toLocaleString('es-ES')
+        date: new Date().toISOString()
       };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
@@ -1014,15 +1016,18 @@
       }
 
       container.innerHTML = sales.map((s, i) => {
-        const img = localStorage.getItem(`img_${s.code}`);
+        const imgKey = `img_${s.barcode || s.code}`;
+        const img = localStorage.getItem(imgKey);
         return `
           <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
             <img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'">
             <div style="flex:1;">
-              <strong>${s.name}</strong><br>
+              <strong>#${i + 1} - ${s.name}</strong><br>
               Código: ${s.code}<br>
+              <strong>Categoría:</strong> ${s.category || 'Sin categoría'}<br>
+              <strong>Cód. Barras:</strong> ${s.barcode || 'Sin barras'}<br>
               Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
-              <small>Fecha: ${s.date || '—'} | Vendedor: ${s.seller || 'Desconocido'}</small>
+              <small><strong>Fecha:</strong> ${s.date ? new Date(s.date).toLocaleString('es-ES') : '—'} | <strong>Vendedor:</strong> ${s.seller || 'Desconocido'}</small>
             </div>
           </div>
         `;

@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+    /* (estilos idénticos al anterior) */
     :root {
       --bg: #ffffff;
       --text: #1f2937;
@@ -461,7 +461,7 @@
 
     function ensureDateTime(item) {
       if (!item.date) {
-        item.date = new Date().toLocaleString('es-ES');
+        item.date = new Date().toISOString(); // ⬅️ ISO para filtros
       }
       return item;
     }
@@ -824,7 +824,7 @@
             <td>$${item.price}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
-            <td>${item.date || '—'}</td>
+            <td>${new Date(item.date).toLocaleString('es-ES')}</td>
             <td>${highlightText(item.category, searchName)}</td>
             <td>${item.quantity}</td>
             <td>
@@ -846,7 +846,7 @@
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${highlightText(item.category, searchName)}</div>
-            <div>Fecha: ${item.date || '—'}</div>
+            <div>Fecha: ${new Date(item.date).toLocaleString('es-ES')}</div>
             <div class="card-footer">
               <button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button>
               <button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button>
@@ -974,7 +974,7 @@
         quantity: soldQty,
         total: soldPrice * soldQty,
         seller: document.getElementById('authSelect')?.value || 'Desconocido',
-        date: new Date().toLocaleString('es-ES')
+        date: new Date().toISOString() // ⬅️ ISO para que el filtro mes funcione
       };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
@@ -1035,7 +1035,7 @@
               <strong>#${i+1} – ${s.name}</strong><br>
               Código: ${s.code}<br>
               Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
-              <small>Fecha: ${s.date || '—'} | Vendedor: ${s.seller || 'Desconocido'}</small>
+              <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${s.seller || 'Desconocido'}</small>
             </div>
           </div>
         `;
@@ -1054,7 +1054,7 @@
         const [y, m] = month.split('-');
         sales = sales.filter(s => {
           const d = new Date(s.date);
-          return d.getFullYear() == y && d.getMonth() + 1 == m;
+          return d.getFullYear() == y && String(d.getMonth() + 1).padStart(2,'0') === m;
         });
       }
 

@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    /* (estilos idénticos al anterior) */
+    /* (estilos idénticos al original) */
     :root {
       --bg: #ffffff;
       --text: #1f2937;
@@ -252,7 +252,6 @@
 
     <div id="reader"></div>
 
-    <!-- BLOQUE DE FILTROS CORREGIDO -->
     <div id="normalSearchBlock" class="search-block">
       <div>
         <label for="searchName">Buscar por nombre:</label>
@@ -387,14 +386,7 @@
       <div id="authBox" style="display:none;margin-top:1rem;">
         <label style="color:#d97706;font-weight:700;">⚠️ Necesitas autorización para cambiar el precio.</label>
         <br><br>
-        <label>Usuario:</label>
-        <select id="authSelect" style="margin-bottom:.4rem;">
-          <option value="">-- Elija --</option>
-          <option value="paola">Paola</option>
-          <option value="ernesto">Ernesto</option>
-        </select>
-
-        <input type="password" id="authPass" placeholder="Contraseña" style="margin-bottom:.4rem;">
+        <input type="password" id="authPass" placeholder="Contraseña: 159753" style="margin-bottom:.4rem;">
       </div>
 
       <button class="stamp" onclick="processSale()">Registrar</button>
@@ -456,12 +448,11 @@
     let html5QrCode;
 
     const PASSWORD_EDIT = 'admin123';
-    const AUTH_USERS = ['paola', 'ernesto'];
     const AUTH_PASSWORD = '159753';
 
     function ensureDateTime(item) {
       if (!item.date) {
-        item.date = new Date().toISOString(); // ⬅️ ISO para filtros
+        item.date = new Date().toISOString();
       }
       return item;
     }
@@ -725,30 +716,18 @@
       document.getElementById('priceModal').style.display = 'none';
     }
 
-    // ✅ Sincroniza precios con almacenamiento.html sin autorización
-    function syncPriceWithStorage(updatedItem) {
-      const storage = JSON.parse(localStorage.getItem('almacenamiento') || '[]');
-      const found = storage.find(p => p.barcode === updatedItem.barcode);
-      if (found) {
-        found.price = updatedItem.price;
-        localStorage.setItem('almacenamiento', JSON.stringify(storage));
-      }
-    }
-
     function saveNewPrice() {
       const newPrice = parseFloat(document.getElementById('newPrice').value);
       if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
 
       const updatedItem = inventory[currentPriceIndex];
       updatedItem.price = newPrice;
-      updatedItem.priceUpdated = true; // ✅ Marcar como actualizado
+      updatedItem.priceUpdated = true;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-
-      syncPriceWithStorage(updatedItem);
 
       closePriceModal();
       filterInventory();
-      document.getElementById('resultMessage').textContent = 'Precio actualizado y sincronizado';
+      document.getElementById('resultMessage').textContent = 'Precio actualizado';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
     }
@@ -759,7 +738,6 @@
       return text.replace(regex, '<mark>$1</mark>');
     }
 
-    /* ---------- filtros unificados ---------- */
     function applyFilters(){
       filterInventory();
     }
@@ -776,7 +754,7 @@
         const okName  = !name  || it.name.toLowerCase().includes(name);
         const okCat   = !category || it.category === category;
         const okCode  = !code || it.barcode.toLowerCase().includes(code);
-        const price   = it.price * (1 - it.discount/100);
+        const price   = it.price * (1 - it.discount / 100);
         const okPrice = price >= minPrice && price <= maxPrice;
         const okStock = !lowStock || it.quantity <= (it.stockMin||0);
         return okName && okCat && okCode && okPrice && okStock;
@@ -786,7 +764,6 @@
       document.getElementById('resultMessage').style.display = 'none';
     }
 
-    /* ---------- limpieza total ---------- */
     function clearAllFilters(){
       document.getElementById('searchName').value      = '';
       document.getElementById('searchCategory').value  = '';
@@ -913,6 +890,17 @@
 
     function markSold(index) {
       currentSoldIndex = index;
+
+      // ✅ Preguntar usuario UNA vez por venta
+      const seller = prompt("¿Quién está vendiendo?\nEscribe: paola o ernesto")?.trim().toLowerCase();
+      if (!['paola', 'ernesto'].includes(seller)) {
+        alert("Usuario no válido. Venta cancelada.");
+        return;
+      }
+
+      // Guardar temporalmente para esta venta
+      window.tempSeller = seller;
+
       const item = inventory[index];
       document.getElementById('originalPriceLabel').textContent = `Precio original: $${item.price}`;
       document.getElementById('soldPrice').value = item.price;
@@ -932,7 +920,7 @@
       const authBox = document.getElementById('authBox');
 
       if (item.priceUpdated && soldPrice === item.price) {
-        authBox.style.display = 'none'; // ✅ No pide autorización
+        authBox.style.display = 'none';
       } else if (soldPrice !== item.price) {
         authBox.style.display = 'block';
       } else {
@@ -953,11 +941,9 @@
       if (item.priceUpdated && soldPrice === item.price) {
         // ✅ No pide autorización
       } else if (soldPrice !== item.price) {
-        const authName = document.getElementById('authSelect').value.trim().toLowerCase();
         const authPass = document.getElementById('authPass').value;
-
-        if (!AUTH_USERS.includes(authName) || authPass !== AUTH_PASSWORD) {
-          alert('Autorización incorrecta.\nUsuarios válidos: Paola o Ernesto\nContraseña: 159753');
+        if (authPass !== AUTH_PASSWORD) {
+          alert('Autorización incorrecta.\nContraseña: 159753');
           document.getElementById('soldPrice').value = item.price;
           document.getElementById('authBox').style.display = 'none';
           return;
@@ -973,8 +959,8 @@
         price: soldPrice,
         quantity: soldQty,
         total: soldPrice * soldQty,
-        seller: document.getElementById('authSelect')?.value || 'Desconocido',
-        date: new Date().toISOString() // ⬅️ ISO para que el filtro mes funcione
+        seller: window.tempSeller || 'Desconocido',
+        date: new Date().toISOString()
       };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
@@ -1008,7 +994,6 @@
       }
     }
 
-    // --- NUEVAS FUNCIONES PARA VENTAS DETALLADAS CON IMAGEN ---
     function openSalesHistoryModal() {
       document.getElementById('salesHistoryModal').style.display = 'block';
       renderSalesHistory();
@@ -1040,117 +1025,3 @@
           </div>
         `;
       }).join('');
-    }
-
-    function applySalesFilters() {
-      const month = document.getElementById('filterMonth').value;
-      const seller = document.getElementById('filterSeller').value;
-      const from = document.getElementById('filterDateFrom').value;
-      const to = document.getElementById('filterDateTo').value;
-
-      let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-
-      if (month) {
-        const [y, m] = month.split('-');
-        sales = sales.filter(s => {
-          const d = new Date(s.date);
-          return d.getFullYear() == y && String(d.getMonth() + 1).padStart(2,'0') === m;
-        });
-      }
-
-      if (seller) {
-        sales = sales.filter(s => (s.seller || '').toLowerCase() === seller);
-      }
-
-      if (from) {
-        sales = sales.filter(s => new Date(s.date) >= new Date(from));
-      }
-
-      if (to) {
-        sales = sales.filter(s => new Date(s.date) <= new Date(to));
-      }
-
-      renderSalesHistory(sales);
-    }
-
-    function clearSalesFilters() {
-      document.getElementById('filterMonth').value = '';
-      document.getElementById('filterSeller').value = '';
-      document.getElementById('filterDateFrom').value = '';
-      document.getElementById('filterDateTo').value = '';
-      renderSalesHistory();
-    }
-
-    // --- FIN NUEVAS FUNCIONES ---
-
-    document.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.key === 'b') {
-        e.preventDefault();
-        document.getElementById('searchCode').focus();
-      }
-    });
-
-    /* ---------- disparo instantáneo ---------- */
-    ['searchName','searchCategory','searchCode','minPrice','maxPrice','lowStockOnly']
-      .forEach(id=>{
-         const el=document.getElementById(id);
-         el.addEventListener('input',()=>{ clearTimeout(window.filterT); window.filterT=setTimeout(filterInventory,300); });
-         if(id==='searchCategory') el.addEventListener('change',filterInventory);
-      });
-
-    if (currentView === 'cards') {
-      document.getElementById('tableView').style.display = 'none';
-      document.getElementById('cardsView').style.display = 'flex';
-      document.getElementById('toggleViewBtn').textContent = 'Ver Tabla';
-    } else {
-      document.getElementById('tableView').style.display = 'block';
-      document.getElementById('cardsView').style.display = 'none';
-      document.getElementById('toggleViewBtn').textContent = 'Ver Tarjetas';
-    }
-
-    inventory = inventory.map(ensureDateTime);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-
-    filterInventory();
-
-    function toggleMenu() {
-      document.getElementById('sideMenu').classList.toggle('show');
-    }
-
-    document.addEventListener('click', function (e) {
-      const menu = document.getElementById('sideMenu');
-      const btn = document.getElementById('menuToggleBtn');
-      if (!menu || !btn) return;
-
-      if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
-        menu.classList.remove('show');
-      }
-    });
-
-    document.querySelectorAll('#sideMenu a').forEach(link => {
-      link.addEventListener('click', () => {
-        document.getElementById('sideMenu').classList.remove('show');
-      });
-    });
-
-    function toggleKiosco() {
-      const body = document.body;
-      const btn = document.getElementById('kioscoBtn');
-
-      if (!document.fullscreenElement) {
-        body.requestFullscreen().then(() => {
-          body.classList.add('kiosco');
-          btn.textContent = '🔲 Salir Kiosco';
-        }).catch(err => {
-          alert('No se pudo activar pantalla completa: ' + err.message);
-        });
-      } else {
-        document.exitFullscreen().then(() => {
-          body.classList.remove('kiosco');
-          btn.textContent = '🖥️ Kiosco';
-        });
-      }
-    }
-  </script>
-</body>
-</html>

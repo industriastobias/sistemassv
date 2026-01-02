@@ -4,14 +4,14 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400 ;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
     :root {
       --bg: #ffffff;
       --text: #1f2937;
@@ -252,49 +252,57 @@
 
     <div id="reader"></div>
 
+    <!-- BLOQUE DE FILTROS CORREGIDO -->
     <div id="normalSearchBlock" class="search-block">
       <div>
         <label for="searchName">Buscar por nombre:</label>
-        <input type="text" id="searchName" placeholder="Escribe parte del nombre">
+        <input type="text" id="searchName" placeholder="Parte del nombre">
       </div>
+
       <div>
-        <label for="searchCategory">Filtrar por categoría:</label>
+        <label for="searchCategory">Categoría:</label>
         <select id="searchCategory">
-          <option value="">Todas las categorías</option>
-          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-          <option value="Anillos">Anillos</option>
-          <option value="Aritos">Aritos</option>
-          <option value="Billeteras">Billeteras</option>
-          <option value="Carteras">Carteras</option>
-          <option value="Case audífonos">Case audífonos</option>
-          <option value="Case teléfonos">Case teléfonos</option>
-          <option value="Chokers">Chokers</option>
-          <option value="Collares">Collares</option>
-          <option value="General">General</option>
-          <option value="Lentes de sol">Lentes de sol</option>
-          <option value="Otros">Otros</option>
-          <option value="Pulseras">Pulseras</option>
-          <option value="Relojes">Relojes</option>
+          <option value="">Todas</option>
+          <option>Accesorios para el cabello</option>
+          <option>Anillos</option>
+          <option>Aritos</option>
+          <option>Billeteras</option>
+          <option>Carteras</option>
+          <option>Case audífonos</option>
+          <option>Case teléfonos</option>
+          <option>Chokers</option>
+          <option>Collares</option>
+          <option>General</option>
+          <option>Lentes de sol</option>
+          <option>Otros</option>
+          <option>Pulseras</option>
+          <option>Relojes</option>
         </select>
       </div>
+
       <div style="position:relative;">
-        <label for="searchCode">Buscar por código de barras:</label>
-        <input type="text" id="searchCode" placeholder="Ej: 123456" style="padding-right: 3rem;">
-        <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:#9ca3af; pointer-events:none;">Ctrl+B</span>
+        <label for="searchCode">Código barras:</label>
+        <input type="text" id="searchCode" placeholder="Ej: 123456" style="padding-right:3rem;">
+        <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:.7rem; color:#9ca3af; pointer-events:none;">Ctrl+B</span>
       </div>
+
       <div>
         <label for="minPrice">Precio mín:</label>
         <input type="number" id="minPrice" placeholder="0" min="0" step="0.01">
       </div>
+
       <div>
-        <label for="maxPrice">Precio max:</label>
+        <label for="maxPrice">Precio máx:</label>
         <input type="number" id="maxPrice" placeholder="999999" min="0" step="0.01">
       </div>
+
       <div style="display:flex;align-items:flex-end;gap:.5rem;">
         <label for="lowStockOnly">Stock bajo</label>
         <input type="checkbox" id="lowStockOnly">
       </div>
-      <button class="stamp" onclick="filterInventory()">Buscar</button>
+
+      <button class="stamp" onclick="applyFilters()">Buscar</button>
+      <button class="stamp" onclick="clearAllFilters()">Limpiar</button>
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
     </div>
 
@@ -329,7 +337,7 @@
       <label for="goToRow">Ir a fila:</label>
       <input type="number" id="goToRow" min="1" style="width:80px;">
       <button class="stamp" onclick="goToRow()">Ir</button>
-      <button class="stamp" onclick="clearFilters()">Limpiar filtros</button>
+      <button class="stamp" onclick="clearAllFilters()">Limpiar filtros</button>
     </div>
 
     <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
@@ -751,26 +759,44 @@
       return text.replace(regex, '<mark>$1</mark>');
     }
 
-    function filterInventory() {
-      const name = document.getElementById('searchName').value.trim().toLowerCase();
-      const category = document.getElementById('searchCategory').value.trim().toLowerCase();
-      const code = document.getElementById('searchCode').value.trim().toLowerCase();
-      const minPrice = parseFloat(document.getElementById('minPrice').value) || 0;
-      const maxPrice = parseFloat(document.getElementById('maxPrice').value) || Infinity;
-      const lowStockOnly = document.getElementById('lowStockOnly').checked;
+    /* ---------- filtros unificados ---------- */
+    function applyFilters(){
+      filterInventory();
+    }
 
-      let filtered = inventory.filter(item => {
-        const matchesName = !name || item.name.toLowerCase().includes(name);
-        const matchesCategory = !category || item.category.toLowerCase() === category;
-        const matchesCode = !code || item.barcode.trim().toLowerCase().includes(code);
-        const price = item.price * (1 - item.discount / 100);
-        const matchesPrice = price >= minPrice && price <= maxPrice;
-        const matchesStock = !lowStockOnly || item.quantity <= (item.stockMin || 0);
-        return matchesName && matchesCategory && matchesCode && matchesPrice && matchesStock;
+    function filterInventory(){
+      const name       = document.getElementById('searchName').value.trim().toLowerCase();
+      const category   = document.getElementById('searchCategory').value;
+      const code       = document.getElementById('searchCode').value.trim().toLowerCase();
+      const minPrice   = parseFloat(document.getElementById('minPrice').value) || 0;
+      const maxPrice   = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+      const lowStock   = document.getElementById('lowStockOnly').checked;
+
+      let filtered = inventory.filter(it=>{
+        const okName  = !name  || it.name.toLowerCase().includes(name);
+        const okCat   = !category || it.category === category;
+        const okCode  = !code || it.barcode.toLowerCase().includes(code);
+        const price   = it.price * (1 - it.discount/100);
+        const okPrice = price >= minPrice && price <= maxPrice;
+        const okStock = !lowStock || it.quantity <= (it.stockMin||0);
+        return okName && okCat && okCode && okPrice && okStock;
       });
 
       renderInventoryWithHighlight(filtered, name);
       document.getElementById('resultMessage').style.display = 'none';
+    }
+
+    /* ---------- limpieza total ---------- */
+    function clearAllFilters(){
+      document.getElementById('searchName').value      = '';
+      document.getElementById('searchCategory').value  = '';
+      document.getElementById('searchCode').value      = '';
+      document.getElementById('minPrice').value        = '';
+      document.getElementById('maxPrice').value        = '';
+      document.getElementById('lowStockOnly').checked  = false;
+      document.getElementById('goToRow').value         = '';
+      document.querySelectorAll('#inventoryList tr, .card').forEach(el=>el.classList.remove('highlight'));
+      filterInventory();
     }
 
     function renderInventoryWithHighlight(filteredInventory, searchName) {
@@ -831,7 +857,7 @@
 
       setTimeout(() => {
         sorted.forEach((item, idx) => {
-          localforage.getItem(`img_${item.barcode}`).then(blob => {
+          localforage.getItem(`img_${item.code}`).then(blob => {
             if (blob) {
               const url = URL.createObjectURL(blob);
               const imgTbl = document.getElementById(`img-${idx}`);
@@ -944,13 +970,11 @@
       const soldItem = {
         name: item.name,
         code: item.code,
-        barcode: item.barcode,
-        category: item.category,
         price: soldPrice,
         quantity: soldQty,
         total: soldPrice * soldQty,
         seller: document.getElementById('authSelect')?.value || 'Desconocido',
-        date: new Date().toISOString()
+        date: new Date().toLocaleString('es-ES')
       };
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
@@ -984,19 +1008,6 @@
       }
     }
 
-    function clearFilters() {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchCategory').value = '';
-      document.getElementById('searchCode').value = '';
-      document.getElementById('minPrice').value = '';
-      document.getElementById('maxPrice').value = '';
-      document.getElementById('lowStockOnly').checked = false;
-      document.getElementById('goToRow').value = '';
-      document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
-      filterInventory();
-      document.getElementById('resultMessage').style.display = 'none';
-    }
-
     // --- NUEVAS FUNCIONES PARA VENTAS DETALLADAS CON IMAGEN ---
     function openSalesHistoryModal() {
       document.getElementById('salesHistoryModal').style.display = 'block';
@@ -1016,18 +1027,15 @@
       }
 
       container.innerHTML = sales.map((s, i) => {
-        const imgKey = `img_${s.barcode || s.code}`;
-        const img = localStorage.getItem(imgKey);
+        const img = localStorage.getItem(`img_${s.code}`);
         return `
           <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
             <img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'">
             <div style="flex:1;">
-              <strong>#${i + 1} - ${s.name}</strong><br>
+              <strong>#${i+1} – ${s.name}</strong><br>
               Código: ${s.code}<br>
-              <strong>Categoría:</strong> ${s.category || 'Sin categoría'}<br>
-              <strong>Cód. Barras:</strong> ${s.barcode || 'Sin barras'}<br>
               Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
-              <small><strong>Fecha:</strong> ${s.date ? new Date(s.date).toLocaleString('es-ES') : '—'} | <strong>Vendedor:</strong> ${s.seller || 'Desconocido'}</small>
+              <small>Fecha: ${s.date || '—'} | Vendedor: ${s.seller || 'Desconocido'}</small>
             </div>
           </div>
         `;
@@ -1082,18 +1090,13 @@
       }
     });
 
-    document.getElementById('searchCategory').addEventListener('change', filterInventory);
-    document.getElementById('searchCode').addEventListener('input', () => {
-      clearTimeout(window.filterTimeout);
-      window.filterTimeout = setTimeout(filterInventory, 300);
-    });
-    document.getElementById('searchName').addEventListener('input', () => {
-      clearTimeout(window.filterTimeout);
-      window.filterTimeout = setTimeout(filterInventory, 300);
-    });
-    document.getElementById('minPrice').addEventListener('input', filterInventory);
-    document.getElementById('maxPrice').addEventListener('input', filterInventory);
-    document.getElementById('lowStockOnly').addEventListener('change', filterInventory);
+    /* ---------- disparo instantáneo ---------- */
+    ['searchName','searchCategory','searchCode','minPrice','maxPrice','lowStockOnly']
+      .forEach(id=>{
+         const el=document.getElementById(id);
+         el.addEventListener('input',()=>{ clearTimeout(window.filterT); window.filterT=setTimeout(filterInventory,300); });
+         if(id==='searchCategory') el.addEventListener('change',filterInventory);
+      });
 
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';

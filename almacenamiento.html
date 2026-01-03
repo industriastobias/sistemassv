@@ -247,6 +247,10 @@
     #cashRegisterFullscreen .big-change{
       font-size:2.2rem; font-weight:700; color:var(--accent);
     }
+    /* barra de búsqueda por código de barras */
+    #cashBarFilter{
+      width:220px; padding:.4rem .6rem; font-size:1rem;
+    }
   </style>
 </head>
 
@@ -1143,6 +1147,11 @@
       <div class="header">
         <h2>🧾 Caja Registradora</h2>
         <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
+      </div>
+      <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">
+        <label for="cashBarFilter">Filtrar x código:</label>
+        <input type="text" id="cashBarFilter" placeholder="Escanee o escriba el código" />
+        <button class="stamp" onclick="clearCashBarFilter()">Limpiar</button>
       </div>`;
 
       const grid = document.createElement('div');
@@ -1152,9 +1161,10 @@
         if(it.quantity<=0) return;
         const card = document.createElement('div');
         card.className = 'prod-card';
+        card.dataset.barcode = it.barcode.toLowerCase();
         card.innerHTML = `
           <img id="cashimg-${idx}" />
-          <div><strong>${it.name}</strong></div>
+          <div><strong>#${idx+1} – ${it.name}</strong></div>
           <div>Cód: ${it.barcode}</div>
           <div>$${it.price} · Stock:${it.quantity}</div>
           <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;">
@@ -1184,6 +1194,22 @@
 
       document.body.appendChild(div);
       div.scrollTop = 0;
+
+      // filtro en tiempo real
+      document.getElementById('cashBarFilter').addEventListener('input', e=>{
+        const val = e.target.value.toLowerCase();
+        document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
+          const ok = val === '' || card.dataset.barcode.includes(val);
+          card.style.display = ok ? 'flex' : 'none';
+        });
+      });
+    }
+
+    function clearCashBarFilter(){
+      document.getElementById('cashBarFilter').value='';
+      document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
+        card.style.display='flex';
+      });
     }
 
     function calcCashChangeFull(){

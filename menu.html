@@ -8,15 +8,15 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" as="style" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com " crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com " crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons " as="style" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400 ;500;700;800&display=swap" as="style" crossorigin>
   <title>Dashboard – TOBIAS PALACIOS</title>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons " rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400 ;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
 
   <style>
     :root {
@@ -73,6 +73,53 @@
       cursor: pointer;
     }
 
+    /* ----------  MODAL FORMATEO  ---------- */
+    #formatModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    #formatModal[open] { display: flex; }
+    .modal-box {
+      background: var(--color-panel);
+      border-radius: var(--radius);
+      padding: 2rem;
+      max-width: 420px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-md);
+    }
+    .modal-box h2 { margin-bottom: 1rem; font-size: 1.25rem; }
+    .modal-list {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+    .modal-list li {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem 0;
+    }
+    .modal-actions {
+      display: flex;
+      gap: .75rem;
+      justify-content: flex-end;
+    }
+    .modal-actions button {
+      padding: .6rem 1.2rem;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-danger { background: var(--color-danger); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: var(--color-text); }
+
     @media (max-width: 1024px) {
       .sidebar { height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     }
@@ -112,6 +159,7 @@
 
     <button id="exportBtn" class="nav-link" style="margin-top: auto;"><span class="material-icons" aria-hidden="true">archive</span><span>Exportar ZIP</span></button>
     <button id="importBtn" class="nav-link"><span class="material-icons" aria-hidden="true">unarchive</span><span>Importar ZIP</span></button>
+    <button id="formatBtn" class="nav-link"><span class="material-icons" aria-hidden="true">delete_sweep</span><span>Formatear / Limpiar</span></button>
     <input type="file" id="importFile" accept=".zip" style="display:none;" />
   </nav>
 </aside>
@@ -131,6 +179,18 @@
 
 <!-- Botón modo kiosko -->
 <button id="kioskBtn">Modo kiosko</button>
+
+<!-- MODAL FORMATEO -->
+<dialog id="formatModal">
+  <div class="modal-box">
+    <h2>Selecciona qué deseas eliminar</h2>
+    <ul id="formatList" class="modal-list"></ul>
+    <div class="modal-actions">
+      <button id="cancelFormat" class="btn-secondary">Cancelar</button>
+      <button id="confirmFormat" class="btn-danger">Limpiar seleccionados</button>
+    </div>
+  </div>
+</dialog>
 
 <script>
   const CONFIG = { DB_NAME: 'menuDB', STORE_SESSION: 'userSession', DEFAULT_AVATAR: 'user2005.jpg', DEFAULT_USER: 'Usuario', REDIRECT_PAGE: 'index.html' };
@@ -291,6 +351,91 @@
       toggleFullscreen();
       actualizaUI();
     }
+  })();
+
+  /* ----------  FORMATEO SELECTIVO  ---------- */
+  (() => {
+    const modal = document.getElementById('formatModal');
+    const listEl = document.getElementById('formatList');
+    const cancelBtn = document.getElementById('cancelFormat');
+    const confirmBtn = document.getElementById('confirmFormat');
+
+    async function collectOptions() {
+      const opts = [];
+      // IndexedDB
+      const dbs = await window.indexedDB.databases?.() || [];
+      for (const { name } of dbs) {
+        opts.push({ type: 'db', name });
+      }
+      // localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        opts.push({ type: 'ls', name: key });
+      }
+      // localForage
+      const lfKeys = await localforage.keys();
+      for (const key of lfKeys) {
+        opts.push({ type: 'lf', name: key });
+      }
+      return opts;
+    }
+
+    function renderList(options) {
+      listEl.innerHTML = '';
+      options.forEach((opt, idx) => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = `opt-${idx}`;
+        cb.value = idx;
+        const label = document.createElement('label');
+        label.htmlFor = cb.id;
+        label.textContent = `${opt.type.toUpperCase()}: ${opt.name}`;
+        li.appendChild(cb);
+        li.appendChild(label);
+        listEl.appendChild(li);
+      });
+    }
+
+    document.getElementById('formatBtn').addEventListener('click', async () => {
+      const options = await collectOptions();
+      renderList(options);
+      modal.setAttribute('open', '');
+      modal.options = options;
+    });
+
+    cancelBtn.addEventListener('click', () => modal.removeAttribute('open'));
+
+    confirmBtn.addEventListener('click', async () => {
+      const checks = listEl.querySelectorAll('input[type=checkbox]:checked');
+      if (checks.length === 0) return alert('Marca al menos un elemento.');
+      if (!confirm(`¿Seguro que quieres eliminar ${checks.length} elemento(s)? Esta acción no se puede deshacer.`)) return;
+
+      const opts = modal.options;
+      for (const ch of checks) {
+        const opt = opts[parseInt(ch.value)];
+        try {
+          if (opt.type === 'db') {
+            // Borrar base completa
+            const db = await new Promise((res, rej) => {
+              const rq = indexedDB.open(opt.name);
+              rq.onsuccess = () => res(rq.result);
+              rq.onerror = () => rej(rq.error);
+            });
+            db.close();
+            indexedDB.deleteDatabase(opt.name);
+          } else if (opt.type === 'ls') {
+            localStorage.removeItem(opt.name);
+          } else if (opt.type === 'lf') {
+            await localforage.removeItem(opt.name);
+          }
+        } catch (e) {
+          console.warn('Error al borrar', opt, e);
+        }
+      }
+      alert('Elementos seleccionados eliminados.');
+      modal.removeAttribute('open');
+    });
   })();
 
   (function () {

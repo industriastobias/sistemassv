@@ -226,6 +226,13 @@
       display:flex; justify-content:space-between; align-items:center;
       border-bottom:2px solid var(--border); padding-bottom:.6rem;
     }
+    #cashRegisterFullscreen .filters{
+      display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+    }
+    #cashRegisterFullscreen .filters select,
+    #cashRegisterFullscreen .filters input{
+      padding:.4rem .6rem; font-size:1rem;
+    }
     #cashRegisterFullscreen .products-grid{
       display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
       gap:1rem; flex:1 1 auto; overflow-y:auto;
@@ -235,7 +242,7 @@
       display:flex; flex-direction:column; gap:.4rem; text-align:center;
     }
     #cashRegisterFullscreen .prod-card img{
-      width:100%; height:120px; object-fit:cover; border-radius:6px;
+      width:100%; height:120px; object-fit:cover; border-radius:6px; cursor:pointer;
     }
     #cashRegisterFullscreen .footer{
       border-top:2px solid var(--border); padding-top:.8rem;
@@ -247,11 +254,7 @@
     #cashRegisterFullscreen .big-change{
       font-size:2.2rem; font-weight:700; color:var(--accent);
     }
-    /* barra de búsqueda por código de barras */
-    #cashBarFilter{
-      width:220px; padding:.4rem .6rem; font-size:1rem;
-    }
-  </style>
+</style>
 </head>
 
 <body>
@@ -1148,12 +1151,20 @@
         <h2>🧾 Caja Registradora</h2>
         <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
       </div>
-      <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">
-        <label for="cashBarFilter">Filtrar x código:</label>
-        <input type="text" id="cashBarFilter" placeholder="Escanee o escriba el código" />
-        <button class="stamp" onclick="clearCashBarFilter()">Limpiar</button>
+      <div class="filters">
+        <input type="text" id="cashBarFilter" placeholder="Código de barras" />
+        <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
+        <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
       </div>`;
 
+      // llenar categorías
+      const catSet = [...new Set(inventory.map(p=>p.category))].sort();
+      const catSelect = div.querySelector('#cashCatFilter');
+      catSet.forEach(c=>{
+        const opt=document.createElement('option'); opt.value=c; opt.textContent=c; catSelect.appendChild(opt);
+      });
+
+      // grilla de productos
       const grid = document.createElement('div');
       grid.className = 'products-grid';
 
@@ -1162,6 +1173,7 @@
         const card = document.createElement('div');
         card.className = 'prod-card';
         card.dataset.barcode = it.barcode.toLowerCase();
+        card.dataset.category = it.category;
         card.innerHTML = `
           <img id="cashimg-${idx}" />
           <div><strong>#${idx+1} – ${it.name}</strong></div>
@@ -1169,13 +1181,16 @@
           <div>$${it.price} · Stock:${it.quantity}</div>
           <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;">
         `;
-        grid.appendChild(card);
+        // imagen cuadrada y cliqueable
+        const img = card.querySelector(`#cashimg-${idx}`);
         localforage.getItem(`img_${it.code}`).then(blob=>{
           if(blob){
-            const url = URL.createObjectURL(blob);
-            document.getElementById(`cashimg-${idx}`).src = url;
+            img.src = URL.createObjectURL(blob);
           }
         });
+        img.onclick = ()=> openImageModal(img.src);
+
+        grid.appendChild(card);
       });
 
       div.appendChild(grid);
@@ -1195,21 +1210,25 @@
       document.body.appendChild(div);
       div.scrollTop = 0;
 
-      // filtro en tiempo real
-      document.getElementById('cashBarFilter').addEventListener('input', e=>{
-        const val = e.target.value.toLowerCase();
-        document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
-          const ok = val === '' || card.dataset.barcode.includes(val);
-          card.style.display = ok ? 'flex' : 'none';
-        });
+      // filtros en tiempo real
+      div.querySelector('#cashBarFilter').addEventListener('input', applyCashFilters);
+      div.querySelector('#cashCatFilter').addEventListener('change', applyCashFilters);
+    }
+
+    function applyCashFilters(){
+      const bar = document.getElementById('cashBarFilter').value.trim().toLowerCase();
+      const cat = document.getElementById('cashCatFilter').value;
+      document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
+        const okBar = bar === '' || card.dataset.barcode.includes(bar);
+        const okCat = cat === '' || card.dataset.category === cat;
+        card.style.display = (okBar && okCat) ? 'flex' : 'none';
       });
     }
 
-    function clearCashBarFilter(){
+    function clearCashFilters(){
       document.getElementById('cashBarFilter').value='';
-      document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
-        card.style.display='flex';
-      });
+      document.getElementById('cashCatFilter').value='';
+      applyCashFilters();
     }
 
     function calcCashChangeFull(){

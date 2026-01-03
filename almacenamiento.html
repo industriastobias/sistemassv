@@ -158,11 +158,11 @@
     }
 
     mark {
-      background-color: #fef08a;
-      color: #1f2937;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-weight: 700;
+        background-color: #fef08a;
+        color: #1f2937;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: 700;
     }
 
     #sideMenu {
@@ -242,7 +242,7 @@
       display:flex; flex-direction:column; gap:.4rem; text-align:center;
     }
     #cashRegisterFullscreen .prod-card img{
-      width:100%; height:120px; object-fit:cover; border-radius:6px; cursor:pointer;
+      width:100%; height:160px; object-fit:cover; border-radius:6px; cursor:pointer;
     }
     #cashRegisterFullscreen .footer{
       border-top:2px solid var(--border); padding-top:.8rem;
@@ -268,11 +268,28 @@
       padding:.3rem 0; font-size:.9rem;
     }
     #cashFloatList button{margin-top:.5rem; width:100%;}
+
+    /* =========  ESTILOS EXTRA (solo para caja)  ========= */
+    /* 1- Búsqueda en tiempo real */
+    #cashQuickFilter{width:220px;margin-right:.5rem}
+
+    /* 2- Atajos visuales */
+    .cashHotkeyHint{font-size:.65rem;color:#9ca3af;margin-left:.3rem}
+
+    /* 4- Resaltado último producto */
+    .cashJustAdded{animation:flash .6s ease}
+    @keyframes flash{0%{background:#fef08a}100%{background:transparent}}
+
+    /* 6- Imagen más grande solo en caja */
+    #cashRegisterFullscreen .prod-card img{height:160px}
+
+    /* 7- Stock bajo en rojo */
+    .cashLowStock{color:var(--danger);font-weight:700}
+
     /* tabla dentro de caja (modo lista) */
     #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
     #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
     #cashRegisterFullscreen th{background:var(--highlight);}
-</style>
 </head>
 
 <body>
@@ -1145,9 +1162,50 @@
       }
     }
 
-    /* ---------- Caja Registradora Pantalla Completa (CORREGIDA) ---------- */
+    /* ---------- Caja Registradora Pantalla Completa (CORREGIDA + mejoras 1-7) ---------- */
     let cashItems = []; // [{idx, qty, name, price}, ...]
     let cashViewMode = 'grid'; // 'grid' | 'list'
+    let cashLastAddedIdx = null; // para mejora 4
+
+    /* ----------  utilidad para ordenar: stock 0 al final  ---------- */
+    function sortCashProducts(a, b) {
+      if (a.quantity === 0 && b.quantity !== 0) return  1;
+      if (a.quantity !== 0 && b.quantity === 0) return -1;
+      if (a.quantity === 0 && b.quantity === 0) return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    }
+
+    /* 5- Sonido distinto al agregar */
+    function beepAdd(){
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.frequency.value = 660; // tono distinto
+      osc.start(); osc.stop(ctx.currentTime + 0.06);
+    }
+
+    /* 1- Filtro rápido nombre/código */
+    function applyCashQuickFilter(){
+      const val = document.getElementById('cashQuickFilter').value.trim().toLowerCase();
+      if(cashViewMode === 'grid'){
+        document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
+          const ok = val === '' || card.dataset.barcode.includes(val) || card.textContent.toLowerCase().includes(val);
+          card.style.display = ok ? 'flex' : 'none';
+        });
+      }else{
+        document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr=>{
+          const ok = val === '' || tr.dataset.barcode.includes(val) || tr.textContent.toLowerCase().includes(val);
+          tr.style.display = ok ? '' : 'none';
+        });
+      }
+    }
+
+    /* 2- Atajos de teclado exclusivos de caja */
+    document.addEventListener('keydown', e=>{
+      if(!document.getElementById('cashRegisterFullscreen')) return; // solo si estamos en caja
+      if(e.key === 'F1'){ e.preventDefault(); closeCashRegister(); } // cerrar caja
+      if(e.key === 'F12'){ e.preventDefault(); confirmCashSaleFull(); } // confirmar venta
+    });
 
     function openCashRegister(){
       document.documentElement.requestFullscreen().catch(()=>{});
@@ -1161,15 +1219,6 @@
       const fl = document.getElementById('cashFloatList');
       if(fl) fl.remove();
       cashItems = [];
-    }
-
-    /* ----------  utilidad para ordenar: stock 0 al final  ---------- */
-    function sortCashProducts(a, b) {
-      // 0 va al final; el resto se ordena alfabéticamente
-      if (a.quantity === 0 && b.quantity !== 0) return  1;
-      if (a.quantity !== 0 && b.quantity === 0) return -1;
-      if (a.quantity === 0 && b.quantity === 0) return a.name.localeCompare(b.name);
-      return a.name.localeCompare(b.name);
     }
 
     function buildCashRegisterUI(){
@@ -1186,10 +1235,13 @@
         <h2>🧾 Caja Registradora</h2>
         <div style="display:flex;gap:.5rem;">
           <button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button>
-          <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
+          <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar <span class="cashHotkeyHint">F1</span></button>
         </div>
       </div>
+
+      <!-- 1- Búsqueda rápida -->
       <div class="filters">
+        <input type="text" id="cashQuickFilter" placeholder="Buscar nombre o código" oninput="applyCashQuickFilter()">
         <input type="text" id="cashBarFilter" placeholder="Código de barras" />
         <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
         <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
@@ -1227,7 +1279,7 @@
         <label>Paga con:</label>
         <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
         <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
-        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta</button>
+        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta <span class="cashHotkeyHint">F12</span></button>
         <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
         <div id="cashChangeBig" class="big-change" style="display:none;"></div>
       `;
@@ -1259,7 +1311,13 @@
             <div><strong>#${idx + 1} – ${it.name}</strong></div>
             <div>Cód: ${it.barcode}</div>
             <div>Cat: ${it.category}</div>
-            <div>$${it.price} · Stock:${it.quantity}</div>
+            <div class="${it.quantity <= (it.stockMin||0) ? 'cashLowStock' : ''}">$${it.price} · Stock:${it.quantity}</div>
+            <!-- 3- Botones +1 +5 +10 -->
+            <div style="display:flex;gap:.3rem;margin-top:.3rem;">
+              <button onclick="addQtyCash(${idx},1)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+              <button onclick="addQtyCash(${idx},5)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
+              <button onclick="addQtyCash(${idx},10)" class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
+            </div>
             <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
           `;
           const img = card.querySelector(`#cashimg-${idx}`);
@@ -1292,6 +1350,7 @@
           const tr = document.createElement('tr');
           tr.dataset.barcode = it.barcode.toLowerCase();
           tr.dataset.category = it.category;
+          tr.id = 'cashRow-' + idx; // para mejora 4
           tr.innerHTML = `
             <td>${idx + 1}</td>
             <td><img id="cashimg-${idx}" style="max-height:40px;border-radius:4px;" /></td>
@@ -1299,8 +1358,16 @@
             <td>${it.barcode}</td>
             <td>${it.category}</td>
             <td>$${it.price}</td>
-            <td>${it.quantity}</td>
-            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()"></td>
+            <td class="${it.quantity <= (it.stockMin||0) ? 'cashLowStock' : ''}">${it.quantity}</td>
+            <td>
+              <!-- 3- Botones +1 +5 +10 -->
+              <div style="display:flex;gap:.3rem;">
+                <button onclick="addQtyCash(${idx},1)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+                <button onclick="addQtyCash(${idx},5)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
+                <button onclick="addQtyCash(${idx},10)" class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
+              </div>
+              <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()">
+            </td>
           `;
           const img = tr.querySelector(`#cashimg-${idx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
@@ -1311,6 +1378,24 @@
         });
         container.appendChild(tbl);
       }
+    }
+
+    /* 3- Función +1 +5 +10 */
+    function addQtyCash(idx,inc){
+      const input = document.getElementById(`cashqty-${idx}`);
+      if(!input) return;
+      const max = parseInt(input.max);
+      let val = parseInt(input.value)||0;
+      val = Math.min(val + inc, max);
+      input.value = val;
+      updateCashList();
+      // 4- Resaltar último producto
+      cashLastAddedIdx = idx;
+      const el = document.getElementById(cashViewMode==='grid' ? '' : `cashRow-${idx}`);
+      if(el) el.classList.add('cashJustAdded');
+      setTimeout(()=>{if(el) el.classList.remove('cashJustAdded')},600);
+      // 5- Sonido distinto
+      beepAdd();
     }
 
     function toggleCashView(){
@@ -1342,6 +1427,7 @@
     function clearCashFilters(){
       document.getElementById('cashBarFilter').value='';
       document.getElementById('cashCatFilter').value='';
+      document.getElementById('cashQuickFilter').value='';
       applyCashFilters();
     }
 

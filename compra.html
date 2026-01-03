@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
 
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
@@ -205,6 +205,28 @@
   </div>
 </div>
 
+<!-- FILTROS -->
+<div style="width:95%;max-width:1200px;margin:0 auto 1rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras o nombre…" style="flex:1 1 260px">
+  <select id="categoryFilter" style="flex:1 1 200px">
+    <option value="">Todas las categorías</option>
+    <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+    <option value="Anillos">Anillos</option>
+    <option value="Aritos">Aritos</option>
+    <option value="Billeteras">Billeteras</option>
+    <option value="Carteras">Carteras</option>
+    <option value="Case audífonos">Case audífonos</option>
+    <option value="Case teléfonos">Case teléfonos</option>
+    <option value="Chokers">Chokers</option>
+    <option value="Collares">Collares</option>
+    <option value="General">General</option>
+    <option value="Lentes de sol">Lentes de sol</option>
+    <option value="Otros">Otros</option>
+    <option value="Pulseras">Pulseras</option>
+    <option value="Relojes">Relojes</option>
+  </select>
+</div>
+
 <div>
   <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
   <div class="table-cards" id="inventoryList"></div>
@@ -248,7 +270,7 @@ function calculateTotal() {
 function renderTable() {
   const list = document.getElementById('inventoryList');
   list.innerHTML = inventory.map((item, idx) => `
-    <div class="card-item">
+    <div class="card-item" data-category="${item.category}">
       <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
       <h3>${escapeHtml(item.name)}</h3>
       <p>Código: ${escapeHtml(item.code)}</p>
@@ -775,6 +797,27 @@ function guardarLoteCompleto() {
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
 }
+
+/* ----------  Filtros  ---------- */
+const searchBox = document.getElementById('searchBox');
+const categoryFilter = document.getElementById('categoryFilter');
+
+function aplicarFiltros() {
+  const q = searchBox.value.trim().toLowerCase();
+  const cat = categoryFilter.value;
+  const cards = document.querySelectorAll('#inventoryList .card-item');
+  cards.forEach(card => {
+    const nombre = card.querySelector('h3').textContent.toLowerCase();
+    const codBarras = card.querySelector('p:nth-of-type(3)').textContent.toLowerCase();
+    const categoria = card.dataset.category;
+    const okText = nombre.includes(q) || codBarras.includes(q);
+    const okCat = !cat || categoria === cat;
+    card.style.display = (okText && okCat) ? '' : 'none';
+  });
+}
+
+searchBox.addEventListener('input', aplicarFiltros);
+categoryFilter.addEventListener('change', aplicarFiltros);
 
 /* ----------  Inicializar  ---------- */
 window.addEventListener('DOMContentLoaded', () => {

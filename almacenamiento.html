@@ -262,34 +262,31 @@
       background: var(--accent-hover);
     }
 
-    /* ---- MENÚ DESPLEGABLE ---- */
-    #mainMenu {
+    /* ---- MENÚ DE BOTONES FLOTANTE ---- */
+    #mainMenuBar {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 2px 6px rgba(0,0,0,.1);
-      z-index: 1002;
-      display: none;
-      flex-wrap: wrap;
-      gap: .5rem;
-      padding: .6rem 1rem;
-    }
-    #mainMenu.show {
+      bottom: 5rem;
+      left: .5rem;
+      background: #000a;
+      color: #fff;
+      padding: .4rem .6rem;
+      border-radius: 8px;
+      font-size: .8rem;
       display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      z-index: 1002;
     }
-    #mainMenu button {
+    #mainMenuBar button {
       background: var(--accent);
       color: #fff;
       border: none;
       border-radius: 6px;
-      padding: .4rem .7rem;
-      font-size: .8rem;
+      padding: .3rem .5rem;
+      font-size: .7rem;
       cursor: pointer;
     }
-    #mainMenu button:hover {
+    #mainMenuBar button:hover {
       background: var(--accent-hover);
     }
 
@@ -301,8 +298,8 @@
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
 
-  <!-- MENÚ DESPLEGABLE -->
-  <nav id="mainMenu">
+  <!-- MENÚ FLOTANTE CON TODOS LOS BOTONES -->
+  <div id="mainMenuBar">
     <button onclick="startCameraScan()" title="Cámara">📷 Cámara</button>
     <button onclick="initUSBReader()" title="Lector USB">🔌 Lector USB</button>
     <button onclick="downloadLabelsPDF()" title="Etiquetas PDF">📇 Etiquetas PDF</button>
@@ -312,11 +309,9 @@
     <button onclick="toggleFastSell()" title="Venta Exprés">⚡ Venta Exprés</button>
     <button onclick="unsoldAlert()" title="Sin venta">📦 Sin venta</button>
     <button onclick="toggleDark()" title="Modo oscuro">🌙</button>
-    <button onclick="toggleMainMenu()" style="margin-left:auto;">✖</button>
-  </nav>
+  </div>
 
   <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
-  <button onclick="toggleMainMenu()" style="position:fixed;top:.7rem;left:.7rem;z-index:1003;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.4rem .6rem;font-size:1rem;">☰</button>
 
   <nav id="sideMenu">
     <a href="menu.html"><i class="fa-solid fa-bars"></i></a>
@@ -335,8 +330,6 @@
   <div class="container">
     <div class="top-bar">
       <div id="lowStockBox" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
-      <!-- BOTONES ELIMINADOS DE AQUÍ Y PASADOS AL MENÚ DESPLEGABLE -->
-      <button class="stamp" onclick="toggleMainMenu()" style="margin-left:auto;">☰ Menú</button>
     </div>
 
     <div id="reader"></div>
@@ -394,7 +387,7 @@
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
     </div>
 
-    <!-- PANEL VENTA EXPRES MEJORADO -->
+    <!-- PANEL VENTA EXPRES MEJORADA -->
     <div id="fastSellPanel" style="display:none;flex-direction:column;gap:.8rem;margin-top:1rem;">
       <div style="display:flex;gap:.5rem;align-items:flex-end;">
         <input id="fastCode" placeholder="Escanea código" style="flex:1">
@@ -404,7 +397,7 @@
       <div id="fastSellList" style="border:1px solid var(--border);border-radius:6px;padding:.5rem;max-height:30vh;overflow:auto;"></div>
       <div style="display:flex;gap:.5rem;align-items:center;">
         <label>Descuento %:</label>
-        <input id="fastDisc" type="number" min="0" max="99" value="0" style="width:60px;">
+        <input id="fastDisc" type="number" min="0" max="99" value="0" style="width:60px;" step="0.01">
         <label>Paga con:</label>
         <input id="fastPaga" type="number" min="0" step="0.01" placeholder="0">
         <span id="fastVuelto" style="font-weight:700;"></span>
@@ -569,7 +562,7 @@
             <button onclick="changeFastQty(${idx},+1)">+</button>
             <button onclick="removeFastItem(${idx})" style="background:var(--danger);">✖</button>
           </div>
-          <span>$${sub.toFixed(0)}</span>
+          <span>$${sub.toFixed(2)}</span>
         </div>`;
       });
       div.innerHTML=html;
@@ -601,7 +594,7 @@
       const paga = parseFloat(document.getElementById('fastPaga').value)||0;
       let total = fastCart.reduce((t,l)=>t+l.qty*l.price,0);
       total = total * (1 - disc/100);
-      document.getElementById('fastVuelto').textContent = paga ? 'Vuelto: $' + (paga - total).toFixed(0) : 'Total: $' + total.toFixed(0);
+      document.getElementById('fastVuelto').textContent = paga ? 'Vuelto: $' + (paga - total).toFixed(2) : 'Total: $' + total.toFixed(2);
     }
 
     document.getElementById('fastDisc').addEventListener('input', updateFastTotal);
@@ -622,7 +615,17 @@
       filterInventory();
       beepFast();
       // PASAR A VENTA.HTML
-      localStorage.setItem('ventaExpress', JSON.stringify({items: ticket, total: total}));
+      const ventaData = {
+        items: ticket.map(l => ({
+          name: l.name,
+          code: l.code,
+          qty: l.qty,
+          price: l.price,
+          total: l.total
+        })),
+        total: total
+      };
+      localStorage.setItem('ventaExpress', JSON.stringify(ventaData));
       window.open('venta.html', '_blank');
       downloadTicket(ticket,total);
     }
@@ -631,8 +634,8 @@
       const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'p',unit:'mm',format:'a7'});
       let y=5;
       doc.setFontSize(10); doc.text('TIK-EXPRESS',35,y,'center'); y+=6;
-      ticket.forEach(l=>{ doc.text(`${l.qty} ${l.name.slice(0,15)}`,5,y); doc.text(`$${l.total.toFixed(0)}`,50,y,'right'); y+=4; });
-      y+=2; doc.text('TOTAL: $'+total.toFixed(0),50,y,'right');
+      ticket.forEach(l=>{ doc.text(`${l.qty} ${l.name.slice(0,15)}`,5,y); doc.text(`$${l.total.toFixed(2)}`,50,y,'right'); y+=4; });
+      y+=2; doc.text('TOTAL: $'+total.toFixed(2),50,y,'right');
       doc.save('ticket.pdf');
     }
 
@@ -641,25 +644,6 @@
       const ctx = new (window.AudioContext||window.webkitAudioContext)();
       const osc=ctx.createOscillator(); osc.connect(ctx.destination);
       osc.frequency.value=freq; osc.start(); osc.stop(ctx.currentTime+0.05);
-    }
-
-    /* ---------- COMBOS RÁPIDOS ---------- */
-    const combos = [
-      {name:'Kit Verano', items:[{barcode:'1234567890123',qty:1},{barcode:'1234567890124',qty:1}], price:2990}
-    ];
-
-    function sellCombo(index){
-      const combo = combos[index];
-      for(const li of combo.items){
-        const it = inventory.find(p=>p.barcode===li.barcode);
-        if(!it||it.quantity<li.qty){alert(`Falta stock de ${it?.name||li.barcode}`); return;}
-      }
-      combo.items.forEach(li=>{const it=inventory.find(p=>p.barcode===li.barcode); it.quantity-=li.qty;});
-      let sold = JSON.parse(localStorage.getItem('soldInventory')||'[]');
-      sold.push({name:combo.name, code:'COMBO', qty:1, price:combo.price, total:combo.price, seller:'Combo', date:new Date().toISOString()});
-      localStorage.setItem('soldInventory',JSON.stringify(sold));
-      localStorage.setItem('inventory',JSON.stringify(inventory));
-      beepFast(); filterInventory();
     }
 
     /* ---------- FUNCIONES AUXILIARES ---------- */
@@ -686,7 +670,7 @@
         const x = margLeft + col * dx, y = margTop + fil * dy;
         doc.setFontSize(8);
         doc.text(p.name.slice(0, 16), x + w / 2, y + 3, { align: 'center' });
-        doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(0)}`, x + w / 2, y + 6, { align: 'center' });
+        doc.text(`$${(p.price * (1 - p.discount / 100)).toFixed(2)}`, x + w / 2, y + 6, { align: 'center' });
         const canvas = document.createElement('canvas');
         const scale = 300 / 25.4;
         canvas.width = w * scale; canvas.height = h * scale * 0.45;
@@ -725,14 +709,10 @@
       if (usbReaderReady) {
         window.removeEventListener('keydown', handleUSBreader);
         usbReaderReady = false;
-        document.getElementById('usbBtn').style.background = 'var(--accent)';
-        document.getElementById('usbBtn').textContent = '🔌 Lector USB';
         return;
       }
       window.addEventListener('keydown', handleUSBreader);
       usbReaderReady = true;
-      document.getElementById('usbBtn').style.background = 'var(--danger)';
-      document.getElementById('usbBtn').textContent = '✅ USB Activo';
       document.getElementById('searchCode').focus();
     }
     let usbBuffer = '', usbTimer = null;
@@ -929,7 +909,7 @@
             <td>${highlightText(item.name, searchName)}</td>
             <td>${item.barcode}</td>
             <td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" /></td>
-            <td>$${item.price}</td>
+            <td>$${item.price.toFixed(2)}</td>
             <td>${item.discount}%</td>
             <td>$${priceWithDiscount}</td>
             <td>${new Date(item.date).toLocaleString('es-ES')}</td>
@@ -1043,7 +1023,7 @@
             <div style="flex:1;">
               <strong>#${i+1} – ${s.name}</strong><br>
               Código: ${s.code}<br>
-              Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
+              Cantidad: ${s.quantity} | Precio: $${s.price.toFixed(2)} | Total: $${s.total.toFixed(2)}<br>
               <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${s.seller || 'Desconocido'}</small>
             </div>
           </div>
@@ -1116,14 +1096,10 @@
     function toggleKiosco() {
       const body = document.body; const btn = document.getElementById('kioscoBtn');
       if (!document.fullscreenElement) {
-        body.requestFullscreen().then(() => { body.classList.add('kiosco'); btn.textContent = '🔲 Salir Kiosco'; }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message));
+        body.requestFullscreen().then(() => { body.classList.add('kiosco'); }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message));
       } else {
-        document.exitFullscreen().then(() => { body.classList.remove('kiosco'); btn.textContent = '🖥️ Kiosco'; });
+        document.exitFullscreen().then(() => { body.classList.remove('kiosco'); });
       }
-    }
-
-    function toggleMainMenu(){
-      document.getElementById('mainMenu').classList.toggle('show');
     }
 
     /* ---------- MODO OSCURO ---------- */

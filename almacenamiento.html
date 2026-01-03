@@ -254,6 +254,15 @@
     #cashRegisterFullscreen .big-change{
       font-size:2.2rem; font-weight:700; color:var(--accent);
     }
+    /* lista resumen */
+    #cashListSummary{
+      border:1px solid var(--border); border-radius:8px; padding:.8rem;
+      max-height:180px; overflow-y:auto; background:var(--highlight);
+    }
+    #cashListSummary li{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:.2rem 0; font-size:.9rem;
+    }
 </style>
 </head>
 
@@ -1128,6 +1137,8 @@
     }
 
     /* ---------- Caja Registradora Pantalla Completa ---------- */
+    let cashItems = []; // [{idx, qty, name, price}, ...]
+
     function openCashRegister(){
       document.documentElement.requestFullscreen().catch(()=>{});
       buildCashRegisterUI();
@@ -1137,11 +1148,15 @@
       if(document.fullscreenElement) document.exitFullscreen();
       const div = document.getElementById('cashRegisterFullscreen');
       if(div) div.remove();
+      cashItems = [];
     }
 
     function buildCashRegisterUI(){
       const prev = document.getElementById('cashRegisterFullscreen');
       if(prev) prev.remove();
+
+      // leer datos frescos
+      inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 
       const div = document.createElement('div');
       div.id = 'cashRegisterFullscreen';
@@ -1155,7 +1170,9 @@
         <input type="text" id="cashBarFilter" placeholder="Código de barras" />
         <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
         <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
-      </div>`;
+      </div>
+      <div id="cashListSummary"><ul></ul></div>
+      <div class="products-grid" id="cashProductsGrid"></div>`;
 
       // llenar categorías
       const catSet = [...new Set(inventory.map(p=>p.category))].sort();
@@ -1165,9 +1182,7 @@
       });
 
       // grilla de productos
-      const grid = document.createElement('div');
-      grid.className = 'products-grid';
-
+      const grid = div.querySelector('#cashProductsGrid');
       inventory.forEach((it,idx)=>{
         if(it.quantity<=0) return;
         const card = document.createElement('div');
@@ -1179,22 +1194,17 @@
           <div><strong>#${idx+1} – ${it.name}</strong></div>
           <div>Cód: ${it.barcode}</div>
           <div>$${it.price} · Stock:${it.quantity}</div>
-          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;">
+          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" onchange="updateCashList()">
         `;
-        // imagen cuadrada y cliqueable
         const img = card.querySelector(`#cashimg-${idx}`);
         localforage.getItem(`img_${it.code}`).then(blob=>{
-          if(blob){
-            img.src = URL.createObjectURL(blob);
-          }
+          if(blob){ img.src = URL.createObjectURL(blob); }
         });
         img.onclick = ()=> openImageModal(img.src);
-
         grid.appendChild(card);
       });
 
-      div.appendChild(grid);
-
+      // footer
       const footer = document.createElement('div');
       footer.className = 'footer';
       footer.innerHTML = `
@@ -1218,7 +1228,7 @@
     function applyCashFilters(){
       const bar = document.getElementById('cashBarFilter').value.trim().toLowerCase();
       const cat = document.getElementById('cashCatFilter').value;
-      document.querySelectorAll('#cashRegisterFullscreen .prod-card').forEach(card=>{
+      document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
         const okBar = bar === '' || card.dataset.barcode.includes(bar);
         const okCat = cat === '' || card.dataset.category === cat;
         card.style.display = (okBar && okCat) ? 'flex' : 'none';
@@ -1231,12 +1241,26 @@
       applyCashFilters();
     }
 
-    function calcCashChangeFull(){
-      let total = 0;
+    function updateCashList(){
+      cashItems = [];
       inventory.forEach((it,idx)=>{
         const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
-        total += qty * it.price;
+        if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price});
       });
+      const ul = document.querySelector('#cashListSummary ul');
+      ul.innerHTML = cashItems.map((x,i)=>`
+        <li>
+          <span>${i+1}. ${x.name} (x${x.qty})</span>
+          <span>$${(x.qty*x.price).toFixed(2)}</span>
+        </li>`).join('');
+      const total = cashItems.reduce((a,x)=>a+x.qty*x.price,0);
+      document.getElementById('cashTotal').textContent = total.toFixed(2);
+      document.getElementById('cashChangeBig').style.display='none';
+      document.getElementById('cashConfirmBtn').style.display='none';
+    }
+
+    function calcCashChangeFull(){
+      const total = parseFloat(document.getElementById('cashTotal').textContent);
       const pay = parseFloat(document.getElementById('cashPayment').value)||0;
       if(pay < total){ alert('Pago insuficiente'); return; }
       const change = pay - total;
@@ -1244,21 +1268,18 @@
       big.textContent = 'Vuelto: $' + change.toFixed(2);
       big.style.display='inline-block';
       document.getElementById('cashConfirmBtn').style.display='inline-block';
-      document.getElementById('cashTotal').textContent = total.toFixed(2);
     }
 
     function confirmCashSaleFull(){
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory')||'[]');
-      inventory.forEach((it,idx)=>{
-        const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
-        if(qty<=0) return;
-        it.quantity -= qty;
+      cashItems.forEach(x=>{
+        inventory[x.idx].quantity -= x.qty;
         soldInventory.push({
-          name: it.name,
-          code: it.code,
-          price: it.price,
-          quantity: qty,
-          total: qty*it.price,
+          name: x.name,
+          code: inventory[x.idx].code,
+          price: x.price,
+          quantity: x.qty,
+          total: x.qty*x.price,
           seller: 'CajaRegistradora',
           date: new Date().toISOString()
         });

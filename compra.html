@@ -44,7 +44,22 @@
     .total-box-fixed h2{font-size:.9rem;color:var(--accent);margin:0}
     .total-box-fixed p{font-size:1.4rem;font-weight:700;margin:0;color:var(--accent)}
 
-    h1{font-size:2rem;font-weight:700;margin:3.5rem 0 1rem;letter-spacing:-.5px} /* margen superior aumentado para evitar solapamiento */
+    /* =====  MODO EDICIÓN INDICADOR  ===== */
+    #editModeFlag{
+      display:none;
+      position:fixed;
+      top:1rem;
+      left:50%;
+      transform:translateX(-50%);
+      background:#10b981;
+      color:#fff;
+      padding:.4rem .8rem;
+      border-radius:20px;
+      font-size:.75rem;
+      z-index:9999;
+    }
+
+    h1{font-size:2rem;font-weight:700;margin:3.5rem 0 1rem;letter-spacing:-.5px}
     .tipo-compra{display:flex;gap:.75rem;margin-bottom:1.2rem}
     .tipo-compra label{cursor:pointer;font-weight:500}
     .tipo-compra input{margin-right:.25rem}
@@ -121,6 +136,12 @@
   <p id="totalAmount">$0.00</p>
 </div>
 
+<!-- =====  MODO EDICIÓN INDICADOR  ===== -->
+<div id="editModeFlag">✏️ Editando producto</div>
+
+<!-- =====  SONIDO OK  ===== -->
+<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
+
 <h1>Compra</h1>
 
 <div class="tipo-compra">
@@ -190,6 +211,8 @@
     <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
     <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
     <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
+    <!-- === MEJORA 15: IMPRIMIR ETIQUETAS === -->
+    <button type="button" class="btn-primary" onclick="printLabels()">🖨️ Imprimir etiquetas</button>
     <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
     <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
   </div>
@@ -408,6 +431,8 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
           document.getElementById('imagePreview').style.display = 'none';
           barcodeCanvas.style.display = 'none';
           document.getElementById('loadingOverlay').classList.remove('show');
+          // === MEJORA 4: QUITAR INDICADOR ===
+          document.getElementById('editModeFlag').style.display = 'none';
           return;
         }
       }
@@ -429,6 +454,10 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
     barcodeCanvas.style.display = 'none';
+    // === MEJORA 6: SONIDO OK ===
+    document.getElementById('okSound').play();
+    // === MEJORA 4: QUITAR INDICADOR ===
+    document.getElementById('editModeFlag').style.display = 'none';
     renderTable(); calculateTotal();
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
@@ -612,6 +641,8 @@ function editProduct(idx) {
     }
   }).catch(() => {});
   generarBarcode(p.barcode);
+  // === MEJORA 4: MOSTRAR INDICADOR ===
+  document.getElementById('editModeFlag').style.display = 'block';
 }
 
 /* ----------  Código de barras  ---------- */
@@ -835,6 +866,27 @@ function aplicarFiltros() {
 
 searchBox.addEventListener('input', aplicarFiltros);
 categoryFilter.addEventListener('change', aplicarFiltros);
+
+/* ----------  MEJORA 15: IMPRIMIR ETIQUETAS ---------- */
+function printLabels() {
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write('<html><head><title>Etiquetas</title></head><body>');
+  inventory.forEach(p => {
+    printWindow.document.write(`
+      <div style="border:1px solid #ccc;padding:10px;margin:10px;text-align:center;width:200px;display:inline-block">
+        <h4>${p.name}</h4>
+        <p><b>$${p.price}</b></p>
+        <canvas id="barcode-${p.code}"></canvas>
+      </div>
+    `);
+  });
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.onload = () => {
+    inventory.forEach(p => JsBarcode(`#barcode-${p.code}`, p.barcode, { format: 'CODE128', width: 2, height: 30 }));
+    printWindow.print();
+  };
+}
 
 /* ----------  Inicializar  ---------- */
 window.addEventListener('DOMContentLoaded', () => {

@@ -215,6 +215,38 @@
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
       z-index: 1001;
     }
+
+    /* ---------- estilos caja registradora pantalla completa ---------- */
+    #cashRegisterFullscreen{
+      position:fixed; inset:0; z-index:9999;
+      background:#fff; color:#1f2937; overflow-y:auto;
+      padding:1.2rem; display:flex; flex-direction:column; gap:1rem;
+    }
+    #cashRegisterFullscreen .header{
+      display:flex; justify-content:space-between; align-items:center;
+      border-bottom:2px solid var(--border); padding-bottom:.6rem;
+    }
+    #cashRegisterFullscreen .products-grid{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
+      gap:1rem; flex:1 1 auto; overflow-y:auto;
+    }
+    #cashRegisterFullscreen .prod-card{
+      border:1px solid var(--border); border-radius:8px; padding:.6rem;
+      display:flex; flex-direction:column; gap:.4rem; text-align:center;
+    }
+    #cashRegisterFullscreen .prod-card img{
+      width:100%; height:120px; object-fit:cover; border-radius:6px;
+    }
+    #cashRegisterFullscreen .footer{
+      border-top:2px solid var(--border); padding-top:.8rem;
+      display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+    }
+    #cashRegisterFullscreen .total{
+      font-size:1.6rem; font-weight:700;
+    }
+    #cashRegisterFullscreen .big-change{
+      font-size:2.2rem; font-weight:700; color:var(--accent);
+    }
   </style>
 </head>
 
@@ -382,7 +414,6 @@
       </label>
 
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio de venta (fijo):</label>
-      <!-- CAMBIO RADICAL: Precio predeterminado y DESABILITADO -->
       <input type="number" id="soldPrice" min="0" step="0.01" readonly style="background-color:#f0f0f0;color:#666;">
 
       <button class="stamp" onclick="processSale()">Registrar</button>
@@ -433,33 +464,6 @@
       </div>
 
       <div id="salesHistoryContent" style="max-height: 60vh; overflow-y: auto;"></div>
-    </div>
-  </div>
-
-  <!-- =============== CAJA REGISTRADORA (multiproducto) =============== -->
-  <!-- Modal caja registradora -->
-  <div id="cashRegisterModal" class="modal">
-    <div class="modal-content" style="max-width:520px;">
-      <span class="close" onclick="closeCashRegister()">&times;</span>
-      <h2>Caja Registradora</h2>
-
-      <!-- Selector múltiple de productos -->
-      <label>Seleccione productos y cantidades:</label>
-      <div id="cashProductsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:.5rem;border-radius:6px;margin-bottom:1rem;"></div>
-
-      <!-- Total general -->
-      <div style="font-size:1.3rem;font-weight:700;margin-bottom:1rem;">Total: $<span id="cashTotal">0</span></div>
-
-      <!-- Pago y vuelto -->
-      <label for="cashPayment">Paga con:</label>
-      <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
-      <button class="stamp" onclick="calcCashChange()">Calcular vuelto</button>
-
-      <!-- Vuelto en grandes letras -->
-      <div id="cashChangeBig" style="display:none;font-size:2.2rem;font-weight:700;color:var(--accent);margin:.8rem 0;"></div>
-
-      <!-- Botón confirmar -->
-      <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSale()">✅ Confirmar venta</button>
     </div>
   </div>
 
@@ -908,17 +912,12 @@
       localStorage.setItem('preferredView', currentView);
     }
 
-    // ✅ CAMBIO RADICAL: Precio fijo e inmutable
     function markSold(index) {
       currentSoldIndex = index;
       const item = inventory[index];
-      
-      // Establecer el precio automáticamente sin posibilidad de cambio
       document.getElementById('originalPriceLabel').textContent = `Precio establecido: $${item.price}`;
-      document.getElementById('soldPrice').value = item.price; // Precio fijo
+      document.getElementById('soldPrice').value = item.price;
       document.getElementById('soldQuantity').value = 1;
-      
-      // Eliminamos toda la lógica de autorización
       document.getElementById('soldModal').style.display = 'block';
     }
 
@@ -927,7 +926,6 @@
       document.getElementById('confirmationMessage').style.display = 'none';
     }
 
-    // ✅ PROCESAR VENTA SIN AUTORIZACIÓN (PRECIO FIJO)
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
@@ -936,7 +934,6 @@
       if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
 
-      // Procesar venta directamente sin autorización
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
 
@@ -959,7 +956,7 @@
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
-      beepOK(); // SONIDO DE ÉXITO
+      beepOK();
     }
 
     function goToRow() {
@@ -1123,93 +1120,110 @@
       }
     }
 
-    /* ---------- Caja registradora ---------- */
-    let cashBasket = []; // [{index, qty, price, name}, ...]
-
+    /* ---------- Caja Registradora Pantalla Completa ---------- */
     function openCashRegister(){
-      cashBasket = [];
-      const listDiv = document.getElementById('cashProductsList');
-      listDiv.innerHTML = '';
-      inventory.forEach((it, idx) => {
-        if(it.quantity<=0) return;
-        const row = document.createElement('div');
-        row.style.display='flex';row.style.alignItems='center';row.style.gap='.5rem';row.style.marginBottom='.4rem';
-        row.innerHTML = `
-          <input type="checkbox" onchange="toggleCashProduct(${idx})" id="cashchk-${idx}">
-          <span style="flex:1;">${it.name} (Stock:${it.quantity})</span>
-          <input type="number" id="cashqty-${idx}" min="1" max="${it.quantity}" value="1" disabled style="width:70px;" oninput="updateCashTotal()">
-          <span>$${it.price}</span>
-        `;
-        listDiv.appendChild(row);
-      });
-      document.getElementById('cashTotal').textContent='0';
-      document.getElementById('cashPayment').value='';
-      document.getElementById('cashChangeBig').style.display='none';
-      document.getElementById('cashConfirmBtn').style.display='none';
-      document.getElementById('cashRegisterModal').style.display='block';
+      document.documentElement.requestFullscreen().catch(()=>{});
+      buildCashRegisterUI();
     }
 
     function closeCashRegister(){
-      document.getElementById('cashRegisterModal').style.display='none';
+      if(document.fullscreenElement) document.exitFullscreen();
+      const div = document.getElementById('cashRegisterFullscreen');
+      if(div) div.remove();
     }
 
-    function toggleCashProduct(idx){
-      const chk = document.getElementById('cashchk-'+idx);
-      const qtyInput = document.getElementById('cashqty-'+idx);
-      qtyInput.disabled = !chk.checked;
-      updateCashTotal();
-    }
+    function buildCashRegisterUI(){
+      const prev = document.getElementById('cashRegisterFullscreen');
+      if(prev) prev.remove();
 
-    function updateCashTotal(){
-      cashBasket = [];
+      const div = document.createElement('div');
+      div.id = 'cashRegisterFullscreen';
+
+      div.innerHTML = `
+      <div class="header">
+        <h2>🧾 Caja Registradora</h2>
+        <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
+      </div>`;
+
+      const grid = document.createElement('div');
+      grid.className = 'products-grid';
+
       inventory.forEach((it,idx)=>{
-        const chk = document.getElementById('cashchk-'+idx);
-        if(!chk || !chk.checked) return;
-        const qty = parseInt(document.getElementById('cashqty-'+idx).value)||0;
-        cashBasket.push({index:idx, qty, price:it.price, name:it.name});
+        if(it.quantity<=0) return;
+        const card = document.createElement('div');
+        card.className = 'prod-card';
+        card.innerHTML = `
+          <img id="cashimg-${idx}" />
+          <div><strong>${it.name}</strong></div>
+          <div>Cód: ${it.barcode}</div>
+          <div>$${it.price} · Stock:${it.quantity}</div>
+          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;">
+        `;
+        grid.appendChild(card);
+        localforage.getItem(`img_${it.code}`).then(blob=>{
+          if(blob){
+            const url = URL.createObjectURL(blob);
+            document.getElementById(`cashimg-${idx}`).src = url;
+          }
+        });
       });
-      const total = cashBasket.reduce((a,b)=>a + b.qty*b.price, 0);
-      document.getElementById('cashTotal').textContent = total.toFixed(2);
-      document.getElementById('cashChangeBig').style.display='none';
-      document.getElementById('cashConfirmBtn').style.display='none';
+
+      div.appendChild(grid);
+
+      const footer = document.createElement('div');
+      footer.className = 'footer';
+      footer.innerHTML = `
+        <div class="total">Total: $<span id="cashTotal">0</span></div>
+        <label>Paga con:</label>
+        <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
+        <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
+        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta</button>
+        <div id="cashChangeBig" class="big-change" style="display:none;"></div>
+      `;
+      div.appendChild(footer);
+
+      document.body.appendChild(div);
+      div.scrollTop = 0;
     }
 
-    function calcCashChange(){
-      const total = parseFloat(document.getElementById('cashTotal').textContent);
+    function calcCashChangeFull(){
+      let total = 0;
+      inventory.forEach((it,idx)=>{
+        const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
+        total += qty * it.price;
+      });
       const pay = parseFloat(document.getElementById('cashPayment').value)||0;
       if(pay < total){ alert('Pago insuficiente'); return; }
       const change = pay - total;
-      document.getElementById('cashChangeBig').textContent = 'Vuelto: $' + change.toFixed(2);
-      document.getElementById('cashChangeBig').style.display='block';
+      const big = document.getElementById('cashChangeBig');
+      big.textContent = 'Vuelto: $' + change.toFixed(2);
+      big.style.display='inline-block';
       document.getElementById('cashConfirmBtn').style.display='inline-block';
+      document.getElementById('cashTotal').textContent = total.toFixed(2);
     }
 
-    function confirmCashSale(){
-      // descuenta stock
-      cashBasket.forEach(line=>{
-        inventory[line.index].quantity -= line.qty;
-      });
-      localStorage.setItem('inventory', JSON.stringify(inventory));
-
-      // guarda venta
+    function confirmCashSaleFull(){
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory')||'[]');
-      cashBasket.forEach(line=>{
+      inventory.forEach((it,idx)=>{
+        const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
+        if(qty<=0) return;
+        it.quantity -= qty;
         soldInventory.push({
-          name: line.name,
-          code: inventory[line.index].code,
-          price: line.price,
-          quantity: line.qty,
-          total: line.qty*line.price,
+          name: it.name,
+          code: it.code,
+          price: it.price,
+          quantity: qty,
+          total: qty*it.price,
           seller: 'CajaRegistradora',
           date: new Date().toISOString()
         });
       });
+      localStorage.setItem('inventory', JSON.stringify(inventory));
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-
+      beepOK();
       alert('Venta realizada ✅');
       closeCashRegister();
-      filterInventory(); // refresca tabla
-      beepOK(); // SONIDO DE ÉXITO
+      filterInventory();
     }
   </script>
 </body>

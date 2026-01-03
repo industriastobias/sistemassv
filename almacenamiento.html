@@ -216,7 +216,7 @@
       z-index: 1001;
     }
 
-    /* ---- VENTA EXPRES ---- */
+    /* ---- VENTA EXPRES MEJORADA ---- */
     #fastSellPanel {
       display: none;
       flex-direction: column;
@@ -230,20 +230,67 @@
       max-height: 30vh;
       overflow: auto;
     }
-
-    /* ---- AYUDA VISUAL RÁPIDA ---- */
-    #quickHelp {
-      position: fixed;
-      bottom: 5rem;
-      left: .5rem;
-      background: #000a;
+    .fast-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .3rem;
+      border-bottom: 1px solid #ddd;
+    }
+    .fast-line.no-stock {
+      background: #fee;
+      color: #900;
+    }
+    .fast-line.ok-stock {
+      background: #efe;
+      color: #060;
+    }
+    .fast-qty-controls {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+    }
+    .fast-qty-controls button {
+      background: var(--accent);
       color: #fff;
-      padding: .3rem .5rem;
+      border: none;
+      border-radius: 4px;
+      padding: .2rem .4rem;
+      cursor: pointer;
+    }
+    .fast-qty-controls button:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ---- MENÚ DESPLEGABLE ---- */
+    #mainMenu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,.1);
+      z-index: 1002;
+      display: none;
+      flex-wrap: wrap;
+      gap: .5rem;
+      padding: .6rem 1rem;
+    }
+    #mainMenu.show {
+      display: flex;
+    }
+    #mainMenu button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
       border-radius: 6px;
-      font-size: .7rem;
-      line-height: 1.3;
-      pointer-events: none;
-      z-index: 1000;
+      padding: .4rem .7rem;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+    #mainMenu button:hover {
+      background: var(--accent-hover);
     }
 
     /* ---- MODO OSCURO ---- */
@@ -254,14 +301,22 @@
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
 
-  <!-- AYUDA VISUAL RÁPIDA -->
-  <div id="quickHelp">
-    Ctrl+B → Buscar código<br>
-    Ctrl+E → Exportar ventas<br>
-    Ctrl+F → Venta exprés
-  </div>
+  <!-- MENÚ DESPLEGABLE -->
+  <nav id="mainMenu">
+    <button onclick="startCameraScan()" title="Cámara">📷 Cámara</button>
+    <button onclick="initUSBReader()" title="Lector USB">🔌 Lector USB</button>
+    <button onclick="downloadLabelsPDF()" title="Etiquetas PDF">📇 Etiquetas PDF</button>
+    <button onclick="toggleSalesPanel()" title="Historial">📋 Historial</button>
+    <button onclick="openSalesHistoryModal()" title="Ventas Detalle">🖼️ Ventas Detalle</button>
+    <button onclick="toggleKiosco()" title="Kiosco">🖥️ Kiosco</button>
+    <button onclick="toggleFastSell()" title="Venta Exprés">⚡ Venta Exprés</button>
+    <button onclick="unsoldAlert()" title="Sin venta">📦 Sin venta</button>
+    <button onclick="toggleDark()" title="Modo oscuro">🌙</button>
+    <button onclick="toggleMainMenu()" style="margin-left:auto;">✖</button>
+  </nav>
 
   <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
+  <button onclick="toggleMainMenu()" style="position:fixed;top:.7rem;left:.7rem;z-index:1003;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:.4rem .6rem;font-size:1rem;">☰</button>
 
   <nav id="sideMenu">
     <a href="menu.html"><i class="fa-solid fa-bars"></i></a>
@@ -280,17 +335,8 @@
   <div class="container">
     <div class="top-bar">
       <div id="lowStockBox" title="Productos con stock bajo">⚠️ <span id="dashLow">-</span></div>
-      <button class="stamp" onclick="startCameraScan()" title="Escanear con cámara">📷 Cámara</button>
-      <button class="stamp" id="usbBtn" onclick="initUSBReader()" title="Lector USB HID">🔌 Lector USB</button>
-      <button class="stamp" onclick="downloadLabelsPDF()" title="Descargar etiquetas">📇 Etiquetas PDF</button>
-      <button class="stamp" id="cancelScanBtn" onclick="cancelScan()" style="display:none;background:var(--danger);border-color:var(--danger);">❌ Cancelar</button>
-      <button class="stamp" id="salesBtn" onclick="toggleSalesPanel()" title="Ver historial de ventas">📋 Historial</button>
-      <button class="stamp" onclick="openSalesHistoryModal()" title="Ventas con imagen y filtros">🖼️ Ventas Detalle</button>
-      <button class="stamp" id="kioscoBtn" onclick="toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
-      <!-- NUEVOS BOTONES -->
-      <button class="stamp" onclick="toggleFastSell()" title="Venta exprés">⚡ Venta Exprés</button>
-      <button class="stamp" onclick="unsoldAlert()" title="Productos sin venta">📦 Sin venta</button>
-      <button class="stamp" onclick="toggleDark()" title="Modo oscuro">🌙</button>
+      <!-- BOTONES ELIMINADOS DE AQUÍ Y PASADOS AL MENÚ DESPLEGABLE -->
+      <button class="stamp" onclick="toggleMainMenu()" style="margin-left:auto;">☰ Menú</button>
     </div>
 
     <div id="reader"></div>
@@ -348,14 +394,22 @@
       <button class="stamp" id="toggleViewBtn" onclick="toggleView()" style="margin-left:auto;">Ver Tarjetas</button>
     </div>
 
-    <!-- PANEL VENTA EXPÉS -->
+    <!-- PANEL VENTA EXPRES MEJORADO -->
     <div id="fastSellPanel" style="display:none;flex-direction:column;gap:.8rem;margin-top:1rem;">
       <div style="display:flex;gap:.5rem;align-items:flex-end;">
         <input id="fastCode" placeholder="Escanea código" style="flex:1">
-        <button class="stamp" onclick="addFastItem(document.getElementById('fastCode').value);document.getElementById('fastCode').value='';document.getElementById('fastCode').focus()">Agregar</button>
+        <input id="fastQty" type="number" min="1" value="1" style="width:60px;">
+        <button class="stamp" onclick="addFastItem()">Agregar</button>
       </div>
       <div id="fastSellList" style="border:1px solid var(--border);border-radius:6px;padding:.5rem;max-height:30vh;overflow:auto;"></div>
-      <button class="stamp" onclick="finishFastSell()" style="align-self:flex-end;">Cobrar e Imprimir</button>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <label>Descuento %:</label>
+        <input id="fastDisc" type="number" min="0" max="99" value="0" style="width:60px;">
+        <label>Paga con:</label>
+        <input id="fastPaga" type="number" min="0" step="0.01" placeholder="0">
+        <span id="fastVuelto" style="font-weight:700;"></span>
+        <button class="stamp" onclick="finishFastSell()" style="margin-left:auto;">Cobrar e Imprimir</button>
+      </div>
     </div>
 
     <div id="salesPanel">
@@ -419,29 +473,21 @@
     <div id="cardsView" class="cards-view"></div>
   </div>
 
-  <!-- ✅ MODAL REGISTRAR VENTA (PRECIO FIJO E INMUTABLE) -->
+  <!-- MODALES -->
   <div id="soldModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeSoldModal()">&times;</span>
       <h2>Registrar Venta</h2>
-
       <label for="soldQuantity">Cantidad vendida:</label>
       <input type="number" id="soldQuantity" min="1">
-
-      <label id="originalPriceLabel" style="font-weight:700;color:#555;margin-bottom:.5rem;display:block;">
-        Precio establecido: $0
-      </label>
-
+      <label id="originalPriceLabel" style="font-weight:700;color:#555;margin-bottom:.5rem;display:block;">Precio establecido: $0</label>
       <label for="soldPrice" style="margin-top:1rem;display:block;">Precio de venta (fijo):</label>
-      <!-- CAMBIO RADICAL: Precio predeterminado y DESABILITADO -->
       <input type="number" id="soldPrice" min="0" step="0.01" readonly style="background-color:#f0f0f0;color:#666;">
-
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
     </div>
   </div>
 
-  <!-- Modal editar precio -->
   <div id="priceModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closePriceModal()">&times;</span>
@@ -452,43 +498,24 @@
     </div>
   </div>
 
-  <!-- Modal de ventas con imagen y filtros -->
   <div id="salesHistoryModal" class="modal">
     <div class="modal-content" style="width: 90vw; max-width: 1000px;">
       <span class="close" onclick="closeSalesHistoryModal()">&times;</span>
       <h2>Historial de Ventas Detallado</h2>
-
       <div style="display:flex;gap:.8rem;flex-wrap: wrap;align-items:flex-end;margin-bottom:1rem;">
-        <div>
-          <label for="filterMonth">Mes:</label>
-          <input type="month" id="filterMonth">
-        </div>
-        <div>
-          <label for="filterSeller">Vendedor:</label>
-          <select id="filterSeller">
-            <option value="">Todos</option>
-            <option value="paola">Paola</option>
-            <option value="ernesto">Ernesto</option>
-          </select>
-        </div>
-        <div>
-          <label for="filterDateFrom">Desde:</label>
-          <input type="date" id="filterDateFrom">
-        </div>
-        <div>
-          <label for="filterDateTo">Hasta:</label>
-          <input type="date" id="filterDateTo">
-        </div>
+        <div><label for="filterMonth">Mes:</label><input type="month" id="filterMonth"></div>
+        <div><label for="filterSeller">Vendedor:</label><select id="filterSeller"><option value="">Todos</option><option value="paola">Paola</option><option value="ernesto">Ernesto</option></select></div>
+        <div><label for="filterDateFrom">Desde:</label><input type="date" id="filterDateFrom"></div>
+        <div><label for="filterDateTo">Hasta:</label><input type="date" id="filterDateTo"></div>
         <button class="stamp" onclick="applySalesFilters()">Filtrar</button>
         <button class="stamp" onclick="clearSalesFilters()">Limpiar</button>
       </div>
-
       <div id="salesHistoryContent" style="max-height: 60vh; overflow-y: auto;"></div>
     </div>
   </div>
 
   <script>
-    /* ----------  VARIABLES GLOBALES  ---------- */
+    /* ---------- VARIABLES GLOBALES ---------- */
     let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
     let currentSoldIndex = -1;
     let currentPriceIndex = -1;
@@ -496,98 +523,143 @@
     let html5QrCode;
     const PASSWORD_EDIT = 'admin123';
 
-    /* ---------- VENTA EXPRES ---------- */
+    /* ---------- VENTA EXPRES MEJORADA ---------- */
     let fastCart = []; // [{code, name, qty, price}, ...]
 
     function toggleFastSell(){
       const panel = document.getElementById('fastSellPanel');
       panel.style.display = panel.style.display==='flex' ? 'none' : 'flex';
-      if(panel.style.display==='flex') document.getElementById('fastCode').focus();
+      if(panel.style.display==='flex') {
+        document.getElementById('fastCode').focus();
+        renderFastCart();
+      }
     }
 
-    function addFastItem(code){
-      if(!code.trim()) return;
-      const item = inventory.find(p=>p.barcode===code.trim());
-      if(!item){beepError(); return;}
-      if(item.quantity===0){alert('Sin stock'); return;}
-      const line = fastCart.find(l=>l.code===code.trim());
-      if(line){ line.qty++; } else {
-        fastCart.push({code:item.barcode, name:item.name, qty:1, price:item.price});
+    function addFastItem(){
+      const code = document.getElementById('fastCode').value.trim();
+      const qty = parseInt(document.getElementById('fastQty').value)||1;
+      if(!code) return;
+      const item = inventory.find(p=>p.barcode===code);
+      if(!item) {beepError(); return;}
+      if(item.quantity < qty) {alert('Stock insuficiente'); return;}
+      const line = fastCart.find(l=>l.code===code);
+      if(line){ line.qty+=qty; } else {
+        fastCart.push({code:item.barcode, name:item.name, qty:qty, price:item.price});
       }
-      item.quantity--;
+      item.quantity-=qty;
       localStorage.setItem('inventory',JSON.stringify(inventory));
-      renderFastCart(); filterInventory(); beepOK();
+      document.getElementById('fastCode').value='';
+      document.getElementById('fastQty').value=1;
+      renderFastCart(); filterInventory(); beepFast();
     }
 
     function renderFastCart(){
       const div = document.getElementById('fastSellList');
-      if(fastCart.length===0){div.innerHTML='<p style="text-align:center;">Carrito vacío</p>'; return;}
+      if(fastCart.length===0){div.innerHTML='<p style="text-align:center;">Carrito vacío</p>'; updateFastTotal(); return;}
       let total=0, html='';
-      fastCart.forEach((l,i)=>{
+      fastCart.forEach((l,idx)=>{
         const sub = l.qty*l.price; total+=sub;
-        html+=`<div style="display:flex;justify-content:space-between;padding:.3rem;border-bottom:1px solid #ddd;">
-          <span>${l.name}</span>
-          <span>${l.qty} × $${l.price} = $${sub.toFixed(0)}</span>
-          <button onclick="removeFastItem(${i})" style="background:var(--danger);color:#fff;border:none;padding:0 .4rem;border-radius:4px;">✖</button>
+        const item = inventory.find(p=>p.barcode===l.code);
+        const noStock = item && item.quantity < l.qty;
+        html+=`<div class="fast-line ${noStock?'no-stock':'ok-stock'}">
+          <span>${l.name} (${l.code})</span>
+          <div class="fast-qty-controls">
+            <button onclick="changeFastQty(${idx},-1)">-</button>
+            <span>${l.qty}</span>
+            <button onclick="changeFastQty(${idx},+1)">+</button>
+            <button onclick="removeFastItem(${idx})" style="background:var(--danger);">✖</button>
+          </div>
+          <span>$${sub.toFixed(0)}</span>
         </div>`;
       });
-      html+=`<div style="font-weight:700;margin-top:.5rem;">Total: $${total.toFixed(0)}</div>`;
       div.innerHTML=html;
+      updateFastTotal();
     }
 
-    function removeFastItem(index){
-      const line = fastCart[index];
+    function changeFastQty(idx,delta){
+      const line = fastCart[idx];
       const item = inventory.find(p=>p.barcode===line.code);
-      item.quantity += line.qty;
-      fastCart.splice(index,1);
+      if(delta>0 && item.quantity===0) {alert('Sin stock'); return;}
+      if(delta<0 && line.qty===1) {removeFastItem(idx); return;}
+      if(delta>0) {line.qty++; item.quantity--;}
+      if(delta<0) {line.qty--; item.quantity++;}
       localStorage.setItem('inventory',JSON.stringify(inventory));
       renderFastCart(); filterInventory();
     }
 
+    function removeFastItem(idx){
+      const line = fastCart[idx];
+      const item = inventory.find(p=>p.barcode===line.code);
+      item.quantity+=line.qty;
+      fastCart.splice(idx,1);
+      localStorage.setItem('inventory',JSON.stringify(inventory));
+      renderFastCart(); filterInventory();
+    }
+
+    function updateFastTotal(){
+      const disc = parseFloat(document.getElementById('fastDisc').value)||0;
+      const paga = parseFloat(document.getElementById('fastPaga').value)||0;
+      let total = fastCart.reduce((t,l)=>t+l.qty*l.price,0);
+      total = total * (1 - disc/100);
+      document.getElementById('fastVuelto').textContent = paga ? 'Vuelto: $' + (paga - total).toFixed(0) : 'Total: $' + total.toFixed(0);
+    }
+
+    document.getElementById('fastDisc').addEventListener('input', updateFastTotal);
+    document.getElementById('fastPaga').addEventListener('input', updateFastTotal);
+
     function finishFastSell(){
       if(fastCart.length===0){alert('Carrito vacío'); return;}
-      const total = fastCart.reduce((t,l)=>t+l.qty*l.price,0);
+      const disc = parseFloat(document.getElementById('fastDisc').value)||0;
+      let total = fastCart.reduce((t,l)=>t+l.qty*l.price,0);
+      total = total * (1 - disc/100);
       const ticket = JSON.parse(JSON.stringify(fastCart));
-      ticket.forEach(l=>{l.total=l.qty*l.price; l.seller='CajaExprés'; l.date=new Date().toISOString();});
+      ticket.forEach(l=>{l.total=l.qty*l.price*(1-disc/100); l.seller='CajaExprés'; l.date=new Date().toISOString();});
       let sold = JSON.parse(localStorage.getItem('soldInventory')||'[]');
       sold = sold.concat(ticket);
       localStorage.setItem('soldInventory',JSON.stringify(sold));
       fastCart=[];
       renderFastCart();
       filterInventory();
-      beepOK();
+      beepFast();
+      // PASAR A VENTA.HTML
+      localStorage.setItem('ventaExpress', JSON.stringify({items: ticket, total: total}));
+      window.open('venta.html', '_blank');
       downloadTicket(ticket,total);
     }
 
     function downloadTicket(ticket,total){
-      const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'p',unit:'mm',format:'a7'}); // 74x105 mm
+      const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'p',unit:'mm',format:'a7'});
       let y=5;
       doc.setFontSize(10); doc.text('TIK-EXPRESS',35,y,'center'); y+=6;
-      ticket.forEach(l=>{ doc.text(`${l.qty} ${l.name.slice(0,15)}`,5,y); doc.text(`$${l.total}`,50,y,'right'); y+=4; });
-      y+=2; doc.text('TOTAL: $'+total,50,y,'right');
+      ticket.forEach(l=>{ doc.text(`${l.qty} ${l.name.slice(0,15)}`,5,y); doc.text(`$${l.total.toFixed(0)}`,50,y,'right'); y+=4; });
+      y+=2; doc.text('TOTAL: $'+total.toFixed(0),50,y,'right');
       doc.save('ticket.pdf');
     }
 
-    /* ---------- COMBOS / RECETAS ---------- */
+    function beepFast(){
+      const freq = 1200;
+      const ctx = new (window.AudioContext||window.webkitAudioContext)();
+      const osc=ctx.createOscillator(); osc.connect(ctx.destination);
+      osc.frequency.value=freq; osc.start(); osc.stop(ctx.currentTime+0.05);
+    }
+
+    /* ---------- COMBOS RÁPIDOS ---------- */
     const combos = [
       {name:'Kit Verano', items:[{barcode:'1234567890123',qty:1},{barcode:'1234567890124',qty:1}], price:2990}
     ];
 
     function sellCombo(index){
       const combo = combos[index];
-      // verificar stock
       for(const li of combo.items){
         const it = inventory.find(p=>p.barcode===li.barcode);
         if(!it||it.quantity<li.qty){alert(`Falta stock de ${it?.name||li.barcode}`); return;}
       }
-      // restar
       combo.items.forEach(li=>{const it=inventory.find(p=>p.barcode===li.barcode); it.quantity-=li.qty;});
-      // registrar venta
       let sold = JSON.parse(localStorage.getItem('soldInventory')||'[]');
       sold.push({name:combo.name, code:'COMBO', qty:1, price:combo.price, total:combo.price, seller:'Combo', date:new Date().toISOString()});
       localStorage.setItem('soldInventory',JSON.stringify(sold));
       localStorage.setItem('inventory',JSON.stringify(inventory));
-      beepOK(); filterInventory();
+      beepFast(); filterInventory();
     }
 
     /* ---------- FUNCIONES AUXILIARES ---------- */
@@ -1012,6 +1084,7 @@
       if (e.ctrlKey && e.key === 'b') { e.preventDefault(); document.getElementById('searchCode').focus(); }
       if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportSalesCSV(); }
       if (e.ctrlKey && e.key === 'f') { e.preventDefault(); toggleFastSell(); }
+      if (e.key === 'Enter' && document.getElementById('fastSellPanel').style.display==='flex' && !document.getElementById('fastCode').value) { finishFastSell(); }
     });
     ['searchName', 'searchCategory', 'searchCode', 'minPrice', 'maxPrice', 'lowStockOnly'].forEach(id => {
       const el = document.getElementById(id);
@@ -1031,7 +1104,7 @@
     }
     filterInventory();
 
-    /* ---------- MENÚ LATERAL ---------- */
+    /* ---------- MENÚES / PANTALLA COMPLETA ---------- */
     function toggleMenu() { document.getElementById('sideMenu').classList.toggle('show'); }
     document.addEventListener('click', e => {
       const menu = document.getElementById('sideMenu');
@@ -1040,7 +1113,6 @@
     });
     document.querySelectorAll('#sideMenu a').forEach(link => link.addEventListener('click', () => document.getElementById('sideMenu').classList.remove('show')));
 
-    /* ---------- PANTALLA COMPLETA ---------- */
     function toggleKiosco() {
       const body = document.body; const btn = document.getElementById('kioscoBtn');
       if (!document.fullscreenElement) {
@@ -1048,6 +1120,10 @@
       } else {
         document.exitFullscreen().then(() => { body.classList.remove('kiosco'); btn.textContent = '🖥️ Kiosco'; });
       }
+    }
+
+    function toggleMainMenu(){
+      document.getElementById('mainMenu').classList.toggle('show');
     }
 
     /* ---------- MODO OSCURO ---------- */

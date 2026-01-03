@@ -247,6 +247,8 @@
       <button class="stamp" id="salesBtn" onclick="toggleSalesPanel()" title="Ver historial de ventas">📋 Historial</button>
       <button class="stamp" onclick="openSalesHistoryModal()" title="Ventas con imagen y filtros">🖼️ Ventas Detalle</button>
       <button class="stamp" id="kioscoBtn" onclick="toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
+      <!-- NUEVO BOTÓN CAJA REGISTRADORA -->
+      <button class="stamp" onclick="openCashRegister()" title="Caja registradora">🧾 Caja Registradora</button>
     </div>
 
     <div id="reader"></div>
@@ -431,6 +433,33 @@
       </div>
 
       <div id="salesHistoryContent" style="max-height: 60vh; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <!-- =============== CAJA REGISTRADORA (multiproducto) =============== -->
+  <!-- Modal caja registradora -->
+  <div id="cashRegisterModal" class="modal">
+    <div class="modal-content" style="max-width:520px;">
+      <span class="close" onclick="closeCashRegister()">&times;</span>
+      <h2>Caja Registradora</h2>
+
+      <!-- Selector múltiple de productos -->
+      <label>Seleccione productos y cantidades:</label>
+      <div id="cashProductsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:.5rem;border-radius:6px;margin-bottom:1rem;"></div>
+
+      <!-- Total general -->
+      <div style="font-size:1.3rem;font-weight:700;margin-bottom:1rem;">Total: $<span id="cashTotal">0</span></div>
+
+      <!-- Pago y vuelto -->
+      <label for="cashPayment">Paga con:</label>
+      <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
+      <button class="stamp" onclick="calcCashChange()">Calcular vuelto</button>
+
+      <!-- Vuelto en grandes letras -->
+      <div id="cashChangeBig" style="display:none;font-size:2.2rem;font-weight:700;color:var(--accent);margin:.8rem 0;"></div>
+
+      <!-- Botón confirmar -->
+      <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSale()">✅ Confirmar venta</button>
     </div>
   </div>
 
@@ -930,6 +959,7 @@
       document.getElementById('resultMessage').textContent = '¡Venta registrada!';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
+      beepOK(); // SONIDO DE ÉXITO
     }
 
     function goToRow() {
@@ -1091,6 +1121,95 @@
           btn.textContent = '🖥️ Kiosco';
         });
       }
+    }
+
+    /* ---------- Caja registradora ---------- */
+    let cashBasket = []; // [{index, qty, price, name}, ...]
+
+    function openCashRegister(){
+      cashBasket = [];
+      const listDiv = document.getElementById('cashProductsList');
+      listDiv.innerHTML = '';
+      inventory.forEach((it, idx) => {
+        if(it.quantity<=0) return;
+        const row = document.createElement('div');
+        row.style.display='flex';row.style.alignItems='center';row.style.gap='.5rem';row.style.marginBottom='.4rem';
+        row.innerHTML = `
+          <input type="checkbox" onchange="toggleCashProduct(${idx})" id="cashchk-${idx}">
+          <span style="flex:1;">${it.name} (Stock:${it.quantity})</span>
+          <input type="number" id="cashqty-${idx}" min="1" max="${it.quantity}" value="1" disabled style="width:70px;" oninput="updateCashTotal()">
+          <span>$${it.price}</span>
+        `;
+        listDiv.appendChild(row);
+      });
+      document.getElementById('cashTotal').textContent='0';
+      document.getElementById('cashPayment').value='';
+      document.getElementById('cashChangeBig').style.display='none';
+      document.getElementById('cashConfirmBtn').style.display='none';
+      document.getElementById('cashRegisterModal').style.display='block';
+    }
+
+    function closeCashRegister(){
+      document.getElementById('cashRegisterModal').style.display='none';
+    }
+
+    function toggleCashProduct(idx){
+      const chk = document.getElementById('cashchk-'+idx);
+      const qtyInput = document.getElementById('cashqty-'+idx);
+      qtyInput.disabled = !chk.checked;
+      updateCashTotal();
+    }
+
+    function updateCashTotal(){
+      cashBasket = [];
+      inventory.forEach((it,idx)=>{
+        const chk = document.getElementById('cashchk-'+idx);
+        if(!chk || !chk.checked) return;
+        const qty = parseInt(document.getElementById('cashqty-'+idx).value)||0;
+        cashBasket.push({index:idx, qty, price:it.price, name:it.name});
+      });
+      const total = cashBasket.reduce((a,b)=>a + b.qty*b.price, 0);
+      document.getElementById('cashTotal').textContent = total.toFixed(2);
+      document.getElementById('cashChangeBig').style.display='none';
+      document.getElementById('cashConfirmBtn').style.display='none';
+    }
+
+    function calcCashChange(){
+      const total = parseFloat(document.getElementById('cashTotal').textContent);
+      const pay = parseFloat(document.getElementById('cashPayment').value)||0;
+      if(pay < total){ alert('Pago insuficiente'); return; }
+      const change = pay - total;
+      document.getElementById('cashChangeBig').textContent = 'Vuelto: $' + change.toFixed(2);
+      document.getElementById('cashChangeBig').style.display='block';
+      document.getElementById('cashConfirmBtn').style.display='inline-block';
+    }
+
+    function confirmCashSale(){
+      // descuenta stock
+      cashBasket.forEach(line=>{
+        inventory[line.index].quantity -= line.qty;
+      });
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+
+      // guarda venta
+      let soldInventory = JSON.parse(localStorage.getItem('soldInventory')||'[]');
+      cashBasket.forEach(line=>{
+        soldInventory.push({
+          name: line.name,
+          code: inventory[line.index].code,
+          price: line.price,
+          quantity: line.qty,
+          total: line.qty*line.price,
+          seller: 'CajaRegistradora',
+          date: new Date().toISOString()
+        });
+      });
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+
+      alert('Venta realizada ✅');
+      closeCashRegister();
+      filterInventory(); // refresca tabla
+      beepOK(); // SONIDO DE ÉXITO
     }
   </script>
 </body>

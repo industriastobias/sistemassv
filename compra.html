@@ -211,7 +211,6 @@
     <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
     <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
     <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
-    <!-- === MEJORA 15: IMPRIMIR ETIQUETAS === -->
     <button type="button" class="btn-primary" onclick="printLabels()">🖨️ Imprimir etiquetas</button>
     <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
     <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
@@ -246,8 +245,8 @@
 
 <!-- ============  FILTROS  ============ -->
 <div style="width:95%;max-width:1200px;margin:0 auto 1rem;display:flex;gap:.75rem;flex-wrap:wrap">
-  <!-- Filtro por código de barras -->
-  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras…" style="flex:1 1 260px">
+  <!-- Filtro por código de barras EXACTO -->
+  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras (exacto)…" style="flex:1 1 260px">
   <!-- Filtro por categoría -->
   <select id="categoryFilter" style="flex:1 1 200px">
     <option value="">Todas las categorías</option>
@@ -306,7 +305,7 @@ function calculateTotal() {
 function renderTable() {
   const list = document.getElementById('inventoryList');
   list.innerHTML = inventory.map((item, idx) => `
-    <div class="card-item" data-barcode="${item.barcode.toLowerCase()}" data-category="${item.category}">
+    <div class="card-item" data-barcode="${item.barcode}" data-category="${item.category}">
       <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
       <h3>${escapeHtml(item.name)}</h3>
       <p>Código: ${escapeHtml(item.code)}</p>
@@ -431,7 +430,6 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
           document.getElementById('imagePreview').style.display = 'none';
           barcodeCanvas.style.display = 'none';
           document.getElementById('loadingOverlay').classList.remove('show');
-          // === MEJORA 4: QUITAR INDICADOR ===
           document.getElementById('editModeFlag').style.display = 'none';
           return;
         }
@@ -852,13 +850,13 @@ const searchBox = document.getElementById('searchBox');
 const categoryFilter = document.getElementById('categoryFilter');
 
 function aplicarFiltros() {
-  const q = searchBox.value.trim().toLowerCase();
+  const q = searchBox.value.trim();   // sin toLowerCase para respetar mayúsculas/minúsculas
   const cat = categoryFilter.value;
   const cards = document.querySelectorAll('#inventoryList .card-item');
   cards.forEach(card => {
-    const barcode = card.dataset.barcode;
+    const barcode = card.dataset.barcode;   // comparación EXACTA
     const categoria = card.dataset.category;
-    const okBarcode = !q || barcode.includes(q);
+    const okBarcode = q === '' || barcode === q;
     const okCat = !cat || categoria === cat;
     card.style.display = (okBarcode && okCat) ? '' : 'none';
   });

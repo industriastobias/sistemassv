@@ -184,6 +184,9 @@
 <dialog id="formatModal">
   <div class="modal-box">
     <h2>Selecciona qué deseas eliminar</h2>
+    <div style="margin-bottom:.75rem;text-align:right;">
+      <button id="toggleAllBtn" class="btn-secondary" style="padding:.4rem .8rem;font-size:.9rem;">Seleccionar todo</button>
+    </div>
     <ul id="formatList" class="modal-list"></ul>
     <div class="modal-actions">
       <button id="cancelFormat" class="btn-secondary">Cancelar</button>
@@ -355,83 +358,81 @@
 
   /* ----------  FORMATEO SELECTIVO  ---------- */
   (() => {
-    const modal = document.getElementById('formatModal');
-    const listEl = document.getElementById('formatList');
-    const cancelBtn = document.getElementById('cancelFormat');
-    const confirmBtn = document.getElementById('confirmFormat');
+    const modal   = document.getElementById('formatModal');
+    const listEl  = document.getElementById('formatList');
+    const cancelBtn   = document.getElementById('cancelFormat');
+    const confirmBtn  = document.getElementById('confirmFormat');
+    const toggleBtn   = document.getElementById('toggleAllBtn');
+
+    let options = [];          // array con {type,name}
+    let allChecked = false;    // estado actual
 
     async function collectOptions() {
       const opts = [];
-      // IndexedDB
       const dbs = await window.indexedDB.databases?.() || [];
-      for (const { name } of dbs) {
-        opts.push({ type: 'db', name });
+      dbs.forEach(({name}) => opts.push({type:'db', name}));
+      for(let i = 0; i < localStorage.length; i++){
+        opts.push({type:'ls', name:localStorage.key(i)});
       }
-      // localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        opts.push({ type: 'ls', name: key });
-      }
-      // localForage
-      const lfKeys = await localforage.keys();
-      for (const key of lfKeys) {
-        opts.push({ type: 'lf', name: key });
+      for(const key of await localforage.keys()){
+        opts.push({type:'lf', name:key});
       }
       return opts;
     }
 
-    function renderList(options) {
+    function renderList() {
       listEl.innerHTML = '';
       options.forEach((opt, idx) => {
-        const li = document.createElement('li');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.id = `opt-${idx}`;
-        cb.value = idx;
-        const label = document.createElement('label');
-        label.htmlFor = cb.id;
-        label.textContent = `${opt.type.toUpperCase()}: ${opt.name}`;
-        li.appendChild(cb);
-        li.appendChild(label);
+        const li  = document.createElement('li');
+        const cb  = document.createElement('input');
+        cb.type   = 'checkbox';
+        cb.id     = `opt-${idx}`;
+        cb.checked= allChecked;
+        const lbl = document.createElement('label');
+        lbl.htmlFor = cb.id;
+        lbl.textContent = `${opt.type.toUpperCase()}: ${opt.name}`;
+        li.append(cb, lbl);
         listEl.appendChild(li);
       });
+      toggleBtn.textContent = allChecked ? 'Deseleccionar todo' : 'Seleccionar todo';
     }
 
     document.getElementById('formatBtn').addEventListener('click', async () => {
-      const options = await collectOptions();
-      renderList(options);
+      options     = await collectOptions();
+      allChecked  = false;
+      renderList();
       modal.setAttribute('open', '');
-      modal.options = options;
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      allChecked = !allChecked;
+      renderList();
     });
 
     cancelBtn.addEventListener('click', () => modal.removeAttribute('open'));
 
     confirmBtn.addEventListener('click', async () => {
-      const checks = listEl.querySelectorAll('input[type=checkbox]:checked');
-      if (checks.length === 0) return alert('Marca al menos un elemento.');
-      if (!confirm(`¿Seguro que quieres eliminar ${checks.length} elemento(s)? Esta acción no se puede deshacer.`)) return;
+      const checks = [...listEl.querySelectorAll('input[type=checkbox]:checked')];
+      if(!checks.length) return alert('Marca al menos un elemento.');
+      if(!confirm(`¿Eliminar ${checks.length} elemento(s)?`)) return;
 
-      const opts = modal.options;
-      for (const ch of checks) {
-        const opt = opts[parseInt(ch.value)];
-        try {
-          if (opt.type === 'db') {
-            // Borrar base completa
-            const db = await new Promise((res, rej) => {
+      for(const ch of checks){
+        const opt = options[parseInt(ch.id.replace('opt-',''))];
+        try{
+          if(opt.type==='db'){
+            const db = await new Promise((res,rej)=>{
               const rq = indexedDB.open(opt.name);
-              rq.onsuccess = () => res(rq.result);
-              rq.onerror = () => rej(rq.error);
+              rq.onsuccess=()=>res(rq.result);
+              rq.onerror =()=>rej(rq.error);
             });
             db.close();
             indexedDB.deleteDatabase(opt.name);
-          } else if (opt.type === 'ls') {
+          }else if(opt.type==='ls'){
             localStorage.removeItem(opt.name);
-          } else if (opt.type === 'lf') {
+          }else if(opt.type==='lf'){
             await localforage.removeItem(opt.name);
           }
-        } catch (e) {
-          console.warn('Error al borrar', opt, e);
-        }
+        }catch(e){console.warn('Error al borrar',opt,e);}
       }
       alert('Elementos seleccionados eliminados.');
       modal.removeAttribute('open');

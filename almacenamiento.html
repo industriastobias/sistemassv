@@ -216,7 +216,7 @@
       z-index: 1001;
     }
 
-    /* ---------- estilos caja registradora pantalla completa (tamaño normal) ---------- */
+    /* ---------- estilos caja registradora (sin cruce) ---------- */
     #cashRegisterFullscreen{
       position:fixed; inset:0; z-index:9999;
       background:#fff; color:#1f2937; overflow-y:auto;
@@ -242,15 +242,12 @@
       display:flex; flex-direction:column; gap:.4rem; text-align:center;
       transition:background .3s;
     }
-    /* Imagen normal en caja */
     #cashRegisterFullscreen .prod-card img{
       width:100%; height:160px; object-fit:cover; border-radius:6px; cursor:pointer;
     }
-    /* Stock bajo en rojo */
     #cashRegisterFullscreen .stock-low{
       color:#dc2626; font-weight:700;
     }
-    /* Iluminar último producto agregado */
     @keyframes flash{
       0%  {background:#fef08a;}
       100%{background:transparent;}
@@ -258,11 +255,9 @@
     .flash{
       animation:flash .6s ease;
     }
-    /* tabla dentro de caja (modo lista) */
     #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:1rem;}
     #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
     #cashRegisterFullscreen th{background:var(--highlight);}
-    /* lista flotante */
     #cashFloatList{
       position:fixed; top:1rem; right:1rem; width:320px; max-height:400px;
       background:#ffffff; border:2px solid var(--accent); border-radius:12px;
@@ -276,10 +271,7 @@
       padding:.3rem 0; font-size:.9rem;
     }
     #cashFloatList button{margin-top:.5rem; width:100%;}
-    /* eliminamos el mensaje de atajos */
-    #cashHelpKeys{
-      display:none;
-    }
+    #cashHelpKeys{display:none}
   </style>
 </head>
 
@@ -1153,8 +1145,8 @@
       }
     }
 
-    /* ---------- Caja Registradora (sin mensaje de atajos y sin cruce) ---------- */
-    let cashItems = []; // [{idx, qty, name, price, rowId}, ...]
+    /* ---------- Caja Registradora (sin cruce de información) ---------- */
+    let cashItems = []; // [{realIdx, qty, name, price, rowId}, ...]
     let cashViewMode = 'grid'; // 'grid' | 'list'
     let lastAddedRowId = null; // para iluminar
 
@@ -1192,20 +1184,17 @@
       </div>
       <div id="cashProductsContainer" style="flex:1 1 auto;overflow-y:auto;"></div>`;
 
-      // llenar categorías
       const catSet = [...new Set(inventory.map(p=>p.category))].sort();
       const catSelect = div.querySelector('#cashCatFilter');
       catSet.forEach(c=>{
         const opt=document.createElement('option'); opt.value=c; opt.textContent=c; catSelect.appendChild(opt);
       });
 
-      // contenedor dinámico
       const container = div.querySelector('#cashProductsContainer');
       renderCashProducts(container);
 
       document.body.appendChild(div);
 
-      // lista flotante más grande
       const fl = document.createElement('div');
       fl.id = 'cashFloatList';
       fl.innerHTML = `
@@ -1215,7 +1204,6 @@
       `;
       document.body.appendChild(fl);
 
-      // footer con total, pago, vuelto y botones
       const footer = document.createElement('div');
       footer.className = 'footer';
       footer.innerHTML = `
@@ -1229,14 +1217,13 @@
       `;
       div.appendChild(footer);
 
-      // filtros en tiempo real
       div.querySelector('#cashSearchLive').addEventListener('input', applyCashLiveFilter);
       div.querySelector('#cashCatFilter').addEventListener('change', applyCashLiveFilter);
 
       updateCashList();
     }
 
-    /* Solo botón +1 (sin +5 ni +10) */
+    /* Solo botón +1 y sin cruce */
     function quickAdd(rowId, qty){
       const input = document.getElementById(rowId);
       if(!input) return;
@@ -1254,7 +1241,6 @@
       updateCashList();
     }
 
-    /* Iluminar último producto agregado */
     function flashRow(rowId){
       const el = document.getElementById(rowId);
       if(!el) return;
@@ -1269,7 +1255,7 @@
       if(e.key === 'F12'){ e.preventDefault(); confirmCashSaleFull(); }
     });
 
-    /* render productos con botón +1 solo y stock 0 al final */
+    /* render productos con índice real del inventario */
     function renderCashProducts(container){
       container.innerHTML = '';
       // orden: stock > 0 primero, luego alfabético
@@ -1284,24 +1270,24 @@
         grid.id = 'cashProductsGrid';
         grid.className = 'products-grid';
         sorted.forEach((it, idx) => {
+          const realIdx = inventory.indexOf(it);
           const card = document.createElement('div');
           card.className = 'prod-card';
           card.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
           card.dataset.category = it.category;
           card.innerHTML = `
-            <img id="cashimg-${idx}" />
+            <img id="cashimg-${realIdx}" />
             <div><strong>${it.name}</strong></div>
             <div>Cód: ${it.barcode}</div>
             <div>Cat: ${it.category}</div>
             <div>$${it.price}</div>
             <div class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">Stock: ${it.quantity}</div>
-            <!-- Solo botón +1 -->
             <div style="display:flex;justify-content:center;margin-top:.3rem;">
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+              <button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
             </div>
-            <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity})">
+            <input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity})">
           `;
-          const img = card.querySelector(`#cashimg-${idx}`);
+          const img = card.querySelector(`#cashimg-${realIdx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
             if(blob){ img.src = URL.createObjectURL(blob); }
           });
@@ -1321,21 +1307,22 @@
         `;
         const tbody = tbl.querySelector('tbody');
         sorted.forEach((it, idx) => {
+          const realIdx = inventory.indexOf(it);
           const tr = document.createElement('tr');
           tr.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
           tr.dataset.category = it.category;
           tr.innerHTML = `
             <td>${idx+1}</td>
-            <td><img id="cashimg-${idx}" style="max-height:40px;border-radius:4px;" /></td>
+            <td><img id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;" /></td>
             <td>${it.name}</td>
             <td>${it.barcode}</td>
             <td>${it.category}</td>
             <td>$${it.price}</td>
             <td class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">${it.quantity}</td>
-            <td><button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></td>
-            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity})"></td>
+            <td><button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></td>
+            <td><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity})"></td>
           `;
-          const img = tr.querySelector(`#cashimg-${idx}`);
+          const img = tr.querySelector(`#cashimg-${realIdx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
             if(blob){ img.src = URL.createObjectURL(blob); }
           });
@@ -1388,13 +1375,14 @@
       applyCashLiveFilter();
     }
 
+    /* Lista flotante con nombre y código REAL */
     function updateCashList(){
       cashItems = [];
-      inventory.forEach((it,idx)=>{
-        const input = document.getElementById(`cashqty-${idx}`);
+      inventory.forEach((it,realIdx)=>{
+        const input = document.getElementById(`cashqty-${realIdx}`);
         if(!input) return;
         const qty = parseInt(input.value)||0;
-        if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price, rowId:`cashqty-${idx}`});
+        if(qty>0) cashItems.push({realIdx, qty, name:it.name, price:it.price, rowId:`cashqty-${realIdx}`});
       });
       const ul = document.querySelector('#cashFloatList ul');
       ul.innerHTML = cashItems.map((x,i)=>`
@@ -1419,8 +1407,8 @@
     function cancelCashSale(){
       if(!confirm('¿Cancelar toda la venta?')) return;
       cashItems = [];
-      inventory.forEach((it,idx)=>{
-        const input = document.getElementById(`cashqty-${idx}`);
+      inventory.forEach((it,realIdx)=>{
+        const input = document.getElementById(`cashqty-${realIdx}`);
         if(input) input.value = 0;
       });
       updateCashList();
@@ -1438,10 +1426,10 @@
     function confirmCashSaleFull(){
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory')||'[]');
       cashItems.forEach(x=>{
-        inventory[x.idx].quantity -= x.qty;
+        inventory[x.realIdx].quantity -= x.qty;
         soldInventory.push({
           name: x.name,
-          code: inventory[x.idx].code,
+          code: inventory[x.realIdx].code,
           price: x.price,
           quantity: x.qty,
           total: x.qty*x.price,
@@ -1452,7 +1440,6 @@
       localStorage.setItem('inventory', JSON.stringify(inventory));
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
       beepOK();
-      // Ocultar lista flotante al confirmar
       document.getElementById('cashFloatList').style.display='none';
       alert('Venta realizada ✅');
       closeCashRegister();

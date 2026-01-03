@@ -1163,6 +1163,15 @@
       cashItems = [];
     }
 
+    /* ----------  utilidad para ordenar: stock 0 al final  ---------- */
+    function sortCashProducts(a, b) {
+      // 0 va al final; el resto se ordena alfabéticamente
+      if (a.quantity === 0 && b.quantity !== 0) return  1;
+      if (a.quantity !== 0 && b.quantity === 0) return -1;
+      if (a.quantity === 0 && b.quantity === 0) return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    }
+
     function buildCashRegisterUI(){
       const prev = document.getElementById('cashRegisterFullscreen');
       if(prev) prev.remove();
@@ -1233,63 +1242,71 @@
 
     function renderCashProducts(container){
       container.innerHTML = '';
-      if(cashViewMode === 'grid'){
+      // ordenar: stock 0 al final
+      const sorted = [...inventory].sort(sortCashProducts);
+
+      if (cashViewMode === 'grid') {
         const grid = document.createElement('div');
         grid.id = 'cashProductsGrid';
         grid.className = 'products-grid';
-        inventory.forEach((it,idx)=>{
-          // MOSTRAR TODOS los productos sin filtro inicial
+        sorted.forEach((it, idx) => {
           const card = document.createElement('div');
           card.className = 'prod-card';
           card.dataset.barcode = it.barcode.toLowerCase();
           card.dataset.category = it.category;
           card.innerHTML = `
             <img id="cashimg-${idx}" />
-            <div><strong>#${idx+1} – ${it.name}</strong></div>
+            <div><strong>#${idx + 1} – ${it.name}</strong></div>
             <div>Cód: ${it.barcode}</div>
             <div>Cat: ${it.category}</div>
             <div>$${it.price} · Stock:${it.quantity}</div>
             <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
           `;
           const img = card.querySelector(`#cashimg-${idx}`);
-          localforage.getItem(`img_${it.code}`).then(blob=>{
-            if(blob){ img.src = URL.createObjectURL(blob); }
+          localforage.getItem(`img_${it.code}`).then(blob => {
+            if (blob) { img.src = URL.createObjectURL(blob); }
           });
-          img.onclick = ()=> openImageModal(img.src);
+          img.onclick = () => openImageModal(img.src);
           grid.appendChild(card);
         });
         container.appendChild(grid);
-      }else{
+      } else { // vista lista
         const tbl = document.createElement('table');
         tbl.innerHTML = `
           <thead>
             <tr>
-              <th>#</th><th>Imagen</th><th>Nombre</th><th>Categoría</th>
-              <th>Precio</th><th>Stock</th><th>Cantidad</th>
+              <th>#</th>
+              <th>Imagen</th>
+              <th>Nombre</th>
+              <th>Código de barras</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Cantidad</th>
             </tr>
           </thead>
           <tbody></tbody>
         `;
         const tbody = tbl.querySelector('tbody');
-        inventory.forEach((it,idx)=>{
-          // MOSTRAR TODOS los productos sin filtro inicial
+        sorted.forEach((it, idx) => {
           const tr = document.createElement('tr');
           tr.dataset.barcode = it.barcode.toLowerCase();
           tr.dataset.category = it.category;
           tr.innerHTML = `
-            <td>${idx+1}</td>
+            <td>${idx + 1}</td>
             <td><img id="cashimg-${idx}" style="max-height:40px;border-radius:4px;" /></td>
             <td>${it.name}</td>
+            <td>${it.barcode}</td>
             <td>${it.category}</td>
             <td>$${it.price}</td>
             <td>${it.quantity}</td>
             <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()"></td>
           `;
           const img = tr.querySelector(`#cashimg-${idx}`);
-          localforage.getItem(`img_${it.code}`).then(blob=>{
-            if(blob){ img.src = URL.createObjectURL(blob); }
+          localforage.getItem(`img_${it.code}`).then(blob => {
+            if (blob) { img.src = URL.createObjectURL(blob); }
           });
-          img.onclick = ()=> openImageModal(img.src);
+          img.onclick = () => openImageModal(img.src);
           tbody.appendChild(tr);
         });
         container.appendChild(tbl);

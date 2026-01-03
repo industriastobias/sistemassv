@@ -11,7 +11,6 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    /* (estilos idénticos al anterior) */
     :root {
       --bg: #ffffff;
       --text: #1f2937;
@@ -367,7 +366,7 @@
     <div id="cardsView" class="cards-view"></div>
   </div>
 
-  <!-- Modal registrar venta -->
+  <!-- ✅ MODAL REGISTRAR VENTA (PRECIO FIJO E INMUTABLE) -->
   <div id="soldModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeSoldModal()">&times;</span>
@@ -377,25 +376,12 @@
       <input type="number" id="soldQuantity" min="1">
 
       <label id="originalPriceLabel" style="font-weight:700;color:#555;margin-bottom:.5rem;display:block;">
-        Precio original: $0
+        Precio establecido: $0
       </label>
 
-      <label for="soldPrice" style="margin-top:1rem;display:block;">Precio vendido (unidad):</label>
-      <input type="number" id="soldPrice" min="0" step="0.01" placeholder="Ej: 1500" oninput="checkPriceChange()">
-
-      <!-- Autorización (solo mensaje inicial) -->
-      <div id="authBox" style="display:none;margin-top:1rem;">
-        <label style="color:#d97706;font-weight:700;">⚠️ Necesitas autorización para cambiar el precio.</label>
-        <br><br>
-        <label>Usuario:</label>
-        <select id="authSelect" style="margin-bottom:.4rem;">
-          <option value="">-- Elija --</option>
-          <option value="paola">Paola</option>
-          <option value="ernesto">Ernesto</option>
-        </select>
-
-        <input type="password" id="authPass" placeholder="Contraseña" style="margin-bottom:.4rem;">
-      </div>
+      <label for="soldPrice" style="margin-top:1rem;display:block;">Precio de venta (fijo):</label>
+      <!-- CAMBIO RADICAL: Precio predeterminado y DESABILITADO -->
+      <input type="number" id="soldPrice" min="0" step="0.01" readonly style="background-color:#f0f0f0;color:#666;">
 
       <button class="stamp" onclick="processSale()">Registrar</button>
       <div id="confirmationMessage" class="result-message" style="display:none; margin-top:1rem;">¡Venta registrada!</div>
@@ -456,12 +442,10 @@
     let html5QrCode;
 
     const PASSWORD_EDIT = 'admin123';
-    const AUTH_USERS = ['paola', 'ernesto'];
-    const AUTH_PASSWORD = '159753';
 
     function ensureDateTime(item) {
       if (!item.date) {
-        item.date = new Date().toISOString(); // ⬅️ ISO para filtros
+        item.date = new Date().toISOString();
       }
       return item;
     }
@@ -725,30 +709,16 @@
       document.getElementById('priceModal').style.display = 'none';
     }
 
-    // ✅ Sincroniza precios con almacenamiento.html sin autorización
-    function syncPriceWithStorage(updatedItem) {
-      const storage = JSON.parse(localStorage.getItem('almacenamiento') || '[]');
-      const found = storage.find(p => p.barcode === updatedItem.barcode);
-      if (found) {
-        found.price = updatedItem.price;
-        localStorage.setItem('almacenamiento', JSON.stringify(storage));
-      }
-    }
-
     function saveNewPrice() {
       const newPrice = parseFloat(document.getElementById('newPrice').value);
       if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; }
 
-      const updatedItem = inventory[currentPriceIndex];
-      updatedItem.price = newPrice;
-      updatedItem.priceUpdated = true; // ✅ Marcar como actualizado
+      inventory[currentPriceIndex].price = newPrice;
       localStorage.setItem('inventory', JSON.stringify(inventory));
-
-      syncPriceWithStorage(updatedItem);
 
       closePriceModal();
       filterInventory();
-      document.getElementById('resultMessage').textContent = 'Precio actualizado y sincronizado';
+      document.getElementById('resultMessage').textContent = 'Precio actualizado';
       document.getElementById('resultMessage').style.display = 'block';
       setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000);
     }
@@ -759,7 +729,6 @@
       return text.replace(regex, '<mark>$1</mark>');
     }
 
-    /* ---------- filtros unificados ---------- */
     function applyFilters(){
       filterInventory();
     }
@@ -786,7 +755,6 @@
       document.getElementById('resultMessage').style.display = 'none';
     }
 
-    /* ---------- limpieza total ---------- */
     function clearAllFilters(){
       document.getElementById('searchName').value      = '';
       document.getElementById('searchCategory').value  = '';
@@ -911,13 +879,17 @@
       localStorage.setItem('preferredView', currentView);
     }
 
+    // ✅ CAMBIO RADICAL: Precio fijo e inmutable
     function markSold(index) {
       currentSoldIndex = index;
       const item = inventory[index];
-      document.getElementById('originalPriceLabel').textContent = `Precio original: $${item.price}`;
-      document.getElementById('soldPrice').value = item.price;
+      
+      // Establecer el precio automáticamente sin posibilidad de cambio
+      document.getElementById('originalPriceLabel').textContent = `Precio establecido: $${item.price}`;
+      document.getElementById('soldPrice').value = item.price; // Precio fijo
       document.getElementById('soldQuantity').value = 1;
-      document.getElementById('authBox').style.display = 'none';
+      
+      // Eliminamos toda la lógica de autorización
       document.getElementById('soldModal').style.display = 'block';
     }
 
@@ -926,44 +898,16 @@
       document.getElementById('confirmationMessage').style.display = 'none';
     }
 
-    function checkPriceChange() {
-      const item = inventory[currentSoldIndex];
-      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
-      const authBox = document.getElementById('authBox');
-
-      if (item.priceUpdated && soldPrice === item.price) {
-        authBox.style.display = 'none'; // ✅ No pide autorización
-      } else if (soldPrice !== item.price) {
-        authBox.style.display = 'block';
-      } else {
-        authBox.style.display = 'none';
-      }
-    }
-
+    // ✅ PROCESAR VENTA SIN AUTORIZACIÓN (PRECIO FIJO)
     function processSale() {
       const soldQty = parseInt(document.getElementById('soldQuantity').value);
       const soldPrice = parseFloat(document.getElementById('soldPrice').value);
       const item = inventory[currentSoldIndex];
 
       if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
-      if (isNaN(soldPrice) || soldPrice < 0) { alert('Precio inválido'); return; }
       if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
 
-      // ✅ Si el precio fue actualizado desde inventario/compra, no pide autorización
-      if (item.priceUpdated && soldPrice === item.price) {
-        // ✅ No pide autorización
-      } else if (soldPrice !== item.price) {
-        const authName = document.getElementById('authSelect').value.trim().toLowerCase();
-        const authPass = document.getElementById('authPass').value;
-
-        if (!AUTH_USERS.includes(authName) || authPass !== AUTH_PASSWORD) {
-          alert('Autorización incorrecta.\nUsuarios válidos: Paola o Ernesto\nContraseña: 159753');
-          document.getElementById('soldPrice').value = item.price;
-          document.getElementById('authBox').style.display = 'none';
-          return;
-        }
-      }
-
+      // Procesar venta directamente sin autorización
       item.quantity -= soldQty;
       localStorage.setItem('inventory', JSON.stringify(inventory));
 
@@ -973,9 +917,10 @@
         price: soldPrice,
         quantity: soldQty,
         total: soldPrice * soldQty,
-        seller: document.getElementById('authSelect')?.value || 'Desconocido',
-        date: new Date().toISOString() // ⬅️ ISO para que el filtro mes funcione
+        seller: 'Sistema',
+        date: new Date().toISOString()
       };
+      
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push(soldItem);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
@@ -1008,7 +953,6 @@
       }
     }
 
-    // --- NUEVAS FUNCIONES PARA VENTAS DETALLADAS CON IMAGEN ---
     function openSalesHistoryModal() {
       document.getElementById('salesHistoryModal').style.display = 'block';
       renderSalesHistory();
@@ -1081,8 +1025,6 @@
       renderSalesHistory();
     }
 
-    // --- FIN NUEVAS FUNCIONES ---
-
     document.addEventListener('keydown', e => {
       if (e.ctrlKey && e.key === 'b') {
         e.preventDefault();
@@ -1090,7 +1032,6 @@
       }
     });
 
-    /* ---------- disparo instantáneo ---------- */
     ['searchName','searchCategory','searchCode','minPrice','maxPrice','lowStockOnly']
       .forEach(id=>{
          const el=document.getElementById(id);

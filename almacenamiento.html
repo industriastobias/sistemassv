@@ -254,15 +254,20 @@
     #cashRegisterFullscreen .big-change{
       font-size:2.2rem; font-weight:700; color:var(--accent);
     }
-    /* lista resumen */
-    #cashListSummary{
-      border:1px solid var(--border); border-radius:8px; padding:.8rem;
-      max-height:180px; overflow-y:auto; background:var(--highlight);
+    /* lista flotante */
+    #cashFloatList{
+      position:fixed; top:1rem; right:1rem; width:260px; max-height:300px;
+      background:#ffffff; border:2px solid var(--accent); border-radius:12px;
+      padding:1rem; box-shadow:0 4px 20px rgba(0,0,0,.25); z-index:10000;
+      display:none; flex-direction:column; gap:.5rem;
     }
-    #cashListSummary li{
+    #cashFloatList h4{margin:0 0 .5rem 0; font-size:1.1rem;}
+    #cashFloatList ul{list-style:none; margin:0; padding:0; overflow-y:auto;}
+    #cashFloatList li{
       display:flex; justify-content:space-between; align-items:center;
-      padding:.2rem 0; font-size:.9rem;
+      padding:.3rem 0; font-size:.9rem;
     }
+    #cashFloatList button{margin-top:.5rem; width:100%;}
 </style>
 </head>
 
@@ -1148,6 +1153,8 @@
       if(document.fullscreenElement) document.exitFullscreen();
       const div = document.getElementById('cashRegisterFullscreen');
       if(div) div.remove();
+      const fl = document.getElementById('cashFloatList');
+      if(fl) fl.remove();
       cashItems = [];
     }
 
@@ -1171,7 +1178,6 @@
         <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
         <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
       </div>
-      <div id="cashListSummary"><ul></ul></div>
       <div class="products-grid" id="cashProductsGrid"></div>`;
 
       // llenar categorías
@@ -1194,7 +1200,7 @@
           <div><strong>#${idx+1} – ${it.name}</strong></div>
           <div>Cód: ${it.barcode}</div>
           <div>$${it.price} · Stock:${it.quantity}</div>
-          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" onchange="updateCashList()">
+          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
         `;
         const img = card.querySelector(`#cashimg-${idx}`);
         localforage.getItem(`img_${it.code}`).then(blob=>{
@@ -1213,12 +1219,23 @@
         <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
         <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
         <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta</button>
+        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
         <div id="cashChangeBig" class="big-change" style="display:none;"></div>
       `;
       div.appendChild(footer);
 
       document.body.appendChild(div);
       div.scrollTop = 0;
+
+      // crear lista flotante
+      const fl = document.createElement('div');
+      fl.id = 'cashFloatList';
+      fl.innerHTML = `
+        <h4>Lista de venta</h4>
+        <ul></ul>
+        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
+      `;
+      document.body.appendChild(fl);
 
       // filtros en tiempo real
       div.querySelector('#cashBarFilter').addEventListener('input', applyCashFilters);
@@ -1247,16 +1264,36 @@
         const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
         if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price});
       });
-      const ul = document.querySelector('#cashListSummary ul');
+      const ul = document.querySelector('#cashFloatList ul');
       ul.innerHTML = cashItems.map((x,i)=>`
         <li>
           <span>${i+1}. ${x.name} (x${x.qty})</span>
-          <span>$${(x.qty*x.price).toFixed(2)}</span>
+          <span>$${(x.qty*x.price).toFixed(2)} <button onclick="removeFromCash(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">✖</button></span>
         </li>`).join('');
       const total = cashItems.reduce((a,x)=>a+x.qty*x.price,0);
       document.getElementById('cashTotal').textContent = total.toFixed(2);
       document.getElementById('cashChangeBig').style.display='none';
       document.getElementById('cashConfirmBtn').style.display='none';
+      // mostrar/ocultar lista flotante
+      const fl = document.getElementById('cashFloatList');
+      fl.style.display = cashItems.length ? 'flex' : 'none';
+    }
+
+    function removeFromCash(index){
+      const x = cashItems[index];
+      document.getElementById(`cashqty-${x.idx}`).value = 0;
+      cashItems.splice(index,1);
+      updateCashList();
+    }
+
+    function cancelCashSale(){
+      if(!confirm('¿Cancelar toda la venta?')) return;
+      cashItems = [];
+      inventory.forEach((it,idx)=>{
+        const input = document.getElementById(`cashqty-${idx}`);
+        if(input) input.value = 0;
+      });
+      updateCashList();
     }
 
     function calcCashChangeFull(){

@@ -268,6 +268,11 @@
       padding:.3rem 0; font-size:.9rem;
     }
     #cashFloatList button{margin-top:.5rem; width:100%;}
+
+    /* tabla dentro de caja (modo lista) */
+    #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
+    #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
+    #cashRegisterFullscreen th{background:var(--highlight);}
 </style>
 </head>
 
@@ -1141,8 +1146,9 @@
       }
     }
 
-    /* ---------- Caja Registradora Pantalla Completa ---------- */
+    /* ---------- Caja Registradora Pantalla Completa (CORREGIDA) ---------- */
     let cashItems = []; // [{idx, qty, name, price}, ...]
+    let cashViewMode = 'grid'; // 'grid' | 'list'
 
     function openCashRegister(){
       document.documentElement.requestFullscreen().catch(()=>{});
@@ -1162,7 +1168,6 @@
       const prev = document.getElementById('cashRegisterFullscreen');
       if(prev) prev.remove();
 
-      // leer datos frescos
       inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 
       const div = document.createElement('div');
@@ -1171,14 +1176,17 @@
       div.innerHTML = `
       <div class="header">
         <h2>🧾 Caja Registradora</h2>
-        <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
+        <div style="display:flex;gap:.5rem;">
+          <button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button>
+          <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
+        </div>
       </div>
       <div class="filters">
         <input type="text" id="cashBarFilter" placeholder="Código de barras" />
         <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
         <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
       </div>
-      <div class="products-grid" id="cashProductsGrid"></div>`;
+      <div id="cashProductsContainer" style="flex:1 1 auto;overflow-y:auto;"></div>`;
 
       // llenar categorías
       const catSet = [...new Set(inventory.map(p=>p.category))].sort();
@@ -1187,69 +1195,118 @@
         const opt=document.createElement('option'); opt.value=c; opt.textContent=c; catSelect.appendChild(opt);
       });
 
-      // grilla de productos
-      const grid = div.querySelector('#cashProductsGrid');
-      inventory.forEach((it,idx)=>{
-        if(it.quantity<=0) return;
-        const card = document.createElement('div');
-        card.className = 'prod-card';
-        card.dataset.barcode = it.barcode.toLowerCase();
-        card.dataset.category = it.category;
-        card.innerHTML = `
-          <img id="cashimg-${idx}" />
-          <div><strong>#${idx+1} – ${it.name}</strong></div>
-          <div>Cód: ${it.barcode}</div>
-          <div>$${it.price} · Stock:${it.quantity}</div>
-          <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
-        `;
-        const img = card.querySelector(`#cashimg-${idx}`);
-        localforage.getItem(`img_${it.code}`).then(blob=>{
-          if(blob){ img.src = URL.createObjectURL(blob); }
-        });
-        img.onclick = ()=> openImageModal(img.src);
-        grid.appendChild(card);
-      });
-
-      // footer
-      const footer = document.createElement('div');
-      footer.className = 'footer';
-      footer.innerHTML = `
-        <div class="total">Total: $<span id="cashTotal">0</span></div>
-        <label>Paga con:</label>
-        <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
-        <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
-        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta</button>
-        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
-        <div id="cashChangeBig" class="big-change" style="display:none;"></div>
-      `;
-      div.appendChild(footer);
+      // contenedor dinámico
+      const container = div.querySelector('#cashProductsContainer');
+      renderCashProducts(container);
 
       document.body.appendChild(div);
-      div.scrollTop = 0;
 
-      // crear lista flotante
+      // lista flotante
       const fl = document.createElement('div');
       fl.id = 'cashFloatList';
       fl.innerHTML = `
         <h4>Lista de venta</h4>
         <ul></ul>
-        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
+        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);width:100%;">Cancelar venta</button>
       `;
       document.body.appendChild(fl);
 
-      // filtros en tiempo real
+      // filtros
       div.querySelector('#cashBarFilter').addEventListener('input', applyCashFilters);
       div.querySelector('#cashCatFilter').addEventListener('change', applyCashFilters);
+
+      updateCashList();
+    }
+
+    function renderCashProducts(container){
+      container.innerHTML = '';
+      if(cashViewMode === 'grid'){
+        const grid = document.createElement('div');
+        grid.id = 'cashProductsGrid';
+        grid.className = 'products-grid';
+        inventory.forEach((it,idx)=>{
+          if(it.quantity<=0) return;
+          const card = document.createElement('div');
+          card.className = 'prod-card';
+          card.dataset.barcode = it.barcode.toLowerCase();
+          card.dataset.category = it.category;
+          card.innerHTML = `
+            <img id="cashimg-${idx}" />
+            <div><strong>#${idx+1} – ${it.name}</strong></div>
+            <div>Cód: ${it.barcode}</div>
+            <div>Cat: ${it.category}</div>
+            <div>$${it.price} · Stock:${it.quantity}</div>
+            <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
+          `;
+          const img = card.querySelector(`#cashimg-${idx}`);
+          localforage.getItem(`img_${it.code}`).then(blob=>{
+            if(blob){ img.src = URL.createObjectURL(blob); }
+          });
+          img.onclick = ()=> openImageModal(img.src);
+          grid.appendChild(card);
+        });
+        container.appendChild(grid);
+      }else{
+        const tbl = document.createElement('table');
+        tbl.innerHTML = `
+          <thead>
+            <tr>
+              <th>#</th><th>Imagen</th><th>Nombre</th><th>Categoría</th>
+              <th>Precio</th><th>Stock</th><th>Cantidad</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        const tbody = tbl.querySelector('tbody');
+        inventory.forEach((it,idx)=>{
+          if(it.quantity<=0) return;
+          const tr = document.createElement('tr');
+          tr.dataset.barcode = it.barcode.toLowerCase();
+          tr.dataset.category = it.category;
+          tr.innerHTML = `
+            <td>${idx+1}</td>
+            <td><img id="cashimg-${idx}" style="max-height:40px;border-radius:4px;" /></td>
+            <td>${it.name}</td>
+            <td>${it.category}</td>
+            <td>$${it.price}</td>
+            <td>${it.quantity}</td>
+            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()"></td>
+          `;
+          const img = tr.querySelector(`#cashimg-${idx}`);
+          localforage.getItem(`img_${it.code}`).then(blob=>{
+            if(blob){ img.src = URL.createObjectURL(blob); }
+          });
+          img.onclick = ()=> openImageModal(img.src);
+          tbody.appendChild(tr);
+        });
+        container.appendChild(tbl);
+      }
+    }
+
+    function toggleCashView(){
+      cashViewMode = cashViewMode === 'grid' ? 'list' : 'grid';
+      document.getElementById('cashToggleViewBtn').textContent = cashViewMode === 'grid' ? 'Ver Lista' : 'Ver Tarjetas';
+      const container = document.querySelector('#cashProductsContainer');
+      renderCashProducts(container);
+      applyCashFilters();
     }
 
     function applyCashFilters(){
       const bar = document.getElementById('cashBarFilter').value.trim().toLowerCase();
       const cat = document.getElementById('cashCatFilter').value;
-      document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
-        const okBar = bar === '' || card.dataset.barcode.includes(bar);
-        const okCat = cat === '' || card.dataset.category === cat;
-        card.style.display = (okBar && okCat) ? 'flex' : 'none';
-      });
+      if(cashViewMode === 'grid'){
+        document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
+          const okBar = bar === '' || card.dataset.barcode.includes(bar);
+          const okCat = cat === '' || card.dataset.category === cat;
+          card.style.display = (okBar && okCat) ? 'flex' : 'none';
+        });
+      }else{
+        document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr=>{
+          const okBar = bar === '' || tr.dataset.barcode.includes(bar);
+          const okCat = cat === '' || tr.dataset.category === cat;
+          tr.style.display = (okBar && okCat) ? '' : 'none';
+        });
+      }
     }
 
     function clearCashFilters(){
@@ -1261,7 +1318,9 @@
     function updateCashList(){
       cashItems = [];
       inventory.forEach((it,idx)=>{
-        const qty = parseInt(document.getElementById(`cashqty-${idx}`)?.value||0);
+        const input = document.getElementById(`cashqty-${idx}`);
+        if(!input) return;
+        const qty = parseInt(input.value)||0;
         if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price});
       });
       const ul = document.querySelector('#cashFloatList ul');
@@ -1274,14 +1333,14 @@
       document.getElementById('cashTotal').textContent = total.toFixed(2);
       document.getElementById('cashChangeBig').style.display='none';
       document.getElementById('cashConfirmBtn').style.display='none';
-      // mostrar/ocultar lista flotante
       const fl = document.getElementById('cashFloatList');
       fl.style.display = cashItems.length ? 'flex' : 'none';
     }
 
     function removeFromCash(index){
       const x = cashItems[index];
-      document.getElementById(`cashqty-${x.idx}`).value = 0;
+      const input = document.getElementById(`cashqty-${x.idx}`);
+      if(input) input.value = 0;
       cashItems.splice(index,1);
       updateCashList();
     }

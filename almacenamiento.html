@@ -262,9 +262,9 @@
     #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
     #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
     #cashRegisterFullscreen th{background:var(--highlight);}
-    /* lista flotante */
+    /* lista flotante más grande */
     #cashFloatList{
-      position:fixed; top:1rem; right:1rem; width:260px; max-height:300px;
+      position:fixed; top:1rem; right:1rem; width:320px; max-height:400px;
       background:#ffffff; border:2px solid var(--accent); border-radius:12px;
       padding:1rem; box-shadow:0 4px 20px rgba(0,0,0,.25); z-index:10000;
       display:none; flex-direction:column; gap:.5rem;
@@ -1154,7 +1154,7 @@
       }
     }
 
-    /* ---------- Caja Registradora con 7 funciones nuevas ---------- */
+    /* ---------- Caja Registradora con 7 funciones (corregidas) ---------- */
     let cashItems = []; // [{idx, qty, name, price, rowId}, ...]
     let cashViewMode = 'grid'; // 'grid' | 'list'
     let lastAddedRowId = null; // para iluminar
@@ -1207,7 +1207,7 @@
 
       document.body.appendChild(div);
 
-      // lista flotante
+      // lista flotante más grande
       const fl = document.createElement('div');
       fl.id = 'cashFloatList';
       fl.innerHTML = `
@@ -1244,14 +1244,18 @@
       updateCashList();
     }
 
-    /* 3. Botones +1 / +5 / +10 */
+    /* 3. Solo botón +1 (sin +5 ni +10) */
     function quickAdd(rowId, qty){
       const input = document.getElementById(rowId);
       if(!input) return;
       const max = parseInt(input.max);
       let val = parseInt(input.value)||0;
-      val = Math.min(val + qty, max);
-      input.value = val;
+      const newVal = val + qty;
+      if (newVal > max) {
+        alert('Cantidad insuficiente en stock');
+        return;
+      }
+      input.value = newVal;
       lastAddedRowId = rowId;
       flashRow(rowId);
       cashBeep();
@@ -1273,10 +1277,15 @@
       if(e.key === 'F12'){ e.preventDefault(); confirmCashSaleFull(); }
     });
 
-    /* render productos con botones rápidos y stock bajo en rojo */
+    /* render productos con botón +1 solo y stock 0 al final */
     function renderCashProducts(container){
       container.innerHTML = '';
-      const sorted = [...inventory].sort((a,b)=>a.name.localeCompare(b.name));
+      // orden: stock > 0 primero, luego alfabético
+      const sorted = [...inventory].sort((a,b)=>{
+        if(a.quantity === 0 && b.quantity > 0) return 1;
+        if(a.quantity > 0 && b.quantity === 0) return -1;
+        return a.name.localeCompare(b.name);
+      });
 
       if(cashViewMode === 'grid'){
         const grid = document.createElement('div');
@@ -1294,13 +1303,11 @@
             <div>Cat: ${it.category}</div>
             <div>$${it.price}</div>
             <div class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">Stock: ${it.quantity}</div>
-            <!-- Botones +1 +5 +10 -->
-            <div style="display:flex;gap:.3rem;justify-content:center;margin-top:.3rem;">
+            <!-- Solo botón +1 -->
+            <div style="display:flex;justify-content:center;margin-top:.3rem;">
               <button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',5)" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',10)" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
             </div>
-            <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
+            <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity})">
           `;
           const img = card.querySelector(`#cashimg-${idx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
@@ -1315,7 +1322,7 @@
         tbl.innerHTML = `
           <thead>
             <tr>
-              <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1+5+10</th><th>Cant</th>
+              <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1</th><th>Cant</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -1333,12 +1340,8 @@
             <td>${it.category}</td>
             <td>$${it.price}</td>
             <td class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">${it.quantity}</td>
-            <td>
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',5)" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
-              <button class="stamp" onclick="quickAdd('cashqty-${idx}',10)" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
-            </td>
-            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()"></td>
+            <td><button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></td>
+            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity})"></td>
           `;
           const img = tr.querySelector(`#cashimg-${idx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
@@ -1349,6 +1352,16 @@
         });
         container.appendChild(tbl);
       }
+    }
+
+    /* Control de cantidad manual: no permite exceder */
+    function handleManualInput(input, maxStock){
+      let val = parseInt(input.value)||0;
+      if(val > maxStock){
+        alert('Cantidad insuficiente en stock');
+        input.value = maxStock;
+      }
+      updateCashList();
     }
 
     /* 1. Filtro en tiempo real (nombre o código) */
@@ -1447,14 +1460,23 @@
       localStorage.setItem('inventory', JSON.stringify(inventory));
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
       beepOK();
+      // Ocultar lista flotante al confirmar
+      document.getElementById('cashFloatList').style.display='none';
       alert('Venta realizada ✅');
       closeCashRegister();
       filterInventory();
     }
-
     function openCashRegister(){
       document.documentElement.requestFullscreen().catch(()=>{});
       buildCashRegisterUI();
+    }
+    function closeCashRegister(){
+      if(document.fullscreenElement) document.exitFullscreen();
+      const div = document.getElementById('cashRegisterFullscreen');
+      if(div) div.remove();
+      const fl = document.getElementById('cashFloatList');
+      if(fl) fl.remove();
+      cashItems = [];
     }
 
   </script>

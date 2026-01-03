@@ -251,6 +251,7 @@
 
     <div id="reader"></div>
 
+    <!-- BLOQUE DE FILTROS CORREGIDO -->
     <div id="normalSearchBlock" class="search-block">
       <div>
         <label for="searchName">Buscar por nombre:</label>
@@ -728,23 +729,25 @@
       return text.replace(regex, '<mark>$1</mark>');
     }
 
-    function applyFilters() { filterInventory(); }
+    function applyFilters(){
+      filterInventory();
+    }
 
-    function filterInventory() {
-      const name = document.getElementById('searchName').value.trim().toLowerCase();
-      const category = document.getElementById('searchCategory').value;
-      const code = document.getElementById('searchCode').value.trim().toLowerCase();
-      const minPrice = parseFloat(document.getElementById('minPrice').value) || 0;
-      const maxPrice = parseFloat(document.getElementById('maxPrice').value) || Infinity;
-      const lowStock = document.getElementById('lowStockOnly').checked;
+    function filterInventory(){
+      const name       = document.getElementById('searchName').value.trim().toLowerCase();
+      const category   = document.getElementById('searchCategory').value;
+      const code       = document.getElementById('searchCode').value.trim().toLowerCase();
+      const minPrice   = parseFloat(document.getElementById('minPrice').value) || 0;
+      const maxPrice   = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+      const lowStock   = document.getElementById('lowStockOnly').checked;
 
-      let filtered = inventory.filter(it => {
-        const okName = !name || it.name.toLowerCase().includes(name);
-        const okCat = !category || it.category === category;
-        const okCode = !code || it.barcode.trim() === code.trim(); // ← coincidencia EXACTA
-        const price = it.price * (1 - it.discount / 100);
+      let filtered = inventory.filter(it=>{
+        const okName  = !name  || it.name.toLowerCase().includes(name);
+        const okCat   = !category || it.category === category;
+        const okCode  = !code || it.barcode.toLowerCase().includes(code);
+        const price   = it.price * (1 - it.discount/100);
         const okPrice = price >= minPrice && price <= maxPrice;
-        const okStock = !lowStock || it.quantity <= (it.stockMin || 0);
+        const okStock = !lowStock || it.quantity <= (it.stockMin||0);
         return okName && okCat && okCode && okPrice && okStock;
       });
 
@@ -752,15 +755,15 @@
       document.getElementById('resultMessage').style.display = 'none';
     }
 
-    function clearAllFilters() {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchCategory').value = '';
-      document.getElementById('searchCode').value = '';
-      document.getElementById('minPrice').value = '';
-      document.getElementById('maxPrice').value = '';
-      document.getElementById('lowStockOnly').checked = false;
-      document.getElementById('goToRow').value = '';
-      document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
+    function clearAllFilters(){
+      document.getElementById('searchName').value      = '';
+      document.getElementById('searchCategory').value  = '';
+      document.getElementById('searchCode').value      = '';
+      document.getElementById('minPrice').value        = '';
+      document.getElementById('maxPrice').value        = '';
+      document.getElementById('lowStockOnly').checked  = false;
+      document.getElementById('goToRow').value         = '';
+      document.querySelectorAll('#inventoryList tr, .card').forEach(el=>el.classList.remove('highlight'));
       filterInventory();
     }
 
@@ -804,10 +807,10 @@
         const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2);
         return `
           <div class="card" data-real-index="${inventory.indexOf(item)}">
-            <img id="card-img-${idx}" loading="lazy" />
+            <img id="card-img-${idx}" onclick="openImageModal(this.src)" />
             <div><strong>${highlightText(item.name, searchName)}</strong></div>
             <div>Barras: ${item.barcode}</div>
-            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" /></div>
+            <div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div>
             <div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div>
             <div>Stock: <strong>${item.quantity}</strong></div>
             <div>Cat: ${highlightText(item.category, searchName)}</div>
@@ -863,38 +866,110 @@
       const table = document.getElementById('tableView');
       const cards = document.getElementById('cardsView');
       if (currentView === 'table') {
-        currentView = 'cards'; table.style.display = 'none'; cards.style.display = 'flex'; btn.textContent = 'Ver Tabla';
+        currentView = 'cards';
+        table.style.display = 'none';
+        cards.style.display = 'flex';
+        btn.textContent = 'Ver Tabla';
       } else {
-        currentView = 'table'; table.style.display = 'block'; cards.style.display = 'none'; btn.textContent = 'Ver Tarjetas';
+        currentView = 'table';
+        table.style.display = 'block';
+        cards.style.display = 'none';
+        btn.textContent = 'Ver Tarjetas';
       }
       localStorage.setItem('preferredView', currentView);
     }
+
+    // ✅ CAMBIO RADICAL: Precio fijo e inmutable
+    function markSold(index) {
+      currentSoldIndex = index;
+      const item = inventory[index];
+      
+      // Establecer el precio automáticamente sin posibilidad de cambio
+      document.getElementById('originalPriceLabel').textContent = `Precio establecido: $${item.price}`;
+      document.getElementById('soldPrice').value = item.price; // Precio fijo
+      document.getElementById('soldQuantity').value = 1;
+      
+      // Eliminamos toda la lógica de autorización
+      document.getElementById('soldModal').style.display = 'block';
+    }
+
+    function closeSoldModal() {
+      document.getElementById('soldModal').style.display = 'none';
+      document.getElementById('confirmationMessage').style.display = 'none';
+    }
+
+    // ✅ PROCESAR VENTA SIN AUTORIZACIÓN (PRECIO FIJO)
+    function processSale() {
+      const soldQty = parseInt(document.getElementById('soldQuantity').value);
+      const soldPrice = parseFloat(document.getElementById('soldPrice').value);
+      const item = inventory[currentSoldIndex];
+
+      if (isNaN(soldQty) || soldQty <= 0) { alert('Cantidad inválida'); return; }
+      if (soldQty > item.quantity) { alert('Stock insuficiente'); return; }
+
+      // Procesar venta directamente sin autorización
+      item.quantity -= soldQty;
+      localStorage.setItem('inventory', JSON.stringify(inventory));
+
+      const soldItem = {
+        name: item.name,
+        code: item.code,
+        price: soldPrice,
+        quantity: soldQty,
+        total: soldPrice * soldQty,
+        seller: 'Sistema',
+        date: new Date().toISOString()
+      };
+      
+      let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      soldInventory.push(soldItem);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+
+      filterInventory();
+      closeSoldModal();
+      document.getElementById('resultMessage').textContent = '¡Venta registrada!';
+      document.getElementById('resultMessage').style.display = 'block';
+      setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 3000);
+    }
+
     function goToRow() {
       const row = parseInt(document.getElementById('goToRow').value);
       if (currentView === 'table') {
         const rows = document.querySelectorAll('#inventoryList tr');
         rows.forEach(r => r.classList.remove('highlight'));
         if (row >= 1 && row <= rows.length) {
-          const target = rows[row - 1]; target.classList.add('highlight');
+          const target = rows[row - 1];
+          target.classList.add('highlight');
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else alert('Fila fuera de rango.');
       } else {
         const cards = document.querySelectorAll('.card');
         cards.forEach(c => c.classList.remove('highlight'));
         if (row >= 1 && row <= cards.length) {
-          const target = cards[row - 1]; target.classList.add('highlight');
+          const target = cards[row - 1];
+          target.classList.add('highlight');
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else alert('Fila fuera de rango.');
       }
     }
 
-    /* ----------  HISTORIAL VENTAS  ---------- */
-    function openSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'block'; renderSalesHistory(); }
-    function closeSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'none'; }
+    function openSalesHistoryModal() {
+      document.getElementById('salesHistoryModal').style.display = 'block';
+      renderSalesHistory();
+    }
+
+    function closeSalesHistoryModal() {
+      document.getElementById('salesHistoryModal').style.display = 'none';
+    }
+
     function renderSalesHistory(filtered = null) {
       const sales = filtered || JSON.parse(localStorage.getItem('soldInventory') || '[]');
       const container = document.getElementById('salesHistoryContent');
-      if (!sales.length) { container.innerHTML = '<p style="text-align:center;">No hay ventas registradas.</p>'; return; }
+      if (!sales.length) {
+        container.innerHTML = '<p style="text-align:center;">No hay ventas registradas.</p>';
+        return;
+      }
+
       container.innerHTML = sales.map((s, i) => {
         const img = localStorage.getItem(`img_${s.code}`);
         return `
@@ -910,34 +985,60 @@
         `;
       }).join('');
     }
+
     function applySalesFilters() {
       const month = document.getElementById('filterMonth').value;
       const seller = document.getElementById('filterSeller').value;
       const from = document.getElementById('filterDateFrom').value;
       const to = document.getElementById('filterDateTo').value;
+
       let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-      if (month) { const [y, m] = month.split('-'); sales = sales.filter(s => { const d = new Date(s.date); return d.getFullYear() == y && String(d.getMonth() + 1).padStart(2,'0') === m; }); }
-      if (seller) sales = sales.filter(s => (s.seller || '').toLowerCase() === seller);
-      if (from) sales = sales.filter(s => new Date(s.date) >= new Date(from));
-      if (to) sales = sales.filter(s => new Date(s.date) <= new Date(to));
+
+      if (month) {
+        const [y, m] = month.split('-');
+        sales = sales.filter(s => {
+          const d = new Date(s.date);
+          return d.getFullYear() == y && String(d.getMonth() + 1).padStart(2,'0') === m;
+        });
+      }
+
+      if (seller) {
+        sales = sales.filter(s => (s.seller || '').toLowerCase() === seller);
+      }
+
+      if (from) {
+        sales = sales.filter(s => new Date(s.date) >= new Date(from));
+      }
+
+      if (to) {
+        sales = sales.filter(s => new Date(s.date) <= new Date(to));
+      }
+
       renderSalesHistory(sales);
     }
+
     function clearSalesFilters() {
-      ['filterMonth', 'filterSeller', 'filterDateFrom', 'filterDateTo'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('filterMonth').value = '';
+      document.getElementById('filterSeller').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
       renderSalesHistory();
     }
 
-    /* ----------  TECLADO / INICIO  ---------- */
     document.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.key === 'b') { e.preventDefault(); document.getElementById('searchCode').focus(); }
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        document.getElementById('searchCode').focus();
+      }
     });
-    ['searchName', 'searchCategory', 'searchCode', 'minPrice', 'maxPrice', 'lowStockOnly'].forEach(id => {
-      const el = document.getElementById(id);
-      el.addEventListener('input', () => { clearTimeout(window.filterT); window.filterT = setTimeout(filterInventory, 300); });
-      if (id === 'searchCategory') el.addEventListener('change', filterInventory);
-    });
-    inventory = inventory.map(ensureDateTime);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
+
+    ['searchName','searchCategory','searchCode','minPrice','maxPrice','lowStockOnly']
+      .forEach(id=>{
+         const el=document.getElementById(id);
+         el.addEventListener('input',()=>{ clearTimeout(window.filterT); window.filterT=setTimeout(filterInventory,300); });
+         if(id==='searchCategory') el.addEventListener('change',filterInventory);
+      });
+
     if (currentView === 'cards') {
       document.getElementById('tableView').style.display = 'none';
       document.getElementById('cardsView').style.display = 'flex';
@@ -947,44 +1048,50 @@
       document.getElementById('cardsView').style.display = 'none';
       document.getElementById('toggleViewBtn').textContent = 'Ver Tarjetas';
     }
+
+    inventory = inventory.map(ensureDateTime);
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+
     filterInventory();
 
-    /* ----------  MENÚ LATERAL  ---------- */
-    function toggleMenu() { document.getElementById('sideMenu').classList.toggle('show'); }
-    document.addEventListener('click', e => {
-      const menu = document.getElementById('sideMenu');
-      const btn = document.getElementById('menuToggleBtn');
-      if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) menu.classList.remove('show');
-    });
-    document.querySelectorAll('#sideMenu a').forEach(link => link.addEventListener('click', () => document.getElementById('sideMenu').classList.remove('show')));
-
-    /* ----------  PANTALLA COMPLETA  ---------- */
-    function toggleKiosco() {
-      const body = document.body; const btn = document.getElementById('kioscoBtn');
-      if (!document.fullscreenElement) {
-        body.requestFullscreen().then(() => { body.classList.add('kiosco'); btn.textContent = '🔲 Salir Kiosco'; }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message));
-      } else {
-        document.exitFullscreen().then(() => { body.classList.remove('kiosco'); btn.textContent = '🖥️ Kiosco'; });
-      }
+    function toggleMenu() {
+      document.getElementById('sideMenu').classList.toggle('show');
     }
 
-    /* ============================================================
-       FIX: clic en imágenes (tabla o cards) → overlay sin cambiar
-       de ventana. Delegación universal para imágenes que se cargan
-       después con localforage.
-    ============================================================ */
-    document.addEventListener('click', e => {
-      const img = e.target.closest('img');
-      if (!img) return;
-      // Solo actuamos sobre las imágenes de producto/código que nosotros renderizamos
-      const isProductImg = img.id.startsWith('img-') ||
-                           img.id.startsWith('card-img-') ||
-                           img.id.startsWith('barcodeimg-') ||
-                           img.id.startsWith('card-barcodeimg-');
-      if (isProductImg && img.src) {
-        openImageModal(img.src);
+    document.addEventListener('click', function (e) {
+      const menu = document.getElementById('sideMenu');
+      const btn = document.getElementById('menuToggleBtn');
+      if (!menu || !btn) return;
+
+      if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
+        menu.classList.remove('show');
       }
     });
+
+    document.querySelectorAll('#sideMenu a').forEach(link => {
+      link.addEventListener('click', () => {
+        document.getElementById('sideMenu').classList.remove('show');
+      });
+    });
+
+    function toggleKiosco() {
+      const body = document.body;
+      const btn = document.getElementById('kioscoBtn');
+
+      if (!document.fullscreenElement) {
+        body.requestFullscreen().then(() => {
+          body.classList.add('kiosco');
+          btn.textContent = '🔲 Salir Kiosco';
+        }).catch(err => {
+          alert('No se pudo activar pantalla completa: ' + err.message);
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          body.classList.remove('kiosco');
+          btn.textContent = '🖥️ Kiosco';
+        });
+      }
+    }
   </script>
 </body>
 </html>

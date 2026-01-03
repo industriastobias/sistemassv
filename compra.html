@@ -205,9 +205,28 @@
   </div>
 </div>
 
-<!-- Buscador solo por código de barras -->
-<div style="width:95%;max-width:1200px;margin:0 auto 1rem">
-  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras…" style="width:100%">
+<!-- ============  FILTROS  ============ -->
+<div style="width:95%;max-width:1200px;margin:0 auto 1rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <!-- Filtro por código de barras -->
+  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras…" style="flex:1 1 260px">
+  <!-- Filtro por categoría -->
+  <select id="categoryFilter" style="flex:1 1 200px">
+    <option value="">Todas las categorías</option>
+    <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+    <option value="Anillos">Anillos</option>
+    <option value="Aritos">Aritos</option>
+    <option value="Billeteras">Billeteras</option>
+    <option value="Carteras">Carteras</option>
+    <option value="Case audífonos">Case audífonos</option>
+    <option value="Case teléfonos">Case teléfonos</option>
+    <option value="Chokers">Chokers</option>
+    <option value="Collares">Collares</option>
+    <option value="General">General</option>
+    <option value="Lentes de sol">Lentes de sol</option>
+    <option value="Otros">Otros</option>
+    <option value="Pulseras">Pulseras</option>
+    <option value="Relojes">Relojes</option>
+  </select>
 </div>
 
 <div>
@@ -253,7 +272,7 @@ function calculateTotal() {
 function renderTable() {
   const list = document.getElementById('inventoryList');
   list.innerHTML = inventory.map((item, idx) => `
-    <div class="card-item" data-barcode="${item.barcode.toLowerCase()}">
+    <div class="card-item" data-barcode="${item.barcode.toLowerCase()}" data-category="${item.category}">
       <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
       <h3>${escapeHtml(item.name)}</h3>
       <p>Código: ${escapeHtml(item.code)}</p>
@@ -781,16 +800,25 @@ function guardarLoteCompleto() {
   }, 500);
 }
 
-/* ----------  Filtro solo por código de barras  ---------- */
+/* ----------  Filtros  ---------- */
 const searchBox = document.getElementById('searchBox');
-searchBox.addEventListener('input', () => {
+const categoryFilter = document.getElementById('categoryFilter');
+
+function aplicarFiltros() {
   const q = searchBox.value.trim().toLowerCase();
+  const cat = categoryFilter.value;
   const cards = document.querySelectorAll('#inventoryList .card-item');
   cards.forEach(card => {
     const barcode = card.dataset.barcode;
-    card.style.display = barcode.includes(q) ? '' : 'none';
+    const categoria = card.dataset.category;
+    const okBarcode = !q || barcode.includes(q);
+    const okCat = !cat || categoria === cat;
+    card.style.display = (okBarcode && okCat) ? '' : 'none';
   });
-});
+}
+
+searchBox.addEventListener('input', aplicarFiltros);
+categoryFilter.addEventListener('change', aplicarFiltros);
 
 /* ----------  Inicializar  ---------- */
 window.addEventListener('DOMContentLoaded', () => {

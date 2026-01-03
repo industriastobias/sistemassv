@@ -158,11 +158,11 @@
     }
 
     mark {
-        background-color: #fef08a;
-        color: #1f2937;
-        padding: 2px 4px;
-        border-radius: 3px;
-        font-weight: 700;
+      background-color: #fef08a;
+      color: #1f2937;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: 700;
     }
 
     #sideMenu {
@@ -197,7 +197,7 @@
       gap: .5rem;
     }
     #sideMenu a:hover {
-        background: var(--white);
+      background: var(--white);
     }
 
     #menuToggleBtn {
@@ -216,7 +216,7 @@
       z-index: 1001;
     }
 
-    /* ---------- estilos caja registradora pantalla completa ---------- */
+    /* ---------- estilos caja registradora pantalla completa (actualizado) ---------- */
     #cashRegisterFullscreen{
       position:fixed; inset:0; z-index:9999;
       background:#fff; color:#1f2937; overflow-y:auto;
@@ -240,20 +240,28 @@
     #cashRegisterFullscreen .prod-card{
       border:1px solid var(--border); border-radius:8px; padding:.6rem;
       display:flex; flex-direction:column; gap:.4rem; text-align:center;
+      transition:background .3s;
     }
+    /* 6. Imagen más grande solo en caja */
     #cashRegisterFullscreen .prod-card img{
       width:100%; height:160px; object-fit:cover; border-radius:6px; cursor:pointer;
     }
-    #cashRegisterFullscreen .footer{
-      border-top:2px solid var(--border); padding-top:.8rem;
-      display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+    /* 7. Stock bajo en rojo */
+    #cashRegisterFullscreen .stock-low{
+      color:#dc2626; font-weight:700;
     }
-    #cashRegisterFullscreen .total{
-      font-size:1.6rem; font-weight:700;
+    /* 4. Iluminar último producto agregado */
+    @keyframes flash{
+      0%  {background:#fef08a;}
+      100%{background:transparent;}
     }
-    #cashRegisterFullscreen .big-change{
-      font-size:2.2rem; font-weight:700; color:var(--accent);
+    .flash{
+      animation:flash .6s ease;
     }
+    /* tabla dentro de caja (modo lista) */
+    #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
+    #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
+    #cashRegisterFullscreen th{background:var(--highlight);}
     /* lista flotante */
     #cashFloatList{
       position:fixed; top:1rem; right:1rem; width:260px; max-height:300px;
@@ -268,28 +276,12 @@
       padding:.3rem 0; font-size:.9rem;
     }
     #cashFloatList button{margin-top:.5rem; width:100%;}
-
-    /* =========  ESTILOS EXTRA (solo para caja)  ========= */
-    /* 1- Búsqueda en tiempo real */
-    #cashQuickFilter{width:220px;margin-right:.5rem}
-
-    /* 2- Atajos visuales */
-    .cashHotkeyHint{font-size:.65rem;color:#9ca3af;margin-left:.3rem}
-
-    /* 4- Resaltado último producto */
-    .cashJustAdded{animation:flash .6s ease}
-    @keyframes flash{0%{background:#fef08a}100%{background:transparent}}
-
-    /* 6- Imagen más grande solo en caja */
-    #cashRegisterFullscreen .prod-card img{height:160px}
-
-    /* 7- Stock bajo en rojo */
-    .cashLowStock{color:var(--danger);font-weight:700}
-
-    /* tabla dentro de caja (modo lista) */
-    #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
-    #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
-    #cashRegisterFullscreen th{background:var(--highlight);}
+    /* atajos F1 / F12 */
+    #cashHelpKeys{
+      position:fixed; bottom:1rem; left:1rem; background:#111827; color:#fff;
+      padding:.4rem .8rem; border-radius:6px; font-size:.75rem; z-index:10001;
+    }
+  </style>
 </head>
 
 <body>
@@ -341,7 +333,7 @@
           <option>Accesorios para el cabello</option>
           <option>Anillos</option>
           <option>Aritos</option>
-      <option>Billeteras</option>
+          <option>Billeteras</option>
           <option>Carteras</option>
           <option>Case audífonos</option>
           <option>Case teléfonos</option>
@@ -1162,65 +1154,21 @@
       }
     }
 
-    /* ---------- Caja Registradora Pantalla Completa (CORREGIDA + mejoras 1-7) ---------- */
-    let cashItems = []; // [{idx, qty, name, price}, ...]
+    /* ---------- Caja Registradora con 7 funciones nuevas ---------- */
+    let cashItems = []; // [{idx, qty, name, price, rowId}, ...]
     let cashViewMode = 'grid'; // 'grid' | 'list'
-    let cashLastAddedIdx = null; // para mejora 4
+    let lastAddedRowId = null; // para iluminar
 
-    /* ----------  utilidad para ordenar: stock 0 al final  ---------- */
-    function sortCashProducts(a, b) {
-      if (a.quantity === 0 && b.quantity !== 0) return  1;
-      if (a.quantity !== 0 && b.quantity === 0) return -1;
-      if (a.quantity === 0 && b.quantity === 0) return a.name.localeCompare(b.name);
-      return a.name.localeCompare(b.name);
-    }
-
-    /* 5- Sonido distinto al agregar */
-    function beepAdd(){
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    /* 5. Sonido corto al agregar producto */
+    function cashBeep(){
+      const ctx = new (window.AudioContext||webkitAudioContext)();
       const osc = ctx.createOscillator();
+      osc.frequency.value = 1200;
       osc.connect(ctx.destination);
-      osc.frequency.value = 660; // tono distinto
-      osc.start(); osc.stop(ctx.currentTime + 0.06);
+      osc.start(); osc.stop(ctx.currentTime + 0.05);
     }
 
-    /* 1- Filtro rápido nombre/código */
-    function applyCashQuickFilter(){
-      const val = document.getElementById('cashQuickFilter').value.trim().toLowerCase();
-      if(cashViewMode === 'grid'){
-        document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
-          const ok = val === '' || card.dataset.barcode.includes(val) || card.textContent.toLowerCase().includes(val);
-          card.style.display = ok ? 'flex' : 'none';
-        });
-      }else{
-        document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr=>{
-          const ok = val === '' || tr.dataset.barcode.includes(val) || tr.textContent.toLowerCase().includes(val);
-          tr.style.display = ok ? '' : 'none';
-        });
-      }
-    }
-
-    /* 2- Atajos de teclado exclusivos de caja */
-    document.addEventListener('keydown', e=>{
-      if(!document.getElementById('cashRegisterFullscreen')) return; // solo si estamos en caja
-      if(e.key === 'F1'){ e.preventDefault(); closeCashRegister(); } // cerrar caja
-      if(e.key === 'F12'){ e.preventDefault(); confirmCashSaleFull(); } // confirmar venta
-    });
-
-    function openCashRegister(){
-      document.documentElement.requestFullscreen().catch(()=>{});
-      buildCashRegisterUI();
-    }
-
-    function closeCashRegister(){
-      if(document.fullscreenElement) document.exitFullscreen();
-      const div = document.getElementById('cashRegisterFullscreen');
-      if(div) div.remove();
-      const fl = document.getElementById('cashFloatList');
-      if(fl) fl.remove();
-      cashItems = [];
-    }
-
+    /* 1. Filtro en tiempo real */
     function buildCashRegisterUI(){
       const prev = document.getElementById('cashRegisterFullscreen');
       if(prev) prev.remove();
@@ -1235,14 +1183,12 @@
         <h2>🧾 Caja Registradora</h2>
         <div style="display:flex;gap:.5rem;">
           <button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button>
-          <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar <span class="cashHotkeyHint">F1</span></button>
+          <button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button>
         </div>
       </div>
-
-      <!-- 1- Búsqueda rápida -->
       <div class="filters">
-        <input type="text" id="cashQuickFilter" placeholder="Buscar nombre o código" oninput="applyCashQuickFilter()">
-        <input type="text" id="cashBarFilter" placeholder="Código de barras" />
+        <!-- 1. Filtro en tiempo real -->
+        <input type="text" id="cashSearchLive" placeholder="🔍 Buscar nombre o código" />
         <select id="cashCatFilter"><option value="">Todas las categorías</option></select>
         <button class="stamp" onclick="clearCashFilters()">Limpiar</button>
       </div>
@@ -1279,68 +1225,97 @@
         <label>Paga con:</label>
         <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
         <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
-        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta <span class="cashHotkeyHint">F12</span></button>
+        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta (F12)</button>
         <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
         <div id="cashChangeBig" class="big-change" style="display:none;"></div>
       `;
       div.appendChild(footer);
 
-      // filtros
-      div.querySelector('#cashBarFilter').addEventListener('input', applyCashFilters);
-      div.querySelector('#cashCatFilter').addEventListener('change', applyCashFilters);
+      // ayuda de atajos
+      const help = document.createElement('div');
+      help.id = 'cashHelpKeys';
+      help.innerHTML = 'Atajos: <b>F1</b> cierra caja | <b>F12</b> confirma venta';
+      document.body.appendChild(help);
+
+      // filtros en tiempo real
+      div.querySelector('#cashSearchLive').addEventListener('input', applyCashLiveFilter);
+      div.querySelector('#cashCatFilter').addEventListener('change', applyCashLiveFilter);
 
       updateCashList();
     }
 
+    /* 3. Botones +1 / +5 / +10 */
+    function quickAdd(rowId, qty){
+      const input = document.getElementById(rowId);
+      if(!input) return;
+      const max = parseInt(input.max);
+      let val = parseInt(input.value)||0;
+      val = Math.min(val + qty, max);
+      input.value = val;
+      lastAddedRowId = rowId;
+      flashRow(rowId);
+      cashBeep();
+      updateCashList();
+    }
+
+    /* 4. Iluminar último producto agregado */
+    function flashRow(rowId){
+      const el = document.getElementById(rowId);
+      if(!el) return;
+      el.classList.add('flash');
+      setTimeout(()=>el.classList.remove('flash'), 600);
+    }
+
+    /* 2. Atajos F1 y F12 */
+    document.addEventListener('keydown', e=>{
+      if(!document.getElementById('cashRegisterFullscreen')) return;
+      if(e.key === 'F1'){ e.preventDefault(); closeCashRegister(); }
+      if(e.key === 'F12'){ e.preventDefault(); confirmCashSaleFull(); }
+    });
+
+    /* render productos con botones rápidos y stock bajo en rojo */
     function renderCashProducts(container){
       container.innerHTML = '';
-      // ordenar: stock 0 al final
-      const sorted = [...inventory].sort(sortCashProducts);
+      const sorted = [...inventory].sort((a,b)=>a.name.localeCompare(b.name));
 
-      if (cashViewMode === 'grid') {
+      if(cashViewMode === 'grid'){
         const grid = document.createElement('div');
         grid.id = 'cashProductsGrid';
         grid.className = 'products-grid';
         sorted.forEach((it, idx) => {
           const card = document.createElement('div');
           card.className = 'prod-card';
-          card.dataset.barcode = it.barcode.toLowerCase();
+          card.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
           card.dataset.category = it.category;
           card.innerHTML = `
             <img id="cashimg-${idx}" />
-            <div><strong>#${idx + 1} – ${it.name}</strong></div>
+            <div><strong>${it.name}</strong></div>
             <div>Cód: ${it.barcode}</div>
             <div>Cat: ${it.category}</div>
-            <div class="${it.quantity <= (it.stockMin||0) ? 'cashLowStock' : ''}">$${it.price} · Stock:${it.quantity}</div>
-            <!-- 3- Botones +1 +5 +10 -->
-            <div style="display:flex;gap:.3rem;margin-top:.3rem;">
-              <button onclick="addQtyCash(${idx},1)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
-              <button onclick="addQtyCash(${idx},5)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
-              <button onclick="addQtyCash(${idx},10)" class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
+            <div>$${it.price}</div>
+            <div class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">Stock: ${it.quantity}</div>
+            <!-- Botones +1 +5 +10 -->
+            <div style="display:flex;gap:.3rem;justify-content:center;margin-top:.3rem;">
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',5)" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',10)" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
             </div>
             <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="updateCashList()">
           `;
           const img = card.querySelector(`#cashimg-${idx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
-            if (blob) { img.src = URL.createObjectURL(blob); }
+            if(blob){ img.src = URL.createObjectURL(blob); }
           });
           img.onclick = () => openImageModal(img.src);
           grid.appendChild(card);
         });
         container.appendChild(grid);
-      } else { // vista lista
+      }else{ // lista
         const tbl = document.createElement('table');
         tbl.innerHTML = `
           <thead>
             <tr>
-              <th>#</th>
-              <th>Imagen</th>
-              <th>Nombre</th>
-              <th>Código de barras</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Cantidad</th>
+              <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1+5+10</th><th>Cant</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -1348,30 +1323,26 @@
         const tbody = tbl.querySelector('tbody');
         sorted.forEach((it, idx) => {
           const tr = document.createElement('tr');
-          tr.dataset.barcode = it.barcode.toLowerCase();
+          tr.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
           tr.dataset.category = it.category;
-          tr.id = 'cashRow-' + idx; // para mejora 4
           tr.innerHTML = `
-            <td>${idx + 1}</td>
+            <td>${idx+1}</td>
             <td><img id="cashimg-${idx}" style="max-height:40px;border-radius:4px;" /></td>
             <td>${it.name}</td>
             <td>${it.barcode}</td>
             <td>${it.category}</td>
             <td>$${it.price}</td>
-            <td class="${it.quantity <= (it.stockMin||0) ? 'cashLowStock' : ''}">${it.quantity}</td>
+            <td class="${it.quantity <= (it.stockMin||0) ? 'stock-low' : ''}">${it.quantity}</td>
             <td>
-              <!-- 3- Botones +1 +5 +10 -->
-              <div style="display:flex;gap:.3rem;">
-                <button onclick="addQtyCash(${idx},1)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
-                <button onclick="addQtyCash(${idx},5)"  class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
-                <button onclick="addQtyCash(${idx},10)" class="stamp" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
-              </div>
-              <input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()">
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',5)" style="padding:.2rem .4rem;font-size:.7rem;">+5</button>
+              <button class="stamp" onclick="quickAdd('cashqty-${idx}',10)" style="padding:.2rem .4rem;font-size:.7rem;">+10</button>
             </td>
+            <td><input type="number" id="cashqty-${idx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="updateCashList()"></td>
           `;
           const img = tr.querySelector(`#cashimg-${idx}`);
           localforage.getItem(`img_${it.code}`).then(blob => {
-            if (blob) { img.src = URL.createObjectURL(blob); }
+            if(blob){ img.src = URL.createObjectURL(blob); }
           });
           img.onclick = () => openImageModal(img.src);
           tbody.appendChild(tr);
@@ -1380,22 +1351,28 @@
       }
     }
 
-    /* 3- Función +1 +5 +10 */
-    function addQtyCash(idx,inc){
-      const input = document.getElementById(`cashqty-${idx}`);
-      if(!input) return;
-      const max = parseInt(input.max);
-      let val = parseInt(input.value)||0;
-      val = Math.min(val + inc, max);
-      input.value = val;
-      updateCashList();
-      // 4- Resaltar último producto
-      cashLastAddedIdx = idx;
-      const el = document.getElementById(cashViewMode==='grid' ? '' : `cashRow-${idx}`);
-      if(el) el.classList.add('cashJustAdded');
-      setTimeout(()=>{if(el) el.classList.remove('cashJustAdded')},600);
-      // 5- Sonido distinto
-      beepAdd();
+    /* 1. Filtro en tiempo real (nombre o código) */
+    function applyCashLiveFilter(){
+      const kw = document.getElementById('cashSearchLive').value.trim().toLowerCase();
+      const cat = document.getElementById('cashCatFilter').value;
+      if(cashViewMode === 'grid'){
+        document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
+          const okSearch = !kw || card.dataset.search.includes(kw);
+          const okCat = !cat || card.dataset.category === cat;
+          card.style.display = (okSearch && okCat) ? 'flex' : 'none';
+        });
+      }else{
+        document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr=>{
+          const okSearch = !kw || tr.dataset.search.includes(kw);
+          const okCat = !cat || tr.dataset.category === cat;
+          tr.style.display = (okSearch && okCat) ? '' : 'none';
+        });
+      }
+    }
+    function clearCashFilters(){
+      document.getElementById('cashSearchLive').value='';
+      document.getElementById('cashCatFilter').value='';
+      applyCashLiveFilter();
     }
 
     function toggleCashView(){
@@ -1403,32 +1380,7 @@
       document.getElementById('cashToggleViewBtn').textContent = cashViewMode === 'grid' ? 'Ver Lista' : 'Ver Tarjetas';
       const container = document.querySelector('#cashProductsContainer');
       renderCashProducts(container);
-      applyCashFilters();
-    }
-
-    function applyCashFilters(){
-      const bar = document.getElementById('cashBarFilter').value.trim().toLowerCase();
-      const cat = document.getElementById('cashCatFilter').value;
-      if(cashViewMode === 'grid'){
-        document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card=>{
-          const okBar = bar === '' || card.dataset.barcode.includes(bar);
-          const okCat = cat === '' || card.dataset.category === cat;
-          card.style.display = (okBar && okCat) ? 'flex' : 'none';
-        });
-      }else{
-        document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr=>{
-          const okBar = bar === '' || tr.dataset.barcode.includes(bar);
-          const okCat = cat === '' || tr.dataset.category === cat;
-          tr.style.display = (okBar && okCat) ? '' : 'none';
-        });
-      }
-    }
-
-    function clearCashFilters(){
-      document.getElementById('cashBarFilter').value='';
-      document.getElementById('cashCatFilter').value='';
-      document.getElementById('cashQuickFilter').value='';
-      applyCashFilters();
+      applyCashLiveFilter();
     }
 
     function updateCashList(){
@@ -1437,7 +1389,7 @@
         const input = document.getElementById(`cashqty-${idx}`);
         if(!input) return;
         const qty = parseInt(input.value)||0;
-        if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price});
+        if(qty>0) cashItems.push({idx, qty, name:it.name, price:it.price, rowId:`cashqty-${idx}`});
       });
       const ul = document.querySelector('#cashFloatList ul');
       ul.innerHTML = cashItems.map((x,i)=>`
@@ -1452,15 +1404,13 @@
       const fl = document.getElementById('cashFloatList');
       fl.style.display = cashItems.length ? 'flex' : 'none';
     }
-
     function removeFromCash(index){
       const x = cashItems[index];
-      const input = document.getElementById(`cashqty-${x.idx}`);
+      const input = document.getElementById(x.rowId);
       if(input) input.value = 0;
       cashItems.splice(index,1);
       updateCashList();
     }
-
     function cancelCashSale(){
       if(!confirm('¿Cancelar toda la venta?')) return;
       cashItems = [];
@@ -1470,7 +1420,6 @@
       });
       updateCashList();
     }
-
     function calcCashChangeFull(){
       const total = parseFloat(document.getElementById('cashTotal').textContent);
       const pay = parseFloat(document.getElementById('cashPayment').value)||0;
@@ -1481,7 +1430,6 @@
       big.style.display='inline-block';
       document.getElementById('cashConfirmBtn').style.display='inline-block';
     }
-
     function confirmCashSaleFull(){
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory')||'[]');
       cashItems.forEach(x=>{
@@ -1503,6 +1451,12 @@
       closeCashRegister();
       filterInventory();
     }
+
+    function openCashRegister(){
+      document.documentElement.requestFullscreen().catch(()=>{});
+      buildCashRegisterUI();
+    }
+
   </script>
 </body>
 </html>

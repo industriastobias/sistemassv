@@ -268,7 +268,6 @@
       padding:.3rem 0; font-size:.9rem;
     }
     #cashFloatList button{margin-top:.5rem; width:100%;}
-
     /* tabla dentro de caja (modo lista) */
     #cashRegisterFullscreen table{width:100%;border-collapse:collapse;font-size:.9rem;}
     #cashRegisterFullscreen th,#cashRegisterFullscreen td{padding:.4rem .5rem;border:1px solid var(--border);}
@@ -1211,6 +1210,20 @@
       `;
       document.body.appendChild(fl);
 
+      // footer con total, pago, vuelto y botones
+      const footer = document.createElement('div');
+      footer.className = 'footer';
+      footer.innerHTML = `
+        <div class="total">Total: $<span id="cashTotal">0</span></div>
+        <label>Paga con:</label>
+        <input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00">
+        <button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button>
+        <button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta</button>
+        <button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button>
+        <div id="cashChangeBig" class="big-change" style="display:none;"></div>
+      `;
+      div.appendChild(footer);
+
       // filtros
       div.querySelector('#cashBarFilter').addEventListener('input', applyCashFilters);
       div.querySelector('#cashCatFilter').addEventListener('change', applyCashFilters);
@@ -1225,7 +1238,7 @@
         grid.id = 'cashProductsGrid';
         grid.className = 'products-grid';
         inventory.forEach((it,idx)=>{
-          if(it.quantity<=0) return;
+          // MOSTRAR TODOS los productos sin filtro inicial
           const card = document.createElement('div');
           card.className = 'prod-card';
           card.dataset.barcode = it.barcode.toLowerCase();
@@ -1259,7 +1272,7 @@
         `;
         const tbody = tbl.querySelector('tbody');
         inventory.forEach((it,idx)=>{
-          if(it.quantity<=0) return;
+          // MOSTRAR TODOS los productos sin filtro inicial
           const tr = document.createElement('tr');
           tr.dataset.barcode = it.barcode.toLowerCase();
           tr.dataset.category = it.category;

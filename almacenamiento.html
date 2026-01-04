@@ -110,9 +110,10 @@
       <button class="stamp" onclick="App.openSalesHistoryModal()" title="Ventas con imagen y filtros">🖼️ Ventas Detalle</button>
       <button class="stamp" id="kioscoBtn" onclick="App.toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
       <button class="stamp" onclick="App.openCashRegister()" title="Caja registradora">🧾 Caja Registradora</button>
-      <button class="stamp" onclick="App.downloadBackup()" title="Descargar respaldo">💾 Backup</button>
+      <!-- BACKUP/RESTORE OPCIONALES – BORRA ESTA LÍNEA SI NO LOS QUIERES -->
+      <button class="stamp" onclick="App.downloadBackup()" title="Descargar respaldo" style="display:none">💾 Backup</button>
       <input type="file" id="backupFile" accept=".json" style="display:none" onchange="App.loadBackup(event)">
-      <button class="stamp" onclick="document.getElementById('backupFile').click()" title="Cargar respaldo">📂 Restore</button>
+      <button class="stamp" onclick="document.getElementById('backupFile').click()" title="Cargar respaldo" style="display:none">📂 Restore</button>
     </div>
 
     <div id="reader"></div>
@@ -205,9 +206,9 @@
       PASSWORD_DELETE: 'admin123',
       STOCK_MIN_ALERT: 0,
       FILTER_DEBOUNCE: 300,
-      CURRENCY_LOCALE: 'es-CL',
-      BACKUP_EVERY_MS: 60000, // 1 min
-      VIRTUAL_ROW_HEIGHT: 34, // px
+      CURRENCY_LOCALE: 'es-ES',
+      BACKUP_EVERY_MS: 60000,
+      VIRTUAL_ROW_HEIGHT: 34,
       VIRTUAL_VIEWPORT_ROWS: 20,
     };
 
@@ -225,7 +226,9 @@
       const hash = str => { let h = 0; for (let i = 0; i < str.length; i++) { h = Math.imul(31, h) + str.charCodeAt(i) | 0; } return '' + h; };
       const saveJSON = (key, data) => {
         if (!Array.isArray(data)) throw new Error('No es array');
-        data.forEach((it, i) => { if (!it.name || !it.barcode || typeof it.price !== 'number' || typeof it.quantity !== 'number') throw new Error(`Ítem ${i} inválido`); });
+        data.forEach((it, i) => {
+          if (typeof it.name !== 'string' || typeof it.barcode !== 'string' || typeof it.price !== 'number' || typeof it.quantity !== 'number') throw new Error(`Ítem ${i} inválido`);
+        });
         localStorage.setItem(key, JSON.stringify(data));
         localStorage.setItem(key + '_ts', Date.now());
       };
@@ -570,7 +573,7 @@
         doc.save('etiquetas.pdf');
       };
 
-      /* ---------- BACKUP / RESTORE ---------- */
+      /* ---------- BACKUP / RESTORE (OPCIONALES) ---------- */
       const downloadBackup = () => backup();
       const loadBackup = ev => {
         const file = ev.target.files[0];
@@ -761,6 +764,36 @@
         filterInventory();
       };
 
+      /* ---------- IMAGEN MODAL ---------- */
+      const openImageModal = src => {
+        const overlay = document.createElement('div');
+        overlay.className = 'full-image-overlay';
+        const img = document.createElement('img');
+        img.src = src;
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', () => document.body.removeChild(overlay));
+      };
+
+      /* ---------- MENU LATERAL ---------- */
+      const toggleMenu = () => el('sideMenu').classList.toggle('show');
+
+      /* ---------- KIOSCO ---------- */
+      const toggleKiosco = () => {
+        const body = document.body, btn = el('kioscoBtn');
+        if (!document.fullscreenElement) {
+          body.requestFullscreen().then(() => {
+            body.classList.add('kiosco');
+            btn.textContent = '🔲 Salir Kiosco';
+          }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message));
+        } else {
+          document.exitFullscreen().then(() => {
+            body.classList.remove('kiosco');
+            btn.textContent = '🖥️ Kiosco';
+          });
+        }
+      };
+
       /* ---------- CAJA REGISTRADORA ---------- */
       const cashBeep = () => {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -876,24 +909,6 @@
           });
           container.appendChild(tbl);
         }
-      };
-      const quickAdd = (rowId, qty) => {
-        const input = el(rowId);
-        if (!input) return;
-        const max = parseInt(input.max);
-        let val = parseInt(input.value) || 0;
-        const newVal = val + qty;
-        if (newVal > max) { alert('Cantidad insuficiente en stock'); return; }
-        input.value = newVal;
-        flashRow(rowId);
-        cashBeep();
-        updateCashList();
-      };
-      const flashRow = rowId => {
-        const el = document.getElementById(rowId);
-        if (!el) return;
-        el.classList.add('flash');
-        setTimeout(() => el.classList.remove('flash'), 600);
       };
       const handleManualInput = (input, maxStock) => {
         let val = parseInt(input.value) || 0;
@@ -1014,36 +1029,6 @@
         cashItems = [];
       };
 
-      /* ---------- IMAGEN MODAL ---------- */
-      const openImageModal = src => {
-        const overlay = document.createElement('div');
-        overlay.className = 'full-image-overlay';
-        const img = document.createElement('img');
-        img.src = src;
-        overlay.appendChild(img);
-        document.body.appendChild(overlay);
-        overlay.addEventListener('click', () => document.body.removeChild(overlay));
-      };
-
-      /* ---------- MENU LATERAL ---------- */
-      const toggleMenu = () => el('sideMenu').classList.toggle('show');
-
-      /* ---------- KIOSCO ---------- */
-      const toggleKiosco = () => {
-        const body = document.body, btn = el('kioscoBtn');
-        if (!document.fullscreenElement) {
-          body.requestFullscreen().then(() => {
-            body.classList.add('kiosco');
-            btn.textContent = '🔲 Salir Kiosco';
-          }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message));
-        } else {
-          document.exitFullscreen().then(() => {
-            body.classList.remove('kiosco');
-            btn.textContent = '🖥️ Kiosco';
-          });
-        }
-      };
-
       /* ---------- PUBLIC API ---------- */
       return {
         init,
@@ -1057,13 +1042,11 @@
         goToRow: () => {
           const row = parseInt(el('goToRow').value);
           if (currentView === 'table') {
-            const rows = el('inventoryList').querySelectorAll('tr');
-            rows.forEach(r => r.classList.remove('highlight'));
             if (row >= 1 && row <= virtualRows.length) {
               const y = (row - 1) * CONST.VIRTUAL_ROW_HEIGHT;
               el('inventoryList').scrollTop = y;
               paintVirtual();
-              const tr = rows[0];
+              const tr = el('inventoryList').querySelector('tr');
               if (tr) tr.classList.add('highlight');
             } else alert('Fila fuera de rango.');
           } else {
@@ -1107,7 +1090,18 @@
         exportSalesCSV,
         openCashRegister,
         closeCashRegister,
-        quickAdd,
+        quickAdd: (rowId, qty) => {
+          const input = el(rowId);
+          if (!input) return;
+          const max = parseInt(input.max);
+          let val = parseInt(input.value) || 0;
+          const newVal = val + qty;
+          if (newVal > max) { alert('Cantidad insuficiente en stock'); return; }
+          input.value = newVal;
+          flashRow(rowId);
+          cashBeep();
+          updateCashList();
+        },
         handleManualInput,
         applyCashLiveFilter,
         clearCashFilters,
@@ -1120,7 +1114,12 @@
         updateCashList,
         buildCashRegisterUI,
         cashBeep,
-        flashRow,
+        flashRow: rowId => {
+          const el = document.getElementById(rowId);
+          if (!el) return;
+          el.classList.add('flash');
+          setTimeout(() => el.classList.remove('flash'), 600);
+        },
       };
     })();
 

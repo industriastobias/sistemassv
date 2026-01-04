@@ -1034,7 +1034,7 @@
       desde.setDate(hoy.getDate() - days);
       document.getElementById('filterDateFrom').value = desde.toISOString().slice(0,10);
       document.getElementById('filterDateTo').value   = hoy.toISOString().slice(0,10);
-      applySalesFilters();
+      applySalesFilters();   // <-- esta línea faltaba
     }
 
     /* 3. Descarga PDF */
@@ -1104,6 +1104,8 @@
 
       container.innerHTML = sales.map((s, i) => {
         const img = localStorage.getItem(`img_${s.code}`);
+        /* CAMBIO AQUÍ: mostramos “Caja Registradora” o “Sistema” */
+        const sellerText = s.seller==='CajaRegistradora'?'Caja Registradora':s.seller==='Sistema'?'Sistema':s.seller || 'Desconocido';
         return `
           <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
             <img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'">
@@ -1111,7 +1113,7 @@
               <strong>#${i+1} – ${s.name}</strong><br>
               Código: ${s.code}<br>
               Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
-              <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${s.seller || 'Desconocido'}</small>
+              <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${sellerText}</small>
               <button onclick="deleteSale(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">🗑️</button>
             </div>
           </div>
@@ -1514,7 +1516,7 @@
           price: x.price,
           quantity: x.qty,
           total: x.qty*x.price,
-          seller: 'CajaRegistradora',
+          seller: 'Caja Registradora',
           date: new Date().toISOString()
         });
       });
@@ -1533,12 +1535,4 @@
     function closeCashRegister(){
       if(document.fullscreenElement) document.exitFullscreen();
       const div = document.getElementById('cashRegisterFullscreen');
-      if(div) div.remove();
-      const fl = document.getElementById('cashFloatList');
-      if(fl) fl.remove();
-      cashItems = [];
-    }
-
-  </script>
-</body>
-</html>
+      if(div

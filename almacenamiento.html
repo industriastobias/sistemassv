@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
 
   <style>
     :root {
@@ -1034,7 +1034,7 @@
       desde.setDate(hoy.getDate() - days);
       document.getElementById('filterDateFrom').value = desde.toISOString().slice(0,10);
       document.getElementById('filterDateTo').value   = hoy.toISOString().slice(0,10);
-      applySalesFilters();   // <-- esta línea faltaba
+      applySalesFilters();
     }
 
     /* 3. Descarga PDF */
@@ -1104,8 +1104,6 @@
 
       container.innerHTML = sales.map((s, i) => {
         const img = localStorage.getItem(`img_${s.code}`);
-        /* CAMBIO AQUÍ: mostramos “Caja Registradora” o “Sistema” */
-        const sellerText = s.seller==='CajaRegistradora'?'Caja Registradora':s.seller==='Sistema'?'Sistema':s.seller || 'Desconocido';
         return `
           <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
             <img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'">
@@ -1113,7 +1111,7 @@
               <strong>#${i+1} – ${s.name}</strong><br>
               Código: ${s.code}<br>
               Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br>
-              <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${sellerText}</small>
+              <small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${s.seller || 'Desconocido'}</small>
               <button onclick="deleteSale(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">🗑️</button>
             </div>
           </div>
@@ -1516,7 +1514,7 @@
           price: x.price,
           quantity: x.qty,
           total: x.qty*x.price,
-          seller: 'Caja Registradora',
+          seller: 'CajaRegistradora',
           date: new Date().toISOString()
         });
       });
@@ -1535,15 +1533,29 @@
     function closeCashRegister(){
       if(document.fullscreenElement) document.exitFullscreen();
       const div = document.getElementById('cashRegisterFullscreen');
-      if(div    function closeCashRegister(){
-      if(document.fullscreenElement) document.exitFullscreen();
-      const div = document.getElementById('cashRegisterFullscreen');
       if(div) div.remove();
       const fl = document.getElementById('cashFloatList');
       if(fl) fl.remove();
       cashItems = [];
     }
 
+    /* ============================================================
+       DEMO: si no hay ventas, crea una de hace 2 días
+       ============================================================ */
+    (function(){
+      const sales = JSON.parse(localStorage.getItem('soldInventory')||'[]');
+      if(sales.length) return; // ya hay ventas, no hacemos nada
+      const demo = {
+        name:'Collar demo',
+        code:'123456',
+        price:2990,
+        quantity:1,
+        total:2990,
+        seller:'Demo',
+        date:new Date(Date.now()-86400000*2).toISOString() // hace 2 días
+      };
+      localStorage.setItem('soldInventory',JSON.stringify([demo]));
+    })();
   </script>
 </body>
 </html>

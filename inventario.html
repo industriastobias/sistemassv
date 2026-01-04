@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css    "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js    "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -111,7 +111,7 @@
 
 <button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
 
-<h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras y Almacenamiento</h1>
+<h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
 
 <div class="summary-cards">
   <div class="summary-card"><h3>Total de productos</h3><p id="totalProducts">0</p></div>
@@ -138,92 +138,6 @@
 </div>
 
 <script>
-/* ----------------- Sincronización entre pestañas (BroadcastChannel + localStorage) ----------------- */
-const CHANNEL_NAME = 'app-inventory-sync';
-const channel = ('BroadcastChannel' in window) ? new BroadcastChannel(CHANNEL_NAME) : null;
-const clientId = sessionStorage.getItem('clientId') || (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
-sessionStorage.setItem('clientId', clientId);
-
-let lastAppliedTs = 0; // timestamp de última actualización aplicada (evita aplicar datos obsoletos)
-
-function safeParse(v){ try { return JSON.parse(v); } catch(e){ return null; } }
-
-// Merge simple: combina arrays de items por `code`. Si hay duplicados suma quantities y mezcla campos (preferencia: remote para campos no vacíos).
-function mergeInventories(localArr, remoteArr){
-  if(!Array.isArray(localArr)) localArr = [];
-  if(!Array.isArray(remoteArr)) remoteArr = remoteArr ? [remoteArr] : [];
-  const map = new Map();
-  localArr.forEach(it => { if(it && it.code) map.set(it.code, Object.assign({}, it)); });
-  remoteArr.forEach(it => {
-    if(!it || !it.code) return;
-    if(!map.has(it.code)) map.set(it.code, Object.assign({}, it));
-    else {
-      const existing = map.get(it.code);
-      const qtyExisting = parseInt(existing.quantity) || 0;
-      const qtyRemote   = parseInt(it.quantity) || 0;
-      // sumamos el stock y preferimos otros campos del remoto si existen
-      existing.quantity = qtyExisting + qtyRemote;
-      existing.price    = (it.price !== undefined && it.price !== '') ? it.price : existing.price;
-      existing.name     = it.name || existing.name;
-      existing.category = it.category || existing.category;
-      existing.barcode  = it.barcode || existing.barcode;
-      existing.discount = (it.discount !== undefined) ? it.discount : existing.discount;
-      // mantén el código
-      existing.code = it.code;
-      map.set(it.code, existing);
-    }
-  });
-  return Array.from(map.values());
-}
-
-function applyRemoteInventory(remoteData, ts){
-  if(!Array.isArray(remoteData)) return;
-  if(ts && ts <= lastAppliedTs) return; // no aplicamos si es antiguo
-  lastAppliedTs = ts || Date.now();
-  inventory = mergeInventories(inventory, remoteData);
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  localStorage.setItem('inventario', JSON.stringify(inventory));
-  localStorage.setItem('almacenamiento', JSON.stringify(inventory));
-  doFilter();
-}
-
-/* Envío de actualización: escribe en localStorage (varias claves) y notifica por BroadcastChannel */
-function broadcastInventory(arr){
-  const ts = Date.now();
-  lastAppliedTs = ts;
-  inventory = arr.slice(); // copia
-  // claves espejo
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  localStorage.setItem('inventario', JSON.stringify(inventory));
-  localStorage.setItem('almacenamiento', JSON.stringify(inventory));
-  // notificar por channel (si existe)
-  if(channel) channel.postMessage({ type:'inventory_update', source: clientId, ts, data: inventory });
-}
-
-/* Escuchar BroadcastChannel de otros clientes */
-if(channel){
-  channel.onmessage = (ev) => {
-    const msg = ev.data || {};
-    if(msg.type === 'inventory_update' && msg.source !== clientId){
-      applyRemoteInventory(msg.data, msg.ts);
-    }
-  };
-}
-
-/* Escuchar storage events (por si la otra página sólo usa localStorage) */
-window.addEventListener('storage', e => {
-  if(!e.key) return;
-  if(e.key === 'inventory' || e.key === 'inventario' || e.key === 'almacenamiento'){
-    const remote = safeParse(e.newValue);
-    if(Array.isArray(remote)){
-      // aplicamos como remoto (ts = ahora) - si la otra página fuera compatible con BroadcastChannel enviará ts; si no, usamos Date.now()
-      applyRemoteInventory(remote, Date.now());
-    }
-  }
-});
-
-/* ----------------- Resto del código (adaptado para usar broadcastInventory en las escrituras) ----------------- */
-
 function entrarKiosko(){
   if(!document.fullscreenElement){
     document.documentElement.requestFullscreen().catch(()=>{});
@@ -239,7 +153,7 @@ const CATEGORY_ORDER = [
   "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
 ];
 
-let inventory = safeParse(localStorage.getItem('inventory')) || safeParse(localStorage.getItem('inventario')) || safeParse(localStorage.getItem('almacenamiento')) || [];
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
 let filtered   = [...inventory];
 let searchTerm = '';
 
@@ -355,8 +269,7 @@ function deleteItem(index){
   const item = inventory[realIndex];
   localforage.removeItem(`img_${item.code}`);
   inventory.splice(realIndex,1);
-  // Guardamos y emitimos la actualización a otras pestañas
-  broadcastInventory(inventory);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
   doFilter();
 }
 
@@ -410,8 +323,7 @@ function saveEdit(filterIdx, invIdx){
     discount: filtered[filterIdx].discount || 0
   };
   inventory[invIdx] = newData;
-  // Guardamos y notificamos a las demás páginas
-  broadcastInventory(inventory);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
   doFilter();
 }
 
@@ -436,29 +348,28 @@ document.getElementById('searchInput').addEventListener('input',doFilter);
 document.getElementById('minPrice').addEventListener('input',doFilter);
 document.getElementById('maxPrice').addEventListener('input',doFilter);
 
-/* Compatibilidad: si otra pestaña actualiza 'inventario' o 'almacenamiento' debemos sincronizar */
 window.addEventListener('storage', e => {
   if(e.key === 'inventory'){
-    const parsed = safeParse(e.newValue);
-    if(Array.isArray(parsed)){
-      applyRemoteInventory(parsed, Date.now());
-    }
+    inventory = JSON.parse(e.newValue) || [];
+    doFilter();
   }
-  // ya hay otro listener arriba para múltiples claves; esto es redundante pero seguro
 });
-
-window.addEventListener('DOMContentLoaded',()=> {
-  // Al cargar, si hay datos en 'almacenamiento' o 'inventario' y difieren, los combinamos
-  const fromAlmacenamiento = safeParse(localStorage.getItem('almacenamiento'));
-  const fromInventario = safeParse(localStorage.getItem('inventario'));
-  const fromInventory = safeParse(localStorage.getItem('inventory'));
-
-  // combinar todas las fuentes conocidas
-  inventory = mergeInventories(fromInventory || [], mergeInventories(fromInventario || [], fromAlmacenamiento || []));
-  // escribir una copia espejo y notificar (no es obligatorio pero mantiene consistencia)
-  broadcastInventory(inventory);
-  doFilter();
+window.addEventListener('storage', e => {
+  if (e.key === 'inventario') {
+    inventory = JSON.parse(e.newValue) || [];
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    doFilter();
+  }
 });
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(this, key, value);
+  if (key === 'inventory') {
+    originalSetItem.call(this, 'inventario', value);
+  }
+};
+
+window.addEventListener('DOMContentLoaded',()=> doFilter());
 </script>
 </body>
 </html>

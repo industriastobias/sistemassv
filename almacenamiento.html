@@ -84,6 +84,7 @@
 </head>
 
 <body>
+  <div id="notExistModal" style="display:none;">Producto no existente</div>
   <button id="menuToggleBtn" onclick="App.toggleMenu()" title="Menú">☰</button>
   <nav id="sideMenu">
     <a href="menu.html"><i class="fa-solid fa-bars"></i></a>
@@ -110,10 +111,8 @@
       <button class="stamp" onclick="App.openSalesHistoryModal()" title="Ventas con imagen y filtros">🖼️ Ventas Detalle</button>
       <button class="stamp" id="kioscoBtn" onclick="App.toggleKiosco()" title="Activar/desactivar pantalla completa">🖥️ Kiosco</button>
       <button class="stamp" onclick="App.openCashRegister()" title="Caja registradora">🧾 Caja Registradora</button>
-      <!-- BACKUP/RESTORE OPCIONALES – BORRA ESTA LÍNEA SI NO LOS QUIERES -->
-      <button class="stamp" onclick="App.downloadBackup()" title="Descargar respaldo" style="display:none">💾 Backup</button>
-      <input type="file" id="backupFile" accept=".json" style="display:none" onchange="App.loadBackup(event)">
-      <button class="stamp" onclick="document.getElementById('backupFile').click()" title="Cargar respaldo" style="display:none">📂 Restore</button>
+      <!-- BACKUP MANUAL (OPCIONAL) -->
+      <button class="stamp" onclick="App.backup()" title="Descargar respaldo manual" style="display:none">💾 Backup</button>
     </div>
 
     <div id="reader"></div>
@@ -181,24 +180,6 @@
     <div id="salesHistoryContent" style="max-height: 60vh; overflow-y: auto;"></div>
   </div></div>
 
-  <!-- PLANTILLAS -->
-  <template id="rowTemplate">
-    <tr class="virtual-tr">
-      <td class="virtual-td idx"></td>
-      <td class="virtual-td img"></td>
-      <td class="virtual-td name"></td>
-      <td class="virtual-td barcode"></td>
-      <td class="virtual-td barcodeimg"></td>
-      <td class="virtual-td price"></td>
-      <td class="virtual-td discount"></td>
-      <td class="virtual-td final"></td>
-      <td class="virtual-td date"></td>
-      <td class="virtual-td category"></td>
-      <td class="virtual-td stock"></td>
-      <td class="virtual-td actions"></td>
-    </tr>
-  </template>
-
   <script>
     /***************  CONSTANTES  ****************/
     const CONST = {
@@ -207,7 +188,7 @@
       STOCK_MIN_ALERT: 0,
       FILTER_DEBOUNCE: 300,
       CURRENCY_LOCALE: 'es-ES',
-      BACKUP_EVERY_MS: 60000,
+      BACKUP_EVERY_MS: 60000, // 1 min (AHORA DESACTIVADO)
       VIRTUAL_ROW_HEIGHT: 34,
       VIRTUAL_VIEWPORT_ROWS: 20,
     };
@@ -252,7 +233,7 @@
         updateDash();
         attachEvents();
         filterInventory();
-        setInterval(backup, CONST.BACKUP_EVERY_MS);
+        // setInterval(backup, CONST.BACKUP_EVERY_MS);  // <-- DESACTIVADO
       };
       const ensureDateTime = item => { if (!item.date) item.date = new Date().toISOString(); return item; };
       const updateDash = () => {
@@ -573,30 +554,6 @@
         doc.save('etiquetas.pdf');
       };
 
-      /* ---------- BACKUP / RESTORE (OPCIONALES) ---------- */
-      const downloadBackup = () => backup();
-      const loadBackup = ev => {
-        const file = ev.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-          try {
-            const data = JSON.parse(e.target.result);
-            if (!data.inventory || !data.soldInventory) throw new Error('Archivo inválido');
-            if (!confirm('Se sobrescribirán todos los datos. ¿Continuar?')) return;
-            saveJSON('inventory', data.inventory);
-            saveJSON('soldInventory', data.soldInventory);
-            if (data.auditLog) localStorage.setItem('auditLog', JSON.stringify(data.auditLog));
-            inventory = data.inventory.map(ensureDateTime);
-            soldInventory = data.soldInventory;
-            audit('RESTORE', {}, {});
-            filterInventory();
-            alert('Backup cargado');
-          } catch (err) { alert('Error leyendo backup: ' + err.message); }
-        };
-        reader.readAsText(file);
-      };
-
       /* ---------- CAMBIO VISTA ---------- */
       const toggleView = () => {
         const btn = el('toggleViewBtn'), table = el('tableView'), cards = el('cardsView');
@@ -879,7 +836,7 @@
               <input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="App.handleManualInput(this, ${it.quantity})">`;
             const img = card.querySelector(`#cashimg-${realIdx}`);
             localforage.getItem(`img_${it.code}`).then(blob => { if (blob) img.src = URL.createObjectURL(blob); });
-            img.onclick = () => App.openImageModal(img.src);
+            img.onclick = () => openImageModal(img.src);
             grid.appendChild(card);
           });
           container.appendChild(grid);
@@ -904,7 +861,7 @@
               <td><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="App.handleManualInput(this, ${it.quantity})"></td>`;
             const img = tr.querySelector(`#cashimg-${realIdx}`);
             localforage.getItem(`img_${it.code}`).then(blob => { if (blob) img.src = URL.createObjectURL(blob); });
-            img.onclick = () => App.openImageModal(img.src);
+            img.onclick = () => openImageModal(img.src);
             tbody.appendChild(tr);
           });
           container.appendChild(tbl);
@@ -1068,8 +1025,7 @@
         cancelScan,
         initUSBReader,
         downloadLabelsPDF,
-        downloadBackup,
-        loadBackup,
+        backup,
         markSold,
         closeSoldModal,
         processSale,
@@ -1098,7 +1054,9 @@
           const newVal = val + qty;
           if (newVal > max) { alert('Cantidad insuficiente en stock'); return; }
           input.value = newVal;
-          flashRow(rowId);
+          const tr = el(rowId).closest('tr') || el(rowId).closest('.prod-card');
+          if (tr) tr.classList.add('flash');
+          setTimeout(() => { if (tr) tr.classList.remove('flash'); }, 600);
           cashBeep();
           updateCashList();
         },
@@ -1114,12 +1072,6 @@
         updateCashList,
         buildCashRegisterUI,
         cashBeep,
-        flashRow: rowId => {
-          const el = document.getElementById(rowId);
-          if (!el) return;
-          el.classList.add('flash');
-          setTimeout(() => el.classList.remove('flash'), 600);
-        },
       };
     })();
 
@@ -1129,10 +1081,4 @@
       document.addEventListener('click', e => {
         const menu = el('sideMenu');
         const btn = el('menuToggleBtn');
-        if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) menu.classList.remove('show');
-      });
-      document.querySelectorAll('#sideMenu a').forEach(link => link.addEventListener('click', () => el('sideMenu').classList.remove('show')));
-    });
-  </script>
-</body>
-</html>
+        if (menu.classList.contains('show') && !menu.contains(e.target)

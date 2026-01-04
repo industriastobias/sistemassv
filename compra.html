@@ -10,8 +10,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
   <style>
-    /* ===== ESTILOS ORIGINALES INTACTOS ===== */
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
@@ -68,6 +68,13 @@
     .spinner{width:60px;height:60px;border:6px solid #e5e7eb;border-top-color:var(--success);border-radius:50%;animation:spin 1s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
 
+    /* ===== MODAL ACCESO ORIGINAL ===== */
+    #accessModal{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:100000;}
+    .modal-box{background:var(--card);padding:2rem;border-radius:var(--radius);box-shadow:var(--shadow-hover);width:90%;max-width:400px;}
+    .modal-box h2{margin-bottom:1rem;color:var(--accent);}
+    .modal-box input{margin-bottom:1rem;}
+    .modal-box button{width:100%;}
+
     /* ===== PAGINACIÓN ===== */
     #pagControls{display:flex;justify-content:center;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     #pagControls button{padding:.4rem .8rem;font-size:.8rem}
@@ -76,7 +83,7 @@
 </head>
 <body>
 
-<!-- MODAL DE ACCESO -->
+<!-- ===== MODAL ACCESO ORIGINAL ===== -->
 <div id="accessModal">
   <div class="modal-box">
     <h2>Acceso requerido</h2>
@@ -89,9 +96,14 @@
 </div>
 
 <script>
+  // Credenciales OFUSCADAS (base64)
   const USER_ENCODED = 'MjAyNQ=='; // 2025
   const PASS_ENCODED = 'MjAwNQ=='; // 2005
-  function decodeBase64(str) { return atob(str); }
+
+  function decodeBase64(str) {
+    return atob(str);
+  }
+
   function verificarAcceso() {
     const usuario = document.getElementById('userInput').value.trim();
     const contrasena = document.getElementById('passInput').value.trim();
@@ -189,7 +201,7 @@
   <div style="grid-column:1/-1">
     <label>Imagen del producto:</label>
     <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
-    <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
+    <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa" style="display:none;max-height:200px;border-radius:12px;box-shadow:var(--shadow)"></div>
   </div>
   <div style="grid-column:1/-1" class="actions">
     <button type="submit" class="btn-primary">Guardar producto</button>
@@ -286,7 +298,7 @@ function escapeHtml(text) {
   return String(text || '').replace(/[&<>"'`]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[s]);
 }
 
-/* ===== LOCALFORAGE WRAPPERS ===== */
+/* ===== LOCALFORAGE ===== */
 async function saveInventory() {
   await localforage.setItem('inventory', inventory);
 }
@@ -432,7 +444,7 @@ function validarAntesDeGuardar(item) {
   return true;
 }
 
-/* ===== GUARDAR PRODUCTO ===== */
+/* ===== GUARDAR PRODUCTO CON OVERLAY RESTAURADO ===== */
 document.getElementById('purchaseForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const form = new FormData(e.target);
@@ -454,7 +466,9 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
 
   if (!validarAntesDeGuardar(item)) return;
 
+  // 1. MOSTRAMOS OVERLAY CON CÍRCULO Y MENSAJE
   document.getElementById('loadingOverlay').classList.add('show');
+
   setTimeout(async () => {
     if (editIndex === -1) {
       const exists = inventory.find(i => i.code === item.code);
@@ -468,6 +482,7 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
           e.target.reset();
           document.getElementById('imagePreview').style.display = 'none';
           barcodeCanvas.style.display = 'none';
+          // 2. QUITAMOS OVERLAY
           document.getElementById('loadingOverlay').classList.remove('show');
           document.getElementById('editModeFlag').style.display = 'none';
           return;
@@ -491,9 +506,12 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
     barcodeCanvas.style.display = 'none';
+    // 3. SONIDO OK
     document.getElementById('okSound').play();
+    // 4. QUITAMOS INDICADOR EDICIÓN
     document.getElementById('editModeFlag').style.display = 'none';
     renderPaginated(); calculateTotal();
+    // 5. OCULTAMOS OVERLAY
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
 });

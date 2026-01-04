@@ -248,12 +248,11 @@
     function openSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'block'; renderSalesHistory(); }
     function closeSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'none'; }
 
-    /* FILTROS RÁPIDOS Y COMPARACIÓN EN FECHA LOCAL */
     function setQuickFilter(days) { const hoy = new Date(); const desde = new Date(hoy); desde.setDate(hoy.getDate() - days); document.getElementById('filterDateFrom').value = desde.toLocaleDateString('sv-SE'); document.getElementById('filterDateTo').value = hoy.toLocaleDateString('sv-SE'); applySalesFilters(); }
     function downloadSalesDetailPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); let y = 20; doc.setFontSize(14); doc.text('Detalle de ventas', 14, y); y += 10; sales.slice(-30).reverse().forEach(s => { doc.setFontSize(10); doc.text(`${s.name}  (${s.quantity})  $${s.total}`, 14, y); y += 6; }); doc.save('ventas-detalle.pdf'); }
     document.addEventListener('DOMContentLoaded', () => { const lss = document.getElementById('liveSearchSales'); if (lss) lss.addEventListener('input', e => { const kw = e.target.value.trim().toLowerCase(); document.querySelectorAll('#salesHistoryContent > div').forEach(div => div.style.display = div.textContent.toLowerCase().includes(kw) ? 'flex' : 'none'); }); });
     function deleteSale(index) { const pwd = prompt('Contraseña para anular venta:'); if (pwd !== 'admin123') return; let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); const sale = sales[index]; const inv = JSON.parse(localStorage.getItem('inventory') || '[]'); const item = inv.find(p => p.code === sale.code); if (item) item.quantity += sale.quantity; localStorage.setItem('inventory', JSON.stringify(inv)); sales.splice(index, 1); localStorage.setItem('soldInventory', JSON.stringify(sales)); applySalesFilters(); }
-    document.addEventListener('keydown', e => { if (e.ctrlKey && e.key.toLowerCase() === 'd') { e.preventDefault(); openSalesHistoryModal(); } });
+    document.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'd') { e.preventDefault(); openSalesHistoryModal(); } });
 
     function renderSalesHistory(filtered = null) { const sales = filtered || JSON.parse(localStorage.getItem('soldInventory') || '[]'); const container = document.getElementById('salesHistoryContent'); if (!sales.length) { container.innerHTML = '<p style="text-align:center;">No hay ventas registradas.</p>'; return; } container.innerHTML = sales.map((s, i) => { const img = localStorage.getItem(`img_${s.code}`); return `<div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:8px;padding:.8rem;margin-bottom:.8rem;align-items:center;"><img src="${img || ''}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'"><div style="flex:1;"><strong>#${i + 1} – ${s.name}</strong><br>Código: ${s.code}<br>Cantidad: ${s.quantity} | Precio: $${s.price} | Total: $${s.total}<br><small>Fecha: ${new Date(s.date).toLocaleString('es-ES')} | Vendedor: ${s.seller || 'Desconocido'}</small><button onclick="deleteSale(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">🗑️</button></div></div>`; }).join(''); }
     function applySalesFilters() { const month = document.getElementById('filterMonth').value, seller = document.getElementById('filterSeller').value, from = document.getElementById('filterDateFrom').value, to = document.getElementById('filterDateTo').value; let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (month) { const [y, m] = month.split('-'); sales = sales.filter(s => { const d = new Date(s.date); return d.getFullYear() == y && String(d.getMonth() + 1).padStart(2, '0') === m; }); } if (seller) sales = sales.filter(s => (s.seller || '').toLowerCase() === seller); if (from) { const fromDate = new Date(from + 'T00:00:00'); sales = sales.filter(s => new Date(s.date) >= fromDate); } if (to) { const toDate = new Date(to + 'T23:59:59.999'); sales = sales.filter(s => new Date(s.date) <= toDate); } renderSalesHistory(sales); }
@@ -268,19 +267,113 @@
     document.querySelectorAll('#sideMenu a').forEach(link => link.addEventListener('click', () => document.getElementById('sideMenu').classList.remove('show')));
     function toggleKiosco() { const body = document.body, btn = document.getElementById('kioscoBtn'); if (!document.fullscreenElement) { body.requestFullscreen().then(() => { body.classList.add('kiosco'); btn.textContent = '🔲 Salir Kiosco'; }).catch(err => alert('No se pudo activar pantalla completa: ' + err.message)); } else { document.exitFullscreen().then(() => { body.classList.remove('kiosco'); btn.textContent = '🖥️ Kiosco'; }); } }
 
-    /* ---------- Caja Registradora (sin cruce) ---------- */
+    /* ---------- Caja Registradora (con descuentos aplicados) ---------- */
     let cashItems = [], cashViewMode = 'grid', lastAddedRowId = null;
     function cashBeep() { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.05); }
     function buildCashRegisterUI() { const prev = document.getElementById('cashRegisterFullscreen'); if (prev) prev.remove(); inventory = JSON.parse(localStorage.getItem('inventory')) || []; const div = document.createElement('div'); div.id = 'cashRegisterFullscreen'; div.innerHTML = `<div class="header"><h2>🧾 Caja Registradora</h2><div style="display:flex;gap:.5rem;"><button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button><button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button></div></div><div class="filters"><input type="text" id="cashSearchLive" placeholder="🔍 Buscar nombre o código" /><select id="cashCatFilter"><option value="">Todas las categorías</option></select><button class="stamp" onclick="clearCashFilters()">Limpiar</button></div><div id="cashProductsContainer" style="flex:1 1 auto;overflow-y:auto;"></div>`; const catSet = [...new Set(inventory.map(p => p.category))].sort(); const catSelect = div.querySelector('#cashCatFilter'); catSet.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; catSelect.appendChild(opt); }); const container = div.querySelector('#cashProductsContainer'); renderCashProducts(container); document.body.appendChild(div); const fl = document.createElement('div'); fl.id = 'cashFloatList'; fl.innerHTML = `<h4>Lista de venta</h4><ul></ul><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);width:100%;">Cancelar venta</button>`; document.body.appendChild(fl); const footer = document.createElement('div'); footer.className = 'footer'; footer.innerHTML = `<div class="total">Total: $<span id="cashTotal">0</span></div><label>Paga con:</label><input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00"><button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button><button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta (F12)</button><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button><div id="cashChangeBig" class="big-change" style="display:none;"></div>`; div.appendChild(footer); div.querySelector('#cashSearchLive').addEventListener('input', applyCashLiveFilter); div.querySelector('#cashCatFilter').addEventListener('change', applyCashLiveFilter); updateCashList(); }
     function quickAdd(rowId, qty) { const input = document.getElementById(rowId); if (!input) return; const max = parseInt(input.max); let val = parseInt(input.value) || 0; const newVal = val + qty; if (newVal > max) { alert('Cantidad insuficiente en stock'); return; } input.value = newVal; lastAddedRowId = rowId; flashRow(rowId); cashBeep(); updateCashList(); }
     function flashRow(rowId) { const el = document.getElementById(rowId); if (!el) return; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 600); }
     document.addEventListener('keydown', e => { if (!document.getElementById('cashRegisterFullscreen')) return; if (e.key === 'F1') { e.preventDefault(); closeCashRegister(); } if (e.key === 'F12') { e.preventDefault(); confirmCashSaleFull(); } });
-    function renderCashProducts(container) { container.innerHTML = ''; const sorted = [...inventory].sort((a, b) => { if (a.quantity === 0 && b.quantity > 0) return 1; if (a.quantity > 0 && b.quantity === 0) return -1; return a.name.localeCompare(b.name); }); if (cashViewMode === 'grid') { const grid = document.createElement('div'); grid.id = 'cashProductsGrid'; grid.className = 'products-grid'; sorted.forEach((it, idx) => { const realIdx = inventory.indexOf(it); const card = document.createElement('div'); card.className = 'prod-card'; card.dataset.search = (it.name + ' ' + it.barcode).toLowerCase(); card.dataset.category = it.category; card.innerHTML = `<img id="cashimg-${realIdx}" /><div><strong>${it.name}</strong></div><div>Cód: ${it.barcode}</div><div>Cat: ${it.category}</div><div>$${it.price}</div><div class="${it.quantity <= (it.stockMin || 0) ? 'stock-low' : ''}">Stock: ${it.quantity}</div><div style="display:flex;justify-content:center;margin-top:.3rem;"><button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></div><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity})">`; const img = card.querySelector(`#cashimg-${realIdx}`); localforage.getItem(`img_${it.code}`).then(blob => { if (blob) img.src = URL.createObjectURL(blob); }); img.onclick = () => openImageModal(img.src); grid.appendChild(card); }); container.appendChild(grid); } else { const tbl = document.createElement('table'); tbl.innerHTML = `<thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1</th><th>Cant</th></tr></thead><tbody></tbody></table>`; const tbody = tbl.querySelector('tbody'); sorted.forEach((it, idx) => { const realIdx = inventory.indexOf(it); const tr = document.createElement('tr'); tr.dataset.search = (it.name + ' ' + it.barcode).toLowerCase(); tr.dataset.category = it.category; tr.innerHTML = `<td>${idx + 1}</td><td><img id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;" /></td><td>${it.name}</td><td>${it.barcode}</td><td>${it.category}</td><td>$${it.price}</td><td class="${it.quantity <= (it.stockMin || 0) ? 'stock-low' : ''}">${it.quantity}</td><td><button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></td><td><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity})"></td>`; const img = tr.querySelector(`#cashimg-${realIdx}`); localforage.getItem(`img_${it.code}`).then(blob => { if (blob) img.src = URL.createObjectURL(blob); }); img.onclick = () => openImageModal(img.src); tbody.appendChild(tr); }); container.appendChild(tbl); } }
+    function renderCashProducts(container) {
+      container.innerHTML = '';
+      const sorted = [...inventory].sort((a, b) => {
+        if (a.quantity === 0 && b.quantity > 0) return 1;
+        if (a.quantity > 0 && b.quantity === 0) return -1;
+        return a.name.localeCompare(b.name);
+      });
+
+      if (cashViewMode === 'grid') {
+        const grid = document.createElement('div');
+        grid.id = 'cashProductsGrid';
+        grid.className = 'products-grid';
+        sorted.forEach((it, idx) => {
+          const realIdx = inventory.indexOf(it);
+          const card = document.createElement('div');
+          card.className = 'prod-card';
+          card.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
+          card.dataset.category = it.category;
+
+          const priceWithDiscount = (it.price * (1 - it.discount / 100)).toFixed(0);
+
+          card.innerHTML = `
+            <img id="cashimg-${realIdx}" />
+            <div><strong>${it.name}</strong></div>
+            <div>Cód: ${it.barcode}</div>
+            <div>Cat: ${it.category}</div>
+            <div>$${priceWithDiscount} ${it.discount > 0 ? `<small style="color:green;">(${it.discount}% dto)</small>` : ''}</div>
+            <div class="${it.quantity <= (it.stockMin || 0) ? 'stock-low' : ''}">Stock: ${it.quantity}</div>
+            <div style="display:flex;justify-content:center;margin-top:.3rem;">
+              <button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button>
+            </div>
+            <input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity})">
+          `;
+
+          const img = card.querySelector(`#cashimg-${realIdx}`);
+          localforage.getItem(`img_${it.code}`).then(blob => {
+            if (blob) img.src = URL.createObjectURL(blob);
+          });
+          img.onclick = () => openImageModal(img.src);
+          grid.appendChild(card);
+        });
+        container.appendChild(grid);
+      } else {
+        const tbl = document.createElement('table');
+        tbl.innerHTML = `<thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1</th><th>Cant</th></tr></thead><tbody></tbody></table>`;
+        const tbody = tbl.querySelector('tbody');
+        sorted.forEach((it, idx) => {
+          const realIdx = inventory.indexOf(it);
+          const tr = document.createElement('tr');
+          tr.dataset.search = (it.name + ' ' + it.barcode).toLowerCase();
+          tr.dataset.category = it.category;
+
+          const priceWithDiscount = (it.price * (1 - it.discount / 100)).toFixed(0);
+
+          tr.innerHTML = `
+            <td>${idx + 1}</td>
+            <td><img id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;" /></td>
+            <td>${it.name}</td>
+            <td>${it.barcode}</td>
+            <td>${it.category}</td>
+            <td>$${priceWithDiscount} ${it.discount > 0 ? `<small style="color:green;">(${it.discount}% dto)</small>` : ''}</td>
+            <td class="${it.quantity <= (it.stockMin || 0) ? 'stock-low' : ''}">${it.quantity}</td>
+            <td><button class="stamp" onclick="quickAdd('cashqty-${realIdx}',1)" style="padding:.2rem .4rem;font-size:.7rem;">+1</button></td>
+            <td><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity})"></td>
+          `;
+
+          const img = tr.querySelector(`#cashimg-${realIdx}`);
+          localforage.getItem(`img_${it.code}`).then(blob => {
+            if (blob) img.src = URL.createObjectURL(blob);
+          });
+          img.onclick = () => openImageModal(img.src);
+          tbody.appendChild(tr);
+        });
+        container.appendChild(tbl);
+      }
+    }
     function handleManualInput(input, maxStock) { let val = parseInt(input.value) || 0; if (val > maxStock) { alert('Cantidad insuficiente en stock'); input.value = maxStock; } updateCashList(); }
     function applyCashLiveFilter() { const kw = document.getElementById('cashSearchLive').value.trim().toLowerCase(), cat = document.getElementById('cashCatFilter').value; if (cashViewMode === 'grid') { document.querySelectorAll('#cashProductsGrid .prod-card').forEach(card => { const okSearch = !kw || card.dataset.search.includes(kw); const okCat = !cat || card.dataset.category === cat; card.style.display = (okSearch && okCat) ? 'flex' : 'none'; }); } else { document.querySelectorAll('#cashProductsContainer tbody tr').forEach(tr => { const okSearch = !kw || tr.dataset.search.includes(kw); const okCat = !cat || tr.dataset.category === cat; tr.style.display = (okSearch && okCat) ? '' : 'none'; }); } }
     function clearCashFilters() { document.getElementById('cashSearchLive').value = ''; document.getElementById('cashCatFilter').value = ''; applyCashLiveFilter(); }
     function toggleCashView() { cashViewMode = cashViewMode === 'grid' ? 'list' : 'grid'; document.getElementById('cashToggleViewBtn').textContent = cashViewMode === 'grid' ? 'Ver Lista' : 'Ver Tarjetas'; const container = document.querySelector('#cashProductsContainer'); renderCashProducts(container); applyCashLiveFilter(); }
-    function updateCashList() { cashItems = []; inventory.forEach((it, realIdx) => { const input = document.getElementById(`cashqty-${realIdx}`); if (!input) return; const qty = parseInt(input.value) || 0; if (qty > 0) cashItems.push({ realIdx, qty, name: it.name, price: it.price, rowId: `cashqty-${realIdx}` }); }); const ul = document.querySelector('#cashFloatList ul'); ul.innerHTML = cashItems.map((x, i) => `<li><span>${i + 1}. ${x.name} (x${x.qty})</span><span>$${(x.qty * x.price).toFixed(2)} <button onclick="removeFromCash(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">✖</button></span></li>`).join(''); const total = cashItems.reduce((a, x) => a + x.qty * x.price, 0); document.getElementById('cashTotal').textContent = total.toFixed(2); document.getElementById('cashChangeBig').style.display = 'none'; document.getElementById('cashConfirmBtn').style.display = 'none'; const fl = document.getElementById('cashFloatList'); fl.style.display = cashItems.length ? 'flex' : 'none'; }
+    function updateCashList() {
+      cashItems = [];
+      inventory.forEach((it, realIdx) => {
+        const input = document.getElementById(`cashqty-${realIdx}`);
+        if (!input) return;
+        const qty = parseInt(input.value) || 0;
+        if (qty > 0) {
+          const priceWithDiscount = it.price * (1 - it.discount / 100);
+          cashItems.push({ realIdx, qty, name: it.name, price: priceWithDiscount, rowId: `cashqty-${realIdx}` });
+        }
+      });
+      const ul = document.querySelector('#cashFloatList ul');
+      ul.innerHTML = cashItems.map((x, i) => `<li><span>${i + 1}. ${x.name} (x${x.qty})</span><span>$${(x.qty * x.price).toFixed(2)} <button onclick="removeFromCash(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;">✖</button></span></li>`).join('');
+      const total = cashItems.reduce((a, x) => a + x.qty * x.price, 0);
+      document.getElementById('cashTotal').textContent = total.toFixed(2);
+      document.getElementById('cashChangeBig').style.display = 'none';
+      document.getElementById('cashConfirmBtn').style.display = 'none';
+      const fl = document.getElementById('cashFloatList');
+      fl.style.display = cashItems.length ? 'flex' : 'none';
+    }
     function removeFromCash(index) { const x = cashItems[index]; const input = document.getElementById(x.rowId); if (input) input.value = 0; cashItems.splice(index, 1); updateCashList(); }
     function cancelCashSale() { if (!confirm('¿Cancelar toda la venta?')) return; cashItems = []; inventory.forEach((it, realIdx) => { const input = document.getElementById(`cashqty-${realIdx}`); if (input) input.value = 0; }); updateCashList(); }
     function calcCashChangeFull() { const total = parseFloat(document.getElementById('cashTotal').textContent), pay = parseFloat(document.getElementById('cashPayment').value) || 0; if (pay < total) { alert('Pago insuficiente'); return; } const change = pay - total; const big = document.getElementById('cashChangeBig'); big.textContent = 'Vuelto: $' + change.toFixed(2); big.style.display = 'inline-block'; document.getElementById('cashConfirmBtn').style.display = 'inline-block'; }

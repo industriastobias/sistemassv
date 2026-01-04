@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
 
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
@@ -147,7 +147,7 @@
 
 <div id="editModeFlag">✏️ Editando producto</div>
 
-<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
+<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3 "></audio>
 
 <h1>Compra</h1>
 
@@ -444,7 +444,7 @@ function validarAntesDeGuardar(item) {
   return true;
 }
 
-/* ===== GUARDAR PRODUCTO CON OVERLAY RESTAURADO ===== */
+/* ===== GUARDAR PRODUCTO CON SINCRONIZACIÓN ===== */
 document.getElementById('purchaseForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const form = new FormData(e.target);
@@ -466,7 +466,6 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
 
   if (!validarAntesDeGuardar(item)) return;
 
-  // 1. MOSTRAMOS OVERLAY CON CÍRCULO Y MENSAJE
   document.getElementById('loadingOverlay').classList.add('show');
 
   setTimeout(async () => {
@@ -478,11 +477,11 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
         } else {
           exists.quantity = Number(exists.quantity) + Number(item.quantity);
           await saveInventory();
+          localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
           renderPaginated(); calculateTotal();
           e.target.reset();
           document.getElementById('imagePreview').style.display = 'none';
           barcodeCanvas.style.display = 'none';
-          // 2. QUITAMOS OVERLAY
           document.getElementById('loadingOverlay').classList.remove('show');
           document.getElementById('editModeFlag').style.display = 'none';
           return;
@@ -494,6 +493,8 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
       editIndex = -1;
     }
     await saveInventory();
+    localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
+
     const imgFile = document.getElementById('imageFile').files[0];
     if (imgFile) {
       new Compressor(imgFile, {
@@ -506,27 +507,25 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
     barcodeCanvas.style.display = 'none';
-    // 3. SONIDO OK
     document.getElementById('okSound').play();
-    // 4. QUITAMOS INDICADOR EDICIÓN
     document.getElementById('editModeFlag').style.display = 'none';
     renderPaginated(); calculateTotal();
-    // 5. OCULTAMOS OVERLAY
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
 });
 
-/* ===== ELIMINAR PRODUCTO ===== */
+/* ===== ELIMINAR PRODUCTO CON SINCRONIZACIÓN ===== */
 async function deleteProduct(idx) {
   if (!confirm('¿Eliminar este producto?')) return;
   const code = inventory[idx].code;
   inventory.splice(idx, 1);
   await saveInventory();
+  localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
   await localforage.removeItem(`img_${code}`);
   renderPaginated(); calculateTotal();
 }
 
-/* ===== VACIAR INVENTARIO ===== */
+/* ===== VACIAR INVENTARIO CON SINCRONIZACIÓN ===== */
 async function vaciarInventario() {
   if (!confirm('¿Vaciar todo el inventario?')) return;
   for (const p of inventory) {
@@ -534,6 +533,7 @@ async function vaciarInventario() {
   }
   inventory = [];
   await saveInventory();
+  localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
   renderPaginated(); calculateTotal();
 }
 
@@ -559,7 +559,7 @@ async function exportToZip() {
   }
 }
 
-/* ===== IMPORTAR ZIP ===== */
+/* ===== IMPORTAR ZIP CON SINCRONIZACIÓN ===== */
 async function importFromZip(evt) {
   const file = evt.target.files[0];
   if (!file || !file.name.toLowerCase().endsWith('.zip')) { alert('Selecciona un archivo .zip'); evt.target.value = ''; return; }
@@ -610,6 +610,7 @@ async function importFromZip(evt) {
       }
     }
     await saveInventory();
+    localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
     renderPaginated(); calculateTotal();
     alert('Importación ZIP completada y fusionada correctamente ✅');
   } catch (e) {
@@ -855,6 +856,7 @@ async function guardarLoteCompleto() {
     });
     inventory = inventory.concat(loteTemporal);
     await saveInventory();
+    localStorage.setItem('inventario', JSON.stringify(inventory)); // ✅ SINCRONIZACIÓN
     alert('Lote guardado ✅');
     loteTemporal = [];
     document.getElementById('editLoteBubble').style.display = 'none';

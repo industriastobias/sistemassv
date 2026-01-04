@@ -58,32 +58,27 @@
     .card-item h3{font-size:1.1rem;color:var(--accent)}
     .card-item p{margin:0;font-size:.85rem;color:#6b7280}
     .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
-    .mini-lote{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;}
-    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
-    .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
-    .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
-    #barcodeCanvas{margin-top:.5rem;width:100%;height:80px;display:none;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-    #loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:99999;}
-    #loadingOverlay.show{display:flex}
-    .spinner{width:60px;height:60px;border:6px solid #e5e7eb;border-top-color:var(--success);border-radius:50%;animation:spin 1s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ===== MODAL ACCESO ORIGINAL ===== */
-    #accessModal{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:100000;}
-    .modal-box{background:var(--card);padding:2rem;border-radius:var(--radius);box-shadow:var(--shadow-hover);width:90%;max-width:400px;}
-    .modal-box h2{margin-bottom:1rem;color:var(--accent);}
-    .modal-box input{margin-bottom:1rem;}
-    .modal-box button{width:100%;}
-
-    /* ===== PAGINACIÓN ===== */
-    #pagControls{display:flex;justify-content:center;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
-    #pagControls button{padding:.4rem .8rem;font-size:.8rem}
-    #pagInfo{font-size:.8rem;align-self:center}
+    /* ===== VISTAS ===== */
+    .vista-selector{display:flex;gap:.5rem;margin:1rem auto;max-width:1200px;width:95%;justify-content:flex-end}
+    .vista-selector button{padding:.4rem .8rem;font-size:.8rem;border:1px solid #e5e7eb;background:#fff;color:var(--text);border-radius:8px;cursor:pointer;transition:background .2s,color .2s;}
+    .vista-selector button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .vista-normal{grid-template-columns:repeat(4,1fr)}
+    .vista-cuadros{grid-template-columns:repeat(6,1fr);}
+    .vista-cuadros .card-item{padding:.75rem;font-size:.75rem}
+    .vista-cuadros .card-item img{height:90px}
+    .vista-lista{display:flex;flex-direction:column;gap:.5rem}
+    .vista-lista .list-item{background:var(--card);border-radius:var(--radius);padding:.75rem 1rem;box-shadow:var(--shadow);display:grid;grid-template-columns:80px 1fr 120px 100px 120px 60px;gap:1rem;align-items:center;font-size:.8rem}
+    .vista-lista .list-item img{width:60px;height:60px;object-fit:cover;border-radius:8px}
+    .vista-lista .list-item h4{font-size:.9rem;margin:0;color:var(--accent)}
+    .vista-lista .list-item p{margin:0}
+    .vista-lista .actions{display:flex;gap:.25rem}
+    .vista-lista .actions button{padding:.3rem .6rem;font-size:.7rem}
   </style>
 </head>
 <body>
 
-<!-- ===== MODAL ACCESO ORIGINAL ===== -->
+<!-- MODAL ACCESO -->
 <div id="accessModal">
   <div class="modal-box">
     <h2>Acceso requerido</h2>
@@ -96,14 +91,9 @@
 </div>
 
 <script>
-  // Credenciales OFUSCADAS (base64)
   const USER_ENCODED = 'MjAyNQ=='; // 2025
   const PASS_ENCODED = 'MjAwNQ=='; // 2005
-
-  function decodeBase64(str) {
-    return atob(str);
-  }
-
+  function decodeBase64(str) { return atob(str); }
   function verificarAcceso() {
     const usuario = document.getElementById('userInput').value.trim();
     const contrasena = document.getElementById('passInput').value.trim();
@@ -261,10 +251,17 @@
   </select>
 </div>
 
+<!-- SELECTOR DE VISTA -->
+<div class="vista-selector">
+  <button onclick="setVista('normal')" id="btn-vista-normal">Normal</button>
+  <button onclick="setVista('cuadros')" id="btn-vista-cuadros">Cuadros</button>
+  <button onclick="setVista('lista')" id="btn-vista-lista">Lista</button>
+</div>
+
 <!-- INVENTARIO -->
 <div>
   <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
-  <div class="table-cards" id="inventoryList"></div>
+  <div id="inventoryList" class="table-cards"></div>
 </div>
 
 <!-- PAGINACIÓN -->
@@ -292,6 +289,7 @@ let currentPage = 0;
 const ITEMS_PER_PAGE = 50;
 let editIndex = -1;
 let loteTemporal = [];
+let vistaActual = localStorage.getItem('vistaInventario') || 'normal';
 
 /* ===== UTILS ===== */
 function escapeHtml(text) {
@@ -304,6 +302,15 @@ async function saveInventory() {
 }
 async function loadInventory() {
   inventory = (await localforage.getItem('inventory')) || [];
+}
+
+/* ===== VISTAS ===== */
+function setVista(vista) {
+  vistaActual = vista;
+  localStorage.setItem('vistaInventario', vista);
+  document.querySelectorAll('.vista-selector button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-vista-${vista}`).classList.add('active');
+  renderPaginated();
 }
 
 /* ===== PAGINACIÓN ===== */
@@ -322,27 +329,53 @@ function renderPaginated() {
   const end = start + ITEMS_PER_PAGE;
   const page = filtered.slice(start, end);
 
-  list.innerHTML = page.map((item, idx) => `
-    <div class="card-item" data-barcode="${item.barcode}" data-category="${item.category}">
-      <img id="invImg${start + idx}" src="" alt="${escapeHtml(item.name)}"/>
-      <h3>${escapeHtml(item.name)}</h3>
-      <p>Código: ${escapeHtml(item.code)}</p>
-      <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
-      <img id="barcodeImg${start + idx}" src="" alt="Código de barras" style="display:none;width:100%;margin-top:.5rem"/>
-      <p>Precio: $${Number(item.price).toFixed(2)}</p>
-      ${item.valorReal ? `<p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal).toFixed(2)}</p>` : ''}
-      <p>Stock: ${Number(item.quantity)}</p>
-      <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
-      <div class="actions">
-        <button class="btn-primary" onclick="editProduct(${inventory.indexOf(item)})"><i class="fa fa-edit"></i> Editar</button>
-        <button class="btn-danger" onclick="deleteProduct(${inventory.indexOf(item)})"><i class="fa fa-trash"></i> Eliminar</button>
+  // Limpiar clases de vista
+  list.className = '';
+  if (vistaActual === 'normal') list.classList.add('table-cards', 'vista-normal');
+  if (vistaActual === 'cuadros') list.classList.add('table-cards', 'vista-cuadros');
+  if (vistaActual === 'lista') list.classList.add('vista-lista');
+
+  if (vistaActual === 'lista') {
+    list.innerHTML = page.map((item, idx) => `
+      <div class="list-item">
+        <img id="invImg${start + idx}" src="" alt="${escapeHtml(item.name)}"/>
+        <div>
+          <h4>${escapeHtml(item.name)}</h4>
+          <p>Cód: ${escapeHtml(item.code)} | Barras: ${escapeHtml(item.barcode)}</p>
+          <p>Cat: ${escapeHtml(item.category)}</p>
+        </div>
+        <div><strong>$${Number(item.price).toFixed(2)}</strong></div>
+        <div>Stock: ${Number(item.quantity)}</div>
+        <div class="actions">
+          <button class="btn-primary" onclick="editProduct(${inventory.indexOf(item)})"><i class="fa fa-edit"></i></button>
+          <button class="btn-danger" onclick="deleteProduct(${inventory.indexOf(item)})"><i class="fa fa-trash"></i></button>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  } else {
+    list.innerHTML = page.map((item, idx) => `
+      <div class="card-item" data-barcode="${item.barcode}" data-category="${item.category}">
+        <img id="invImg${start + idx}" src="" alt="${escapeHtml(item.name)}"/>
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>Código: ${escapeHtml(item.code)}</p>
+        <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
+        <img id="barcodeImg${start + idx}" src="" alt="Código de barras" style="display:none;width:100%;margin-top:.5rem"/>
+        <p>Precio: $${Number(item.price).toFixed(2)}</p>
+        ${item.valorReal ? `<p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal).toFixed(2)}</p>` : ''}
+        <p>Stock: ${Number(item.quantity)}</p>
+        <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
+        <div class="actions">
+          <button class="btn-primary" onclick="editProduct(${inventory.indexOf(item)})"><i class="fa fa-edit"></i> Editar</button>
+          <button class="btn-danger" onclick="deleteProduct(${inventory.indexOf(item)})"><i class="fa fa-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `).join('');
+  }
 
   page.forEach((p, i) => {
     localforage.getItem(`img_${p.code}`).then(blob => {
-      if (blob) document.getElementById(`invImg${start + i}`).src = URL.createObjectURL(blob);
+      const img = document.getElementById(`invImg${start + i}`);
+      if (blob && img) img.src = URL.createObjectURL(blob);
     }).catch(() => {});
     if (p.barcode) {
       const canvas = document.createElement('canvas');
@@ -887,6 +920,7 @@ function printLabels() {
 /* ===== INICIALIZAR ===== */
 window.addEventListener('DOMContentLoaded', async () => {
   await loadInventory();
+  setVista(vistaActual);
   renderPaginated();
   calculateTotal();
 });

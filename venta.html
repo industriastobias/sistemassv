@@ -8,7 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    /* ---------- DISEÑO VISUAL 7 ---------- */
+    /* ---------- DISEÑO VISUAL 8 PRODUCTOS POR LÍNEA ---------- */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;600&display=swap');
     :root{
       --bg:#f7f9fc;
@@ -26,33 +26,42 @@
     body.dark{--bg:#0f111a;--card:#181a26;--text:#e5e7eb;--accent:#818cf8;--danger:#f87171;}
 
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
-    html,body{height:100%}
+    html,body{height:100%;width:100%}
     body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:flex-start;padding:0;min-height:100vh}
 
-    .container{width:100%;height:100vh;background:var(--card);border-radius:0;box-shadow:none;padding:40px 56px;display:flex;flex-direction:column;gap:24px}
-    @media(max-width:768px){.container{padding:32px 24px}}
+    .container{width:100%;height:100vh;background:var(--card);border-radius:0;box-shadow:none;padding:24px 32px;display:flex;flex-direction:column;gap:16px}
+    @media(max-width:768px){.container{padding:16px 20px}}
 
     /* ---------- CABECERA MÁS COMPACTA ---------- */
-    .header{gap:8px;margin-bottom:4px}
-    .header h1{font-size:1.6rem;font-weight:600;letter-spacing:-.5px}
+    .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+    .header h1{font-size:1.5rem;font-weight:600;letter-spacing:-.5px}
 
-    /* ---------- CONTROLES EN UNA LÍNEA Y MÁS PEQUEÑOS ---------- */
+    #menuToggle{position:fixed;top:16px;right:16px;z-index:1001;background:var(--accent);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;box-shadow:var(--shadow);transition:var(--transition)}
+    #menuToggle:hover{transform:scale(1.05)}
+
+    #sideMenu{position:fixed;top:0;right:-60px;width:60px;height:100vh;background:var(--card);box-shadow:-2px 0 8px rgba(0,0,0,.05);display:flex;flex-direction:column;align-items:center;padding-top:80px;gap:20px;transition:right .3s;z-index:1000}
+    #sideMenu.show{right:0}
+    #sideMenu a{color:var(--accent);font-size:1.4rem;text-decoration:none;position:relative;transition:var(--transition)}
+    #sideMenu a:hover{opacity:.7}
+
+    /* ---------- CONTROLES EN UNA LÍNEA COMPACTA ---------- */
     .controls{
       display:flex;
       flex-wrap:wrap;
       align-items:center;
-      gap:10px;
+      gap:8px;
       margin-bottom:6px;
       padding:0;
     }
     .controls input,
     .controls select,
     .controls button{
-      padding:8px 12px;
-      font-size:.82rem;
+      padding:6px 10px;
+      font-size:.78rem;
       border-radius:8px;
     }
-    .controls button{transform:scale(.95)} /* mismo alto que inputs */
+    .controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:500;transform:scale(.95)}
+    .controls button:hover{opacity:.9;transform:translateY(-1px)}
 
     /* ---------- SORT-ROW COMPACTO (al costado) ---------- */
     .sort-row{
@@ -62,43 +71,49 @@
       margin-left:auto; /* se pega a la derecha */
     }
     .sort-row button{
-      padding:5px 10px;
-      font-size:.7rem;
-      border-radius:6px;
+      padding:4px 8px;
+      font-size:.65rem;
+        border-radius:6px;
     }
 
-    /* ---------- GRID MÁS PEQUEÑO (proporción 7) ---------- */
+    /* ---------- GRID 8 PRODUCTOS POR LÍNEA ---------- */
     .cards-grid{
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-      gap:24px;
+      grid-template-columns:repeat(8, 1fr);
+      gap:16px;
       overflow:auto;
+      width:100%;
     }
+    @media(max-width:1200px){.cards-grid{grid-template-columns:repeat(6, 1fr)}}
+    @media(max-width:900px){.cards-grid{grid-template-columns:repeat(4, 1fr)}}
+    @media(max-width:600px){.cards-grid{grid-template-columns:repeat(2, 1fr)}}
+
     .card{
       background:var(--card);
       border-radius:var(--radius);
-      padding:24px;
+      padding:12px;
       box-shadow:var(--shadow);
       display:flex;
       flex-direction:column;
-      gap:16px;
+      gap:8px;
       transition:var(--transition);
       position:relative;
       contain:layout paint;
+      min-height:220px;
     }
-    .card:hover{transform:translateY(-4px);box-shadow:0 4px 20px rgba(0,0,0,.06)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 3px 12px rgba(0,0,0,.07)}
     .card-header{display:flex;justify-content:space-between;align-items:center}
-    .card-title{font-size:1.1rem;font-weight:500}
-    .card-price{font-size:1.5rem;font-weight:600;color:var(--accent)}
+    .card-title{font-size:.85rem;font-weight:500;line-height:1.2}
+    .card-price{font-size:1.1rem;font-weight:600;color:var(--accent)}
     .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
-    .card-delete{background:var(--danger);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:.75rem;cursor:pointer;transition:var(--transition)}
+    .card-delete{background:var(--danger);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:.65rem;cursor:pointer;transition:var(--transition)}
     .card-delete:hover{opacity:.8}
 
-    .pagination{display:flex;justify-content:center;gap:12px;margin-top:auto}
-    .pagination button{padding:10px 16px;border:none;border-radius:var(--radius);background:#f0f2f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:500;transition:var(--transition)}
+    .pagination{display:flex;justify-content:center;gap:10px;margin-top:auto}
+    .pagination button{padding:8px 12px;border:none;border-radius:var(--radius);background:#f0f2f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:500;transition:var(--transition)}
     .pagination button:hover{background:var(--accent);color:#fff}
 
-    .fab-totals{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.5rem;font-weight:600;box-shadow:var(--shadow);z-index:1000;transition:var(--transition)}
+    .fab-totals{position:fixed;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;font-weight:600;box-shadow:var(--shadow);z-index:1000;transition:var(--transition)}
     .fab-totals:hover{transform:scale(1.08)}
 
     /* ---------- MODALES ---------- */
@@ -113,20 +128,20 @@
     .btn-close{background:#6b7280;color:#fff}
     #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
 
-    /* ---------- IMÁGENES 160px ---------- */
-    .card img{width:100%;height:160px;object-fit:contain;border-radius:10px;cursor:pointer;margin-bottom:10px;border:1px solid #f0f0f0;transition:var(--transition)}
+    /* ---------- IMÁGENES 140px ---------- */
+    .card img{width:100%;height:140px;object-fit:contain;border-radius:8px;cursor:pointer;margin-bottom:6px;border:1px solid #f0f0f0;transition:var(--transition)}
     .card img:hover{transform:scale(1.02)}
-    .barcode-text{font-size:10px;text-align:center;margin-top:4px;color:#666}
+    .barcode-text{font-size:9px;text-align:center;margin-top:3px;color:#777}
 
-    #btnTop,#btnDown{position:fixed;right:24px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:999;transition:var(--transition)}
-    #btnTop{bottom:90px}#btnDown{bottom:140px}
+    #btnTop,#btnDown{position:fixed;right:20px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:999;transition:var(--transition)}
+    #btnTop{bottom:80px}#btnDown{bottom:130px}
     #btnTop:hover,#btnDown:hover{transform:scale(1.05)}
 
     #noResults{display:none;text-align:center;padding:40px;color:var(--text)}
     #noResults svg{width:120px;margin-bottom:16px;fill:var(--accent)}
-    .new-badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;padding:4px 8px;border-radius:12px;font-size:.65rem;font-weight:700}
+    .new-badge{position:absolute;top:6px;left:6px;background:var(--accent);color:#fff;padding:3px 6px;border-radius:10px;font-size:.6rem;font-weight:700}
 
-    #darkToggle{position:fixed;top:24px;right:76px;z-index:1001;background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:var(--accent);transition:var(--transition)}
+    #darkToggle{position:fixed;top:20px;right:70px;z-index:1001;background:transparent;border:none;font-size:1.1rem;cursor:pointer;color:var(--accent);transition:var(--transition)}
     #darkToggle:hover{transform:rotate(15deg)}
     @media print{
       .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,#btnDown,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu,#darkToggle{display:none!important}
@@ -502,7 +517,7 @@
           <div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div>
           <button class="card-delete" onclick="confirmDelete('${item.uuid}')" aria-label="Eliminar venta">Eliminar</button>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;" ${checkedMap.has(item.uuid)?'checked':''}>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:6px;right:6px;width:14px;height:14px;" ${checkedMap.has(item.uuid)?'checked':''}>
       `;
 
       card.insertBefore(img, card.firstChild);

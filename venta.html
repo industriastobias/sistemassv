@@ -18,6 +18,12 @@
       --radius:14px;
       --shadow:0 4px 20px rgba(0,0,0,.05);
     }
+    /* DARK MODE */
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#121212;--card:#1e1e1e;--text:#eee;--accent:#bbb;--danger:#ff6b8b;}
+    }
+    body.dark{--bg:#121212;--card:#1e1e1e;--text:#eee;--accent:#bbb;--danger:#ff6b8b;}
+
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
     html,body{height:100%;}
     body{
@@ -121,6 +127,7 @@
       grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
       gap:20px;
       overflow:auto;
+      contain:layout paint;
     }
     .card{
       background:#fafafa;
@@ -136,6 +143,7 @@
       opacity:0;
       transform:translateY(20px);
       animation:fadeIn .5s forwards;
+      contain:layout paint;
     }
     @keyframes fadeIn{to{opacity:1;transform:translateY(0);}}
     .card:hover{transform:translateY(-4px);}
@@ -268,18 +276,22 @@
       font-size:.65rem;
       font-weight:700;
     }
+    /* ---------- ORDENAR ---------- */
+    .sort-row{display:flex;gap:8px;margin-bottom:8px;}
+    .sort-row button{background:var(--accent);color:#fff;border:none;padding:6px 10px;border-radius:var(--radius);cursor:pointer;font-size:.75rem;}
+    /* ---------- DARK TOGGLE ---------- */
+    #darkToggle{position:fixed;top:20px;right:70px;z-index:1001;background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:var(--accent);}
     @media print{
-      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,#btnDown,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu{display:none!important;}
+      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,#btnDown,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu,#darkToggle{display:none!important;}
     }
   </style>
 </head>
 <body>
 
-<!-- Botón para mostrar/ocultar menú -->
-<button id="menuToggle" onclick="toggleMenu()">☰</button>
+<button id="menuToggle" onclick="toggleMenu()" aria-label="Menú">☰</button>
+<button id="darkToggle" onclick="toggleDark()" aria-label="Alternar tema">🌗</button>
 
-<!-- Menú lateral pegable -->
-<nav id="sideMenu">
+<nav id="sideMenu" aria-label="Navegación principal">
   <a href="compra.html" data-title="Compra"><i class="fa fa-shopping-cart"></i></a>
   <a href="almacenamiento.html" data-title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
   <a href="lista.html" data-title="Lista"><i class="fa fa-list"></i></a>
@@ -290,49 +302,53 @@
   <a href="facturas.html" data-title="Facturas"><i class="fa fa-file-invoice"></i></a>
   <a href="traslados.html" data-title="Traslados"><i class="fa fa-truck"></i></a>
   <a href="venta.html" data-title="Venta"><i class="fa fa-cash-register"></i></a>
-  <!-- MODO KIOSCO -->
   <a id="kioskBtn" href="#" data-title="Pantalla completa" onclick="toggleKiosk();return false;"><i class="fa fa-expand"></i></a>
 </nav>
 
 <div class="container">
-  <div class="spinner" id="spinner"></div>
+  <div class="spinner" id="spinner" aria-hidden="true"></div>
 
   <header class="header">
     <h1>Ventas Realizadas</h1>
   </header>
 
   <div class="controls">
-    <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode">
-    <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option>
+    <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode" aria-label="Buscar">
+    <select id="rowsPerPage" aria-label="Filas por página">
+      <option value="10">10</option><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option>
     </select>
-    <button onclick="abrirFactura()">🧾 Generar Factura</button>
-    <button onclick="location.href='lista.html'">📊 Ver Ingresos</button>
+    <button onclick="abrirFactura()" aria-label="Generar factura">🧾 Generar Factura</button>
+    <button onclick="location.href='lista.html'" aria-label="Ver ingresos">📊 Ver Ingresos</button>
+    <button onclick="toggleToday()" aria-label="Ventas de hoy">📅 Ventas de hoy</button>
   </div>
 
-  <section class="cards-grid" id="soldInventoryList"></section>
+  <div class="sort-row" id="sortRow">
+    <button onclick="sortBy('date')" aria-label="Ordenar por fecha">Fecha <span id="dateDir">↓</span></button>
+    <button onclick="sortBy('amount')" aria-label="Ordenar por monto">Monto <span id="amountDir">↓</span></button>
+  </div>
 
-  <div id="noResults">
-    <svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
+  <section class="cards-grid" id="soldInventoryList" aria-live="polite"></section>
+
+  <div id="noResults" role="status">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
     <div>No se encontraron productos</div>
   </div>
 
   <div class="pagination">
-    <button onclick="prevPage()">← Anterior</button>
-    <button onclick="nextPage()">Siguiente →</button>
+    <button onclick="prevPage()" aria-label="Página anterior">← Anterior</button>
+    <button onclick="nextPage()" aria-label="Página siguiente">Siguiente →</button>
   </div>
 </div>
 
-<!-- Flechas -->
-<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">↓</button>
+<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba">↑</button>
+<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" aria-label="Ir abajo">↓</button>
 
-<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
+<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn" aria-label="Ver totales"><span id="fabQty">0</span></button>
 
 <!-- Modal totales -->
-<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()" role="dialog" aria-modal="true">
   <div class="totales-card" onclick="event.stopPropagation()">
-    <button class="close-btn" onclick="cerrarModalTotales()">×</button>
+    <button class="close-btn" onclick="cerrarModalTotales()" aria-label="Cerrar">×</button>
     <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
       <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
       <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
@@ -343,12 +359,12 @@
 </div>
 
 <!-- Modal factura pantalla completa -->
-<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()" role="dialog" aria-modal="true">
   <div class="factura-card" onclick="event.stopPropagation()">
     <h2>Factura – Ticket</h2>
-    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
-    <label>Fecha</label><input id="fFecha" readonly>
-    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+    <label for="fNum">Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label for="fFecha">Fecha</label><input id="fFecha" readonly>
+    <label for="fCliente">Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
 
     <div class="ticket-preview">
       <header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
@@ -369,21 +385,96 @@
   </div>
 </div>
 
-<div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
+<div id="imgModal" onclick="cerrarImgModal()" role="dialog" aria-modal="true">
+  <img id="imgModalImg" src="" alt="Imagen ampliada">
+</div>
 
 <script>
-  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  let currentPage = 1;
-  let rowsPerPage = 100;
+  /* ======================  MEJORAS  ====================== */
+  /* 1. Constantes y utilidades */
+  const ESC_MAP = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' };
+  const esc = str => str.replace(/[&<>"']/g, m => ESC_MAP[m]);
+  const $ = q => document.querySelector(q);
+  const DEBOUNCE_DELAY = 200;
+  const THUMBNAIL_SIZE = 200;
 
-  function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
-  function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
+  /* 2. Dark-mode */
+  function toggleDark(){
+    document.body.classList.toggle('dark');
+    localStorage.setItem('bh:dark', document.body.classList.contains('dark') ? '1' : '0');
+  }
+  function loadDark(){
+    if(localStorage.getItem('bh:dark') === '1') document.body.classList.add('dark');
+  }
+  loadDark();
 
-  function toggleMenu() {
-    document.getElementById('sideMenu').classList.toggle('show');
+  /* 3. Ordenación */
+  let sortField = 'date', sortDir = -1;
+  function sortBy(field){
+    if(sortField === field) sortDir *= -1;
+    else { sortField = field; sortDir = -1; }
+    $('#dateDir').textContent = sortField === 'date' ? (sortDir === -1 ? '↓' : '↑') : '↓';
+    $('#amountDir').textContent = sortField === 'amount' ? (sortDir === -1 ? '↓' : '↑') : '↓';
+    currentPage = 1;
+    loadSoldInventory();
   }
 
-  /* ---------- MODO KIOSCO ---------- */
+  /* 4. Ventas de hoy */
+  function toggleToday(){
+    const today = new Date().toISOString().slice(0,10);
+    const search = $('#unifiedSearch');
+    if(search.value === today) search.value = '';
+    else search.value = today;
+    search.dispatchEvent(new Event('input'));
+  }
+
+  /* 5. Thumbnail canvas */
+  async function compressImage(file){
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const max = THUMBNAIL_SIZE;
+        const ratio = Math.min(max/img.width, max/img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  /* 6. Checkboxes persistentes */
+  const checkedMap = new Map(); // uuid -> boolean
+
+  /* 7. Debounce búsqueda */
+  let searchTimeout;
+  $('#unifiedSearch').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, DEBOUNCE_DELAY);
+  });
+
+  /* 8. IntersectionObserver para paginación infinita */
+  const io = new IntersectionObserver(entries => {
+    if(entries[0].isIntersecting && !$('#next').disabled){
+      nextPage();
+    }
+  }, { rootMargin: '200px' });
+
+  /* ======================  LÓGICA ORIGINAL (SIN CAMBIOS DE NOMBRES)  ====================== */
+  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  let currentPage = 1;
+  let rowsPerPage = 50;
+
+  function showSpinner() { $('#spinner').style.display = 'grid'; }
+  function hideSpinner() { $('#spinner').style.display = 'none'; }
+
+  function toggleMenu() {
+    $('#sideMenu').classList.toggle('show');
+  }
+
   function toggleKiosk(){
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(()=>{});
@@ -392,24 +483,17 @@
     }
   }
 
-  /* ---------- MOSTRAR/OCULTAR FLECHAS ---------- */
   window.addEventListener('scroll', () => {
     const show = window.scrollY > 300;
-    document.getElementById('btnTop').style.opacity = show ? '1' : '0';
-    document.getElementById('btnDown').style.opacity = show ? '1' : '0';
-  });
-
-  let searchTimeout;
-  document.getElementById('unifiedSearch').addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
+    $('#btnTop').style.opacity = show ? '1' : '0';
+    $('#btnDown').style.opacity = show ? '1' : '0';
   });
 
   function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
   function nextPage() {
     const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
-      (item.barcode && item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()))
+      item.name.toLowerCase().includes($('#unifiedSearch').value.toLowerCase()) ||
+      (item.barcode && item.barcode.toLowerCase().includes($('#unifiedSearch').value.toLowerCase()))
     );
     if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
   }
@@ -417,30 +501,30 @@
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
     if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
-    document.getElementById('facturaModal').style.display = 'flex';
-    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+    $('#facturaModal').style.display = 'flex';
+    $('#fFecha').value = new Date().toLocaleDateString('es-SV');
     actualizarTablaTicket();
   }
-  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
+  function cerrarFactura() { $('#facturaModal').style.display = 'none'; }
   function actualizarTablaTicket() {
     const checks = [...document.querySelectorAll('.factCheck:checked')];
-    const body = document.getElementById('fBody');
+    const body = $('#fBody');
     body.innerHTML = '';
     let sum = 0;
     checks.forEach(ch => {
       const p = JSON.parse(ch.value);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${p.name}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
+        <td>${esc(p.name)}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
         <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
         <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
       body.appendChild(tr);
       sum += Number(p.total);
     });
-    document.getElementById('fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
-    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
-    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
-    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+    $('#fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
+    $('#fNumTxt').textContent = $('#fNum').value;
+    $('#fClienteTxt').textContent = $('#fCliente').value;
+    $('#fFechaTxt').textContent = $('#fFecha').value;
   }
   function imprimirTicket() {
     const cont = document.querySelector('.ticket-preview').innerHTML;
@@ -453,7 +537,6 @@
       th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
       th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
       .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
-      .line{border-top:1px dashed #000;margin:6px 0}
       .pu{font-size:10px;color:#555;}
       </style></head><body>${cont}</body></html>`);
     ventana.document.close();
@@ -476,10 +559,10 @@
     doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
     doc.line(margen, y, 80 - margen, y); y += 5;
 
-    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text($('#fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text($('#fFecha').value, margen + 22, y); y += 5;
     doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
-    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
+    const cliente = doc.splitTextToSize($('#fCliente').value, ancho - 22);
     cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
     y += 3;
     doc.line(margen, y, 80 - margen, y); y += 4;
@@ -497,36 +580,38 @@
     y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
 
     doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
+    doc.text('TOTAL:', margen, y); doc.text('$' + $('#fTotal').textContent, margen + 62, y, 'right'); y += 6;
 
     doc.setFontSize(8); doc.setFont(undefined, 'normal');
     const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
     const split = doc.splitTextToSize(msg, ancho);
     split.forEach(l => { doc.text(l, margen, y); y += 3; });
 
-    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
+    doc.save(`ticket_${$('#fNum').value}.pdf`);
   }
 
-  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
-  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
+  function abrirModalTotales() { $('#totalesModal').style.display = 'flex'; }
+  function cerrarModalTotales() { $('#totalesModal').style.display = 'none'; }
   function abrirImgModal(src) {
-    const modal = document.getElementById('imgModal');
-    const img = document.getElementById('imgModalImg');
+    const modal = $('#imgModal');
+    const img = $('#imgModalImg');
     img.src = src;
+    img.alt = 'Imagen ampliada';
     modal.style.display = 'flex';
   }
-  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
+  function cerrarImgModal() { $('#imgModal').style.display = 'none'; }
 
   async function loadSoldInventory() {
     showSpinner();
-    const search = document.getElementById('unifiedSearch').value.toLowerCase();
-    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
+    const search = $('#unifiedSearch').value.toLowerCase();
+    rowsPerPage = parseInt($('#rowsPerPage').value);
 
-    // ✅ ORDEN: MÁS RECIENTES PRIMERO (por soldAt)
+    // Orden
     soldInventory.sort((a, b) => {
-      const dateA = new Date(a.soldAt || 0);
-      const dateB = new Date(b.soldAt || 0);
-      return dateB - dateA;
+      let v1, v2;
+      if(sortField === 'date'){ v1 = new Date(a.soldAt||0); v2 = new Date(b.soldAt||0); }
+      else { v1 = Number(a.total); v2 = Number(b.total); }
+      return (v2 - v1) * sortDir;
     });
 
     let filtered = soldInventory.filter(item =>
@@ -539,28 +624,31 @@
 
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
-    document.getElementById('totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
-    document.getElementById('totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
-    document.getElementById('fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    $('#totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    $('#totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
+    $('#fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
 
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
 
-    const container = document.getElementById('soldInventoryList');
+    const container = $('#soldInventoryList');
     container.innerHTML = '';
 
     if (paginated.length === 0) {
-      document.getElementById('noResults').style.display = 'block';
+      $('#noResults').style.display = 'block';
     } else {
-      document.getElementById('noResults').style.display = 'none';
+      $('#noResults').style.display = 'none';
     }
 
+    const frag = document.createDocumentFragment();
     for (const item of paginated) {
       const card = document.createElement('div');
       card.className = 'card';
+      card.setAttribute('tabindex', '0');
 
       const img = document.createElement('img');
-      img.alt = `${item.name}`;
+      img.alt = `Imagen de ${esc(item.name)}`;
+      img.loading = 'lazy';
 
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
@@ -573,32 +661,38 @@
 
       const barcodeText = document.createElement('div');
       barcodeText.className = 'barcode-text';
-      barcodeText.textContent = item.barcode ? `Código: ${item.barcode}` : '';
+      barcodeText.textContent = item.barcode ? `Código: ${esc(item.barcode)}` : '';
 
       if (isToday(item.soldAt)) {
         const badge = document.createElement('div');
         badge.className = 'new-badge';
         badge.textContent = 'Nuevo';
+        badge.setAttribute('aria-label', 'Producto nuevo');
         card.appendChild(badge);
       }
 
       card.innerHTML = `
         <div class="card-header">
-          <div class="card-title">${item.name}</div>
+          <div class="card-title">${esc(item.name)}</div>
         </div>
         <div class="card-price">$${new Intl.NumberFormat('es-SV').format(Number(item.price).toFixed(2))}</div>
         <div>Cantidad vendida: ${new Intl.NumberFormat('es-SV').format(item.quantity)}</div>
         <div class="card-footer">
           <div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div>
-          <button class="card-delete" onclick="confirmDelete('${item.code}')">Eliminar</button>
+          <button class="card-delete" onclick="confirmDelete('${item.code}')" aria-label="Eliminar venta">Eliminar</button>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;">
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:8px;right:8px;width:16px;height:16px;" ${checkedMap.has(item.code)?'checked':''}>
       `;
 
       card.insertBefore(img, card.firstChild);
       if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
-      container.appendChild(card);
+      frag.appendChild(card);
     }
+    container.appendChild(frag);
+
+    // Observar último elemento para cargar más
+    const lastCard = container.lastElementChild;
+    if(lastCard) io.observe(lastCard);
 
     hideSpinner();
   }
@@ -634,6 +728,7 @@
     return d.toDateString() === today.toDateString();
   }
 
+  // Inicializar
   loadSoldInventory();
 </script>
 </body>

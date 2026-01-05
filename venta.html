@@ -8,126 +8,391 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    /* ---------- DISEÑO 8-Columnas / COMPACTO / COMPLETO ---------- */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;600&display=swap');
-    :root{
-      --bg:#f7f9fc;
-      --card:#ffffff;
-      --text:#1a1a1a;
-      --accent:#6366f1;
-      --danger:#ef4444;
-      --radius:10px;
-      --shadow:0 1px 6px rgba(0,0,0,.06);
-      --transition:.2s ease;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #222;
+      --accent: #444;
+      --danger: #d63384;
+      --radius: 10px;
+      --shadow: 0 2px 8px rgba(0,0,0,.05);
     }
-    @media (prefers-color-scheme: dark){
-      :root{--bg:#0f111a;--card:#181a26;--text:#e5e7eb;--accent:#818cf8;--danger:#f87171;}
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 0; min-height: 100vh; }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      background: var(--card);
+      border-radius: 0;
+      box-shadow: none;
     }
-    body.dark{--bg:#0f111a;--card:#181a26;--text:#e5e7eb;--accent:#818cf8;--danger:#f87171;}
 
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
-    html,body{height:100%;width:100%}
-    body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:flex-start;padding:0;min-height:100vh}
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
 
-    .container{width:100%;height:100vh;background:var(--card);border-radius:0;box-shadow:none;padding:20px 28px;display:flex;flex-direction:column;gap:14px}
-    @media(max-width:768px){.container{padding:14px 18px}}
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
 
-    .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px}
-    .header h1{font-size:1.4rem;font-weight:600;letter-spacing:-.5px}
+    /* ---------- MENÚ PEGABLE ---------- */
+    #menuToggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 1001;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
 
-    #menuToggle{position:fixed;top:14px;right:14px;z-index:1001;background:var(--accent);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);transition:var(--transition)}
-    #menuToggle:hover{transform:scale(1.05)}
+    #sideMenu {
+      position: fixed;
+      top: 0;
+      right: -50px;
+      width: 50px;
+      height: 100vh;
+      background: #ffffff;
+      box-shadow: -2px 0 6px rgba(0,0,0,.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 60px;
+      gap: 16px;
+      transition: right .3s;
+      z-index: 1000;
+    }
 
-    #sideMenu{position:fixed;top:0;right:-60px;width:60px;height:100vh;background:var(--card);box-shadow:-2px 0 8px rgba(0,0,0,.05);display:flex;flex-direction:column;align-items:center;padding-top:80px;gap:20px;transition:right .3s;z-index:1000}
-    #sideMenu.show{right:0}
-    #sideMenu a{color:var(--accent);font-size:1.4rem;text-decoration:none;position:relative;transition:var(--transition)}
-    #sideMenu a:hover{opacity:.7}
+    #sideMenu.show { right: 0; }
 
-    .controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px;padding:0}
-    .controls input,.controls select,.controls button{padding:5px 8px;font-size:.75rem;border-radius:8px}
-    .controls button{background:var(--accent);color:#fff;cursor:pointer;font-weight:500;transform:scale(.95)}
-    .controls button:hover{opacity:.9;transform:translateY(-1px)}
+    #sideMenu a {
+      color: var(--accent);
+      font-size: 1.2rem;
+      text-decoration: none;
+      position: relative;
+    }
 
-    .sort-row{display:inline-flex;gap:4px;margin-left:auto}
-    .sort-row button{padding:3px 6px;font-size:.6rem;border-radius:6px}
+    #sideMenu a:hover::after {
+      content: attr(data-title);
+      position: absolute;
+      right: 40px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #333;
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: .7rem;
+      white-space: nowrap;
+    }
+
+    /* ---------- CONTROLES COMPACTOS ---------- */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .controls input,
+    .controls select,
+    .controls button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: var(--radius);
+      background: #f5f5f5;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font-size: 0.75rem;
+    }
+
+    .controls button {
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .controls button:hover {
+      opacity: .9;
+    }
 
     /* ---------- GRID 8 COLUMNAS ---------- */
-    .cards-grid{
-      display:grid;
-      grid-template-columns:repeat(8, 1fr);
-      gap:12px;
-      overflow:auto;
-      width:100%;
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+      overflow: auto;
     }
-    @media(max-width:1200px){.cards-grid{grid-template-columns:repeat(6, 1fr)}}
-    @media(max-width:900px){.cards-grid{grid-template-columns:repeat(4, 1fr)}}
-    @media(max-width:600px){.cards-grid{grid-template-columns:repeat(2, 1fr)}}
 
-    .card{
-      background:var(--card);
-      border-radius:var(--radius);
-      padding:10px;
-      box-shadow:var(--shadow);
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      transition:var(--transition);
-      position:relative;
-      contain:layout paint;
-      min-height:180px;
+    .card {
+      background: #fafafa;
+      border-radius: var(--radius);
+      padding: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: .3s;
+      position: relative;
+      min-height: 160px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn .4s forwards;
+      font-size: 0.7rem;
     }
-    .card:hover{transform:translateY(-2px);box-shadow:0 3px 12px rgba(0,0,0,.07)}
-    .card-header{display:flex;justify-content:space-between;align-items:center}
-    .card-title{font-size:.75rem;font-weight:500;line-height:1.2}
-    .card-price{font-size:1rem;font-weight:600;color:var(--accent)}
-    .card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
-    .card-delete{background:var(--danger);color:#fff;border:none;padding:3px 6px;border-radius:5px;font-size:.6rem;cursor:pointer;transition:var(--transition)}
-    .card-delete:hover{opacity:.8}
 
-    .pagination{display:flex;justify-content:center;gap:10px;margin-top:auto}
-    .pagination button{padding:6px 10px;border:none;border-radius:var(--radius);background:#f0f2f5;color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-weight:500;transition:var(--transition)}
-    .pagination button:hover{background:var(--accent);color:#fff}
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-    .fab-totals{position:fixed;bottom:16px;right:16px;width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;font-weight:600;box-shadow:var(--shadow);z-index:1000;transition:var(--transition)}
-    .fab-totals:hover{transform:scale(1.08)}
+    .card img {
+      width: 100%;
+      height: 60px;
+      object-fit: contain;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #eee;
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .card-price {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      font-size: 0.65rem;
+    }
+
+    .card-delete {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.6rem;
+      cursor: pointer;
+    }
+
+    .barcode-text {
+      font-size: 9px;
+      text-align: center;
+      color: #666;
+    }
+
+    .new-badge {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 5px;
+      border-radius: 8px;
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+
+    /* ---------- PAGINACIÓN ---------- */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: var(--radius);
+      background: #f5f5f5;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.7rem;
+    }
+
+    .pagination button:hover {
+      background: var(--accent);
+      color: #fff;
+    }
 
     /* ---------- MODALES ---------- */
-    #totalesModal,#facturaModal,#imgModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999}
-    .totales-card,.factura-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;width:90vw;max-width:400px}
-    #facturaModal .factura-card{width:100vw;height:100vh;max-width:none;border-radius:0;margin:0;overflow:auto}
-    .ticket-preview{background:#fff;color:#000;font-family:'Courier New',monospace;font-size:11px;line-height:1.3;padding:6px 4px;border:1px dashed #999;border-radius:4px;width:100%;max-width:360px;margin:0 auto}
-    .ticket-preview .total{font-weight:700;font-size:12px;text-align:right;margin-top:4px;padding-right:4px}
-    .modal-buttons{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-    .modal-buttons button{padding:6px 10px;border:none;border-radius:4px;cursor:pointer;font-weight:500;transition:var(--transition)}
-    .btn-print{background:#16a34a;color:#fff}
-    .btn-close{background:#6b7280;color:#fff}
-    #imgModal img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
+    #totalesModal, #facturaModal, #imgModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
 
-    /* ---------- IMÁGENES 120px ---------- */
-    .card img{width:100%;height:120px;object-fit:contain;border-radius:6px;cursor:pointer;margin-bottom:4px;border:1px solid #f0f0f0;transition:var(--transition)}
-    .card img:hover{transform:scale(1.02)}
-    .barcode-text{font-size:8px;text-align:center;margin-top:2px;color:#777}
+    .totales-card, .factura-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      width: 90vw;
+      max-width: 360px;
+    }
 
-    #btnTop,#btnDown{position:fixed;right:16px;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:999;transition:var(--transition)}
-    #btnTop{bottom:70px}#btnDown{bottom:110px}
-    #btnTop:hover,#btnDown:hover{transform:scale(1.05)}
+    #facturaModal .factura-card {
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      border-radius: 0;
+      margin: 0;
+      overflow: auto;
+    }
 
-    #noResults{display:none;text-align:center;padding:32px;color:var(--text)}
-    #noResults svg{width:100px;margin-bottom:12px;fill:var(--accent)}
-    .new-badge{position:absolute;top:4px;left:4px;background:var(--accent);color:#fff;padding:2px 5px;border-radius:8px;font-size:.55rem;font-weight:700}
+    .ticket-preview {
+      background: #fff;
+      color: #000;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      line-height: 1.2;
+      padding: 6px 4px;
+      border: 1px dashed #999;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+    }
 
-    #darkToggle{position:fixed;top:16px;right:60px;z-index:1001;background:transparent;border:none;font-size:1rem;cursor:pointer;color:var(--accent);transition:var(--transition)}
-    #darkToggle:hover{transform:rotate(15deg)}
-    @media print{
-      .header,.controls,.pagination,.fab-totals,#kioskBtn,#btnTop,#btnDown,.card-delete,.factCheck,.sort-row,#menuToggle,#sideMenu,#darkToggle{display:none!important}
+    .ticket-preview .total {
+      font-weight: 700;
+      font-size: 11px;
+      text-align: right;
+      margin-top: 4px;
+      padding-right: 4px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .modal-buttons button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.7rem;
+    }
+
+    .btn-print {
+      background: #16a34a;
+      color: #fff;
+    }
+
+    .btn-close {
+      background: #6b7280;
+      color: #fff;
+    }
+
+    #imgModal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    /* ---------- FLECHAS ---------- */
+    #btnTop, #btnDown {
+      position: fixed;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+      z-index: 999;
+      transition: opacity .2s;
+      font-size: 0.8rem;
+    }
+
+    #btnTop { bottom: 80px; }
+    #btnDown { bottom: 120px; }
+
+    #noResults {
+      display: none;
+      text-align: center;
+      padding: 30px;
+      color: var(--text);
+    }
+
+    #noResults svg {
+      width: 80px;
+      margin-bottom: 12px;
+      fill: var(--accent);
+    }
+
+    @media (max-width: 1200px) {
+      .cards-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+
+    @media (max-width: 900px) {
+      .cards-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media print {
+      .header, .controls, .pagination, .fab-totals, #kioskBtn, #btnTop, #btnDown, .card-delete, .factCheck, .sort-row, #menuToggle, #sideMenu {
+        display: none !important;
+      }
     }
   </style>
 </head>
 <body>
-<button id="menuToggle" onclick="toggleMenu()" aria-label="Menú">☰</button>
-<button id="darkToggle" onclick="toggleDark()" aria-label="Alternar tema">🌗</button>
 
-<nav id="sideMenu" aria-label="Navegación principal">
+<!-- Botón menú -->
+<button id="menuToggle" onclick="toggleMenu()">☰</button>
+
+<!-- Menú lateral -->
+<nav id="sideMenu">
   <a href="compra.html" data-title="Compra"><i class="fa fa-shopping-cart"></i></a>
   <a href="almacenamiento.html" data-title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
   <a href="lista.html" data-title="Lista"><i class="fa fa-list"></i></a>
@@ -142,48 +407,46 @@
 </nav>
 
 <div class="container">
-  <div class="spinner" id="spinner" aria-hidden="true"></div>
-
   <header class="header">
     <h1>Ventas Realizadas</h1>
   </header>
 
   <div class="controls">
-    <input type="text" id="unifiedSearch" placeholder="Buscar nombre / código / barcode" aria-label="Buscar">
-    <select id="rowsPerPage" aria-label="Filas por página">
-      <option value="10">10</option><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option>
+    <input type="text" id="unifiedSearch" placeholder="Buscar..." style="flex:1;">
+    <select id="rowsPerPage" onchange="loadSoldInventory()">
+      <option value="16">16</option>
+      <option value="32">32</option>
+      <option value="64">64</option>
+      <option value="128" selected>128</option>
     </select>
-    <button onclick="abrirFactura()" aria-label="Generar factura">🧾 Generar Factura</button>
-    <button onclick="location.href='lista.html'" aria-label="Ver ingresos">📊 Ver Ingresos</button>
-    <button onclick="toggleToday()" aria-label="Ventas de hoy">📅 Ventas de hoy</button>
-    <div class="sort-row" id="sortRow">
-      <button onclick="sortBy('date')" aria-label="Ordenar por fecha">Fecha <span id="dateDir">↓</span></button>
-      <button onclick="sortBy('amount')" aria-label="Ordenar por monto">Monto <span id="amountDir">↓</span></button>
-    </div>
+    <button onclick="abrirFactura()">🧾 Factura</button>
+    <button onclick="location.href='lista.html'">📊 Ingresos</button>
   </div>
 
-  <section class="cards-grid" id="soldInventoryList" aria-live="polite"></section>
+  <section class="cards-grid" id="soldInventoryList"></section>
 
-  <div id="noResults" role="status">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
+  <div id="noResults">
+    <svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
     <div>No se encontraron productos</div>
   </div>
 
   <div class="pagination">
-    <button onclick="prevPage()" aria-label="Página anterior">← Anterior</button>
-    <button onclick="nextPage()" aria-label="Página siguiente">Siguiente →</button>
+    <button onclick="prevPage()">← Anterior</button>
+    <button onclick="nextPage()">Siguiente →</button>
   </div>
 </div>
 
-<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba">↑</button>
-<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" aria-label="Ir abajo">↓</button>
+<!-- Flechas -->
+<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">↓</button>
 
-<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn" aria-label="Ver totales"><span id="fabQty">0</span></button>
+<!-- FAB totales -->
+<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
 
 <!-- Modal totales -->
-<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()" role="dialog" aria-modal="true">
+<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
   <div class="totales-card" onclick="event.stopPropagation()">
-    <button class="close-btn" onclick="cerrarModalTotales()" aria-label="Cerrar">×</button>
+    <button class="close-btn" onclick="cerrarModalTotales()" style="float:right;background:none;border:none;font-size:1.2rem;cursor:pointer;">×</button>
     <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
       <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
       <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
@@ -193,13 +456,13 @@
   </div>
 </div>
 
-<!-- Modal factura pantalla completa -->
-<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()" role="dialog" aria-modal="true">
+<!-- Modal factura -->
+<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
   <div class="factura-card" onclick="event.stopPropagation()">
     <h2>Factura – Ticket</h2>
-    <label for="fNum">Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
-    <label for="fFecha">Fecha</label><input id="fFecha" readonly>
-    <label for="fCliente">Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
+    <label>Fecha</label><input id="fFecha" readonly>
+    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
 
     <div class="ticket-preview">
       <header><div style="font-size:12px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
@@ -220,90 +483,46 @@
   </div>
 </div>
 
-<div id="imgModal" onclick="cerrarImgModal()" role="dialog" aria-modal="true">
-  <img id="imgModalImg" src="" alt="Imagen ampliada">
-</div>
+<!-- Modal imagen -->
+<div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
 
 <script>
-  /* ---------- UTILIDADES ---------- */
-  const ESC_MAP = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' };
-  const esc = str => str.replace(/[&<>"']/g, m => ESC_MAP[m]);
-  const $ = q => document.querySelector(q);
-  const DEBOUNCE_DELAY = 200;
-  const THUMBNAIL_SIZE = 200;
-
-  /* ---------- DARK-MODE ---------- */
-  function toggleDark(){
-    document.body.classList.toggle('dark');
-    localStorage.setItem('bh:dark', document.body.classList.contains('dark') ? '1' : '0');
-  }
-  function loadDark(){
-    if(localStorage.getItem('bh:dark') === '1') document.body.classList.add('dark');
-  }
-  loadDark();
-
-  /* ---------- ORDENAR ---------- */
-  let sortField = 'date', sortDir = -1;
-  function sortBy(field){
-    if(sortField === field) sortDir *= -1;
-    else { sortField = field; sortDir = -1; }
-    $('#dateDir').textContent = sortField === 'date' ? (sortDir === -1 ? '↓' : '↑') : '↓';
-    $('#amountDir').textContent = sortField === 'amount' ? (sortDir === -1 ? '↓' : '↑') : '↓';
-    currentPage = 1;
-    loadSoldInventory();
-  }
-
-  /* ---------- VENTAS DE HOY ---------- */
-  function toggleToday(){
-    const today = new Date().toISOString().slice(0,10);
-    const search = $('#unifiedSearch');
-    if(search.value === today) search.value = '';
-    else search.value = today;
-    search.dispatchEvent(new Event('input'));
-  }
-
-  /* ---------- CHECKBOXES PERSISTENTES ---------- */
-  const checkedMap = new Map(); // uuid -> boolean
-
-  /* ---------- DEBOUNCE ---------- */
-  let searchTimeout;
-  $('#unifiedSearch').addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, DEBOUNCE_DELAY);
-  });
-
-  /* ---------- INTERSECTION-OBSERVER (INFINITA) ---------- */
-  const io = new IntersectionObserver(entries => {
-    if(entries[0].isIntersecting && !$('#next').disabled){
-      nextPage();
-    }
-  }, { rootMargin: '200px' });
-
-  /* ---------- LÓGICA ORIGINAL (CON UUID) ---------- */
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
-  let rowsPerPage = 50;
+  let rowsPerPage = 128;
 
-  function showSpinner() { $('#spinner').style.display = 'grid'; }
-  function hideSpinner() { $('#spinner').style.display = 'none'; }
+  function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
+  function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
 
-  function toggleMenu() { $('#sideMenu').classList.toggle('show'); }
-  function toggleKiosk(){
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-    else document.exitFullscreen();
+  function toggleMenu() {
+    document.getElementById('sideMenu').classList.toggle('show');
+  }
+
+  function toggleKiosk() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen();
+    }
   }
 
   window.addEventListener('scroll', () => {
     const show = window.scrollY > 300;
-    $('#btnTop').style.opacity = show ? '1' : '0';
-    $('#btnDown').style.opacity = show ? '1' : '0';
+    document.getElementById('btnTop').style.opacity = show ? '1' : '0';
+    document.getElementById('btnDown').style.opacity = show ? '1' : '0';
+  });
+
+  let searchTimeout;
+  document.getElementById('unifiedSearch').addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { currentPage = 1; loadSoldInventory(); }, 250);
   });
 
   function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
   function nextPage() {
     const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes($('#unifiedSearch').value.toLowerCase()) ||
-      (item.barcode && item.barcode.toLowerCase().includes($('#unifiedSearch').value.toLowerCase()))
+      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
+      (item.barcode && item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()))
     );
     if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
   }
@@ -311,50 +530,53 @@
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
     if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
-    $('#facturaModal').style.display = 'flex';
-    $('#fFecha').value = new Date().toLocaleDateString('es-SV');
+    document.getElementById('facturaModal').style.display = 'flex';
+    document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
     actualizarTablaTicket();
   }
-  function cerrarFactura() { $('#facturaModal').style.display = 'none'; }
+
+  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
+
   function actualizarTablaTicket() {
     const checks = [...document.querySelectorAll('.factCheck:checked')];
-    const body = $('#fBody');
+    const body = document.getElementById('fBody');
     body.innerHTML = '';
     let sum = 0;
     checks.forEach(ch => {
       const p = JSON.parse(ch.value);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${esc(p.name)}<br><span style="font-size:10px;">P/U: $${new Intl.NumberFormat('es-SV').format(Number(p.price).toFixed(2))}</span></td>
-        <td>${new Intl.NumberFormat('es-SV').format(p.quantity)}</td>
-        <td>$${new Intl.NumberFormat('es-SV').format(Number(p.total).toFixed(2))}</td>`;
+        <td>${p.name}<br><span style="font-size:9px;">P/U: $${Number(p.price).toFixed(2)}</span></td>
+        <td>${Number(p.quantity)}</td>
+        <td>$${Number(p.total).toFixed(2)}</td>`;
       body.appendChild(tr);
       sum += Number(p.total);
     });
-    $('#fTotal').textContent = new Intl.NumberFormat('es-SV').format(sum.toFixed(2));
-    $('#fNumTxt').textContent = $('#fNum').value;
-    $('#fClienteTxt').textContent = $('#fCliente').value;
-    $('#fFechaTxt').textContent = $('#fFecha').value;
+    document.getElementById('fTotal').textContent = sum.toFixed(2);
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
   }
+
   function imprimirTicket() {
     const cont = document.querySelector('.ticket-preview').innerHTML;
-    const ventana = window.open('', '', 'width=360,height=600');
+    const ventana = window.open('', '', 'width=300,height=600');
     ventana.document.write(`<html><head><title>Ticket</title><style>
-      body{margin:0;padding:6px;font:11px/1.3 'Courier New',monospace;width:360px;color:#000;background:#fff}
+      body{margin:0;padding:4px;font:10px/1.2 'Courier New',monospace;width:300px;color:#000;background:#fff}
       table{width:100%;border-collapse:collapse;table-layout:fixed}
       th,td{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       th:first-child,td:first-child{text-align:left;width:60%}
       th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
-      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
-      .total{font-weight:700;font-size:12px;text-align:right;padding-right:6px;margin-top:6px}
-      .line{border-top:1px dashed #000;margin:6px 0}
-      .pu{font-size:10px;color:#555;}
+      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:4px}
+      .total{font-weight:700;font-size:11px;text-align:right;padding-right:4px;margin-top:4px}
+      .line{border-top:1px dashed #000;margin:4px 0}
       </style></head><body>${cont}</body></html>`);
     ventana.document.close();
     ventana.focus();
     ventana.print();
     ventana.close();
   }
+
   function descargarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'mm', format:[80, 190] });
@@ -370,10 +592,10 @@
     doc.text('IG: @Klohesv', margen + ((ancho - doc.getTextWidth('IG: @Klohesv')) / 2), y); y += 5;
     doc.line(margen, y, 80 - margen, y); y += 5;
 
-    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text($('#fNum').value, margen + 22, y); y += 5;
-    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text($('#fFecha').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Factura N°:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fNum').value, margen + 22, y); y += 5;
+    doc.setFont(undefined, 'bold'); doc.text('Fecha:', margen, y); doc.setFont(undefined, 'normal'); doc.text(document.getElementById('fFecha').value, margen + 22, y); y += 5;
     doc.setFont(undefined, 'bold'); doc.text('Cliente:', margen, y); doc.setFont(undefined, 'normal');
-    const cliente = doc.splitTextToSize($('#fCliente').value, ancho - 22);
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 22);
     cliente.forEach(l => { doc.text(l, margen + 22, y); y += 4; });
     y += 3;
     doc.line(margen, y, 80 - margen, y); y += 4;
@@ -391,38 +613,34 @@
     y += 3; doc.line(margen, y, 80 - margen, y); y += 4;
 
     doc.setFontSize(12); doc.setFont(undefined, 'bold');
-    doc.text('TOTAL:', margen, y); doc.text('$' + $('#fTotal').textContent, margen + 62, y, 'right'); y += 6;
+    doc.text('TOTAL:', margen, y); doc.text('$' + document.getElementById('fTotal').textContent, margen + 62, y, 'right'); y += 6;
 
     doc.setFontSize(8); doc.setFont(undefined, 'normal');
     const msg = '¡Gracias por su compra! No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
     const split = doc.splitTextToSize(msg, ancho);
     split.forEach(l => { doc.text(l, margen, y); y += 3; });
 
-    doc.save(`ticket_${$('#fNum').value}.pdf`);
+    doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
   }
 
-  function abrirModalTotales() { $('#totalesModal').style.display = 'flex'; }
-  function cerrarModalTotales() { $('#totalesModal').style.display = 'none'; }
+  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
+  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
   function abrirImgModal(src) {
-    const modal = $('#imgModal');
-    const img = $('#imgModalImg');
+    const modal = document.getElementById('imgModal');
+    const img = document.getElementById('imgModalImg');
     img.src = src;
-    img.alt = 'Imagen ampliada';
     modal.style.display = 'flex';
   }
-  function cerrarImgModal() { $('#imgModal').style.display = 'none'; }
+  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
 
   async function loadSoldInventory() {
-    showSpinner();
-    const search = $('#unifiedSearch').value.toLowerCase();
-    rowsPerPage = parseInt($('#rowsPerPage').value);
+    const search = document.getElementById('unifiedSearch').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
 
-    // Orden
     soldInventory.sort((a, b) => {
-      let v1, v2;
-      if(sortField === 'date'){ v1 = new Date(a.soldAt||0); v2 = new Date(b.soldAt||0); }
-      else { v1 = Number(a.total); v2 = Number(b.total); }
-      return (v2 - v1) * sortDir;
+      const dateA = new Date(a.soldAt || 0);
+      const dateB = new Date(b.soldAt || 0);
+      return dateB - dateA;
     });
 
     let filtered = soldInventory.filter(item =>
@@ -435,31 +653,28 @@
 
     localStorage.setItem('totalVendido', totalUSD.toFixed(2));
 
-    $('#totalQtyModal').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
-    $('#totalUSDModal').textContent = `$${new Intl.NumberFormat('es-SV').format(totalUSD.toFixed(2))}`;
-    $('#fabQty').textContent = new Intl.NumberFormat('es-SV').format(totalUnits);
+    document.getElementById('totalQtyModal').textContent = totalUnits;
+    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('fabQty').textContent = totalUnits;
 
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
 
-    const container = $('#soldInventoryList');
+    const container = document.getElementById('soldInventoryList');
     container.innerHTML = '';
 
     if (paginated.length === 0) {
-      $('#noResults').style.display = 'block';
+      document.getElementById('noResults').style.display = 'block';
     } else {
-      $('#noResults').style.display = 'none';
+      document.getElementById('noResults').style.display = 'none';
     }
 
-    const frag = document.createDocumentFragment();
     for (const item of paginated) {
       const card = document.createElement('div');
       card.className = 'card';
-      card.setAttribute('tabindex', '0');
 
       const img = document.createElement('img');
-      img.alt = `Imagen de ${esc(item.name)}`;
-      img.loading = 'lazy';
+      img.alt = `${item.name}`;
 
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
@@ -472,58 +687,52 @@
 
       const barcodeText = document.createElement('div');
       barcodeText.className = 'barcode-text';
-      barcodeText.textContent = item.barcode ? `Código: ${esc(item.barcode)}` : '';
+      barcodeText.textContent = item.barcode ? `Código: ${item.barcode}` : '';
 
       if (isToday(item.soldAt)) {
         const badge = document.createElement('div');
         badge.className = 'new-badge';
         badge.textContent = 'Nuevo';
-        badge.setAttribute('aria-label', 'Producto nuevo');
         card.appendChild(badge);
       }
 
       card.innerHTML = `
         <div class="card-header">
-          <div class="card-title">${esc(item.name)}</div>
+          <div class="card-title">${item.name}</div>
         </div>
-        <div class="card-price">$${new Intl.NumberFormat('es-SV').format(Number(item.price).toFixed(2))}</div>
-        <div>Cantidad vendida: ${new Intl.NumberFormat('es-SV').format(item.quantity)}</div>
+        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
+        <div>Cantidad: ${Number(item.quantity)}</div>
         <div class="card-footer">
-          <div class="card-total">Total: $${new Intl.NumberFormat('es-SV').format(Number(item.total).toFixed(2))}</div>
-          <button class="card-delete" onclick="confirmDelete('${item.uuid}')" aria-label="Eliminar venta">Eliminar</button>
+          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
+          <button class="card-delete" onclick="confirmDelete('${item.code}')">✖</button>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:4px;right:4px;width:12px;height:12px;" ${checkedMap.has(item.uuid)?'checked':''}>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:4px;right:4px;width:14px;height:14px;">
       `;
 
       card.insertBefore(img, card.firstChild);
       if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
-      frag.appendChild(card);
+      container.appendChild(card);
     }
-    container.appendChild(frag);
-
-    const lastCard = container.lastElementChild;
-    if(lastCard) io.observe(lastCard);
-
-    hideSpinner();
   }
 
-  window.confirmDelete = function (uuid) {
+  window.confirmDelete = function (code) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
       <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
-        <div style="background:#fff;padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);width:280px;text-align:center;">
-          <p>¿Eliminar esta venta?</p>
-          <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+        <div style="background:#fff;padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);width:240px;text-align:center;">
+          <p>¿Eliminar este producto?</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
             <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
-            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${uuid}')">Eliminar</button>
+            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${code}')">Eliminar</button>
           </div>
         </div>
       </div>
     `;
     document.body.appendChild(wrapper);
   };
-  window.deleteSoldItem = function (uuid) {
-    const index = soldInventory.findIndex(item => item.uuid === uuid);
+
+  window.deleteSoldItem = function (code) {
+    const index = soldInventory.findIndex(item => item.code === code);
     if (index !== -1) {
       soldInventory.splice(index, 1);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
@@ -538,7 +747,6 @@
     return d.toDateString() === today.toDateString();
   }
 
-  // Inicializar
   loadSoldInventory();
 </script>
 </body>

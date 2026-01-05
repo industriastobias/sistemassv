@@ -91,11 +91,13 @@
     .spinner{width:60px;height:60px;border:6px solid #e5e7eb;border-top-color:var(--success);border-radius:50%;animation:spin 1s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* =====  MODAL CON FONDO BORROSO  ===== */
+    /* =====  MODAL FULL-SCREEN  ===== */
     #accessModal {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,.75);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       display: flex;
@@ -111,28 +113,23 @@
       width: 90%;
       max-width: 400px;
     }
-    .modal-box h2 {
-      margin-bottom: 1rem;
-      color: var(--accent);
-    }
-    .modal-box input {
-      margin-bottom: 1rem;
-    }
-    .modal-box button {
-      width: 100%;
-    }
   </style>
 </head>
 <body>
 
-<!-- =====  MODAL CON FONDO BORROSO  ===== -->
+<!-- =====  MODAL FULL-SCREEN  ===== -->
 <div id="accessModal">
-  <div class="modal-box">
+  <div id="loadingCircle" style="display:none;text-align:center;color:#fff;font-size:1.3rem">
+    <div class="spinner" style="margin:0 auto .75rem"></div>
+    CARGANDO COMPRAS – ESPERE UN MOMENTO
+  </div>
+
+  <div class="modal-box" id="loginBox">
     <h2>Acceso requerido</h2>
     <label>Usuario</label>
-    <input type="text" id="userInput" placeholder="Usuario">
+    <input type="text" id="userInput" placeholder="Usuario" onkeydown="if(event.key==='Enter') document.getElementById('passInput').focus()">
     <label>Contraseña</label>
-    <input type="password" id="passInput" placeholder="Contraseña">
+    <input type="password" id="passInput" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarAcceso()">
     <button class="btn-primary" onclick="verificarAcceso()">Ingresar</button>
   </div>
 </div>
@@ -150,7 +147,13 @@
     const usuario = document.getElementById('userInput').value.trim();
     const contrasena = document.getElementById('passInput').value.trim();
     if (usuario === decodeBase64(USER_ENCODED) && contrasena === decodeBase64(PASS_ENCODED)) {
-      document.getElementById('accessModal').style.display = 'none';
+      // Oculta el formulario y muestra el círculo de carga
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('loadingCircle').style.display = 'block';
+      // Espera 5 s antes de quitar el modal
+      setTimeout(() => {
+        document.getElementById('accessModal').style.display = 'none';
+      }, 5000);
     } else {
       alert('Usuario o contraseña incorrectos');
     }

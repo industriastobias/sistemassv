@@ -35,7 +35,7 @@
       color: var(--text);
       font-size: 15px;
       line-height: 1.5;
-      transition: transform .4s ease;
+      transition: transform .3s ease;
     }
     h1 {
       font-size: 1.5rem;
@@ -465,13 +465,20 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
       z-index: 1002;
     }
+    body.rotate90 {
+      transform: rotate(-90deg);
+      transform-origin: center center;
+      width: 100vh;
+      height: 100vw;
+      overflow: hidden;
+    }
   </style>
 </head>
 
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
   <!-- Botón fijo ROTAR -->
-  <button id="rotateBtn" onclick="rotateScreen()" title="Giro automático">↻</button>
+  <button id="rotateBtn" onclick="document.body.classList.toggle('rotate90')" title="Rotar vertical/horizontal">↻</button>
   <!-- Botón fijo MENÚ (ya existente) -->
   <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
   <nav id="sideMenu">
@@ -784,32 +791,6 @@
     function confirmCashSaleFull() { let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]'); cashItems.forEach(x => { inventory[x.realIdx].quantity -= x.qty; soldInventory.push({ name: x.name, code: inventory[x.realIdx].code, price: x.price, quantity: x.qty, total: x.qty * x.price, seller: 'CajaRegistradora', date: new Date().toISOString() }); }); localStorage.setItem('inventory', JSON.stringify(inventory)); localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); beepOK(); document.getElementById('cashFloatList').style.display = 'none'; alert('Venta realizada ✅'); closeCashRegister(); filterInventory(); }
     function openCashRegister() { document.documentElement.requestFullscreen().catch(() => {}); buildCashRegisterUI(); }
     function closeCashRegister() { if (document.fullscreenElement) document.exitFullscreen(); const div = document.getElementById('cashRegisterFullscreen'); if (div) div.remove(); const fl = document.getElementById('cashFloatList'); if (fl) fl.remove(); cashItems = []; }
-
-    /* ---------- Giro automático tipo tablet ---------- */
-    let currentRotate = 0;   // 0, 90, 180, 270
-    function rotateScreen() {
-      currentRotate = (currentRotate + 90) % 360;
-      document.body.style.transition = 'transform .4s ease';
-      document.body.style.transform = `rotate(-${currentRotate}deg)`;
-
-      // Ajustamos tamaño para que ocupe toda la pantalla girada
-      if (currentRotate % 180 === 90) {
-        document.body.style.width  = '100vh';
-        document.body.style.height = '100vw';
-        document.body.style.position = 'fixed';
-        document.body.style.top = '0';
-        document.body.style.left = '0';
-        document.body.style.overflow = 'hidden';
-      } else if (currentRotate === 0) {
-        // volvemos a vertical
-        document.body.style.width  = '';
-        document.body.style.height = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.overflow = '';
-      }
-    }
 
     /* DEMO: si no hay ventas, crea una de hace 2 días para que los filtros no aparezcan vacíos */
     (function () { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (sales.length) return; const demo = { name: 'Collar demo', code: '123456', price: 2990, quantity: 1, total: 2990, seller: 'Demo', date: new Date(Date.now() - 86400000 * 2).toISOString() }; localStorage.setItem('soldInventory', JSON.stringify([demo])); })();

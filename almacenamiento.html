@@ -35,7 +35,6 @@
       color: var(--text);
       font-size: 15px;
       line-height: 1.5;
-      transition: transform .3s ease;
     }
     h1 {
       font-size: 1.5rem;
@@ -146,7 +145,6 @@
       background: #fef08a !important;
       color: #1f2937 !important;
     }
-    /* ---------- 5 tarjetas por línea ---------- */
     .cards-view {
       display: none;
       flex-wrap: wrap;
@@ -449,37 +447,11 @@
     #cashHelpKeys {
       display: none;
     }
-    /* ---------- botón rotar ---------- */
-    #rotateBtn {
-      position: fixed;
-      bottom: 1.2rem;
-      left: 1.2rem;
-      width: 3rem;
-      height: 3rem;
-      border-radius: 50%;
-      border: none;
-      background: var(--accent);
-      color: var(--white);
-      font-size: 1.4rem;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-      z-index: 1002;
-    }
-    body.rotate90 {
-      transform: rotate(-90deg);
-      transform-origin: center center;
-      width: 100vh;
-      height: 100vw;
-      overflow: hidden;
-    }
   </style>
 </head>
 
 <body>
   <div id="notExistModal" style="display:none;">Producto no existente</div>
-  <!-- Botón fijo ROTAR -->
-  <button id="rotateBtn" onclick="document.body.classList.toggle('rotate90')" title="Rotar vertical/horizontal">↻</button>
-  <!-- Botón fijo MENÚ (ya existente) -->
   <button id="menuToggleBtn" onclick="toggleMenu()" title="Menú">☰</button>
   <nav id="sideMenu">
     <a href="menu.html"><i class="fa-solid fa-bars"></i></a>
@@ -637,7 +609,7 @@
     function clearAllFilters() { ['searchName', 'searchCategory', 'searchCode', 'minPrice', 'maxPrice', 'lowStockOnly', 'goToRow'].forEach(id => { const el = document.getElementById(id); if (el.type === 'checkbox') el.checked = false; else el.value = ''; }); document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight')); filterInventory(); }
     function renderInventoryWithHighlight(filteredInventory, searchName) { const list = document.getElementById('inventoryList'), cards = document.getElementById('cardsView'), noResults = document.getElementById('noResultsMessage'), resultMsg = document.getElementById('resultMessage');
       if (filteredInventory.length === 0) { list.innerHTML = ''; cards.innerHTML = ''; noResults.style.display = 'block'; resultMsg.style.display = 'none'; return; } noResults.style.display = 'none'; const sorted = [...filteredInventory].sort((a, b) => b.quantity - a.quantity);
-      list.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}"><td>${idx + 1}</td><td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" /></td><td>${highlightText(item.name, searchName)}</td><td>${item.barcode}</td><td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" /></td><td>$${item.price}</td><td>${item.discount}%</td><td>$${priceWithDiscount}</td><td>${new Date(item.date).toLocaleString('es-ES')}</td><td>${highlightText(item.category, searchName)}</td><td>${item.quantity}</td><td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button></td></tr>`; }).join('');
+      list.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}"><td>${idx + 1}</td><td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>${highlightText(item.name, searchName)}</td><td>${item.barcode}</td><td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>$${item.price}</td><td>${item.discount}%</td><td>$${priceWithDiscount}</td><td>${new Date(item.date).toLocaleString('es-ES')}</td><td>${highlightText(item.category, searchName)}</td><td>${item.quantity}</td><td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button></td></tr>`; }).join('');
       cards.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<div class="card" data-real-index="${inventory.indexOf(item)}"><img id="card-img-${idx}" onclick="openImageModal(this.src)" /><div><strong>${highlightText(item.name, searchName)}</strong></div><div>Barras: ${item.barcode}</div><div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div><div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div><div>Stock: <strong>${item.quantity}</strong></div><div>Cat: ${highlightText(item.category, searchName)}</div><div>Fecha: ${new Date(item.date).toLocaleString('es-ES')}</div><div class="card-footer"><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button></div></div>`; }).join('');
       setTimeout(() => { sorted.forEach((item, idx) => { localforage.getItem(`img_${item.code}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const imgTbl = document.getElementById(`img-${idx}`); const imgCard = document.getElementById(`card-img-${idx}`); if (imgTbl) imgTbl.src = url; if (imgCard) imgCard.src = url; } }); localforage.getItem(`barcodeimg_${item.barcode}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } else { const canvas = document.createElement('canvas'); JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: true }); canvas.toBlob(barcodeBlob => { if (barcodeBlob) { localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob); const url = URL.createObjectURL(barcodeBlob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } }); } }); }); }, 100); updateDash(); }
     function toggleView() { const btn = document.getElementById('toggleViewBtn'), table = document.getElementById('tableView'), cards = document.getElementById('cardsView'); if (currentView === 'table') { currentView = 'cards'; table.style.display = 'none'; cards.style.display = 'flex'; btn.textContent = 'Ver Tabla'; } else { currentView = 'table'; table.style.display = 'block'; cards.style.display = 'none'; btn.textContent = 'Ver Tarjetas'; } localStorage.setItem('preferredView', currentView); }

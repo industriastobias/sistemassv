@@ -1,944 +1,376 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
+  <title>Inventario</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
   <style>
-    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
+    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
+    body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    html{scroll-behavior:smooth}
     body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
-    .sticky-menu{position:fixed;top:1rem;right:1rem;z-index:9999;}
-    .menu-toggle{background:var(--card);border:none;border-radius:var(--radius);width:48px;height:48px;font-size:1.4rem;cursor:pointer;box-shadow:var(--shadow-hover);transition:transform .2s;}
-    .menu-toggle:hover{transform:scale(1.1)}
-    .menu-icons{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;background:var(--card);padding:.75rem;border-radius:var(--radius);box-shadow:var(--shadow-hover);display:none;}
-    .menu-icons.show{display:flex}
-    .menu-icons a{color:var(--text);font-size:1.3rem;text-align:center;padding:.4rem;border-radius:8px;transition:background .2s, color .2s;}
-    .menu-icons a:hover{background:var(--accent);color:#fff}
-    body.kiosco .sticky-menu{top:unset; bottom:1rem; right:1rem}
-    body.kiosco .menu-toggle{background:rgba(0,0,0,.5); color:#fff}
-    body.kiosco .menu-icons{background:rgba(0,0,0,.5)}
-    body.kiosco .menu-icons a{color:#fff}
-    body.kiosco .menu-icons a:hover{background:var(--accent)}
 
-    .total-box-fixed{
+    /* ---------- MENÚ KIOSKO ---------- */
+    #kioskoBar{
       position:fixed;
-      top:1rem;
-      left:1rem;
-      z-index:9998;
-      background:var(--card);
-      padding:.75rem 1.25rem;
-      border-radius:var(--radius);
-      box-shadow:var(--shadow-hover);
-      font-size:.9rem;
-      line-height:1.2;
-    }
-    .total-box-fixed h2{font-size:.9rem;color:var(--accent);margin:0}
-    .total-box-fixed p{font-size:1.4rem;font-weight:700;margin:0;color:var(--accent)}
-
-    #editModeFlag{
-      display:none;
-      position:fixed;
-      top:1rem;
-      left:50%;
-      transform:translateX(-50%);
-      background:#10b981;
-      color:#fff;
-      padding:.4rem .8rem;
-      border-radius:20px;
-      font-size:.75rem;
-      z-index:9999;
-    }
-
-    h1{font-size:2rem;font-weight:700;margin:3.5rem 0 1rem;letter-spacing:-.5px}
-    .tipo-compra{display:flex;gap:.75rem;margin-bottom:1.2rem}
-    .tipo-compra label{cursor:pointer;font-weight:500}
-    .tipo-compra input{margin-right:.25rem}
-    form, .table-cards, .mini-lote, #editLoteBubble > div{width:95%;max-width:1200px;margin:0 auto 2rem;}
-    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
-    label{font-size:.9rem;font-weight:500;margin-bottom:.25rem;display:block}
-    input,select,textarea{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;color:var(--text);transition:background .3s,border-color .3s;}
-    input:focus,select:focus,textarea:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
-    button{padding:.75rem 1.5rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;}
-    button:hover{transform:translateY(-2px)}
-    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
-    .btn-primary:hover{background:var(--accent-hover)}
-    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
-    .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
-    .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
-    #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
-    .table-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;place-content:center;}
-    .card-item{background:var(--card);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.75rem;transition:transform var(--transition),box-shadow var(--transition);}
-    .card-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
-    .card-item img{width:100%;height:160px;object-fit:cover;border-radius:12px}
-    .card-item h3{font-size:1.1rem;color:var(--accent)}
-    .card-item p{margin:0;font-size:.85rem;color:#6b7280}
-    .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
-    .mini-lote{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;}
-    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
-    .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
-    .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
-    #barcodeCanvas{margin-top:.5rem;width:100%;height:80px;display:none;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-    #loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:99999;}
-    #loadingOverlay.show{display:flex}
-    .spinner{width:60px;height:60px;border:6px solid #e5e7eb;border-top-color:var(--success);border-radius:50%;animation:spin 1s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* =====  MODAL FULL-SCREEN  ===== */
-    #accessModal {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100000;
-    }
-    .modal-box {
+      top:0; right:0;
+      z-index: 9999;
       background: var(--card);
-      padding: 2rem;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-hover);
-      width: 90%;
-      max-width: 400px;
+      box-shadow: var(--shadow);
+      border-radius: 0 0 0 var(--radius);
+      padding: .4rem .6rem;
+      display: flex; gap: .5rem; flex-wrap: wrap;
+      transform: translateX(100%);
+      transition: transform .3s ease;
     }
+    #kioskoBar.show{ transform: translateX(0); }
+    #kioskoBar a{
+      color: var(--accent);
+      font-size: 1.3rem;
+      padding: .4rem;
+      border-radius: 50%;
+      transition: background .2s;
+    }
+    #kioskoBar a:hover{background: var(--highlight);}
+
+    #menuToggle{
+      position: fixed;
+      top: 1rem; right: 1rem;
+      z-index: 10000;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: .5rem .7rem;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
+    mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
+    #themeToggle{position:fixed;top:1rem;left:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+    .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
+    .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
+    .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;width:100%;max-width:960px;}
+    .summary-card{background:var(--card);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow);text-align:center;}
+    .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
+    .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
+    .search-bar{width:100%;max-width:960px;margin-bottom:1.5rem;}
+    .search-bar input{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:1rem;}
+    .search-bar input:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+    .table-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.5rem;width:100%;max-width:1200px;}
+    @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:900px){.table-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.table-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:400px){.table-grid{grid-column:1fr}}
+    .line-item{background:var(--card);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem;transition:transform var(--transition),box-shadow var(--transition);}
+    .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
+    .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;cursor:zoom-in}
+    .line-item h3{font-size:1rem;color:var(--accent)}
+    .line-item p{margin:0;font-size:.75rem;color:#6b7280}
+    .stock-line{font-weight:600;color:var(--success)}
+    .actions{display:flex;gap:.5rem;margin-top:auto}
+    button{padding:.4rem .8rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;font-size:.75rem;}
+    button:hover{transform:translateY(-2px)}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4);}
+    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4);}
+    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem;}
+    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
+    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
+    .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
+    .copy-barcode:hover{color:var(--accent-hover)}
+    .edit-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem;font-size:.75rem;}
+    .edit-form input, .edit-form select{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
+    .edit-form button{padding:.3rem .6rem;font-size:.7rem;}
+    @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
+    #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
+    #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
   </style>
 </head>
 <body>
 
-<!-- =====  MODAL FULL-SCREEN  ===== -->
-<div id="accessModal">
-  <div id="loadingCircle" style="display:none;text-align:center;color:#fff;font-size:1.3rem">
-    <div class="spinner" style="margin:0 auto .75rem"></div>
-    CARGANDO COMPRAS – ESPERE UN MOMENTO
-  </div>
+<button id="menuToggle" title="Abrir menú"><i class="fa fa-bars"></i></button>
 
-  <div class="modal-box" id="loginBox">
-    <h2>Acceso requerido</h2>
-    <label>Usuario</label>
-    <input type="text" id="userInput" placeholder="Usuario" onkeydown="if(event.key==='Enter') document.getElementById('passInput').focus()">
-    <label>Contraseña</label>
-    <input type="password" id="passInput" placeholder="Contraseña" onkeydown="if(event.key==='Enter') verificarAcceso()">
-    <button class="btn-primary" onclick="verificarAcceso()">Ingresar</button>
-  </div>
-</div>
-
-<script>
-  // Credenciales OFUSCADAS (base64)
-  const USER_ENCODED = 'MjAyNQ=='; // 2025
-  const PASS_ENCODED = 'MjAwNQ=='; // 2005
-
-  function decodeBase64(str) {
-    return atob(str);
-  }
-
-  function verificarAcceso() {
-    const usuario = document.getElementById('userInput').value.trim();
-    const contrasena = document.getElementById('passInput').value.trim();
-    if (usuario === decodeBase64(USER_ENCODED) && contrasena === decodeBase64(PASS_ENCODED)) {
-      // Oculta el formulario y muestra el círculo de carga
-      document.getElementById('loginBox').style.display = 'none';
-      document.getElementById('loadingCircle').style.display = 'block';
-      // Espera 5 s antes de quitar el modal
-      setTimeout(() => {
-        document.getElementById('accessModal').style.display = 'none';
-      }, 5000);
-    } else {
-      alert('Usuario o contraseña incorrectos');
-    }
-  }
-</script>
-
-<!-- RESTO DEL CÓDIGO ORIGINAL (SIN CAMBIOS) -->
-<script>
-  (function () {
-    const kiosco = localStorage.getItem('kiosco') === 'true';
-    if (kiosco) {
-      document.body.classList.add('kiosco');
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    }
-  })();
-</script>
-
-<nav class="sticky-menu" aria-label="Navegación principal">
-  <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
-  <div class="menu-icons" id="menuIcons">
-    <a href="compra.html" title="Compra"><i class="fa-solid fa-cart-plus"></i></a>
-    <a href="almacenamiento.html" title="Almacenamiento"><i class="fa-solid fa-warehouse"></i></a>
-    <a href="finanzas.html" title="Finanzas"><i class="fa-solid fa-dollar-sign"></i></a>
-    <a href="inventario.html" title="Inventario"><i class="fa-solid fa-boxes-stacked"></i></a>
-    <a href="catalogo.html" title="Catálogo"><i class="fa-solid fa-book"></i></a>
-    <a href="clientes.html" title="Clientes"><i class="fa-solid fa-users"></i></a>
-    <a href="descuentos.html" title="Descuentos"><i class="fa-solid fa-percent"></i></a>
-    <a href="facturas.html" title="Facturas"><i class="fa-solid fa-file-invoice"></i></a>
-    <a href="traslados.html" title="Traslados"><i class="fa-solid fa-truck-fast"></i></a>
-    <a href="venta.html" title="Venta"><i class="fa-solid fa-cash-register"></i></a>
-    <a href="#" onclick="salirKiosco()" title="Salir modo kiosco"><i class="fa-solid fa-xmark"></i></a>
-  </div>
+<nav id="kioskoBar">
+  <a href="compra.html" title="Compra"><i class="fa fa-shopping-cart"></i></a>
+  <a href="almacenamiento.html" title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
+  <a href="finanzas.html" title="Finanzas"><i class="fa fa-chart-line"></i></a>
+  <a href="inventario.html" title="Inventario"><i class="fa fa-boxes"></i></a>
+  <a href="catalogo.html" title="Catálogo"><i class="fa fa-book"></i></a>
+  <a href="clientes.html" title="Clientes"><i class="fa fa-users"></i></a>
+  <a href="descuentos.html" title="Descuentos"><i class="fa fa-percent"></i></a>
+  <a href="facturas.html" title="Facturas"><i class="fa fa-file-invoice"></i></a>
+  <a href="traslados.html" title="Traslados"><i class="fa fa-truck"></i></a>
+  <a href="venta.html" title="Venta"><i class="fa fa-cash-register"></i></a>
+  <a href="menu.html" title="Menú"><i class="fa fa-bars"></i></a>
 </nav>
 
-<div id="loadingOverlay">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:.75rem">
-    <div style="color:#10b981;font-weight:600;font-size:1.1rem">Guardado en el sistema</div>
-    <div class="spinner"></div>
-  </div>
+<button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
+
+<h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
+
+<div class="summary-cards">
+  <div class="summary-card"><h3>Total de productos</h3><p id="totalProducts">0</p></div>
+  <div class="summary-card"><h3>Stock total</h3><p id="totalStock">0</p></div>
 </div>
 
-<div class="total-box-fixed">
-  <h2>Total en USD</h2>
-  <p id="totalAmount">$0.00</p>
+<div class="price-range">
+  <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
+  <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
 </div>
 
-<div id="editModeFlag">✏️ Editando producto</div>
-
-<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
-
-<h1>Compra</h1>
-
-<div class="tipo-compra">
-  <label><input type="radio" name="tipoCompra" value="normal" checked> Producto normal</label>
-  <label><input type="radio" name="tipoCompra" value="lote"> Producto por lote / mayoreo</label>
+<div class="search-bar">
+  <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
 </div>
 
-<form id="purchaseForm" class="form-grid">
-  <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
-  <div><label>Código *</label><input type="text" id="code" name="code" required></div>
-  <div>
-    <label>Código de Barras *</label>
-    <input type="text" id="barcode" name="barcode" required>
-    <canvas id="barcodeCanvas"></canvas>
-  </div>
+<div id="inventoryTable" class="table-grid"></div>
 
-  <div><label>Precio de venta *</label><input type="number" id="price" name="price" step="0.01" required></div>
-  <div><label>Valor real (costo)</label><input type="number" id="valorReal" name="valorReal" step="0.01"></div>
-  <div>
-    <label>% ganancia sugerida</label>
-    <input type="number" id="porcentajeGanancia" value="60" step="1" min="0" max="999">
-  </div>
-  <div>
-    <label>Sugerencia venta</label>
-    <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background:#e5e7eb;color:#333">
-  </div>
-  <div><label>Fecha de compra *</label><input type="date" id="fechaCompra" name="fechaCompra" required></div>
+<div class="total-box"><h2>Total en USD</h2><p id="totalAmount">$0.00</p></div>
 
-  <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
-  <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
-  <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
-  <div><label>Categoría *</label>
-    <select id="category" name="category" required>
-      <option value="">-- Seleccione --</option>
-      <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-      <option value="Anillos">Anillos</option>
-      <option value="Aritos">Aritos</option>
-      <option value="Billeteras">Billeteras</option>
-      <option value="Carteras">Carteras</option>
-      <option value="Case audífonos">Case audífonos</option>
-      <option value="Case teléfonos">Case teléfonos</option>
-      <option value="Chokers">Chokers</option>
-      <option value="Collares">Collares</option>
-      <option value="General">General</option>
-      <option value="Lentes de sol">Lentes de sol</option>
-      <option value="Otros">Otros</option>
-      <option value="Pulseras">Pulseras</option>
-      <option value="Relojes">Relojes</option>
-    </select>
-  </div>
-  <div style="grid-column:1/-1">
-    <label>Imagen del producto:</label>
-    <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
-    <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
-  </div>
-  <div style="grid-column:1/-1" class="actions">
-    <button type="submit" class="btn-primary">Guardar producto</button>
-    <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
-    <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
-    <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
-    <button type="button" class="btn-primary" onclick="printLabels()">🖨️ Imprimir etiquetas</button>
-    <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
-    <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
-  </div>
-</form>
+<div id="printArea" style="display:none;"></div>
 
-<div>
-  <h2><i class="fa fa-images"></i> Carga imágenes</h2>
-  <p>Selecciona entre <strong>1 y 130 imágenes</strong>. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
-  <div style="margin-bottom:1rem">
-    <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
-    <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
-  </div>
-  <input type="file" id="loteFiles" accept="image/*" multiple>
-  <div class="actions">
-    <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
-    <button class="btn-danger" onclick="vaciarLote()">Vaciar lote actual</button>
-  </div>
-  <div id="loteStatus"></div>
-  <div class="mini-lote" id="lotePreview"></div>
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
 
-<div id="editLoteBubble" style="display:none">
-  <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
-  <div class="table-cards" id="editLoteGrid"></div>
-  <div class="actions">
-    <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
-  </div>
-</div>
-
-<div style="width:95%;max-width:1200px;margin:0 auto 1rem;display:flex;gap:.75rem;flex-wrap:wrap">
-  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras (exacto)…" style="flex:1 1 260px">
-  <select id="categoryFilter" style="flex:1 1 200px">
-    <option value="">Todas las categorías</option>
-    <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-    <option value="Anillos">Anillos</option>
-    <option value="Aritos">Aritos</option>
-    <option value="Billeteras">Billeteras</option>
-    <option value="Carteras">Carteras</option>
-    <option value="Case audífonos">Case audífonos</option>
-    <option value="Case teléfonos">Case teléfonos</option>
-    <option value="Chokers">Chokers</option>
-    <option value="Collares">Collares</option>
-    <option value="General">General</option>
-    <option value="Lentes de sol">Lentes de sol</option>
-    <option value="Otros">Otros</option>
-    <option value="Pulseras">Pulseras</option>
-    <option value="Relojes">Relojes</option>
-  </select>
-</div>
-
-<div>
-  <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
-  <div class="table-cards" id="inventoryList"></div>
-</div>
-
-<!-- SCRIPTS ORIGINALES (SIN CAMBIOS) -->
 <script>
-/* ----------  Menú  ---------- */
+function entrarKiosko(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+}
+window.addEventListener('load', entrarKiosko);
+
 const menuToggle = document.getElementById('menuToggle');
-const menuIcons = document.getElementById('menuIcons');
-menuToggle.addEventListener('click', () => menuIcons.classList.toggle('show'));
-function salirKiosco() {
-  localStorage.setItem('kiosco', 'false');
-  document.body.classList.remove('kiosco');
-  document.exitFullscreen?.();
-  location.reload();
-}
+const kioskoBar  = document.getElementById('kioskoBar');
+menuToggle.addEventListener('click', () => kioskoBar.classList.toggle('show'));
 
-/* ----------  Globales  ---------- */
+const CATEGORY_ORDER = [
+  "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
+];
+
 let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-let editIndex = -1;
-let loteTemporal = [];
+let filtered   = [...inventory];
+let searchTerm = '';
 
-/* ----------  Total inventario  ---------- */
-function calculateTotal() {
-  const total = inventory.reduce((sum, item) => {
-    const price = Number(item.price) || 0;
-    const quantity = Number(item.quantity) || 0;
-    const discount = Number(item.discount) || 0;
-    const finalPrice = price * (1 - discount / 100);
-    return sum + finalPrice * quantity;
-  }, 0);
-  document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+});
+
+function calculateTotal(list){
+  return list.reduce((sum,item)=>{
+    const price = parseFloat(item.price)||0;
+    const qty   = parseFloat(item.quantity)||0;
+    const disc  = parseFloat(item.discount)||0;
+    return sum + (price * (1 - disc/100)) * qty;
+  },0);
+}
+function stockTotal(list){
+  return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
 }
 
-/* ----------  Render tabla  ---------- */
-function renderTable() {
-  const list = document.getElementById('inventoryList');
-  list.innerHTML = inventory.map((item, idx) => `
-    <div class="card-item" data-barcode="${item.barcode}" data-category="${item.category}">
-      <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
-      <h3>${escapeHtml(item.name)}</h3>
-      <p>Código: ${escapeHtml(item.code)}</p>
-      <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
-      <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none;width:100%;margin-top:.5rem"/>
-      <p>Precio: $${Number(item.price).toFixed(2)}</p>
-      ${item.valorReal ? `<p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal).toFixed(2)}</p>` : ''}
-      <p>Stock: ${Number(item.quantity)}</p>
-      <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
+function sortByCustomCategory(list) {
+  return [...list].sort((a, b) => {
+    const catA = (a.category || "Otros").trim();
+    const catB = (b.category || "Otros").trim();
+    const indexA = CATEGORY_ORDER.indexOf(catA);
+    const indexB = CATEGORY_ORDER.indexOf(catB);
+    const posA = indexA === -1 ? 999 : indexA;
+    const posB = indexB === -1 ? 999 : indexB;
+    return posA - posB || a.name.localeCompare(b.name);
+  });
+}
+
+function highlight(text, query){
+  if(!query) return text;
+  const re = new RegExp(`(${query})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('Código de barras copiado: ' + text);
+  });
+}
+
+function openLightbox(src) {
+  const lightbox = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = src;
+  lightbox.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+function renderTable(){
+  const container = document.getElementById('inventoryTable');
+
+  document.getElementById('totalProducts').textContent = inventory.length;
+  document.getElementById('totalStock').textContent = stockTotal(inventory);
+
+  filtered = sortByCustomCategory(filtered);
+
+  if(!filtered.length){
+    container.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la búsqueda.</p>';
+    document.getElementById('totalAmount').textContent = '$0.00';
+    return;
+  }
+
+  container.innerHTML = filtered.map((item,idx)=>`
+    <div class="line-item" id="card-${idx}">
+      <img id="invImg${idx}" src="" alt="${item.name}"/>
+      <h3>${highlight(item.name, searchTerm)}</h3>
+      <p>Código: ${highlight(item.code, searchTerm)}</p>
+      <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
+      ${typeof item.discount === 'number' && item.discount > 0 ? `
+        <p style="color:#ef4444;font-weight:600;">${item.discount}% OFF</p>
+        <p>Precio: <del style="color:#9ca3af;">$${item.price}</del> <strong>$${(item.price * (1 - item.discount / 100)).toFixed(2)}</strong></p>
+      ` : `
+        <p>Precio: $${item.price}</p>
+      `}
+      <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+      <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
+        <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
+      </p>
       <div class="actions">
-        <button class="btn-primary" onclick="editProduct(${idx})"><i class="fa fa-edit"></i> Editar</button>
-        <button class="btn-danger" onclick="deleteProduct(${idx})"><i class="fa fa-trash"></i> Eliminar</button>
+        <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+        <button onclick="deleteItem(${idx})" class="btn-danger">Eliminar</button>
+        <button onclick="editItem(${idx})" class="btn-primary">Editar</button>
       </div>
     </div>
   `).join('');
 
-  inventory.forEach((p, i) => {
-    localforage.getItem(`img_${p.code}`).then(blob => {
-      if (blob && document.getElementById(`invImg${i}`)) {
-        document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
+  filtered.forEach((p,i)=>{
+    localforage.getItem(`img_${p.code}`).then(blob=>{
+      if(blob){
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById(`invImg${i}`);
+        img.src = url;
+        img.onclick = () => openLightbox(url);
       }
-    }).catch(() => {});
-    if (p.barcode) {
-      const canvas = document.createElement('canvas');
-      JsBarcode(canvas, p.barcode, { format: "CODE128", width: 2, height: 40, displayValue: true, fontSize: 12 });
-      const img = document.getElementById(`barcodeImg${i}`);
-      if (img) {
-        img.src = canvas.toDataURL('image/png');
-        img.style.display = 'block';
-      }
-    }
-  });
-}
-
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"'`]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[s]);
-}
-
-/* ----------  Preview imagen  ---------- */
-function previewImage(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  new Compressor(file, {
-    quality: 0.6, maxWidth: 800, maxHeight: 800,
-    success(result) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        document.getElementById('imagePreview').src = e.target.result;
-        document.getElementById('imagePreview').style.display = 'block';
-      };
-      reader.readAsDataURL(result);
-    },
-    error(err) { console.error(err); }
-  });
-}
-
-/* ----------  Cálculo sugerencia con % editable  ---------- */
-const valorRealInput = document.getElementById('valorReal');
-const porcentajeInput = document.getElementById('porcentajeGanancia');
-const sugerenciaInput = document.getElementById('sugerenciaVenta');
-function calcularSugerencia() {
-  const costo = parseFloat(valorRealInput.value) || 0;
-  const porcentaje = parseFloat(porcentajeInput.value) || 60;
-  const sugerencia = costo * (1 + porcentaje / 100);
-  sugerenciaInput.value = sugerencia.toFixed(2);
-}
-valorRealInput.addEventListener('input', calcularSugerencia);
-porcentajeInput.addEventListener('input', calcularSugerencia);
-
-/* ============================================================
-   VALIDACIÓN #9 ANTES DE GUARDAR
-============================================================ */
-function validarAntesDeGuardar(item) {
-  // 1. Valor real > precio venta
-  if (item.valorReal && item.price && Number(item.valorReal) > Number(item.price)) {
-    if (!confirm('⚠️ El costo es MAYOR que el precio de venta. ¿Seguro de guardar?')) return false;
-  }
-  // 2. Fecha futura
-  const hoy = new Date().toISOString().slice(0, 10);
-  if (item.fechaCompra > hoy) {
-    alert('❌ No puedes guardar una fecha futura.');
-    return false;
-  }
-  return true;
-}
-
-/* ----------  Guardar producto  ---------- */
-document.getElementById('purchaseForm').addEventListener('submit', function (e) {
-  e.preventDefault();
-  const form = new FormData(e.target);
-  const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
-  const item = {
-    name: form.get('name') || '',
-    code: form.get('code') || '',
-    barcode: form.get('barcode') || '',
-    price: Number(form.get('price')) || 0,
-    valorReal: Number(form.get('valorReal')) || 0,
-    fechaCompra: form.get('fechaCompra') || '',
-    discount: Number(form.get('discount')) || 0,
-    quantity: Number(form.get('quantity')) || 0,
-    description: form.get('description') || '',
-    category: form.get('category') || '',
-    addedAt: new Date().toLocaleString('es-ES'),
-    tipoCompra: esLote ? 'lote' : 'normal'
-  };
-
-  // VALIDACIÓN
-  if (!validarAntesDeGuardar(item)) return;
-
-  document.getElementById('loadingOverlay').classList.add('show');
-  setTimeout(() => {
-    if (editIndex === -1) {
-      const exists = inventory.find(i => i.code === item.code);
-      if (exists) {
-        if (!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')) {
-          item.code = `${item.code}_${Date.now()}`;
-        } else {
-          exists.quantity = Number(exists.quantity) + Number(item.quantity);
-          localStorage.setItem('inventory', JSON.stringify(inventory));
-          renderTable(); calculateTotal();
-          e.target.reset();
-          document.getElementById('imagePreview').style.display = 'none';
-          barcodeCanvas.style.display = 'none';
-          document.getElementById('loadingOverlay').classList.remove('show');
-          document.getElementById('editModeFlag').style.display = 'none';
-          return;
-        }
-      }
-      inventory.push(item);
-    } else {
-      inventory[editIndex] = item;
-      editIndex = -1;
-    }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    const imgFile = document.getElementById('imageFile').files[0];
-    if (imgFile) {
-      new Compressor(imgFile, {
-        quality: 0.6, maxWidth: 800, maxHeight: 800,
-        success(result) {
-          localforage.setItem(`img_${item.code}`, result).catch(() => {});
-        }
-      });
-    }
-    e.target.reset();
-    document.getElementById('imagePreview').style.display = 'none';
-    barcodeCanvas.style.display = 'none';
-    // === MEJORA 6: SONIDO OK ===
-    document.getElementById('okSound').play();
-    // === MEJORA 4: QUITAR INDICADOR ===
-    document.getElementById('editModeFlag').style.display = 'none';
-    renderTable(); calculateTotal();
-    document.getElementById('loadingOverlay').classList.remove('show');
-  }, 500);
-});
-
-/* ----------  Eliminar producto  ---------- */
-function deleteProduct(idx) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  const code = inventory[idx].code;
-  inventory.splice(idx, 1);
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  localforage.removeItem(`img_${code}`).catch(() => {});
-  renderTable(); calculateTotal();
-}
-
-/* ----------  Vaciar inventario  ---------- */
-function vaciarInventario() {
-  if (!confirm('¿Vaciar todo el inventario?')) return;
-  inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
-  inventory = [];
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  renderTable(); calculateTotal();
-}
-
-/* ----------  Exportar ZIP  ---------- */
-async function exportToZip() {
-  try {
-    const zip = new JSZip();
-    zip.file('inventory.json', JSON.stringify(inventory, null, 2));
-    const imgFolder = zip.folder('images');
-    for (const p of inventory) {
-      try {
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if (blob) imgFolder.file(`${p.code}.jpg`, blob);
-      } catch (e) {}
-    }
-    const blobZip = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blobZip);
-    a.download = 'inventario.zip';
-    a.click();
-  } catch (e) {
-    alert('Error exportando ZIP: ' + (e.message || e));
-  }
-}
-
-/* ----------  Importar ZIP  ---------- */
-async function importFromZip(evt) {
-  const file = evt.target.files[0];
-  if (!file || !file.name.toLowerCase().endsWith('.zip')) { alert('Selecciona un archivo .zip'); evt.target.value = ''; return; }
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    const jsonFile = zip.file('inventory.json');
-    if (!jsonFile) { alert('El ZIP no contiene inventory.json'); evt.target.value = ''; return; }
-    const jsonText = await jsonFile.async('string');
-    let imported = JSON.parse(jsonText);
-    if (!Array.isArray(imported)) imported = [];
-    for (const p of imported) {
-      p.price = Number(p.price) || 0;
-      p.quantity = Number(p.quantity) || 0;
-      p.discount = Number(p.discount) || 0;
-      const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
-      if (imgEntry) {
-        try {
-          const blob = await imgEntry.async('blob');
-          await localforage.setItem(`img_${p.code}`, blob);
-        } catch (e) {}
-      }
-      const idx = inventory.findIndex(x => x.code === p.code);
-      if (idx > -1) {
-        inventory[idx].quantity = Number(inventory[idx].quantity || 0) + Number(p.quantity || 0);
-        if (!inventory[idx].name && p.name) inventory[idx].name = p.name;
-        if (!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
-        if ((!inventory[idx].price || inventory[idx].price === 0) && p.price) inventory[idx].price = p.price;
-        if (!inventory[idx].description && p.description) inventory[idx].description = p.description;
-        if (!inventory[idx].category && p.category) inventory[idx].category = p.category;
-        if (!inventory[idx].addedAt && p.addedAt) inventory[idx].addedAt = p.addedAt;
-      } else {
-        const nuevo = {
-          name: p.name || p.code,
-          code: p.code,
-          barcode: p.barcode || '',
-          price: Number(p.price) || 0,
-          valorReal: Number(p.valorReal) || 0,
-          fechaCompra: p.fechaCompra || '',
-          discount: Number(p.discount) || 0,
-          quantity: Number(p.quantity) || 0,
-          description: p.description || '',
-          category: p.category || '',
-          addedAt: p.addedAt || new Date().toLocaleString('es-ES'),
-          tipoCompra: p.tipoCompra || 'normal'
-        };
-        inventory.push(nuevo);
-      }
-    }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    renderTable(); calculateTotal();
-    alert('Importación ZIP completada y fusionada correctamente ✅');
-  } catch (e) {
-    console.error(e);
-    alert('Error leyendo ZIP: ' + (e.message || e));
-  } finally {
-    evt.target.value = '';
-  }
-}
-
-function resetAndOpenImport() {
-  const inp = document.getElementById('importFile');
-  inp.value = '';
-  inp.click();
-}
-
-/* ----------  Exportar PDF  ---------- */
-async function exportToPDF() {
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const margin = 15; let y = margin;
-    pdf.setFontSize(16);
-    pdf.text('Inventario con imágenes', margin, y); y += 10;
-    for (let i = 0; i < inventory.length; i++) {
-      const p = inventory[i];
-      let blob = null;
-      try { blob = await localforage.getItem(`img_${p.code}`); } catch (e) { blob = null; }
-      if (blob) {
-        const dataUrl = await blobToDataURL(blob);
-        try { pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40); } catch (e) {}
-      }
-      pdf.setFontSize(11);
-      pdf.text(`Código: ${p.code}`, 60, y + 7);
-      pdf.text(`Nombre: ${p.name}`, 60, y + 14);
-      pdf.text(`Precio: $${Number(p.price).toFixed(2)}`, 60, y + 21);
-      pdf.text(`Stock: ${Number(p.quantity)}`, 60, y + 28);
-      y += 48;
-      if (y > 250) { pdf.addPage(); y = margin; }
-    }
-    pdf.save('inventario.pdf');
-  } catch (e) {
-    console.error(e);
-    alert('Error generando PDF: ' + (e.message || e));
-  }
-}
-
-function blobToDataURL(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-/* ----------  Editar producto  ---------- */
-function editProduct(idx) {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  const p = inventory[idx];
-  document.getElementById('name').value = p.name;
-  /* =====  BLOQUEAR CÓDIGO  ===== */
-  const codeInput = document.getElementById('code');
-  codeInput.value = p.code;
-  codeInput.readOnly = true;
-  codeInput.style.background = '#e5e7eb';
-
-  document.getElementById('barcode').value = p.barcode;
-  document.getElementById('price').value = p.price;
-  document.getElementById('valorReal').value = p.valorReal || '';
-  document.getElementById('fechaCompra').value = p.fechaCompra || '';
-  document.getElementById('porcentajeGanancia').value = 60;
-  calcularSugerencia();
-  document.getElementById('discount').value = p.discount;
-  document.getElementById('quantity').value = p.quantity;
-  document.getElementById('description').value = p.description;
-  document.getElementById('category').value = p.category;
-  editIndex = idx;
-  document.querySelector(`input[name="tipoCompra"][value="${p.tipoCompra || 'normal'}"]`).checked = true;
-  localforage.getItem(`img_${p.code}`).then(blob => {
-    if (blob) {
-      document.getElementById('imagePreview').src = URL.createObjectURL(blob);
-      document.getElementById('imagePreview').style.display = 'block';
-    }
-  }).catch(() => {});
-  generarBarcode(p.barcode);
-  // === MEJORA 4: MOSTRAR INDICADOR ===
-  document.getElementById('editModeFlag').style.display = 'block';
-}
-
-/* ----------  Código de barras  ---------- */
-const barcodeInput = document.getElementById('barcode');
-const barcodeCanvas = document.getElementById('barcodeCanvas');
-function generarBarcode(value) {
-  if (!value || value.trim() === '') { barcodeCanvas.style.display = 'none'; return; }
-  barcodeCanvas.style.display = 'block';
-  JsBarcode(barcodeCanvas, value, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: true, fontSize: 14, margin: 5 });
-}
-barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
-
-/* ============================================================
-   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
-============================================================ */
-async function procesarLote() {
-  const files = document.getElementById('loteFiles').files;
-  if (!files.length) { alert('Selecciona imágenes'); return; }
-  if (files.length < 1 || files.length > 130) { alert('Elige entre 1 y 130 imágenes'); return; }
-  const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
-  loteTemporal = [];
-  const preview = document.getElementById('lotePreview');
-  preview.innerHTML = '';
-  document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const codigo = `${prefix}${Date.now()}${i}`;
-    await new Promise(res => {
-      new Compressor(file, {
-        quality: 0.6, maxWidth: 800, maxHeight: 800,
-        success(result) {
-          const reader = new FileReader();
-          reader.onload = e => {
-            const mini = document.createElement('div');
-            mini.className = 'mini-item';
-            mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
-            preview.appendChild(mini);
-            localforage.setItem(`img_${codigo}`, result);
-            loteTemporal.push({
-              name: '', code: codigo, barcode: '', price: 0, valorReal: 0, fechaCompra: '',
-              discount: 0, quantity: 0, description: '', category: '',
-              addedAt: new Date().toLocaleString('es-ES'), tipoCompra: 'lote'
-            });
-            res();
-          };
-          reader.readAsDataURL(result);
-        },
-        error(err) { console.error(err); res(); }
-      });
     });
-  }
-  document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
-  mostrarEditorLote();
-}
-
-function vaciarLote() {
-  if (!confirm('¿Vaciar lote actual?')) return;
-  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
-  loteTemporal = [];
-  document.getElementById('lotePreview').innerHTML = '';
-  document.getElementById('loteStatus').textContent = '';
-  document.getElementById('editLoteBubble').style.display = 'none';
-}
-
-/* ----------  Editor de lote con labels arriba de cada campo  ---------- */
-function mostrarEditorLote() {
-  const grid = document.getElementById('editLoteGrid');
-  grid.innerHTML = '';
-  document.getElementById('editLoteBubble').style.display = 'block';
-
-  loteTemporal.forEach((p, i) => {
-    const card = document.createElement('div');
-    card.className = 'card-item';
-    card.innerHTML = `
-      <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
-      <h3>${p.code}</h3>
-
-      <!-- 1. Nombre -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Nombre *</label>
-      <input id="loteName${i}" value="${escapeHtml(p.name)}">
-
-      <!-- 2. Código (solo lectura) -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código</label>
-      <input value="${p.code}" readonly style="background:#e5e7eb">
-
-      <!-- 3. Barras -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código de Barras *</label>
-      <input id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
-
-      <!-- 4. Precio venta -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Precio de venta *</label>
-      <input id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
-
-      <!-- 5. Costo -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Valor real (costo)</label>
-      <input id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
-
-      <!-- 6. Fecha compra -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Fecha de compra *</label>
-      <input id="loteFecha${i}" type="text" placeholder="dd/mm/aaaa" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}">
-
-      <!-- 7. % Ganancia -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">% ganancia</label>
-      <input id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
-
-      <!-- 8. Sugerencia venta -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Sugerencia venta</label>
-      <input id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
-
-      <!-- 9. Descuento -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descuento (%)</label>
-      <input id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
-
-      <!-- 10. Stock -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Cantidad en Stock *</label>
-      <input id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
-
-      <!-- 11. Descripción -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descripción *</label>
-      <textarea id="loteDescription${i}" rows="2">${escapeHtml(p.description)}</textarea>
-
-      <!-- 12. Categoría -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Categoría *</label>
-      <select id="loteCategory${i}">
-        <option value="">-- Seleccione --</option>
-        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-        <option value="Anillos">Anillos</option>
-        <option value="Aritos">Aritos</option>
-        <option value="Billeteras">Billeteras</option>
-        <option value="Carteras">Carteras</option>
-        <option value="Case audífonos">Case audífonos</option>
-        <option value="Case teléfonos">Case teléfonos</option>
-        <option value="Chokers">Chokers</option>
-        <option value="Collares">Collares</option>
-        <option value="General">General</option>
-        <option value="Lentes de sol">Lentes de sol</option>
-        <option value="Otros">Otros</option>
-        <option value="Pulseras">Pulseras</option>
-        <option value="Relojes">Relojes</option>
-      </select>
-    `;
-    grid.appendChild(card);
-
-    // Cargar mini-imagen
-    localforage.getItem(`img_${p.code}`).then(blob => {
-      if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
-    }).catch(() => {});
-
-    // Calcula sugerencia inicial
-    calcSugLote(i);
   });
+
+  document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
 }
 
-/* ----------  Calcula sugerencia por item del lote  ---------- */
-function calcSugLote(i) {
-  const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
-  const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
-  document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
+function viewItem(index){
+  alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+}
+function deleteItem(index){
+  if(!confirm('¿Eliminar producto?'))return;
+  const realIndex = inventory.findIndex(it=> it.code === filtered[index].code);
+  const item = inventory[realIndex];
+  localforage.removeItem(`img_${item.code}`);
+  inventory.splice(realIndex,1);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  doFilter();
 }
 
-/* ----------  Guardar lote completo con validación  ---------- */
-function guardarLoteCompleto() {
-  if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+function editItem(index){
+  const card = document.getElementById(`card-${index}`);
+  const p    = filtered[index];
+  const realIndex = inventory.findIndex(it=> it.code === p.code);
+  if(card.querySelector('.edit-form')) return;
 
-  // Validación por item
-  for (let i = 0; i < loteTemporal.length; i++) {
-    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
-    const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
-    const fecha = document.getElementById(`loteFecha${i}`).value;
-    const hoy = new Date().toISOString().slice(0, 10);
-    if (costo > precio) {
-      if (!confirm(`⚠️ Producto ${i + 1}: el costo es mayor que el precio de venta. ¿Sigues?`)) return;
-    }
-    if (fecha > hoy) {
-      alert(`❌ Producto ${i + 1}: fecha futura no permitida.`);
-      return;
-    }
-  }
-
-  document.getElementById('loadingOverlay').classList.add('show');
-  setTimeout(() => {
-    loteTemporal.forEach((p, i) => {
-      p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
-      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
-      p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
-      p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
-      p.fechaCompra = document.getElementById(`loteFecha${i}`).value;
-      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
-      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
-      p.description = document.getElementById(`loteDescription${i}`).value.trim();
-      p.category = document.getElementById(`loteCategory${i}`).value;
-      if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
-    });
-    inventory = inventory.concat(loteTemporal);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    alert('Lote guardado ✅');
-    loteTemporal = [];
-    document.getElementById('editLoteBubble').style.display = 'none';
-    renderTable(); calculateTotal();
-    document.getElementById('loadingOverlay').classList.remove('show');
-  }, 500);
+  const form = document.createElement('div');
+  form.className = 'edit-form';
+  form.innerHTML = `
+    <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
+    <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
+    <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
+    <select id="editCat${index}">
+      <option value="Accesorios para el cabello" ${p.category === 'Accesorios para el cabello' ? 'selected' : ''}>Accesorios para el cabello</option>
+      <option value="Anillos" ${p.category === 'Anillos' ? 'selected' : ''}>Anillos</option>
+      <option value="Aritos" ${p.category === 'Aritos' ? 'selected' : ''}>Aritos</option>
+      <option value="Billetera" ${p.category === 'Billetera' ? 'selected' : ''}>Billetera</option>
+      <option value="Carteras" ${p.category === 'Carteras' ? 'selected' : ''}>Carteras</option>
+      <option value="Case audífonos" ${p.category === 'Case audífonos' ? 'selected' : ''}>Case audífonos</option>
+      <option value="Case teléfonos" ${p.category === 'Case teléfonos' ? 'selected' : ''}>Case teléfonos</option>
+      <option value="Chokers" ${p.category === 'Chokers' ? 'selected' : ''}>Chokers</option>
+      <option value="Collares" ${p.category === 'Collares' ? 'selected' : ''}>Collares</option>
+      <option value="General" ${p.category === 'General' ? 'selected' : ''}>General</option>
+      <option value="Lentes de sol" ${p.category === 'Lentes de sol' ? 'selected' : ''}>Lentes de sol</option>
+      <option value="Pulseras" ${p.category === 'Pulseras' ? 'selected' : ''}>Pulseras</option>
+      <option value="Relojes" ${p.category === 'Relojes' ? 'selected' : ''}>Relojes</option>
+      <option value="Otros" ${p.category === 'Otros' ? 'selected' : ''}>Otros</option>
+    </select>
+    <input id="editBar${index}"  value="${p.barcode}" placeholder="Código de barras"/>
+    <div style="display:flex;gap:.3rem">
+      <button onclick="saveEdit(${index},${realIndex})" class="btn-primary">Guardar</button>
+      <button onclick="cancelEdit(${index})" class="btn-danger">Cancelar</button>
+    </div>
+  `;
+  card.appendChild(form);
 }
-
-/* ----------  Filtros  ---------- */
-const searchBox = document.getElementById('searchBox');
-const categoryFilter = document.getElementById('categoryFilter');
-
-function aplicarFiltros() {
-  const q = searchBox.value.trim();
-  const cat = categoryFilter.value;
-  const cards = document.querySelectorAll('#inventoryList .card-item');
-  cards.forEach(card => {
-    const barcode = card.dataset.barcode;
-    const categoria = card.dataset.category;
-    const okBarcode = q === '' || barcode === q;
-    const okCat = !cat || categoria === cat;
-    card.style.display = (okBarcode && okCat) ? '' : 'none';
-  });
+function cancelEdit(index){
+  document.getElementById(`card-${index}`).querySelector('.edit-form').remove();
 }
-
-searchBox.addEventListener('input', aplicarFiltros);
-categoryFilter.addEventListener('change', aplicarFiltros);
-
-/* ----------  MEJORA 15: IMPRIMIR ETIQUETAS ---------- */
-function printLabels() {
-  const printWindow = window.open('', '', 'width=800,height=600');
-  printWindow.document.write('<html><head><title>Etiquetas</title></head><body>');
-  inventory.forEach(p => {
-    printWindow.document.write(`
-      <div style="border:1px solid #ccc;padding:10px;margin:10px;text-align:center;width:200px;display:inline-block">
-        <h4>${p.name}</h4>
-        <p><b>$${p.price}</b></p>
-        <canvas id="barcode-${p.code}"></canvas>
-      </div>
-    `);
-  });
-  printWindow.document.write('</body></html>');
-  printWindow.document.close();
-  printWindow.onload = () => {
-    inventory.forEach(p => JsBarcode(`#barcode-${p.code}`, p.barcode, { format: 'CODE128', width: 2, height: 30 }));
-    printWindow.print();
+function saveEdit(filterIdx, invIdx){
+  const newData = {
+    name:     document.getElementById(`editName${filterIdx}`).value.trim(),
+    price:    document.getElementById(`editPrice${filterIdx}`).value.trim(),
+    quantity: document.getElementById(`editQty${filterIdx}`).value.trim(),
+    category: document.getElementById(`editCat${filterIdx}`).value.trim(),
+    barcode:  document.getElementById(`editBar${filterIdx}`).value.trim(),
+    code:     filtered[filterIdx].code,
+    discount: filtered[filterIdx].discount || 0
   };
+  inventory[invIdx] = newData;
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  doFilter();
 }
 
-/* ----------  Inicializar  ---------- */
-window.addEventListener('DOMContentLoaded', () => {
-  renderTable(); calculateTotal();
+function doFilter(){
+  searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+  const maxP = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+
+  filtered = inventory.filter(p=>{
+    const price = parseFloat(p.price)||0;
+    const matchText = !searchTerm ||
+      p.name.toLowerCase().includes(searchTerm) ||
+      p.code.toLowerCase().includes(searchTerm) ||
+      p.barcode.toLowerCase().includes(searchTerm) ||
+      p.category.toLowerCase().includes(searchTerm);
+    const matchPrice = price >= minP && price <= maxP;
+    return matchText && matchPrice;
+  });
+  renderTable();
+}
+document.getElementById('searchInput').addEventListener('input',doFilter);
+document.getElementById('minPrice').addEventListener('input',doFilter);
+document.getElementById('maxPrice').addEventListener('input',doFilter);
+
+window.addEventListener('storage', e => {
+  if(e.key === 'inventory'){
+    inventory = JSON.parse(e.newValue) || [];
+    doFilter();
+  }
 });
+window.addEventListener('storage', e => {
+  if (e.key === 'inventario') {
+    inventory = JSON.parse(e.newValue) || [];
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    doFilter();
+  }
+});
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(this, key, value);
+  if (key === 'inventory') {
+    originalSetItem.call(this, 'inventario', value);
+  }
+};
+
+window.addEventListener('DOMContentLoaded',()=> doFilter());
 </script>
 </body>
 </html>

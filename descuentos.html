@@ -23,7 +23,7 @@
       color: #fff;
       padding: 1rem;
       text-align: center;
-      font-size: 1.5rem;
+      font-size: 1.3rem;
       font-weight: 600;
       box-shadow: var(--shadow);
       flex-shrink: 0;
@@ -31,20 +31,22 @@
     .wrap {
       flex: 1 1 auto;
       width: 100%;
+      max-width: 1200px;
+      margin: auto;
       padding: 1rem;
       overflow-y: auto;
     }
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1rem;
+      gap: .8rem;
+      margin-bottom: 1.2rem;
     }
     .filters input, .filters select, .filters button {
-      padding: .6rem .8rem;
+      padding: .55rem .7rem;
       border: 1px solid #bbb;
       border-radius: 6px;
-      font-size: 1rem;
+      font-size: .95rem;
     }
     .filters button {
       background: var(--primary);
@@ -60,24 +62,24 @@
       box-shadow: var(--shadow);
       border-radius: 8px;
       overflow: hidden;
-      font-size: 1rem;
     }
-    th, td { padding: .8rem 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
-    th { background: #f2f5ff; font-weight: 600; }
-    tr:hover { background: #fafbfc; }
-    .thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; }
+    th, td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+    th { background: #f2f5ff; }
+    tr.highlight { background: var(--green); color: #fff; }
+    .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+    .info { margin: .5rem 0; font-weight: 600; }
     .counters {
       margin: .5rem 0;
-      font-size: 1.1rem;
+      font-size: .95rem;
       font-weight: 600;
       display: flex;
-      gap: 2rem;
+      gap: 1.5rem;
       flex-wrap: wrap;
     }
-    @media (max-width: 900px) {
-      table { font-size: .9rem; }
-      th, td { padding: .5rem .6rem; }
-      .thumb { width: 50px; height: 50px; }
+    .price-desc {
+      font-size: .85rem;
+      color: #555;
+      margin-top: .25rem;
     }
   </style>
 </head>
@@ -111,61 +113,33 @@
     <button onclick="removeGlobal()">Quitar</button>
   </div>
 
+  <div class="info" id="info"></div>
   <div class="counters" id="counters"></div>
 
   <table>
     <thead>
       <tr>
-        <th>#</th>
-        <th>Imagen</th>
-        <th>Nombre</th>
-        <th>Código</th>
-        <th>Cód.Barras</th>
-        <th>Precio</th>
-        <th>Dto %</th>
-        <th>Final</th>
-        <th>Categoría</th>
-        <th>Stock</th>
-        <th>Acción</th>
+        <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
+        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
       </tr>
     </thead>
     <tbody id="list"></tbody>
   </table>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+<!-- localforage para imágenes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
 <script>
-/* ---------- 0.  Migración 1-OFF ---------- */
-(async () => {
-  const old = localStorage.getItem('inventory');
-  if (old) {
-    try {
-      await localforage.setItem('inventory', JSON.parse(old));
-      localStorage.removeItem('inventory');
-      localStorage.removeItem('inventario');
-      console.log('Migración descuentos -> IndexedDB ✅');
-    } catch (e) {
-      console.error('Falló migración descuentos', e);
-    }
-  }
-})();
+/* ----------  DATOS  ---------- */
+const inv = JSON.parse(localStorage.getItem('inventory')) || [];
+const qs  = (s) => document.querySelector(s);
 
-/* ---------- 1.  Variables ---------- */
-let inv = [];
-const qs = (s) => document.querySelector(s);
-
-/* ---------- 2.  Carga inicial ---------- */
-(async () => {
-  inv = await localforage.getItem('inventory') || [];
-  render();
-})();
-
-/* ---------- 3.  Render ---------- */
+/* ----------  PINTAR  ---------- */
 function render(arr = inv) {
   const tb = qs('#list');
   tb.innerHTML = '';
   arr.forEach((it, idx) => {
-    const final = (+it.price * (1 - (it.discount || 0) / 100)).toFixed(2);
+    const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
     const tr = document.createElement('tr');
     tr.dataset.line = idx + 1;
     tr.innerHTML = `
@@ -178,7 +152,7 @@ function render(arr = inv) {
         <span style="text-decoration: line-through; opacity: .7;">$${(+it.price).toFixed(2)}</span>
         <strong>$${final}</strong>
       </td>
-      <td><input type="number" min="0" max="100" value="${it.discount || 0}"
+      <td><input type="number" min="0" max="100" value="${it.discount||0}"
                  onchange="startSave('${it.code}', this.value)"></td>
       <td>$${final}</td>
       <td>${it.category}</td>
@@ -187,64 +161,74 @@ function render(arr = inv) {
     tb.appendChild(tr);
   });
   loadImages();
+  totals();
   updateCounters();
 }
 
-/* ---------- 4.  Imágenes ---------- */
-async function loadImages() {
-  for (const it of inv) {
-    const imgEl = qs(`#img-${it.code}`);
-    if (!imgEl) continue;
-    try {
-      const blob = await localforage.getItem(`img_${it.code}`);
-      imgEl.src = blob ? URL.createObjectURL(blob) : 'https://via.placeholder.com/70?text=Sin+img';
-    } catch {
-      imgEl.src = 'https://via.placeholder.com/70?text=Sin+img';
-    }
-  }
+/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE ---------- */
+function loadImages() {
+  inv.forEach(it => {
+    const imgEl = document.getElementById(`img-${it.code}`);
+    if (!imgEl) return;
+    localforage.getItem(`img_${it.code}`).then(blob => {
+      if (blob) {
+        imgEl.src = URL.createObjectURL(blob);
+      } else {
+        imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
+      }
+    }).catch(() => {
+      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
+    });
+  });
 }
 
-/* ---------- 5.  Descuentos ---------- */
+/* ----------  LÓGICA DE DESCUENTOS ---------- */
 let saveTimeout = {};
 function startSave(code, val) {
   clearTimeout(saveTimeout[code]);
-  saveTimeout[code] = setTimeout(() => setDisc(code, val), 500);
+  saveTimeout[code] = setTimeout(() => {
+    setDisc(code, val);
+  }, 500);
 }
-async function setDisc(code, val) {
+function setDisc(code, val) {
   const it = inv.find(i => i.code === code);
-  if (!it) return;
-  it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
-  await save();
-  render();
+  if (it) {
+    it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
+    save();
+    filterAndRender();
+  }
 }
-async function removeDiscount(code) {
-  await setDisc(code, 0);
+function removeDiscount(code) {
+  setDisc(code, 0);
 }
-async function applyGlobal() {
+function applyGlobal() {
   const v = parseFloat(qs('#globalDisc').value);
   if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
   inv.forEach(i => i.discount = v);
-  await save();
-  render();
+  save();
+  filterAndRender();
 }
-async function removeGlobal() {
+function removeGlobal() {
   inv.forEach(i => i.discount = 0);
-  await save();
-  render();
+  save();
+  filterAndRender();
 }
 
-/* ---------- 6.  Guardar ---------- */
-async function save() {
-  await localforage.setItem('inventory', inv);
-  localStorage.setItem('inventario_sync', Date.now());
-}
-
-/* ---------- 7.  Contadores ---------- */
+/* ----------  CONTADORES + PRECIOS ---------- */
 function updateCounters() {
   const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
   const normal = inv.length - withDisc;
-  const normalTotal = inv.reduce((s, i) => (i.discount || 0) === 0 ? s + (i.price * i.quantity) : s, 0);
-  const discTotal = inv.reduce((s, i) => (i.discount || 0) > 0 ? s + (i.price * (1 - (i.discount || 0) / 100) * i.quantity) : s, 0);
+
+  const normalTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) === 0) return sum + (i.price * i.quantity);
+    return sum;
+  }, 0);
+
+  const discTotal = inv.reduce((sum, i) => {
+    if ((i.discount || 0) > 0) return sum + (i.price * (1 - (i.discount || 0)/100) * i.quantity);
+    return sum;
+  }, 0);
+
   qs('#counters').innerHTML = `
     Con descuento: ${withDisc} | Precio normal: ${normal} |
     Normal: <strong>$${normalTotal.toFixed(2)}</strong> |
@@ -252,28 +236,38 @@ function updateCounters() {
   `;
 }
 
-/* ---------- 8.  Filtros ---------- */
+/* ----------  TOTALES ---------- */
+function totals() {
+  let norm = 0, desc = 0;
+  inv.forEach(i => {
+    const q = +i.quantity, p = +i.price, d = (+i.discount||0);
+    norm += p * q;
+    desc += p * (1 - d/100) * q;
+  });
+}
+function save() {
+  localStorage.setItem('inventory', JSON.stringify(inv));
+}
+
+/* ----------  FILTRAR ---------- */
 function filterAndRender() {
   const barcode = qs('#searchBarcode').value.trim();
-  const cat = qs('#catFilter').value;
+  const cat  = qs('#catFilter').value;
   let aux = inv;
   if (barcode) aux = aux.filter(i => i.barcode === barcode);
-  if (cat) aux = aux.filter(i => i.category === cat);
+  if (cat)  aux = aux.filter(i => i.category === cat);
   render(aux);
 }
+
+/* ----------  EVENTOS ---------- */
 qs('#searchBarcode').addEventListener('input', filterAndRender);
 qs('#catFilter').addEventListener('change', filterAndRender);
 qs('#searchBarcode').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchBarcode').select(); }
 });
 
-/* ---------- 9.  Escuchar cambios de otras pestañas ---------- */
-window.addEventListener('storage', async (e) => {
-  if (e.key === 'inventario_sync') {
-    inv = await localforage.getItem('inventory') || [];
-    render();
-  }
-});
+/* ----------  INICIO ---------- */
+render();
 </script>
 </body>
 </html>

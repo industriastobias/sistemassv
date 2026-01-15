@@ -147,10 +147,8 @@
     const usuario = document.getElementById('userInput').value.trim();
     const contrasena = document.getElementById('passInput').value.trim();
     if (usuario === decodeBase64(USER_ENCODED) && contrasena === decodeBase64(PASS_ENCODED)) {
-      // Oculta el formulario y muestra el círculo de carga
       document.getElementById('loginBox').style.display = 'none';
       document.getElementById('loadingCircle').style.display = 'block';
-      // Espera 5 s antes de quitar el modal
       setTimeout(() => {
         document.getElementById('accessModal').style.display = 'none';
       }, 5000);
@@ -160,7 +158,6 @@
   }
 </script>
 
-<!-- RESTO DEL CÓDIGO ORIGINAL (SIN CAMBIOS) -->
 <script>
   (function () {
     const kiosco = localStorage.getItem('kiosco') === 'true';
@@ -320,7 +317,6 @@
   <div class="table-cards" id="inventoryList"></div>
 </div>
 
-<!-- SCRIPTS ORIGINALES (SIN CAMBIOS) -->
 <script>
 /* ----------  Menú  ---------- */
 const menuToggle = document.getElementById('menuToggle');
@@ -334,9 +330,20 @@ function salirKiosco() {
 }
 
 /* ----------  Globales  ---------- */
-let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+let inventory = [];
 let editIndex = -1;
 let loteTemporal = [];
+
+/* ----------  IndexedDB: cargar / guardar  ---------- */
+async function loadInventory() {
+  try {
+    const data = await localforage.getItem('inventory');
+    if (data) inventory = data;
+  } catch (e) { inventory = []; }
+}
+async function saveInventory() {
+  await localforage.setItem('inventory', inventory);
+}
 
 /* ----------  Total inventario  ---------- */
 function calculateTotal() {
@@ -428,11 +435,9 @@ porcentajeInput.addEventListener('input', calcularSugerencia);
    VALIDACIÓN #9 ANTES DE GUARDAR
 ============================================================ */
 function validarAntesDeGuardar(item) {
-  // 1. Valor real > precio venta
   if (item.valorReal && item.price && Number(item.valorReal) > Number(item.price)) {
     if (!confirm('⚠️ El costo es MAYOR que el precio de venta. ¿Seguro de guardar?')) return false;
   }
-  // 2. Fecha futura
   const hoy = new Date().toISOString().slice(0, 10);
   if (item.fechaCompra > hoy) {
     alert('❌ No puedes guardar una fecha futura.');
@@ -442,7 +447,7 @@ function validarAntesDeGuardar(item) {
 }
 
 /* ----------  Guardar producto  ---------- */
-document.getElementById('purchaseForm').addEventListener('submit', function (e) {
+document.getElementById('purchaseForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const form = new FormData(e.target);
   const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
@@ -461,11 +466,10 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
     tipoCompra: esLote ? 'lote' : 'normal'
   };
 
-  // VALIDACIÓN
   if (!validarAntesDeGuardar(item)) return;
 
   document.getElementById('loadingOverlay').classList.add('show');
-  setTimeout(() => {
+  setTimeout(async () => {
     if (editIndex === -1) {
       const exists = inventory.find(i => i.code === item.code);
       if (exists) {
@@ -473,7 +477,7 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
           item.code = `${item.code}_${Date.now()}`;
         } else {
           exists.quantity = Number(exists.quantity) + Number(item.quantity);
-          localStorage.setItem('inventory', JSON.stringify(inventory));
+          await saveInventory();
           renderTable(); calculateTotal();
           e.target.reset();
           document.getElementById('imagePreview').style.display = 'none';
@@ -488,7 +492,7 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
       inventory[editIndex] = item;
       editIndex = -1;
     }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
+    await saveInventory();
     const imgFile = document.getElementById('imageFile').files[0];
     if (imgFile) {
       new Compressor(imgFile, {
@@ -501,9 +505,7 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
     e.target.reset();
     document.getElementById('imagePreview').style.display = 'none';
     barcodeCanvas.style.display = 'none';
-    // === MEJORA 6: SONIDO OK ===
     document.getElementById('okSound').play();
-    // === MEJORA 4: QUITAR INDICADOR ===
     document.getElementById('editModeFlag').style.display = 'none';
     renderTable(); calculateTotal();
     document.getElementById('loadingOverlay').classList.remove('show');
@@ -511,21 +513,21 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
 });
 
 /* ----------  Eliminar producto  ---------- */
-function deleteProduct(idx) {
+async function deleteProduct(idx) {
   if (!confirm('¿Eliminar este producto?')) return;
   const code = inventory[idx].code;
   inventory.splice(idx, 1);
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  localforage.removeItem(`img_${code}`).catch(() => {});
+  await saveInventory();
+  await localforage.removeItem(`img_${code}`);
   renderTable(); calculateTotal();
 }
 
 /* ----------  Vaciar inventario  ---------- */
-function vaciarInventario() {
+async function vaciarInventario() {
   if (!confirm('¿Vaciar todo el inventario?')) return;
-  inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
+  for (const p of inventory) await localforage.removeItem(`img_${p.code}`);
   inventory = [];
-  localStorage.setItem('inventory', JSON.stringify(inventory));
+  await saveInventory();
   renderTable(); calculateTotal();
 }
 
@@ -601,7 +603,7 @@ async function importFromZip(evt) {
         inventory.push(nuevo);
       }
     }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
+    await saveInventory();
     renderTable(); calculateTotal();
     alert('Importación ZIP completada y fusionada correctamente ✅');
   } catch (e) {
@@ -659,11 +661,10 @@ function blobToDataURL(blob) {
 }
 
 /* ----------  Editar producto  ---------- */
-function editProduct(idx) {
+async function editProduct(idx) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const p = inventory[idx];
   document.getElementById('name').value = p.name;
-  /* =====  BLOQUEAR CÓDIGO  ===== */
   const codeInput = document.getElementById('code');
   codeInput.value = p.code;
   codeInput.readOnly = true;
@@ -681,14 +682,12 @@ function editProduct(idx) {
   document.getElementById('category').value = p.category;
   editIndex = idx;
   document.querySelector(`input[name="tipoCompra"][value="${p.tipoCompra || 'normal'}"]`).checked = true;
-  localforage.getItem(`img_${p.code}`).then(blob => {
-    if (blob) {
-      document.getElementById('imagePreview').src = URL.createObjectURL(blob);
-      document.getElementById('imagePreview').style.display = 'block';
-    }
-  }).catch(() => {});
+  const blob = await localforage.getItem(`img_${p.code}`);
+  if (blob) {
+    document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+    document.getElementById('imagePreview').style.display = 'block';
+  }
   generarBarcode(p.barcode);
-  // === MEJORA 4: MOSTRAR INDICADOR ===
   document.getElementById('editModeFlag').style.display = 'block';
 }
 
@@ -768,51 +767,39 @@ function mostrarEditorLote() {
       <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
       <h3>${p.code}</h3>
 
-      <!-- 1. Nombre -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Nombre *</label>
       <input id="loteName${i}" value="${escapeHtml(p.name)}">
 
-      <!-- 2. Código (solo lectura) -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código</label>
       <input value="${p.code}" readonly style="background:#e5e7eb">
 
-      <!-- 3. Barras -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código de Barras *</label>
       <input id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
 
-      <!-- 4. Precio venta -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Precio de venta *</label>
       <input id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
 
-      <!-- 5. Costo -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Valor real (costo)</label>
       <input id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
 
-      <!-- 6. Fecha compra -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Fecha de compra *</label>
       <input id="loteFecha${i}" type="text" placeholder="dd/mm/aaaa" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}">
 
-      <!-- 7. % Ganancia -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">% ganancia</label>
       <input id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
 
-      <!-- 8. Sugerencia venta -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Sugerencia venta</label>
       <input id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
 
-      <!-- 9. Descuento -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descuento (%)</label>
       <input id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
 
-      <!-- 10. Stock -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Cantidad en Stock *</label>
       <input id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
 
-      <!-- 11. Descripción -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descripción *</label>
       <textarea id="loteDescription${i}" rows="2">${escapeHtml(p.description)}</textarea>
 
-      <!-- 12. Categoría -->
       <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Categoría *</label>
       <select id="loteCategory${i}">
         <option value="">-- Seleccione --</option>
@@ -833,13 +820,9 @@ function mostrarEditorLote() {
       </select>
     `;
     grid.appendChild(card);
-
-    // Cargar mini-imagen
     localforage.getItem(`img_${p.code}`).then(blob => {
       if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
     }).catch(() => {});
-
-    // Calcula sugerencia inicial
     calcSugLote(i);
   });
 }
@@ -852,10 +835,8 @@ function calcSugLote(i) {
 }
 
 /* ----------  Guardar lote completo con validación  ---------- */
-function guardarLoteCompleto() {
+async function guardarLoteCompleto() {
   if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
-
-  // Validación por item
   for (let i = 0; i < loteTemporal.length; i++) {
     const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
     const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
@@ -869,9 +850,8 @@ function guardarLoteCompleto() {
       return;
     }
   }
-
   document.getElementById('loadingOverlay').classList.add('show');
-  setTimeout(() => {
+  setTimeout(async () => {
     loteTemporal.forEach((p, i) => {
       p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
       p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
@@ -885,7 +865,7 @@ function guardarLoteCompleto() {
       if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
     });
     inventory = inventory.concat(loteTemporal);
-    localStorage.setItem('inventory', JSON.stringify(inventory));
+    await saveInventory();
     alert('Lote guardado ✅');
     loteTemporal = [];
     document.getElementById('editLoteBubble').style.display = 'none';
@@ -936,8 +916,10 @@ function printLabels() {
 }
 
 /* ----------  Inicializar  ---------- */
-window.addEventListener('DOMContentLoaded', () => {
-  renderTable(); calculateTotal();
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadInventory();
+  renderTable();
+  calculateTotal();
 });
 </script>
 </body>

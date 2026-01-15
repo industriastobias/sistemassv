@@ -23,7 +23,7 @@
       color: #fff;
       padding: 1rem;
       text-align: center;
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       font-weight: 600;
       box-shadow: var(--shadow);
       flex-shrink: 0;
@@ -31,22 +31,20 @@
     .wrap {
       flex: 1 1 auto;
       width: 100%;
-      max-width: 1200px;
-      margin: auto;
       padding: 1rem;
       overflow-y: auto;
     }
     .filters {
       display: flex;
       flex-wrap: wrap;
-      gap: .8rem;
-      margin-bottom: 1.2rem;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
     .filters input, .filters select, .filters button {
-      padding: .55rem .7rem;
+      padding: .6rem .8rem;
       border: 1px solid #bbb;
       border-radius: 6px;
-      font-size: .95rem;
+      font-size: 1rem;
     }
     .filters button {
       background: var(--primary);
@@ -62,24 +60,24 @@
       box-shadow: var(--shadow);
       border-radius: 8px;
       overflow: hidden;
+      font-size: 1rem;
     }
-    th, td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
-    th { background: #f2f5ff; }
-    tr.highlight { background: var(--green); color: #fff; }
-    .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-    .info { margin: .5rem 0; font-weight: 600; }
+    th, td { padding: .8rem 1rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
+    th { background: #f2f5ff; font-weight: 600; }
+    tr:hover { background: #fafbfc; }
+    .thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; }
     .counters {
       margin: .5rem 0;
-      font-size: .95rem;
+      font-size: 1.1rem;
       font-weight: 600;
       display: flex;
-      gap: 1.5rem;
+      gap: 2rem;
       flex-wrap: wrap;
     }
-    .price-desc {
-      font-size: .85rem;
-      color: #555;
-      margin-top: .25rem;
+    @media (max-width: 900px) {
+      table { font-size: .9rem; }
+      th, td { padding: .5rem .6rem; }
+      .thumb { width: 50px; height: 50px; }
     }
   </style>
 </head>
@@ -113,21 +111,28 @@
     <button onclick="removeGlobal()">Quitar</button>
   </div>
 
-  <div class="info" id="info"></div>
   <div class="counters" id="counters"></div>
 
   <table>
     <thead>
       <tr>
-        <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
-        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
+        <th>#</th>
+        <th>Imagen</th>
+        <th>Nombre</th>
+        <th>Código</th>
+        <th>Cód.Barras</th>
+        <th>Precio</th>
+        <th>Dto %</th>
+        <th>Final</th>
+        <th>Categoría</th>
+        <th>Stock</th>
+        <th>Acción</th>
       </tr>
     </thead>
     <tbody id="list"></tbody>
   </table>
 </div>
 
-<!-- localforage para imágenes -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 <script>
 /* ---------- 0.  Migración 1-OFF ---------- */
@@ -146,7 +151,7 @@
 })();
 
 /* ---------- 1.  Variables ---------- */
-let inv = []; // inventario en memoria
+let inv = [];
 const qs = (s) => document.querySelector(s);
 
 /* ---------- 2.  Carga inicial ---------- */
@@ -186,17 +191,17 @@ function render(arr = inv) {
 }
 
 /* ---------- 4.  Imágenes ---------- */
-function loadImages() {
-  inv.forEach(async (it) => {
+async function loadImages() {
+  for (const it of inv) {
     const imgEl = qs(`#img-${it.code}`);
-    if (!imgEl) return;
+    if (!imgEl) continue;
     try {
       const blob = await localforage.getItem(`img_${it.code}`);
-      imgEl.src = blob ? URL.createObjectURL(blob) : 'https://via.placeholder.com/60?text=Sin+img';
+      imgEl.src = blob ? URL.createObjectURL(blob) : 'https://via.placeholder.com/70?text=Sin+img';
     } catch {
-      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img';
+      imgEl.src = 'https://via.placeholder.com/70?text=Sin+img';
     }
-  });
+  }
 }
 
 /* ---------- 5.  Descuentos ---------- */
@@ -231,7 +236,6 @@ async function removeGlobal() {
 /* ---------- 6.  Guardar ---------- */
 async function save() {
   await localforage.setItem('inventory', inv);
-  // Sincronizar con otras pestañas (opcional)
   localStorage.setItem('inventario_sync', Date.now());
 }
 

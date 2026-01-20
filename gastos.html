@@ -95,7 +95,7 @@
   <button id="btnWix" class="btn-fixed" onclick="descargarWixCSV()">Descargar Wix CSV</button>
 
   <script>
-    /* ---------- CATALOGO / MODAL / PDF / ZIP (idem que antes) ---------- */
+    /* ---------- CATALOGO / MODAL / PDF / ZIP (igual que antes) ---------- */
     const catalogo = document.getElementById('catalogo');
     const modal    = document.getElementById('modal');
     const modalImg = document.getElementById('modalImg');
@@ -245,12 +245,12 @@
       a.click();
     }
 
-    /* ---------- NUEVO: GENERAR CSV FORMATO WIX ---------- */
+    /* ---------- WIX CSV 91 COLUMNAS ---------- */
     async function descargarWixCSV() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos'); return; }
 
-      // Encabezado exacto de la plantilla
+      // Cabecera Wix 91 columnas (exportada hoy)
       const header = [
         'handle','fieldType','name','visible','plainDescription','media','mediaAltText','ribbon','brand',
         'price','strikethroughPrice','baseUnit','baseUnitMeasurement','totalUnits','totalUnitsMeasurement',
@@ -274,32 +274,29 @@
 
       for (const p of lista) {
         const handle = p.code || p.barcode || 'product_' + Math.random().toString(36).slice(2);
-        const mediaUrls = [];
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if (blob) {
-          // generamos una URL temporal para que Wix la importe (puede ser base64 también)
-          mediaUrls.push(URL.createObjectURL(blob));
-        }
-        const price = Number(p.price || 0).toFixed(2);
-        const stPrice = (p.discount && p.discount > 0) ? Number(p.price).toFixed(2) : '';
-        const desc = p.description || `<p>${p.name}</p>`;
+        const price  = Number(p.price || 0).toFixed(2);
+        const stPrice= (p.discount && p.discount > 0) ? Number(p.price).toFixed(2) : '';
+        const desc   = p.description || `<p>${p.name}</p>`;
 
-        // Fila PRODUCT
-        rows.push([
-          handle, 'PRODUCT', p.name, 'TRUE',
-          `"${desc}"`,                                      // plainDescription entre comillas
-          mediaUrls.join(';'), '', '', '',                 // media, mediaAltText, ribbon, brand
-          price, stPrice, '', '', '', '', '',              // price, strikethroughPrice, units...
-          '', 'IN_STOCK', '', '', '',                      // cost, inventory, preOrder...
-          p.sku || '', p.barcode || '', ''                 // sku, barcode, weight
-        ].concat(Array(header.length - 23).fill('')));    // rellenamos opciones/modifiers vacíos
-
-        // Si querés agregar VARIANTES o MEDIA se hace igual, por ahora dejamos 1 fila PRODUCT por item
+        const fila = [];
+        fila[0]  = handle;
+        fila[1]  = 'PRODUCT';
+        fila[2]  = p.name;
+        fila[3]  = 'TRUE';
+        fila[4]  = `"${desc}"`;
+        fila[5]  = '';                   // media
+        fila[6]  = '';
+        fila[7]  = '';
+        fila[8]  = '';
+        fila[9]  = price;
+        fila[10] = stPrice;
+        // completamos 91 celdas
+        while (fila.length < 91) fila.push('');
+        rows.push(fila);
       }
 
-      // Unir a texto CSV
       const csv = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'wix_products.csv';

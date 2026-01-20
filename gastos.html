@@ -7,6 +7,8 @@
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- JSZip para generar el zip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
     :root {
@@ -69,11 +71,12 @@
     .modal img { max-width: 95vw; max-height: 95vh; border-radius: 4px; }
     .modal-close { position: absolute; top: 1rem; right: 1.5rem; color: #fff; font-size: 2rem; cursor: pointer; }
 
-    #btnPdf {
-      position: fixed; bottom: 20px; right: 20px; background: var(--accent);
-      border: none; padding: 12px 18px; border-radius: 30px;
+    .btn-fixed {
+      position: fixed; bottom: 20px; border: none; padding: 12px 18px; border-radius: 30px;
       font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); z-index: 2000;
     }
+    #btnPdf { right: 20px; background: var(--accent); }
+    #btnZip { right: 160px; background: #06d6a0; color: #fff; display: none; }
   </style>
 </head>
 <body>
@@ -87,7 +90,8 @@
     <img id="modalImg" src="" alt="Imagen ampliada">
   </div>
 
-  <button id="btnPdf" onclick="descargarPDF()">Descargar PDF</button>
+  <button id="btnPdf" class="btn-fixed" onclick="descargarPDF()">Descargar PDF</button>
+  <button id="btnZip" class="btn-fixed" onclick="descargarZIP()">Descargar imágenes</button>
 
   <script>
     const catalogo = document.getElementById('catalogo');
@@ -137,6 +141,10 @@
           delay += 0.05;
         }
       }
+
+      /* mostrar/ocultar botón zip */
+      const hayImagenes = lista.some(p => localforage.getItem(`img_${p.code}`));
+      document.getElementById('btnZip').style.display = hayImagenes ? 'block' : 'none';
     }
 
     function openModal(src) { modalImg.src = src; modal.style.display = 'flex'; }
@@ -213,6 +221,31 @@
         r.onloadend = () => resolve(r.result);
         r.readAsDataURL(blob);
       });
+    }
+
+    /* ---------- DESCARGAR ZIP ---------- */
+    async function descargarZIP() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      if (!lista.length) { alert('No hay productos'); return; }
+
+      const zip = new JSZip();
+      let c = 0;
+
+      for (const p of lista) {
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if (blob) {
+          c++;
+          zip.file(`${p.barcode || p.code}.jpg`, blob);
+        }
+      }
+
+      if (!c) { alert('No hay imágenes para descargar'); return; }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = 'klohe_imagenes.zip';
+      a.click();
     }
 
     /* ---- init ---- */

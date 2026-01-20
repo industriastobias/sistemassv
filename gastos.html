@@ -7,7 +7,6 @@
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- JSZip para generar el zip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
@@ -77,6 +76,7 @@
     }
     #btnPdf { right: 20px; background: var(--accent); }
     #btnZip { right: 160px; background: #06d6a0; color: #fff; display: none; }
+    #btnWix { right: 300px; background: #118ab2; color: #fff; }
   </style>
 </head>
 <body>
@@ -92,8 +92,10 @@
 
   <button id="btnPdf" class="btn-fixed" onclick="descargarPDF()">Descargar PDF</button>
   <button id="btnZip" class="btn-fixed" onclick="descargarZIP()">Descargar imágenes</button>
+  <button id="btnWix" class="btn-fixed" onclick="descargarWixCSV()">Descargar Wix CSV</button>
 
   <script>
+    /* ---------- CATALOGO / MODAL / PDF / ZIP (idem que antes) ---------- */
     const catalogo = document.getElementById('catalogo');
     const modal    = document.getElementById('modal');
     const modalImg = document.getElementById('modalImg');
@@ -104,7 +106,6 @@
       'Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
 
-    /* ---------- RENDER WEB ---------- */
     async function renderCatalogo() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       catalogo.innerHTML = '';
@@ -142,7 +143,6 @@
         }
       }
 
-      /* mostrar/ocultar botón zip */
       const hayImagenes = lista.some(p => localforage.getItem(`img_${p.code}`));
       document.getElementById('btnZip').style.display = hayImagenes ? 'block' : 'none';
     }
@@ -151,7 +151,6 @@
     function closeModal()  { modal.style.display = 'none'; modalImg.src = ''; }
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-    /* ---------- PDF SIN ENCABEZADOS ---------- */
     async function descargarPDF() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos'); return; }
@@ -191,7 +190,6 @@
           let imgData = '';
           if (blob) imgData = await blobToBase64(blob);
 
-          /* tarjeta estilo web */
           doc.setDrawColor(229, 229, 229);
           doc.setFillColor(255, 255, 255);
           doc.setLineWidth(1);
@@ -223,7 +221,6 @@
       });
     }
 
-    /* ---------- DESCARGAR ZIP ---------- */
     async function descargarZIP() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos'); return; }
@@ -245,6 +242,67 @@
       const a = document.createElement('a');
       a.href = URL.createObjectURL(content);
       a.download = 'klohe_imagenes.zip';
+      a.click();
+    }
+
+    /* ---------- NUEVO: GENERAR CSV FORMATO WIX ---------- */
+    async function descargarWixCSV() {
+      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      if (!lista.length) { alert('No hay productos'); return; }
+
+      // Encabezado exacto de la plantilla
+      const header = [
+        'handle','fieldType','name','visible','plainDescription','media','mediaAltText','ribbon','brand',
+        'price','strikethroughPrice','baseUnit','baseUnitMeasurement','totalUnits','totalUnitsMeasurement',
+        'cost','inventory','preOrderEnabled','preOrderMessage','preOrderLimit','sku','barcode','weight',
+        'productOptionName1','productOptionType1','productOptionChoices1','productOptionName2','productOptionType2','productOptionChoices2',
+        'productOptionName3','productOptionType3','productOptionChoices3','productOptionName4','productOptionType4','productOptionChoices4',
+        'productOptionName5','productOptionType5','productOptionChoices5','productOptionName6','productOptionType6','productOptionChoices6',
+        'modifierName1','modifierType1','modifierCharLimit1','modifierMandatory1','modifierDescription1',
+        'modifierName2','modifierType2','modifierCharLimit2','modifierMandatory2','modifierDescription2',
+        'modifierName3','modifierType3','modifierCharLimit3','modifierMandatory3','modifierDescription3',
+        'modifierName4','modifierType4','modifierCharLimit4','modifierMandatory4','modifierDescription4',
+        'modifierName5','modifierType5','modifierCharLimit5','modifierMandatory5','modifierDescription5',
+        'modifierName6','modifierType6','modifierCharLimit6','modifierMandatory6','modifierDescription6',
+        'modifierName7','modifierType7','modifierCharLimit7','modifierMandatory7','modifierDescription7',
+        'modifierName8','modifierType8','modifierCharLimit8','modifierMandatory8','modifierDescription8',
+        'modifierName9','modifierType9','modifierCharLimit9','modifierMandatory9','modifierDescription9',
+        'modifierName10','modifierType10','modifierCharLimit10','modifierMandatory10','modifierDescription10'
+      ];
+
+      const rows = [header];
+
+      for (const p of lista) {
+        const handle = p.code || p.barcode || 'product_' + Math.random().toString(36).slice(2);
+        const mediaUrls = [];
+        const blob = await localforage.getItem(`img_${p.code}`);
+        if (blob) {
+          // generamos una URL temporal para que Wix la importe (puede ser base64 también)
+          mediaUrls.push(URL.createObjectURL(blob));
+        }
+        const price = Number(p.price || 0).toFixed(2);
+        const stPrice = (p.discount && p.discount > 0) ? Number(p.price).toFixed(2) : '';
+        const desc = p.description || `<p>${p.name}</p>`;
+
+        // Fila PRODUCT
+        rows.push([
+          handle, 'PRODUCT', p.name, 'TRUE',
+          `"${desc}"`,                                      // plainDescription entre comillas
+          mediaUrls.join(';'), '', '', '',                 // media, mediaAltText, ribbon, brand
+          price, stPrice, '', '', '', '', '',              // price, strikethroughPrice, units...
+          '', 'IN_STOCK', '', '', '',                      // cost, inventory, preOrder...
+          p.sku || '', p.barcode || '', ''                 // sku, barcode, weight
+        ].concat(Array(header.length - 23).fill('')));    // rellenamos opciones/modifiers vacíos
+
+        // Si querés agregar VARIANTES o MEDIA se hace igual, por ahora dejamos 1 fila PRODUCT por item
+      }
+
+      // Unir a texto CSV
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'wix_products.csv';
       a.click();
     }
 

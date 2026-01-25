@@ -422,16 +422,32 @@
       display: none;
       flex-direction: column;
       gap: 0.5rem;
+      cursor: move;
+      user-select: none;
+    }
+    #cashFloatList.dragging {
+      opacity: 0.8;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     }
     #cashFloatList h4 {
       margin: 0 0 0.5rem 0;
       font-size: 1.1rem;
+      cursor: grab;
+      padding: 0.5rem;
+      margin: -0.5rem -0.5rem 0.5rem -0.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--highlight);
+      border-radius: 4px 4px 0 0;
+    }
+    #cashFloatList h4:active {
+      cursor: grabbing;
     }
     #cashFloatList ul {
       list-style: none;
       margin: 0;
       padding: 0;
       overflow-y: auto;
+      cursor: default;
     }
     #cashFloatList li {
       display: flex;
@@ -701,7 +717,83 @@
     /* ---------- Caja Registradora (con descuentos aplicados) ---------- */
     let cashItems = [], cashViewMode = 'grid', lastAddedRowId = null;
     function cashBeep() { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.frequency.value = 1200; osc.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.05); }
-    function buildCashRegisterUI() { const prev = document.getElementById('cashRegisterFullscreen'); if (prev) prev.remove(); inventory = JSON.parse(localStorage.getItem('inventory')) || []; const div = document.createElement('div'); div.id = 'cashRegisterFullscreen'; div.innerHTML = `<div class="header"><h2>🧾 Caja Registradora</h2><div style="display:flex;gap:.5rem;"><button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button><button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button></div></div><div class="filters"><input type="text" id="cashSearchLive" placeholder="🔍 Buscar nombre o código" /><select id="cashCatFilter"><option value="">Todas las categorías</option></select><button class="stamp" onclick="clearCashFilters()">Limpiar</button></div><div id="cashProductsContainer" style="flex:1 1 auto;overflow-y:auto;"></div>`; const catSet = [...new Set(inventory.map(p => p.category))].sort(); const catSelect = div.querySelector('#cashCatFilter'); catSet.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; catSelect.appendChild(opt); }); const container = div.querySelector('#cashProductsContainer'); renderCashProducts(container); document.body.appendChild(div); const fl = document.createElement('div'); fl.id = 'cashFloatList'; fl.innerHTML = `<h4>Lista de venta</h4><ul></ul><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);width:100%;">Cancelar venta</button>`; document.body.appendChild(fl); const footer = document.createElement('div'); footer.className = 'footer'; footer.innerHTML = `<div class="total">Total: $<span id="cashTotal">0</span></div><label>Paga con:</label><input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00"><button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button><button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta (F12)</button><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button><div id="cashChangeBig" class="big-change" style="display:none;"></div>`; div.appendChild(footer); div.querySelector('#cashSearchLive').addEventListener('input', applyCashLiveFilter); div.querySelector('#cashCatFilter').addEventListener('change', applyCashLiveFilter); updateCashList(); }
+    
+    // VARIABLES PARA DRAG
+    let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+    
+    function buildCashRegisterUI() { 
+      const prev = document.getElementById('cashRegisterFullscreen'); 
+      if (prev) prev.remove(); 
+      inventory = JSON.parse(localStorage.getItem('inventory')) || []; 
+      const div = document.createElement('div'); 
+      div.id = 'cashRegisterFullscreen'; 
+      div.innerHTML = `<div class="header"><h2>🧾 Caja Registradora</h2><div style="display:flex;gap:.5rem;"><button class="stamp" onclick="toggleCashView()" id="cashToggleViewBtn">Ver Lista</button><button class="stamp" onclick="closeCashRegister()" style="background:var(--danger);border-color:var(--danger);">❌ Cerrar</button></div></div><div class="filters"><input type="text" id="cashSearchLive" placeholder="🔍 Buscar nombre o código" /><select id="cashCatFilter"><option value="">Todas las categorías</option></select><button class="stamp" onclick="clearCashFilters()">Limpiar</button></div><div id="cashProductsContainer" style="flex:1 1 auto;overflow-y:auto;"></div>`; 
+      const catSet = [...new Set(inventory.map(p => p.category))].sort(); 
+      const catSelect = div.querySelector('#cashCatFilter'); 
+      catSet.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; catSelect.appendChild(opt); }); 
+      const container = div.querySelector('#cashProductsContainer'); 
+      renderCashProducts(container); 
+      document.body.appendChild(div); 
+      
+      // CREAR PANEL FLOTANTE CON DRAG
+      const fl = document.createElement('div'); 
+      fl.id = 'cashFloatList'; 
+      fl.innerHTML = `<h4 id="cashFloatHeader">📋 Lista de venta <small style="font-size:0.7rem;opacity:0.6;">(Arrastrar)</small></h4><ul></ul><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);width:100%;">Cancelar venta</button>`; 
+      document.body.appendChild(fl); 
+      
+      // AGREGAR EVENTOS DE DRAG AL HEADER
+      const header = fl.querySelector('#cashFloatHeader');
+      header.addEventListener('mousedown', dragStart);
+      document.addEventListener('mousemove', drag);
+      document.addEventListener('mouseup', dragEnd);
+      
+      const footer = document.createElement('div'); 
+      footer.className = 'footer'; 
+      footer.innerHTML = `<div class="total">Total: $<span id="cashTotal">0</span></div><label>Paga con:</label><input type="number" id="cashPayment" min="0" step="0.01" placeholder="0.00"><button class="stamp" onclick="calcCashChangeFull()">Calcular vuelto</button><button class="stamp" id="cashConfirmBtn" style="display:none;background:#10b981;border-color:#10b981;" onclick="confirmCashSaleFull()">✅ Confirmar venta (F12)</button><button class="stamp" onclick="cancelCashSale()" style="background:var(--danger);border-color:var(--danger);">Cancelar venta</button><div id="cashChangeBig" class="big-change" style="display:none;"></div>`; 
+      div.appendChild(footer); 
+      div.querySelector('#cashSearchLive').addEventListener('input', applyCashLiveFilter); 
+      div.querySelector('#cashCatFilter').addEventListener('change', applyCashLiveFilter); 
+      updateCashList(); 
+    }
+    
+    // FUNCIONES DE DRAG
+    function dragStart(e) {
+      const fl = document.getElementById('cashFloatList');
+      if (!fl) return;
+      
+      initialX = e.clientX - xOffset;
+      initialY = e.clientY - yOffset;
+      
+      if (e.target === document.getElementById('cashFloatHeader') || e.target.closest('#cashFloatHeader')) {
+        isDragging = true;
+        fl.classList.add('dragging');
+      }
+    }
+    
+    function drag(e) {
+      if (isDragging) {
+        e.preventDefault();
+        const fl = document.getElementById('cashFloatList');
+        if (!fl) return;
+        
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        
+        xOffset = currentX;
+        yOffset = currentY;
+        
+        fl.style.transform = `translate(${currentX}px, ${currentY}px)`;
+      }
+    }
+    
+    function dragEnd(e) {
+      initialX = currentX;
+      initialY = currentY;
+      isDragging = false;
+      const fl = document.getElementById('cashFloatList');
+      if (fl) fl.classList.remove('dragging');
+    }
+    
     function quickAdd(rowId, qty) { const input = document.getElementById(rowId); if (!input) return; const max = parseInt(input.max); let val = parseInt(input.value) || 0; const newVal = val + qty; if (newVal > max) { alert('Cantidad insuficiente en stock'); return; } input.value = newVal; lastAddedRowId = rowId; flashRow(rowId); cashBeep(); updateCashList(); }
     function flashRow(rowId) { const el = document.getElementById(rowId); if (!el) return; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 600); }
     document.addEventListener('keydown', e => { if (!document.getElementById('cashRegisterFullscreen')) return; if (e.key === 'F1') { e.preventDefault(); closeCashRegister(); } if (e.key === 'F12') { e.preventDefault(); confirmCashSaleFull(); } });
@@ -809,8 +901,26 @@
     function cancelCashSale() { if (!confirm('¿Cancelar toda la venta?')) return; cashItems = []; inventory.forEach((it, realIdx) => { const input = document.getElementById(`cashqty-${realIdx}`); if (input) input.value = 0; }); updateCashList(); }
     function calcCashChangeFull() { const total = parseFloat(document.getElementById('cashTotal').textContent), pay = parseFloat(document.getElementById('cashPayment').value) || 0; if (pay < total) { alert('Pago insuficiente'); return; } const change = pay - total; const big = document.getElementById('cashChangeBig'); big.textContent = 'Vuelto: $' + change.toFixed(2); big.style.display = 'inline-block'; document.getElementById('cashConfirmBtn').style.display = 'inline-block'; }
     function confirmCashSaleFull() { let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]'); cashItems.forEach(x => { inventory[x.realIdx].quantity -= x.qty; soldInventory.push({ name: x.name, code: inventory[x.realIdx].code, price: x.price, quantity: x.qty, total: x.qty * x.price, seller: 'CajaRegistradora', date: new Date().toISOString() }); }); localStorage.setItem('inventory', JSON.stringify(inventory)); localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); beepOK(); document.getElementById('cashFloatList').style.display = 'none'; alert('Venta realizada ✅'); closeCashRegister(); filterInventory(); }
-    function openCashRegister() { document.documentElement.requestFullscreen().catch(() => {}); buildCashRegisterUI(); }
-    function closeCashRegister() { if (document.fullscreenElement) document.exitFullscreen(); const div = document.getElementById('cashRegisterFullscreen'); if (div) div.remove(); const fl = document.getElementById('cashFloatList'); if (fl) fl.remove(); cashItems = []; }
+    function openCashRegister() { 
+      // RESETEAR OFFSETS AL ABRIR
+      xOffset = 0; 
+      yOffset = 0; 
+      currentX = 0; 
+      currentY = 0; 
+      document.documentElement.requestFullscreen().catch(() => {}); 
+      buildCashRegisterUI(); 
+    }
+    function closeCashRegister() { 
+      // REMOVER EVENTOS DE DRAG AL CERRAR
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('mouseup', dragEnd);
+      if (document.fullscreenElement) document.exitFullscreen(); 
+      const div = document.getElementById('cashRegisterFullscreen'); 
+      if (div) div.remove(); 
+      const fl = document.getElementById('cashFloatList'); 
+      if (fl) fl.remove(); 
+      cashItems = []; 
+    }
 
     /* DEMO: si no hay ventas, crea una de hace 2 días para que los filtros no aparezcan vacíos */
     (function () { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (sales.length) return; const demo = { name: 'Collar demo', code: '123456', price: 2990, quantity: 1, total: 2990, seller: 'Demo', date: new Date(Date.now() - 86400000 * 2).toISOString() }; localStorage.setItem('soldInventory', JSON.stringify([demo])); })();

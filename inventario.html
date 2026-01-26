@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -115,9 +115,12 @@
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
 
-    /* Estilos para el PDF */
+    /* Estilos para el PDF - CORREGIDO: posición fuera de pantalla en lugar de display:none */
     #pdfContent{
-      display:none;
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 210mm;
       background:#fff;
       color:#000;
       padding:20px;
@@ -202,7 +205,7 @@
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
 
-<!-- Contenedor oculto para generar el PDF -->
+<!-- Contenedor oculto para generar el PDF - CORREGIDO: posición absoluta fuera de pantalla -->
 <div id="pdfContent">
   <h1>Reporte de Inventario</h1>
   <div id="pdfItems"></div>
@@ -440,9 +443,14 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-// Función para descargar PDF
+// Función para descargar PDF - CORREGIDA
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
+  
+  if (!filtered || filtered.length === 0) {
+    alert('No hay productos para generar el PDF');
+    return;
+  }
   
   // Preparar el contenido del PDF con los datos filtrados
   const pdfItems = document.getElementById('pdfItems');
@@ -469,22 +477,32 @@ async function downloadPDF() {
     pdfItems.appendChild(itemDiv);
   });
   
-  // Mostrar temporalmente el contenido para capturar
+  // CORRECCIÓN: El contenedor ya está posicionado fuera de pantalla con CSS
+  // No necesitamos cambiar display, solo asegurarnos que esté renderizado
   const pdfContent = document.getElementById('pdfContent');
-  pdfContent.style.display = 'block';
+  
+  // Forzar reflow para asegurar que el contenido esté renderizado
+  pdfContent.offsetHeight;
   
   try {
+    // Esperar un momento para que el DOM se actualice
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const canvas = await html2canvas(pdfContent, {
       scale: 2,
       useCORS: true,
-      logging: false
+      logging: false,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: 794, // Ancho A4 en pixels a 96 DPI
+      windowWidth: 794
     });
     
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
     
     const imgWidth = 210;
-    const pageHeight = 295;
+    const pageHeight = 297;
     const imgHeight = canvas.height * imgWidth / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
@@ -502,9 +520,7 @@ async function downloadPDF() {
     pdf.save('inventario.pdf');
   } catch (error) {
     console.error('Error generando PDF:', error);
-    alert('Error al generar el PDF');
-  } finally {
-    pdfContent.style.display = 'none';
+    alert('Error al generar el PDF: ' + error.message);
   }
 }
 

@@ -115,43 +115,9 @@
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
 
-    /* Estilos para el PDF - CORREGIDO: posición fuera de pantalla en lugar de display:none */
+    /* Estilos para el PDF - ya no se usa html2canvas, se genera directamente */
     #pdfContent{
-      position: absolute;
-      left: -9999px;
-      top: 0;
-      width: 210mm;
-      background:#fff;
-      color:#000;
-      padding:20px;
-      font-family:Arial,sans-serif;
-    }
-    #pdfContent h1{
-      text-align:center;
-      color:#000;
-      margin-bottom:20px;
-      font-size:24px;
-    }
-    #pdfContent .pdf-item{
-      border:1px solid #ccc;
-      padding:15px;
-      margin-bottom:15px;
-      page-break-inside:avoid;
-    }
-    #pdfContent .pdf-item h3{
-      margin:0 0 10px 0;
-      color:#000;
-      font-size:18px;
-      border-bottom:2px solid #3b82f6;
-      padding-bottom:5px;
-    }
-    #pdfContent .pdf-field{
-      margin:5px 0;
-      font-size:14px;
-    }
-    #pdfContent .pdf-label{
-      font-weight:bold;
-      color:#333;
+      display: none;
     }
   </style>
 </head>
@@ -205,11 +171,8 @@
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
 
-<!-- Contenedor oculto para generar el PDF - CORREGIDO: posición absoluta fuera de pantalla -->
-<div id="pdfContent">
-  <h1>Reporte de Inventario</h1>
-  <div id="pdfItems"></div>
-</div>
+<!-- Contenedor oculto - ya no se usa para html2canvas -->
+<div id="pdfContent"></div>
 
 <script>
 function entrarKiosko(){
@@ -443,8 +406,8 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-// Función para descargar PDF - CORREGIDA
-async function downloadPDF() {
+// NUEVA FUNCIÓN: Generar PDF directamente con jsPDF sin html2canvas
+function downloadPDF() {
   const { jsPDF } = window.jspdf;
   
   if (!filtered || filtered.length === 0) {
@@ -452,76 +415,117 @@ async function downloadPDF() {
     return;
   }
   
-  // Preparar el contenido del PDF con los datos filtrados
-  const pdfItems = document.getElementById('pdfItems');
-  pdfItems.innerHTML = '';
+  // Crear PDF en orientación vertical
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 15;
+  const usableWidth = pageWidth - (margin * 2);
   
+  let yPosition = 20;
+  
+  // Título
+  pdf.setFontSize(20);
+  pdf.setTextColor(59, 130, 246); // Color azul
+  pdf.text('Reporte de Inventario', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+  
+  // Fecha
+  pdf.setFontSize(10);
+  pdf.setTextColor(100, 100, 100);
+  const fecha = new Date().toLocaleDateString('es-ES', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  pdf.text(`Generado: ${fecha}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 15;
+  
+  // Resumen
+  pdf.setFontSize(12);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('Resumen:', margin, yPosition);
+  yPosition += 7;
+  
+  pdf.setFont(undefined, 'normal');
+  pdf.setFontSize(10);
+  pdf.text(`Total de productos: ${filtered.length}`, margin, yPosition);
+  yPosition += 5;
+  pdf.text(`Stock total: ${stockTotal(filtered)} unidades`, margin, yPosition);
+  yPosition += 5;
+  pdf.text(`Valor total: $${calculateTotal(filtered).toFixed(2)}`, margin, yPosition);
+  yPosition += 15;
+  
+  // Línea separadora
+  pdf.setDrawColor(200, 200, 200);
+  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+  yPosition += 10;
+  
+  // Productos
   const sortedItems = sortByCustomCategory(filtered);
   
-  sortedItems.forEach(item => {
-    const finalPrice = item.discount > 0 
-      ? (item.price * (1 - item.discount / 100)).toFixed(2)
-      : item.price;
-      
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'pdf-item';
-    itemDiv.innerHTML = `
-      <h3>${item.name}</h3>
-      <div class="pdf-field"><span class="pdf-label">DESCRIPCIÓN:</span> ${item.name}</div>
-      <div class="pdf-field"><span class="pdf-label">CÓDIGO:</span> ${item.code}</div>
-      <div class="pdf-field"><span class="pdf-label">Stock:</span> ${item.quantity} unidades</div>
-      <div class="pdf-field"><span class="pdf-label">Precio:</span> $${finalPrice} ${item.discount > 0 ? `(Descuento ${item.discount}%)` : ''}</div>
-      <div class="pdf-field"><span class="pdf-label">Categoría:</span> ${item.category}</div>
-      <div class="pdf-field"><span class="pdf-label">Barras:</span> ${item.barcode}</div>
-    `;
-    pdfItems.appendChild(itemDiv);
-  });
-  
-  // CORRECCIÓN: El contenedor ya está posicionado fuera de pantalla con CSS
-  // No necesitamos cambiar display, solo asegurarnos que esté renderizado
-  const pdfContent = document.getElementById('pdfContent');
-  
-  // Forzar reflow para asegurar que el contenido esté renderizado
-  pdfContent.offsetHeight;
-  
-  try {
-    // Esperar un momento para que el DOM se actualice
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const canvas = await html2canvas(pdfContent, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      width: 794, // Ancho A4 en pixels a 96 DPI
-      windowWidth: 794
-    });
-    
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    
-    const imgWidth = 210;
-    const pageHeight = 297;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
+  sortedItems.forEach((item, index) => {
+    // Verificar si necesitamos nueva página
+    if (yPosition > 270) {
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      yPosition = 20;
     }
     
-    pdf.save('inventario.pdf');
-  } catch (error) {
-    console.error('Error generando PDF:', error);
-    alert('Error al generar el PDF: ' + error.message);
-  }
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+    
+    // Nombre del producto (título)
+    pdf.setFontSize(12);
+    pdf.setTextColor(59, 130, 246);
+    pdf.setFont(undefined, 'bold');
+    
+    // Truncar nombre si es muy largo
+    let nombre = item.name;
+    if (nombre.length > 50) {
+      nombre = nombre.substring(0, 47) + '...';
+    }
+    pdf.text(nombre, margin, yPosition);
+    yPosition += 6;
+    
+    // Detalles del producto
+    pdf.setFontSize(9);
+    pdf.setTextColor(80, 80, 80);
+    pdf.setFont(undefined, 'normal');
+    
+    pdf.text(`Código: ${item.code}`, margin, yPosition);
+    yPosition += 4;
+    
+    pdf.text(`Stock: ${item.quantity} unidades`, margin, yPosition);
+    yPosition += 4;
+    
+    // Precio con o sin descuento
+    if (item.discount > 0) {
+      pdf.setTextColor(239, 68, 68); // Rojo para descuento
+      pdf.text(`Precio: $${finalPrice} (Descuento ${item.discount}%)`, margin, yPosition);
+      pdf.setTextColor(80, 80, 80);
+    } else {
+      pdf.text(`Precio: $${finalPrice}`, margin, yPosition);
+    }
+    yPosition += 4;
+    
+    pdf.text(`Categoría: ${item.category}`, margin, yPosition);
+    yPosition += 4;
+    
+    pdf.text(`Barras: ${item.barcode}`, margin, yPosition);
+    yPosition += 8;
+    
+    // Línea separadora ligera entre productos
+    if (index < sortedItems.length - 1) {
+      pdf.setDrawColor(230, 230, 230);
+      pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
+    }
+  });
+  
+  // Guardar PDF
+  pdf.save(`inventario_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 window.addEventListener('DOMContentLoaded',()=> doFilter());

@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;--info:#06b6d4;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -1118,7 +1118,7 @@ async function downloadPDF() {
   pdf.save(`reporte_inventario_completo_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-// NUEVA FUNCIÓN: Catálogo de Productos (Base de Datos en PDF)
+// NUEVA FUNCIÓN: Catálogo de Productos (Base de Datos en PDF) - CORREGIDA
 async function downloadCatalogPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -1220,10 +1220,11 @@ async function downloadCatalogPDF() {
     
     checkNewPage(70);
     
-    // Calcular precio final con descuento
+    // ✅ CORRECCIÓN: Asegurar que el precio sea número
+    const rawPrice = parseFloat(item.price) || 0;
     const finalPrice = item.discount > 0 
-      ? (item.price * (1 - item.discount / 100)).toFixed(2)
-      : parseFloat(item.price).toFixed(2);
+      ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
+      : rawPrice.toFixed(2);
     
     // === DISEÑO DE FICHA DE PRODUCTO ===
     
@@ -1337,8 +1338,8 @@ async function downloadCatalogPDF() {
       // Precio tachado
       pdf.setTextColor(156, 163, 175);
       pdf.setFont(undefined, 'normal');
-      pdf.text(`$${parseFloat(item.price).toFixed(2)}`, textX, textY);
-      const oldPriceWidth = pdf.getTextWidth(`$${parseFloat(item.price).toFixed(2)}`);
+      pdf.text(`$${rawPrice.toFixed(2)}`, textX, textY);  // ✅ USAR rawPrice
+      const oldPriceWidth = pdf.getTextWidth(`$${rawPrice.toFixed(2)}`);
       pdf.line(textX, textY - 2, textX + oldPriceWidth, textY - 2);
       
       // Precio con descuento

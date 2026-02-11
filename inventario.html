@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -272,6 +272,7 @@ function renderTable(){
         <p>Precio: $${item.price}</p>
       `}
       <p>Categoría: ${highlight(item.category, searchTerm)}</p>
+      ${item.description ? `<p style="font-size:.7rem;color:#4b5563;"><i class="fa fa-info-circle"></i> ${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}</p>` : ''}
       <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
         <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
       </p>
@@ -322,6 +323,7 @@ function editItem(index){
     <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
     <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
     <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
+    <textarea id="editDesc${index}" placeholder="Descripción" rows="2" style="padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;resize:vertical;">${p.description || ''}</textarea>
     <select id="editCat${index}">
       <option value="Accesorios para el cabello" ${p.category === 'Accesorios para el cabello' ? 'selected' : ''}>Accesorios para el cabello</option>
       <option value="Anillos" ${p.category === 'Anillos' ? 'selected' : ''}>Anillos</option>
@@ -354,6 +356,7 @@ function saveEdit(filterIdx, invIdx){
     name:     document.getElementById(`editName${filterIdx}`).value.trim(),
     price:    document.getElementById(`editPrice${filterIdx}`).value.trim(),
     quantity: document.getElementById(`editQty${filterIdx}`).value.trim(),
+    description: document.getElementById(`editDesc${filterIdx}`).value.trim(),
     category: document.getElementById(`editCat${filterIdx}`).value.trim(),
     barcode:  document.getElementById(`editBar${filterIdx}`).value.trim(),
     code:     filtered[filterIdx].code,
@@ -375,7 +378,8 @@ function doFilter(){
       p.name.toLowerCase().includes(searchTerm) ||
       p.code.toLowerCase().includes(searchTerm) ||
       p.barcode.toLowerCase().includes(searchTerm) ||
-      p.category.toLowerCase().includes(searchTerm);
+      p.category.toLowerCase().includes(searchTerm) ||
+      (p.description && p.description.toLowerCase().includes(searchTerm));
     const matchPrice = price >= minP && price <= maxP;
     return matchText && matchPrice;
   });
@@ -406,8 +410,8 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-// NUEVA FUNCIÓN: Generar PDF directamente con jsPDF sin html2canvas
-function downloadPDF() {
+// FUNCIÓN ACTUALIZADA: Generar PDF con resumen de stock, descripciones e imágenes
+async function downloadPDF() {
   const { jsPDF } = window.jspdf;
   
   if (!filtered || filtered.length === 0) {
@@ -425,7 +429,7 @@ function downloadPDF() {
   
   // Título
   pdf.setFontSize(20);
-  pdf.setTextColor(59, 130, 246); // Color azul
+  pdf.setTextColor(59, 130, 246);
   pdf.text('Reporte de Inventario', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
   
@@ -442,21 +446,49 @@ function downloadPDF() {
   pdf.text(`Generado: ${fecha}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 15;
   
-  // Resumen
+  // Calcular resumen de stock
+  const outOfStock = filtered.filter(item => parseInt(item.quantity) === 0).length;
+  const inStock = filtered.filter(item => parseInt(item.quantity) > 0).length;
+  const lowStock = filtered.filter(item => parseInt(item.quantity) > 0 && parseInt(item.quantity) <= 5).length;
+  
+  // Resumen mejorado
   pdf.setFontSize(12);
   pdf.setTextColor(0, 0, 0);
   pdf.setFont(undefined, 'bold');
-  pdf.text('Resumen:', margin, yPosition);
-  yPosition += 7;
+  pdf.text('Resumen del Inventario:', margin, yPosition);
+  yPosition += 8;
   
   pdf.setFont(undefined, 'normal');
   pdf.setFontSize(10);
-  pdf.text(`Total de productos: ${filtered.length}`, margin, yPosition);
+  
+  // Productos totales
+  pdf.text(`• Total de productos: ${filtered.length}`, margin, yPosition);
   yPosition += 5;
-  pdf.text(`Stock total: ${stockTotal(filtered)} unidades`, margin, yPosition);
+  
+  // En stock (verde)
+  pdf.setTextColor(16, 185, 129);
+  pdf.text(`• En stock: ${inStock} productos`, margin, yPosition);
   yPosition += 5;
-  pdf.text(`Valor total: $${calculateTotal(filtered).toFixed(2)}`, margin, yPosition);
-  yPosition += 15;
+  
+  // Fuera de stock (rojo)
+  pdf.setTextColor(239, 68, 68);
+  pdf.text(`• Fuera de stock: ${outOfStock} productos`, margin, yPosition);
+  yPosition += 5;
+  
+  // Stock bajo (naranja)
+  if (lowStock > 0) {
+    pdf.setTextColor(245, 158, 11);
+    pdf.text(`• Stock bajo (≤5 unidades): ${lowStock} productos`, margin, yPosition);
+    yPosition += 5;
+  }
+  
+  // Stock total y valor
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(`• Unidades totales: ${stockTotal(filtered)}`, margin, yPosition);
+  yPosition += 5;
+  pdf.setFont(undefined, 'bold');
+  pdf.text(`• Valor total del inventario: $${calculateTotal(filtered).toFixed(2)}`, margin, yPosition);
+  yPosition += 12;
   
   // Línea separadora
   pdf.setDrawColor(200, 200, 200);
@@ -464,11 +496,29 @@ function downloadPDF() {
   yPosition += 10;
   
   // Productos
+  pdf.setFontSize(14);
+  pdf.setTextColor(59, 130, 246);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('Detalle de Productos:', margin, yPosition);
+  yPosition += 10;
+  
   const sortedItems = sortByCustomCategory(filtered);
   
-  sortedItems.forEach((item, index) => {
+  // Función para convertir blob a base64
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  };
+  
+  // Procesar cada producto
+  for (let index = 0; index < sortedItems.length; index++) {
+    const item = sortedItems[index];
+    
     // Verificar si necesitamos nueva página
-    if (yPosition > 270) {
+    if (yPosition > 250) {
       pdf.addPage();
       yPosition = 20;
     }
@@ -477,44 +527,80 @@ function downloadPDF() {
       ? (item.price * (1 - item.discount / 100)).toFixed(2)
       : parseFloat(item.price).toFixed(2);
     
+    // Intentar agregar imagen si existe
+    try {
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        const base64 = await blobToBase64(blob);
+        // Agregar imagen pequeña (30x30mm)
+        pdf.addImage(base64, 'JPEG', margin, yPosition, 25, 25);
+      }
+    } catch (e) {
+      // Si no hay imagen, continuar sin ella
+    }
+    
+    const textX = margin + 30; // Dejar espacio para la imagen
+    
     // Nombre del producto (título)
-    pdf.setFontSize(12);
+    pdf.setFontSize(11);
     pdf.setTextColor(59, 130, 246);
     pdf.setFont(undefined, 'bold');
     
-    // Truncar nombre si es muy largo
     let nombre = item.name;
-    if (nombre.length > 50) {
-      nombre = nombre.substring(0, 47) + '...';
+    if (nombre.length > 45) {
+      nombre = nombre.substring(0, 42) + '...';
     }
-    pdf.text(nombre, margin, yPosition);
-    yPosition += 6;
+    pdf.text(nombre, textX, yPosition + 4);
+    
+    // Estado del stock
+    const qty = parseInt(item.quantity) || 0;
+    pdf.setFontSize(9);
+    if (qty === 0) {
+      pdf.setTextColor(239, 68, 68);
+      pdf.text('[FUERA DE STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
+    } else if (qty <= 5) {
+      pdf.setTextColor(245, 158, 11);
+      pdf.text('[STOCK BAJO]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
+    } else {
+      pdf.setTextColor(16, 185, 129);
+      pdf.text('[EN STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
+    }
+    
+    yPosition += 7;
     
     // Detalles del producto
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     pdf.setTextColor(80, 80, 80);
     pdf.setFont(undefined, 'normal');
     
-    pdf.text(`Código: ${item.code}`, margin, yPosition);
-    yPosition += 4;
-    
-    pdf.text(`Stock: ${item.quantity} unidades`, margin, yPosition);
+    pdf.text(`Código: ${item.code}  |  Stock: ${item.quantity} unidades  |  Categoría: ${item.category}`, textX, yPosition);
     yPosition += 4;
     
     // Precio con o sin descuento
     if (item.discount > 0) {
-      pdf.setTextColor(239, 68, 68); // Rojo para descuento
-      pdf.text(`Precio: $${finalPrice} (Descuento ${item.discount}%)`, margin, yPosition);
+      pdf.setTextColor(239, 68, 68);
+      pdf.text(`Precio: $${finalPrice}  (Descuento ${item.discount}% aplicado)`, textX, yPosition);
       pdf.setTextColor(80, 80, 80);
     } else {
-      pdf.text(`Precio: $${finalPrice}`, margin, yPosition);
+      pdf.text(`Precio: $${finalPrice}`, textX, yPosition);
     }
     yPosition += 4;
     
-    pdf.text(`Categoría: ${item.category}`, margin, yPosition);
+    pdf.text(`Código de barras: ${item.barcode}`, textX, yPosition);
     yPosition += 4;
     
-    pdf.text(`Barras: ${item.barcode}`, margin, yPosition);
+    // Descripción si existe
+    if (item.description && item.description.trim() !== '') {
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFontSize(7);
+      let desc = item.description.trim();
+      if (desc.length > 100) {
+        desc = desc.substring(0, 97) + '...';
+      }
+      pdf.text(`Descripción: ${desc}`, textX, yPosition);
+      yPosition += 4;
+    }
+    
     yPosition += 8;
     
     // Línea separadora ligera entre productos
@@ -522,7 +608,7 @@ function downloadPDF() {
       pdf.setDrawColor(230, 230, 230);
       pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
     }
-  });
+  }
   
   // Guardar PDF
   pdf.save(`inventario_${new Date().toISOString().split('T')[0]}.pdf`);

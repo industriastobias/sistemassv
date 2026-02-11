@@ -8,8 +8,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <style>
-    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
+    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;--info:#06b6d4;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
     html{scroll-behavior:smooth}
@@ -53,8 +54,81 @@
     }
 
     h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
+    h2{font-size:1.5rem;font-weight:600;margin:1.5rem 0 1rem;color:var(--accent)}
     mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
     #themeToggle{position:fixed;top:1rem;left:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
+    
+    /* Nuevos estilos para reportes */
+    .report-section{
+      width:100%;
+      max-width:1200px;
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:1.5rem;
+      margin-bottom:1.5rem;
+      box-shadow:var(--shadow);
+    }
+    .report-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+      gap:1rem;
+      margin-bottom:1rem;
+    }
+    .report-card{
+      background:var(--bg);
+      border-radius:12px;
+      padding:1rem;
+      border-left:4px solid var(--accent);
+    }
+    .report-card.warning{border-left-color:var(--warning);}
+    .report-card.danger{border-left-color:var(--danger);}
+    .report-card.success{border-left-color:var(--success);}
+    .report-card.info{border-left-color:var(--info);}
+    .report-card h4{font-size:.85rem;color:#6b7280;margin-bottom:.5rem;text-transform:uppercase;}
+    .report-card .value{font-size:1.8rem;font-weight:700;color:var(--text);}
+    .report-card .detail{font-size:.8rem;color:#6b7280;margin-top:.25rem;}
+    
+    .chart-container{
+      width:100%;
+      max-width:600px;
+      margin:1rem auto;
+      height:300px;
+    }
+    
+    .table-responsive{
+      width:100%;
+      overflow-x:auto;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.9rem;
+    }
+    th,td{
+      padding:.75rem;
+      text-align:left;
+      border-bottom:1px solid #e5e7eb;
+    }
+    th{
+      background:var(--bg);
+      font-weight:600;
+      color:var(--text);
+      font-size:.8rem;
+      text-transform:uppercase;
+    }
+    tr:hover{background:var(--bg);}
+    .badge{
+      display:inline-block;
+      padding:.25rem .5rem;
+      border-radius:9999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .badge-success{background:#d1fae5;color:#065f46;}
+    .badge-warning{background:#fef3c7;color:#92400e;}
+    .badge-danger{background:#fee2e2;color:#991b1b;}
+    .badge-info{background:#cffafe;color:#155e75;}
+    
     .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
     .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
     .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;width:100%;max-width:960px;}
@@ -65,7 +139,6 @@
     .search-bar input{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:1rem;}
     .search-bar input:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
     
-    /* Botón PDF */
     .pdf-button{
       width:100%;
       max-width:960px;
@@ -103,22 +176,20 @@
     button:hover{transform:translateY(-2px)}
     .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4);}
     .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4);}
+    .btn-warning{background:var(--warning);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.4);}
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem;}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
     .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
     .copy-barcode:hover{color:var(--accent-hover)}
     .edit-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem;font-size:.75rem;}
-    .edit-form input, .edit-form select{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
-    .edit-form button{padding:.3rem .6rem;font-size:.7rem;}
+    .edit-form input, .edit-form select, .edit-form textarea{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
+    .edit-form textarea{resize:vertical;min-height:60px;}
     @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
     #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
 
-    /* Estilos para el PDF - ya no se usa html2canvas, se genera directamente */
-    #pdfContent{
-      display: none;
-    }
+    #pdfContent{display: none;}
   </style>
 </head>
 <body>
@@ -143,6 +214,73 @@
 
 <h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
 
+<!-- NUEVO: Dashboard de Reportes -->
+<div class="report-section">
+  <h2><i class="fa fa-chart-pie"></i> Resumen Ejecutivo</h2>
+  <div class="report-grid" id="executiveSummary">
+    <!-- Se llena dinámicamente -->
+  </div>
+  
+  <h3 style="margin-top:1.5rem;margin-bottom:1rem;color:var(--text);font-size:1.1rem;">
+    <i class="fa fa-exclamation-triangle"></i> Alertas y Notificaciones
+  </h3>
+  <div id="alertsContainer" style="display:flex;flex-direction:column;gap:.5rem;">
+    <!-- Alertas dinámicas -->
+  </div>
+</div>
+
+<!-- NUEVO: Análisis por Categoría -->
+<div class="report-section">
+  <h2><i class="fa fa-layer-group"></i> Análisis por Categoría</h2>
+  <div class="table-responsive">
+    <table id="categoryTable">
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th>Productos</th>
+          <th>Stock Total</th>
+          <th>Valor del Stock</th>
+          <th>Promedio por Producto</th>
+          <th>% del Total</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="categoryTableBody">
+        <!-- Se llena dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- NUEVO: Top Productos -->
+<div class="report-section">
+  <h2><i class="fa fa-trophy"></i> Top Productos por Valor</h2>
+  <div class="table-responsive">
+    <table id="topProductsTable">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Stock</th>
+          <th>Precio Unit.</th>
+          <th>Valor Total</th>
+          <th>% del Inventario</th>
+        </tr>
+      </thead>
+      <tbody id="topProductsBody">
+        <!-- Se llena dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- NUEVO: Productos con Problemas -->
+<div class="report-section" id="problemSection" style="display:none;">
+  <h2><i class="fa fa-exclamation-circle"></i> Productos que Requieren Atención</h2>
+  <div id="problemProductsContainer"></div>
+</div>
+
 <div class="summary-cards">
   <div class="summary-card"><h3>Total de productos</h3><p id="totalProducts">0</p></div>
   <div class="summary-card"><h3>Stock total</h3><p id="totalStock">0</p></div>
@@ -158,7 +296,7 @@
 </div>
 
 <div class="pdf-button">
-  <button onclick="downloadPDF()"><i class="fa fa-file-pdf"></i> Descargar PDF del Inventario</button>
+  <button onclick="downloadPDF()"><i class="fa fa-file-pdf"></i> Descargar Reporte Completo PDF</button>
 </div>
 
 <div id="inventoryTable" class="table-grid"></div>
@@ -171,7 +309,6 @@
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
 
-<!-- Contenedor oculto - ya no se usa para html2canvas -->
 <div id="pdfContent"></div>
 
 <script>
@@ -211,6 +348,12 @@ function calculateTotal(list){
 function stockTotal(list){
   return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
 }
+function calculateItemValue(item){
+  const price = parseFloat(item.price)||0;
+  const qty = parseInt(item.quantity)||0;
+  const disc = parseFloat(item.discount)||0;
+  return (price * (1 - disc/100)) * qty;
+}
 
 function sortByCustomCategory(list) {
   return [...list].sort((a, b) => {
@@ -243,6 +386,213 @@ function openLightbox(src) {
 }
 function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
+}
+
+// NUEVO: Generar reportes ejecutivos
+function generateExecutiveReports(){
+  const totalValue = calculateTotal(inventory);
+  const totalQty = stockTotal(inventory);
+  const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0);
+  const lowStock = inventory.filter(i => {
+    const q = parseInt(i.quantity);
+    return q > 0 && q <= 5;
+  });
+  const inStock = inventory.filter(i => parseInt(i.quantity) > 5);
+  
+  // Calcular rotación estimada (simulada - en realidad necesitaría historial de ventas)
+  const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
+  
+  // Categorías únicas
+  const categories = [...new Set(inventory.map(i => i.category || 'Sin categoría'))];
+  
+  // Producto más valioso
+  const mostValuable = inventory.length > 0 ? 
+    inventory.reduce((max, item) => calculateItemValue(item) > calculateItemValue(max) ? item : max, inventory[0]) : null;
+  
+  // Producto con mayor stock
+  const highestStock = inventory.length > 0 ?
+    inventory.reduce((max, item) => parseInt(item.quantity) > parseInt(max.quantity) ? item : max, inventory[0]) : null;
+
+  const summaryHTML = `
+    <div class="report-card success">
+      <h4><i class="fa fa-check-circle"></i> En Stock Saludable</h4>
+      <div class="value">${inStock.length}</div>
+      <div class="detail">Productos con >5 unidades</div>
+    </div>
+    <div class="report-card warning">
+      <h4><i class="fa fa-exclamation-triangle"></i> Stock Bajo</h4>
+      <div class="value">${lowStock.length}</div>
+      <div class="detail">Productos con 1-5 unidades</div>
+    </div>
+    <div class="report-card danger">
+      <h4><i class="fa fa-times-circle"></i> Fuera de Stock</h4>
+      <div class="value">${outOfStock.length}</div>
+      <div class="detail">Productos agotados</div>
+    </div>
+    <div class="report-card info">
+      <h4><i class="fa fa-dollar-sign"></i> Valor Promedio</h4>
+      <div class="value">$${avgPrice.toFixed(2)}</div>
+      <div class="detail">Por unidad en inventario</div>
+    </div>
+    <div class="report-card">
+      <h4><i class="fa fa-tags"></i> Categorías</h4>
+      <div class="value">${categories.length}</div>
+      <div class="detail">Diferentes categorías activas</div>
+    </div>
+    <div class="report-card">
+      <h4><i class="fa fa-crown"></i> Producto Top</h4>
+      <div class="value" style="font-size:1.2rem;">${mostValuable ? mostValuable.name.substring(0,15) + '...' : 'N/A'}</div>
+      <div class="detail">Mayor valor: $${mostValuable ? calculateItemValue(mostValuable).toFixed(2) : '0.00'}</div>
+    </div>
+  `;
+  
+  document.getElementById('executiveSummary').innerHTML = summaryHTML;
+  
+  // Generar alertas
+  const alertsContainer = document.getElementById('alertsContainer');
+  alertsContainer.innerHTML = '';
+  
+  if (outOfStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div style="background:#fee2e2;border-left:4px solid #ef4444;padding:1rem;border-radius:8px;">
+        <strong style="color:#991b1b;"><i class="fa fa-times-circle"></i> ${outOfStock.length} productos agotados</strong>
+        <p style="color:#991b1b;font-size:.9rem;margin-top:.25rem;">Requiere reposición inmediata para evitar pérdida de ventas.</p>
+      </div>
+    `;
+  }
+  
+  if (lowStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:1rem;border-radius:8px;">
+        <strong style="color:#92400e;"><i class="fa fa-exclamation-triangle"></i> ${lowStock.length} productos con stock crítico</strong>
+        <p style="color:#92400e;font-size:.9rem;margin-top:.25rem;">Considere reordenar pronto para mantener disponibilidad.</p>
+      </div>
+    `;
+  }
+  
+  if (inventory.length === 0) {
+    alertsContainer.innerHTML += `
+      <div style="background:#e0f2fe;border-left:4px solid #06b6d4;padding:1rem;border-radius:8px;">
+        <strong style="color:#155e75;"><i class="fa fa-info-circle"></i> Inventario vacío</strong>
+        <p style="color:#155e75;font-size:.9rem;margin-top:.25rem;">No hay productos registrados en el sistema.</p>
+      </div>
+    `;
+  }
+  
+  // Tabla por categorías
+  generateCategoryTable();
+  
+  // Top productos
+  generateTopProductsTable();
+  
+  // Productos problemáticos
+  generateProblemProducts();
+}
+
+function generateCategoryTable(){
+  const categories = {};
+  const totalValue = calculateTotal(inventory);
+  
+  inventory.forEach(item => {
+    const cat = item.category || 'Sin categoría';
+    if (!categories[cat]) {
+      categories[cat] = { count: 0, stock: 0, value: 0 };
+    }
+    categories[cat].count++;
+    categories[cat].stock += parseInt(item.quantity) || 0;
+    categories[cat].value += calculateItemValue(item);
+  });
+  
+  const tbody = document.getElementById('categoryTableBody');
+  tbody.innerHTML = Object.entries(categories)
+    .sort((a, b) => b[1].value - a[1].value)
+    .map(([cat, data]) => {
+      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
+      const avgPerProduct = data.count > 0 ? (data.stock / data.count).toFixed(1) : 0;
+      
+      let statusBadge = '<span class="badge badge-success">OK</span>';
+      if (data.stock === 0) statusBadge = '<span class="badge badge-danger">Agotado</span>';
+      else if (data.stock / data.count <= 2) statusBadge = '<span class="badge badge-warning">Bajo</span>';
+      
+      return `
+        <tr>
+          <td><strong>${cat}</strong></td>
+          <td>${data.count}</td>
+          <td>${data.stock} u.</td>
+          <td>$${data.value.toFixed(2)}</td>
+          <td>${avgPerProduct} u.</td>
+          <td>${percentage}%</td>
+          <td>${statusBadge}</td>
+        </tr>
+      `;
+    }).join('');
+}
+
+function generateTopProductsTable(){
+  const totalValue = calculateTotal(inventory);
+  const sorted = [...inventory]
+    .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
+    .slice(0, 10); // Top 10
+  
+  const tbody = document.getElementById('topProductsBody');
+  tbody.innerHTML = sorted.map((item, index) => {
+    const value = calculateItemValue(item);
+    const percentage = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+    
+    return `
+      <tr>
+        <td><span class="badge badge-info">#${index + 1}</span></td>
+        <td>${item.name}</td>
+        <td>${item.category}</td>
+        <td>${item.quantity} u.</td>
+        <td>$${finalPrice}</td>
+        <td><strong>$${value.toFixed(2)}</strong></td>
+        <td>${percentage}%</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function generateProblemProducts(){
+  const problems = inventory.filter(item => {
+    const qty = parseInt(item.quantity);
+    return qty === 0 || (qty > 0 && qty <= 2);
+  }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
+  
+  const section = document.getElementById('problemSection');
+  const container = document.getElementById('problemProductsContainer');
+  
+  if (problems.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  container.innerHTML = problems.map(item => {
+    const qty = parseInt(item.quantity);
+    const isOut = qty === 0;
+    const statusClass = isOut ? 'badge-danger' : 'badge-warning';
+    const statusText = isOut ? 'AGOTADO' : 'CRÍTICO';
+    
+    return `
+      <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg);border-radius:8px;margin-bottom:.5rem;border-left:4px solid ${isOut ? '#ef4444' : '#f59e0b'};">
+        <div style="flex:1;">
+          <strong>${item.name}</strong>
+          <span class="badge ${statusClass}" style="margin-left:.5rem;">${statusText}</span>
+          <p style="font-size:.8rem;color:#6b7280;margin-top:.25rem;">
+            Código: ${item.code} | Categoría: ${item.category} | Stock: ${qty} u.
+          </p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:var(--accent);">$${parseFloat(item.price).toFixed(2)}</div>
+          <div style="font-size:.75rem;color:#6b7280;">Precio unitario</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderTable(){
@@ -296,6 +646,9 @@ function renderTable(){
   });
 
   document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
+  
+  // Generar reportes
+  generateExecutiveReports();
 }
 
 function viewItem(index){
@@ -323,7 +676,8 @@ function editItem(index){
     <input id="editName${index}" value="${p.name}" placeholder="Nombre"/>
     <input id="editPrice${index}" type="number" step="0.01" value="${p.price}" placeholder="Precio"/>
     <input id="editQty${index}"  type="number" value="${p.quantity}" placeholder="Stock"/>
-    <textarea id="editDesc${index}" placeholder="Descripción" rows="2" style="padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;resize:vertical;">${p.description || ''}</textarea>
+    <input id="editMinStock${index}" type="number" value="${p.minStock || 5}" placeholder="Stock mínimo (alerta)"/>
+    <textarea id="editDesc${index}" placeholder="Descripción" rows="2">${p.description || ''}</textarea>
     <select id="editCat${index}">
       <option value="Accesorios para el cabello" ${p.category === 'Accesorios para el cabello' ? 'selected' : ''}>Accesorios para el cabello</option>
       <option value="Anillos" ${p.category === 'Anillos' ? 'selected' : ''}>Anillos</option>
@@ -356,6 +710,7 @@ function saveEdit(filterIdx, invIdx){
     name:     document.getElementById(`editName${filterIdx}`).value.trim(),
     price:    document.getElementById(`editPrice${filterIdx}`).value.trim(),
     quantity: document.getElementById(`editQty${filterIdx}`).value.trim(),
+    minStock: document.getElementById(`editMinStock${filterIdx}`).value.trim() || 5,
     description: document.getElementById(`editDesc${filterIdx}`).value.trim(),
     category: document.getElementById(`editCat${filterIdx}`).value.trim(),
     barcode:  document.getElementById(`editBar${filterIdx}`).value.trim(),
@@ -410,7 +765,7 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-// FUNCIÓN ACTUALIZADA: Generar PDF con resumen de stock, descripciones e imágenes
+// FUNCIÓN ACTUALIZADA: Generar PDF completo con todos los reportes
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -419,90 +774,25 @@ async function downloadPDF() {
     return;
   }
   
-  // Crear PDF en orientación vertical
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 15;
-  const usableWidth = pageWidth - (margin * 2);
   
   let yPosition = 20;
+  let pageCount = 1;
   
-  // Título
-  pdf.setFontSize(20);
-  pdf.setTextColor(59, 130, 246);
-  pdf.text('Reporte de Inventario', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
-  
-  // Fecha
-  pdf.setFontSize(10);
-  pdf.setTextColor(100, 100, 100);
-  const fecha = new Date().toLocaleDateString('es-ES', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  pdf.text(`Generado: ${fecha}`, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 15;
-  
-  // Calcular resumen de stock
-  const outOfStock = filtered.filter(item => parseInt(item.quantity) === 0).length;
-  const inStock = filtered.filter(item => parseInt(item.quantity) > 0).length;
-  const lowStock = filtered.filter(item => parseInt(item.quantity) > 0 && parseInt(item.quantity) <= 5).length;
-  
-  // Resumen mejorado
-  pdf.setFontSize(12);
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont(undefined, 'bold');
-  pdf.text('Resumen del Inventario:', margin, yPosition);
-  yPosition += 8;
-  
-  pdf.setFont(undefined, 'normal');
-  pdf.setFontSize(10);
-  
-  // Productos totales
-  pdf.text(`• Total de productos: ${filtered.length}`, margin, yPosition);
-  yPosition += 5;
-  
-  // En stock (verde)
-  pdf.setTextColor(16, 185, 129);
-  pdf.text(`• En stock: ${inStock} productos`, margin, yPosition);
-  yPosition += 5;
-  
-  // Fuera de stock (rojo)
-  pdf.setTextColor(239, 68, 68);
-  pdf.text(`• Fuera de stock: ${outOfStock} productos`, margin, yPosition);
-  yPosition += 5;
-  
-  // Stock bajo (naranja)
-  if (lowStock > 0) {
-    pdf.setTextColor(245, 158, 11);
-    pdf.text(`• Stock bajo (≤5 unidades): ${lowStock} productos`, margin, yPosition);
-    yPosition += 5;
-  }
-  
-  // Stock total y valor
-  pdf.setTextColor(0, 0, 0);
-  pdf.text(`• Unidades totales: ${stockTotal(filtered)}`, margin, yPosition);
-  yPosition += 5;
-  pdf.setFont(undefined, 'bold');
-  pdf.text(`• Valor total del inventario: $${calculateTotal(filtered).toFixed(2)}`, margin, yPosition);
-  yPosition += 12;
-  
-  // Línea separadora
-  pdf.setDrawColor(200, 200, 200);
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 10;
-  
-  // Productos
-  pdf.setFontSize(14);
-  pdf.setTextColor(59, 130, 246);
-  pdf.setFont(undefined, 'bold');
-  pdf.text('Detalle de Productos:', margin, yPosition);
-  yPosition += 10;
-  
-  const sortedItems = sortByCustomCategory(filtered);
+  // Función helper para verificar espacio
+  const checkNewPage = (neededSpace = 40) => {
+    if (yPosition > 280 - neededSpace) {
+      pdf.addPage();
+      pageCount++;
+      yPosition = 20;
+      // Encabezado en nueva página
+      pdf.setFontSize(8);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`Reporte de Inventario - Página ${pageCount}`, pageWidth / 2, 10, { align: 'center' });
+    }
+  };
   
   // Función para convertir blob a base64
   const blobToBase64 = (blob) => {
@@ -513,105 +803,337 @@ async function downloadPDF() {
     });
   };
   
-  // Procesar cada producto
+  // PORTADA / ENCABEZADO
+  pdf.setFontSize(24);
+  pdf.setTextColor(59, 130, 246);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('REPORTE DE INVENTARIO', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 12;
+  
+  pdf.setFontSize(10);
+  pdf.setTextColor(100, 100, 100);
+  pdf.setFont(undefined, 'normal');
+  const fecha = new Date().toLocaleDateString('es-ES', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  pdf.text(`Generado el ${fecha} | ${inventory.length} productos registrados`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 15;
+  
+  // Línea separadora
+  pdf.setDrawColor(59, 130, 246);
+  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+  yPosition += 10;
+  
+  // 1. RESUMEN EJECUTIVO
+  pdf.setFontSize(16);
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('1. RESUMEN EJECUTIVO', margin, yPosition);
+  yPosition += 8;
+  
+  const totalValue = calculateTotal(inventory);
+  const totalQty = stockTotal(inventory);
+  const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0).length;
+  const lowStock = inventory.filter(i => {
+    const q = parseInt(i.quantity);
+    return q > 0 && q <= 5;
+  }).length;
+  const inStock = inventory.filter(i => parseInt(i.quantity) > 5).length;
+  const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
+  
+  // Tabla de resumen
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'normal');
+  
+  const summaryData = [
+    ['Total de Productos:', inventory.length.toString()],
+    ['Unidades en Stock:', totalQty.toString()],
+    ['Valor Total del Inventario:', `$${totalValue.toFixed(2)}`],
+    ['Precio Promedio por Unidad:', `$${avgPrice.toFixed(2)}`],
+    ['Productos Agotados:', outOfStock.toString()],
+    ['Productos con Stock Bajo:', lowStock.toString()],
+    ['Productos con Stock Saludable:', inStock.toString()]
+  ];
+  
+  summaryData.forEach(([label, value]) => {
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(label, margin, yPosition);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(value, margin + 70, yPosition);
+    pdf.setFont(undefined, 'normal');
+    yPosition += 6;
+  });
+  
+  yPosition += 5;
+  
+  // 2. DISTRIBUCIÓN POR ESTADO
+  checkNewPage(60);
+  pdf.setFontSize(16);
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('2. DISTRIBUCIÓN POR ESTADO DE STOCK', margin, yPosition);
+  yPosition += 10;
+  
+  // Gráfico de barras simple con caracteres
+  const maxVal = Math.max(inStock, lowStock, outOfStock, 1);
+  const barWidth = 80;
+  
+  // En stock
+  pdf.setFillColor(16, 185, 129);
+  pdf.rect(margin, yPosition - 5, (inStock / maxVal) * barWidth, 8, 'F');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(`En Stock (>5u): ${inStock}`, margin + (inStock / maxVal) * barWidth + 5, yPosition);
+  yPosition += 12;
+  
+  // Stock bajo
+  pdf.setFillColor(245, 158, 11);
+  pdf.rect(margin, yPosition - 5, (lowStock / maxVal) * barWidth, 8, 'F');
+  pdf.text(`Stock Bajo (1-5u): ${lowStock}`, margin + (lowStock / maxVal) * barWidth + 5, yPosition);
+  yPosition += 12;
+  
+  // Agotado
+  pdf.setFillColor(239, 68, 68);
+  pdf.rect(margin, yPosition - 5, (outOfStock / maxVal) * barWidth, 8, 'F');
+  pdf.text(`Agotado (0u): ${outOfStock}`, margin + (outOfStock / maxVal) * barWidth + 5, yPosition);
+  yPosition += 15;
+  
+  // 3. ANÁLISIS POR CATEGORÍA
+  checkNewPage(100);
+  pdf.setFontSize(16);
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('3. ANÁLISIS POR CATEGORÍA', margin, yPosition);
+  yPosition += 10;
+  
+  // Tabla de categorías
+  const categories = {};
+  inventory.forEach(item => {
+    const cat = item.category || 'Sin categoría';
+    if (!categories[cat]) categories[cat] = { count: 0, stock: 0, value: 0 };
+    categories[cat].count++;
+    categories[cat].stock += parseInt(item.quantity) || 0;
+    categories[cat].value += calculateItemValue(item);
+  });
+  
+  // Encabezados de tabla
+  pdf.setFillColor(243, 244, 246);
+  pdf.rect(margin, yPosition - 6, pageWidth - margin * 2, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setTextColor(75, 85, 99);
+  pdf.text('Categoría', margin + 2, yPosition);
+  pdf.text('Prod.', margin + 60, yPosition);
+  pdf.text('Stock', margin + 80, yPosition);
+  pdf.text('Valor Total', margin + 105, yPosition);
+  pdf.text('% del Total', margin + 140, yPosition);
+  yPosition += 8;
+  
+  // Filas de categorías
+  pdf.setTextColor(0, 0, 0);
+  Object.entries(categories)
+    .sort((a, b) => b[1].value - a[1].value)
+    .forEach(([cat, data]) => {
+      checkNewPage(15);
+      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
+      
+      pdf.setFontSize(9);
+      pdf.text(cat.substring(0, 25), margin + 2, yPosition);
+      pdf.text(data.count.toString(), margin + 60, yPosition);
+      pdf.text(data.stock.toString(), margin + 80, yPosition);
+      pdf.text(`$${data.value.toFixed(2)}`, margin + 105, yPosition);
+      pdf.text(`${percentage}%`, margin + 140, yPosition);
+      
+      // Barra de progreso visual
+      pdf.setFillColor(59, 130, 246);
+      pdf.rect(margin + 160, yPosition - 4, percentage * 0.8, 4, 'F');
+      
+      yPosition += 7;
+    });
+  
+  yPosition += 10;
+  
+  // 4. TOP 10 PRODUCTOS POR VALOR
+  checkNewPage(120);
+  pdf.setFontSize(16);
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('4. TOP 10 PRODUCTOS POR VALOR DE INVENTARIO', margin, yPosition);
+  yPosition += 10;
+  
+  const topProducts = [...inventory]
+    .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
+    .slice(0, 10);
+  
+  // Encabezados
+  pdf.setFillColor(243, 244, 246);
+  pdf.rect(margin, yPosition - 6, pageWidth - margin * 2, 8, 'F');
+  pdf.setFontSize(9);
+  pdf.setTextColor(75, 85, 99);
+  pdf.text('#', margin + 2, yPosition);
+  pdf.text('Producto', margin + 15, yPosition);
+  pdf.text('Stock', margin + 90, yPosition);
+  pdf.text('Precio', margin + 110, yPosition);
+  pdf.text('Valor Total', margin + 135, yPosition);
+  pdf.text('%', margin + 165, yPosition);
+  yPosition += 8;
+  
+  // Filas
+  topProducts.forEach((item, idx) => {
+    checkNewPage(15);
+    const value = calculateItemValue(item);
+    const percentage = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text((idx + 1).toString(), margin + 2, yPosition);
+    pdf.text(item.name.substring(0, 35), margin + 15, yPosition);
+    pdf.text(item.quantity.toString(), margin + 90, yPosition);
+    pdf.text(`$${finalPrice}`, margin + 110, yPosition);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`$${value.toFixed(2)}`, margin + 135, yPosition);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`${percentage}%`, margin + 165, yPosition);
+    yPosition += 7;
+  });
+  
+  yPosition += 10;
+  
+  // 5. PRODUCTOS QUE REQUIEREN ATENCIÓN
+  const problems = inventory.filter(item => {
+    const qty = parseInt(item.quantity);
+    return qty === 0 || (qty > 0 && qty <= 2);
+  }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
+  
+  if (problems.length > 0) {
+    checkNewPage(100);
+    pdf.setFontSize(16);
+    pdf.setTextColor(239, 68, 68);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('5. PRODUCTOS QUE REQUIEREN ATENCIÓN INMEDIATA', margin, yPosition);
+    yPosition += 10;
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    
+    problems.forEach(item => {
+      checkNewPage(20);
+      const qty = parseInt(item.quantity);
+      const isOut = qty === 0;
+      
+      // Indicador visual
+      pdf.setFillColor(isOut ? 239 : 245, isOut ? 68 : 158, isOut ? 68 : 11);
+      pdf.circle(margin + 3, yPosition - 2, 2, 'F');
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.text(item.name.substring(0, 40), margin + 10, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`[${isOut ? 'AGOTADO' : 'CRÍTICO'}] Stock: ${qty}u | Código: ${item.code} | $${parseFloat(item.price).toFixed(2)}`, 
+        margin + 10, yPosition + 5);
+      yPosition += 12;
+    });
+    
+    yPosition += 5;
+  }
+  
+  // 6. LISTADO COMPLETO DE PRODUCTOS
+  checkNewPage(40);
+  pdf.addPage();
+  pageCount++;
+  yPosition = 20;
+  
+  pdf.setFontSize(16);
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('6. LISTADO COMPLETO DE PRODUCTOS', margin, yPosition);
+  yPosition += 10;
+  
+  const sortedItems = sortByCustomCategory(filtered);
+  
   for (let index = 0; index < sortedItems.length; index++) {
     const item = sortedItems[index];
-    
-    // Verificar si necesitamos nueva página
-    if (yPosition > 250) {
-      pdf.addPage();
-      yPosition = 20;
-    }
+    checkNewPage(35);
     
     const finalPrice = item.discount > 0 
       ? (item.price * (1 - item.discount / 100)).toFixed(2)
       : parseFloat(item.price).toFixed(2);
     
-    // Intentar agregar imagen si existe
+    // Intentar agregar imagen
     try {
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
         const base64 = await blobToBase64(blob);
-        // Agregar imagen pequeña (30x30mm)
-        pdf.addImage(base64, 'JPEG', margin, yPosition, 25, 25);
+        pdf.addImage(base64, 'JPEG', margin, yPosition, 20, 20);
       }
-    } catch (e) {
-      // Si no hay imagen, continuar sin ella
-    }
+    } catch (e) {}
     
-    const textX = margin + 30; // Dejar espacio para la imagen
+    const textX = margin + 25;
     
-    // Nombre del producto (título)
-    pdf.setFontSize(11);
+    // Nombre y estado
+    pdf.setFontSize(10);
     pdf.setTextColor(59, 130, 246);
     pdf.setFont(undefined, 'bold');
-    
-    let nombre = item.name;
-    if (nombre.length > 45) {
-      nombre = nombre.substring(0, 42) + '...';
-    }
+    let nombre = item.name.length > 35 ? item.name.substring(0, 32) + '...' : item.name;
     pdf.text(nombre, textX, yPosition + 4);
     
-    // Estado del stock
+    // Badge de estado
     const qty = parseInt(item.quantity) || 0;
-    pdf.setFontSize(9);
+    pdf.setFontSize(8);
     if (qty === 0) {
       pdf.setTextColor(239, 68, 68);
-      pdf.text('[FUERA DE STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
+      pdf.text('[SIN STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
     } else if (qty <= 5) {
       pdf.setTextColor(245, 158, 11);
       pdf.text('[STOCK BAJO]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
-    } else {
-      pdf.setTextColor(16, 185, 129);
-      pdf.text('[EN STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
     }
     
     yPosition += 7;
     
-    // Detalles del producto
+    // Detalles
     pdf.setFontSize(8);
     pdf.setTextColor(80, 80, 80);
     pdf.setFont(undefined, 'normal');
-    
-    pdf.text(`Código: ${item.code}  |  Stock: ${item.quantity} unidades  |  Categoría: ${item.category}`, textX, yPosition);
+    pdf.text(`Código: ${item.code} | Stock: ${item.quantity}u | Categoría: ${item.category}`, textX, yPosition);
     yPosition += 4;
     
-    // Precio con o sin descuento
     if (item.discount > 0) {
       pdf.setTextColor(239, 68, 68);
-      pdf.text(`Precio: $${finalPrice}  (Descuento ${item.discount}% aplicado)`, textX, yPosition);
-      pdf.setTextColor(80, 80, 80);
+      pdf.text(`Precio: $${finalPrice} (desc. ${item.discount}%) | Barras: ${item.barcode}`, textX, yPosition);
     } else {
-      pdf.text(`Precio: $${finalPrice}`, textX, yPosition);
+      pdf.text(`Precio: $${finalPrice} | Barras: ${item.barcode}`, textX, yPosition);
     }
     yPosition += 4;
     
-    pdf.text(`Código de barras: ${item.barcode}`, textX, yPosition);
-    yPosition += 4;
-    
-    // Descripción si existe
-    if (item.description && item.description.trim() !== '') {
+    if (item.description) {
       pdf.setTextColor(100, 100, 100);
       pdf.setFontSize(7);
       let desc = item.description.trim();
-      if (desc.length > 100) {
-        desc = desc.substring(0, 97) + '...';
-      }
+      if (desc.length > 80) desc = desc.substring(0, 77) + '...';
       pdf.text(`Descripción: ${desc}`, textX, yPosition);
       yPosition += 4;
     }
     
     yPosition += 8;
     
-    // Línea separadora ligera entre productos
-    if (index < sortedItems.length - 1) {
-      pdf.setDrawColor(230, 230, 230);
-      pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
-    }
+    // Línea separadora
+    pdf.setDrawColor(230, 230, 230);
+    pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
   }
   
-  // Guardar PDF
-  pdf.save(`inventario_${new Date().toISOString().split('T')[0]}.pdf`);
+  // PIE DE PÁGINA FINAL
+  pdf.setFontSize(8);
+  pdf.setTextColor(150, 150, 150);
+  pdf.text(`Reporte generado automáticamente por Sistema de Inventario | Total de páginas: ${pageCount}`, 
+    pageWidth / 2, 285, { align: 'center' });
+  
+  // Guardar
+  pdf.save(`reporte_inventario_completo_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 window.addEventListener('DOMContentLoaded',()=> doFilter());

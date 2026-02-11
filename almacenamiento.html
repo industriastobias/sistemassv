@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js  "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css   "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js   "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js   "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -250,6 +250,20 @@
     }
     .btn-edit:hover {
       background: #6b7280;
+    }
+    /* ESTILOS NUEVOS PARA BOTÓN DE OJITO */
+    .btn-view {
+      background: #3b82f6;
+      border: none;
+      color: #fff;
+      padding: 0.15rem 0.3rem;
+      font-size: 0.65rem;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 0.25rem;
+    }
+    .btn-view:hover {
+      background: #2563eb;
     }
     #salesPanel {
       display: none;
@@ -543,6 +557,11 @@
     <label>Nuevo precio:</label><input type="number" id="newPrice" min="0" step="0.01" placeholder="Ej: 1990"><button class="stamp" onclick="saveNewPrice()">Guardar</button>
   </div></div>
 
+  <!-- MODAL VER DESCRIPCIÓN (NUEVO) -->
+  <div id="descriptionModal" class="modal"><div class="modal-content"><span class="close" onclick="closeDescriptionModal()">&times;</span><h2>Descripción del Producto</h2>
+    <div id="descriptionContent" style="white-space: pre-wrap; line-height: 1.6; color: #374151; font-size: 0.95rem; padding: 1rem; background: #f9fafb; border-radius: 6px; border: 1px solid var(--border);"></div>
+  </div></div>
+
   <!-- MODAL VENTAS DETALLADO -->
   <div id="salesHistoryModal" class="modal" style="backdrop-filter:none;background:#000a;"><div class="modal-content" style="width:100vw; height:100vh; max-width:none; border-radius:0; margin:0; overflow-y:auto;">
     <span class="close" onclick="closeSalesHistoryModal()">&times;</span><h2>Historial de Ventas Detallado</h2>
@@ -623,6 +642,18 @@
     function highlightText(text, search) { if (!search) return text; const regex = new RegExp(`(${search})`, 'gi'); return text.replace(regex, '<mark>$1</mark>'); }
     function applyFilters() { filterInventory(); }
     
+    // NUEVA FUNCIÓN: Abrir modal de descripción
+    function openDescriptionModal(index) {
+      const item = inventory[index];
+      document.getElementById('descriptionContent').textContent = item.description || 'Sin descripción disponible.';
+      document.getElementById('descriptionModal').style.display = 'block';
+    }
+    
+    // NUEVA FUNCIÓN: Cerrar modal de descripción
+    function closeDescriptionModal() {
+      document.getElementById('descriptionModal').style.display = 'none';
+    }
+    
     // FUNCIÓN FILTERINVENTORY MODIFICADA PARA INCLUIR FILTRO POR FECHA
     function filterInventory() { 
       const name = document.getElementById('searchName').value.trim().toLowerCase(), 
@@ -666,8 +697,8 @@
     
     function renderInventoryWithHighlight(filteredInventory, searchName) { const list = document.getElementById('inventoryList'), cards = document.getElementById('cardsView'), noResults = document.getElementById('noResultsMessage'), resultMsg = document.getElementById('resultMessage');
       if (filteredInventory.length === 0) { list.innerHTML = ''; cards.innerHTML = ''; noResults.style.display = 'block'; resultMsg.style.display = 'none'; return; } noResults.style.display = 'none'; const sorted = [...filteredInventory].sort((a, b) => b.quantity - a.quantity);
-      list.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}"><td>${idx + 1}</td><td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>${highlightText(item.name, searchName)}</td><td>${item.barcode}</td><td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>$${item.price}</td><td>${item.discount}%</td><td>$${priceWithDiscount}</td><td>${new Date(item.date).toLocaleString('es-ES')}</td><td>${highlightText(item.category, searchName)}</td><td>${item.quantity}</td><td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button></td></tr>`; }).join('');
-      cards.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<div class="card" data-real-index="${inventory.indexOf(item)}"><img id="card-img-${idx}" onclick="openImageModal(this.src)" /><div><strong>${highlightText(item.name, searchName)}</strong></div><div>Barras: ${item.barcode}</div><div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div><div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div><div>Stock: <strong>${item.quantity}</strong></div><div>Cat: ${highlightText(item.category, searchName)}</div><div>Fecha: ${new Date(item.date).toLocaleString('es-ES')}</div><div class="card-footer"><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button></div></div>`; }).join('');
+      list.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}"><td>${idx + 1}</td><td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>${highlightText(item.name, searchName)}</td><td>${item.barcode}</td><td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>$${item.price}</td><td>${item.discount}%</td><td>$${priceWithDiscount}</td><td>${new Date(item.date).toLocaleString('es-ES')}</td><td>${highlightText(item.category, searchName)}</td><td>${item.quantity}</td><td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button><button class="btn-view" onclick="openDescriptionModal(${inventory.indexOf(item)})" title="Ver descripción">👁️</button></td></tr>`; }).join('');
+      cards.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<div class="card" data-real-index="${inventory.indexOf(item)}"><img id="card-img-${idx}" onclick="openImageModal(this.src)" /><div><strong>${highlightText(item.name, searchName)}</strong></div><div>Barras: ${item.barcode}</div><div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div><div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div><div>Stock: <strong>${item.quantity}</strong></div><div>Cat: ${highlightText(item.category, searchName)}</div><div>Fecha: ${new Date(item.date).toLocaleString('es-ES')}</div><div class="card-footer"><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button><button class="btn-view" onclick="openDescriptionModal(${inventory.indexOf(item)})" title="Ver descripción">👁️</button></div></div>`; }).join('');
       setTimeout(() => { sorted.forEach((item, idx) => { localforage.getItem(`img_${item.code}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const imgTbl = document.getElementById(`img-${idx}`); const imgCard = document.getElementById(`card-img-${idx}`); if (imgTbl) imgTbl.src = url; if (imgCard) imgCard.src = url; } }); localforage.getItem(`barcodeimg_${item.barcode}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } else { const canvas = document.createElement('canvas'); JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: true }); canvas.toBlob(barcodeBlob => { if (barcodeBlob) { localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob); const url = URL.createObjectURL(barcodeBlob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } }); } }); }); }, 100); updateDash(); }
     function toggleView() { const btn = document.getElementById('toggleViewBtn'), table = document.getElementById('tableView'), cards = document.getElementById('cardsView'); if (currentView === 'table') { currentView = 'cards'; table.style.display = 'none'; cards.style.display = 'flex'; btn.textContent = 'Ver Tabla'; } else { currentView = 'table'; table.style.display = 'block'; cards.style.display = 'none'; btn.textContent = 'Ver Tarjetas'; } localStorage.setItem('preferredView', currentView); }
 

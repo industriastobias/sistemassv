@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Traslados - Control de Costos</title>
+    <title>Traslados - Gestión de Productos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -15,307 +15,350 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
+            padding: 40px 20px;
         }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+        header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        h1 {
+            font-size: 28px;
+            font-weight: 300;
+            color: #222;
+            letter-spacing: -0.5px;
         }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
         }
 
-        .main-content {
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
-            padding: 30px;
+            grid-template-columns: 320px 1fr;
+            gap: 40px;
         }
 
-        @media (max-width: 968px) {
-            .main-content {
+        @media (max-width: 900px) {
+            .grid {
                 grid-template-columns: 1fr;
             }
         }
 
-        .form-section {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        /* Formulario minimalista */
+        .form-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
         }
 
-        .form-section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
+        .form-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #222;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 0.95em;
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .form-group input, .form-group textarea {
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: all 0.3s ease;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            background: #fafafa;
         }
 
-        .form-group input:focus, .form-group textarea:focus {
+        input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #333;
+            background: white;
+        }
+
+        .image-upload {
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        .image-upload:hover {
+            border-color: #999;
+            background: #f5f5f5;
         }
 
         .image-preview {
             width: 100%;
-            height: 200px;
-            border: 3px dashed #667eea;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
-            background: #fff;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .image-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        .image-preview .placeholder {
-            color: #667eea;
-            font-size: 3em;
-        }
-
-        .image-preview .remove-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ff4757;
-            color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 4px;
             display: none;
-            font-size: 1.2em;
+            margin-bottom: 10px;
         }
 
-        .image-preview.has-image .remove-btn {
+        .image-preview.active {
             display: block;
         }
 
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 25px;
+        .remove-image {
+            font-size: 12px;
+            color: #999;
             cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            text-decoration: underline;
+            display: none;
+        }
+
+        .remove-image.active {
+            display: inline;
+        }
+
+        .calculated-field {
+            background: #f0f0f0;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #222;
             color: white;
-            width: 100%;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            background: #444;
         }
 
-        .btn-danger {
-            background: #ff4757;
-            color: white;
+        /* Lista de productos */
+        .list-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
 
-        .btn-success {
-            background: #2ed573;
-            color: white;
-        }
-
-        .btn-warning {
-            background: #ffa502;
-            color: white;
-        }
-
-        .products-section {
-            background: #fff;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .products-section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
+        .list-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #f0f0f0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .summary-card h3 {
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            opacity: 0.9;
-        }
-
-        .summary-card .value {
-            font-size: 1.8em;
-            font-weight: bold;
-        }
-
-        .summary-card.profit {
-            background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
-        }
-
-        .summary-card.loss {
-            background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
-        }
-
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.9em;
-        }
-
-        .products-table th {
-            background: #667eea;
-            color: white;
-            padding: 15px;
-            text-align: left;
+        .list-title {
+            font-size: 16px;
             font-weight: 600;
-        }
-
-        .products-table td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .products-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .product-image {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-
-        .product-image:hover {
-            transform: scale(1.1);
-        }
-
-        .action-btns {
-            display: flex;
-            gap: 5px;
-        }
-
-        .action-btns .btn {
-            padding: 8px 12px;
-            font-size: 0.8em;
+            color: #222;
         }
 
         .global-costs {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            padding: 20px 30px;
+            background: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
         }
 
-        .global-costs h3 {
-            color: #856404;
-            margin-bottom: 15px;
+        .global-cost-item {
+            flex: 1;
         }
 
-        .global-costs-row {
+        .global-cost-item label {
+            margin-bottom: 4px;
+        }
+
+        .global-cost-item input {
+            background: white;
+        }
+
+        /* Totales */
+        .totals-bar {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: #e0e0e0;
         }
 
-        .empty-state {
+        .total-item {
+            background: white;
+            padding: 20px;
             text-align: center;
-            padding: 60px 20px;
+        }
+
+        .total-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .total-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .total-value.positive {
+            color: #2e7d32;
+        }
+
+        .total-value.negative {
+            color: #c62828;
+        }
+
+        /* Tabla */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: #fafafa;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f5f5f5;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .product-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .product-name {
+            font-weight: 500;
+            color: #222;
+        }
+
+        .number {
+            font-family: 'Courier New', monospace;
+            font-weight: 500;
+        }
+
+        .profit-positive {
+            color: #2e7d32;
+        }
+
+        .profit-negative {
+            color: #c62828;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .btn-icon.delete:hover {
+            background: #ffebee;
+            border-color: #ef9a9a;
+            color: #c62828;
+        }
+
+        /* Estado vacío */
+        .empty-state {
+            padding: 60px;
+            text-align: center;
             color: #999;
         }
 
-        .empty-state i {
-            font-size: 4em;
+        .empty-icon {
+            font-size: 48px;
             margin-bottom: 20px;
-            color: #ddd;
+            opacity: 0.3;
         }
 
+        /* Modal imagen */
         .modal {
             display: none;
             position: fixed;
@@ -323,7 +366,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -333,167 +376,189 @@
             display: flex;
         }
 
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
+        .modal img {
             max-width: 90%;
             max-height: 90%;
-        }
-
-        .modal-content img {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 10px;
+            object-fit: contain;
         }
 
         .modal-close {
             position: absolute;
-            top: 20px;
+            top: 30px;
             right: 30px;
             color: white;
-            font-size: 2em;
+            font-size: 30px;
             cursor: pointer;
+            opacity: 0.7;
         }
 
-        .hidden-input {
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        /* Botones de acción */
+        .action-bar {
+            padding: 20px 30px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+            width: auto;
+            padding: 10px 20px;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-danger {
+            background: white;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            width: auto;
+            padding: 10px 20px;
+        }
+
+        .btn-danger:hover {
+            background: #ffebee;
+        }
+
+        .hidden {
             display: none;
-        }
-
-        .file-input-label {
-            display: block;
-            padding: 15px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 2px dashed #667eea;
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .file-input-label:hover {
-            background: #667eea;
-            color: white;
-        }
-
-        @media print {
-            .no-print {
-                display: none !important;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📦 Sistema de Traslados</h1>
-            <p>Gestión de Productos, Costos y Ganancias</p>
-        </div>
+        <header>
+            <h1>Gestión de Traslados</h1>
+            <div class="subtitle">Control de inventario, costos y rentabilidad</div>
+        </header>
 
-        <div class="main-content">
-            <div class="form-section">
-                <h2>➕ Nuevo Producto</h2>
+        <div class="grid">
+            <!-- Formulario -->
+            <div class="form-card">
+                <div class="form-title">Nuevo Producto</div>
                 
                 <div class="form-group">
-                    <label>Imagen del Producto</label>
-                    <input type="file" id="productImage" accept="image/*" class="hidden-input">
-                    <label for="productImage" class="file-input-label">
-                        📁 Seleccionar Imagen
-                    </label>
-                    <div class="image-preview" id="imagePreview">
-                        <span class="placeholder">📷</span>
-                        <button class="remove-btn" onclick="removeImage()">×</button>
+                    <label>Imagen</label>
+                    <input type="file" id="imageInput" accept="image/*" class="hidden">
+                    <div class="image-upload" onclick="document.getElementById('imageInput').click()">
+                        <img id="imagePreview" class="image-preview">
+                        <div id="uploadText">
+                            <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
+                            <div style="font-size: 12px; color: #999;">Click para subir imagen</div>
+                        </div>
                     </div>
+                    <span class="remove-image" id="removeImage" onclick="removeImage(event)">Eliminar imagen</span>
                 </div>
 
                 <div class="form-group">
-                    <label>Nombre del Producto</label>
-                    <input type="text" id="productName" placeholder="Ej: Laptop Dell XPS 15">
+                    <label>Nombre del producto</label>
+                    <input type="text" id="productName" placeholder="Ej: Laptop Dell XPS">
                 </div>
 
                 <div class="form-group">
-                    <label>Precio Original (Costo)</label>
-                    <input type="number" id="originalPrice" placeholder="0.00" step="0.01" oninput="calculateMargin()">
+                    <label>Precio de costo</label>
+                    <input type="number" id="costPrice" placeholder="0.00" step="0.01" oninput="calculate()">
                 </div>
 
                 <div class="form-group">
-                    <label>Precio de Venta</label>
-                    <input type="number" id="salePrice" placeholder="0.00" step="0.01" oninput="calculateMargin()">
+                    <label>Precio de venta</label>
+                    <input type="number" id="salePrice" placeholder="0.00" step="0.01" oninput="calculate()">
                 </div>
 
                 <div class="form-group">
-                    <label>Margen de Ganancia (%)</label>
-                    <input type="number" id="profitMargin" placeholder="0" readonly style="background: #e9ecef;">
+                    <label>Margen (%)</label>
+                    <input type="text" id="margin" class="calculated-field" readonly>
                 </div>
 
                 <div class="form-group">
-                    <label>Ganancia Neta ($)</label>
-                    <input type="number" id="profitAmount" placeholder="0.00" readonly style="background: #e9ecef;">
+                    <label>Ganancia unitaria</label>
+                    <input type="text" id="unitProfit" class="calculated-field" readonly>
                 </div>
 
-                <button class="btn btn-primary" onclick="addProduct()">
-                    💾 Guardar Producto
-                </button>
+                <button class="btn btn-primary" id="saveBtn" onclick="saveProduct()">Guardar Producto</button>
             </div>
 
-            <div class="products-section">
-                <h2>
-                    📋 Lista de Productos
-                    <div>
-                        <button class="btn btn-success no-print" onclick="downloadPDF()">
-                            📄 Descargar PDF
-                        </button>
-                        <button class="btn btn-danger no-print" onclick="clearAllData()" style="margin-left: 10px;">
-                            🗑️ Limpiar Todo
-                        </button>
+            <!-- Lista -->
+            <div class="list-section">
+                <div class="list-header">
+                    <div class="list-title">Productos registrados</div>
+                    <div style="font-size: 13px; color: #666;">
+                        <span id="productCount">0</span> items
                     </div>
-                </h2>
+                </div>
 
                 <div class="global-costs">
-                    <h3>🌍 Costos Globales (Distribuidos entre todos los productos)</h3>
-                    <div class="global-costs-row">
-                        <div class="form-group">
-                            <label>Costo Total de Envío ($)</label>
-                            <input type="number" id="totalShipping" placeholder="0.00" step="0.01" oninput="updateGlobalCosts()">
-                        </div>
-                        <div class="form-group">
-                            <label>Pago Total de Impuestos ($)</label>
-                            <input type="number" id="totalTaxes" placeholder="0.00" step="0.01" oninput="updateGlobalCosts()">
-                        </div>
+                    <div class="global-cost-item">
+                        <label>Costo total de envío</label>
+                        <input type="number" id="totalShipping" placeholder="0.00" step="0.01" onchange="updateTotals()">
+                    </div>
+                    <div class="global-cost-item">
+                        <label>Total de impuestos</label>
+                        <input type="number" id="totalTaxes" placeholder="0.00" step="0.01" onchange="updateTotals()">
                     </div>
                 </div>
 
-                <div class="summary-cards" id="summaryCards">
-                    <div class="summary-card">
-                        <h3>Total Invertido</h3>
-                        <div class="value" id="totalInvested">$0.00</div>
+                <div class="totals-bar">
+                    <div class="total-item">
+                        <div class="total-label">Total Invertido</div>
+                        <div class="total-value" id="totalCost">$0.00</div>
                     </div>
-                    <div class="summary-card">
-                        <h3>Total Ventas</h3>
-                        <div class="value" id="totalSales">$0.00</div>
+                    <div class="total-item">
+                        <div class="total-label">Total Ventas</div>
+                        <div class="total-value" id="totalSales">$0.00</div>
                     </div>
-                    <div class="summary-card profit">
-                        <h3>Ganancia Total</h3>
-                        <div class="value" id="totalProfit">$0.00</div>
+                    <div class="total-item">
+                        <div class="total-label">Ganancia Bruta</div>
+                        <div class="total-value" id="totalGross">$0.00</div>
                     </div>
-                    <div class="summary-card">
-                        <h3>Costo Envío/Prod</h3>
-                        <div class="value" id="shippingPerProduct">$0.00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>Impuestos/Prod</h3>
-                        <div class="value" id="taxesPerProduct">$0.00</div>
+                    <div class="total-item">
+                        <div class="total-label">Ganancia Neta</div>
+                        <div class="total-value" id="totalNet">$0.00</div>
                     </div>
                 </div>
 
-                <div id="productsList">
-                    <div class="empty-state">
-                        <div style="font-size: 4em; margin-bottom: 20px;">📭</div>
-                        <h3>No hay productos registrados</h3>
-                        <p>Agrega tu primer producto usando el formulario</p>
-                    </div>
+                <div class="table-container">
+                    <table id="productsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">Img</th>
+                                <th>Producto</th>
+                                <th style="text-align: right;">Costo</th>
+                                <th style="text-align: right;">Venta</th>
+                                <th style="text-align: right;">Margen</th>
+                                <th style="text-align: right;">Ganancia</th>
+                                <th style="text-align: right;">Envío</th>
+                                <th style="text-align: right;">Impuesto</th>
+                                <th style="text-align: right;">Neto</th>
+                                <th style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr class="empty-row">
+                                <td colspan="10">
+                                    <div class="empty-state">
+                                        <div class="empty-icon">📦</div>
+                                        <div>No hay productos registrados</div>
+                                        <div style="font-size: 12px; margin-top: 10px;">Agrega productos desde el formulario</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="action-bar">
+                    <button class="btn btn-secondary" onclick="exportPDF()">📄 Descargar PDF</button>
+                    <button class="btn btn-danger" onclick="clearAll()">🗑️ Limpiar todo</button>
                 </div>
             </div>
         </div>
@@ -501,15 +566,13 @@
 
     <div class="modal" id="imageModal" onclick="closeModal()">
         <span class="modal-close">&times;</span>
-        <div class="modal-content">
-            <img id="modalImage" src="" alt="Vista previa">
-        </div>
+        <img id="modalImage" src="" alt="Producto">
     </div>
 
     <script>
         // Inicializar LocalForage
         localforage.config({
-            name: 'TrasladosApp',
+            name: 'TrasladosMinimal',
             storeName: 'products'
         });
 
@@ -517,80 +580,96 @@
         let currentImage = null;
         let editingId = null;
 
-        // Cargar datos al iniciar
+        // Cargar datos al inicio
         window.onload = async function() {
-            await loadProducts();
-            await loadGlobalCosts();
-            renderProducts();
+            await loadData();
+            renderTable();
         };
 
-        // Manejar selección de imagen
-        document.getElementById('productImage').addEventListener('change', function(e) {
+        // Cargar imagen
+        document.getElementById('imageInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     currentImage = event.target.result;
-                    const preview = document.getElementById('imagePreview');
-                    preview.innerHTML = `<img src="${currentImage}" style="max-width: 100%; max-height: 100%;"><button class="remove-btn" onclick="removeImage()" style="display: block;">×</button>`;
-                    preview.classList.add('has-image');
+                    showImagePreview(currentImage);
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        function removeImage() {
-            currentImage = null;
-            document.getElementById('productImage').value = '';
+        function showImagePreview(src) {
             const preview = document.getElementById('imagePreview');
-            preview.innerHTML = '<span class="placeholder">📷</span><button class="remove-btn" onclick="removeImage()">×</button>';
-            preview.classList.remove('has-image');
+            const uploadText = document.getElementById('uploadText');
+            const removeBtn = document.getElementById('removeImage');
+            
+            preview.src = src;
+            preview.classList.add('active');
+            uploadText.style.display = 'none';
+            removeBtn.classList.add('active');
         }
 
-        function calculateMargin() {
-            const original = parseFloat(document.getElementById('originalPrice').value) || 0;
+        function removeImage(e) {
+            if(e) e.stopPropagation();
+            currentImage = null;
+            document.getElementById('imageInput').value = '';
+            
+            const preview = document.getElementById('imagePreview');
+            const uploadText = document.getElementById('uploadText');
+            const removeBtn = document.getElementById('removeImage');
+            
+            preview.src = '';
+            preview.classList.remove('active');
+            uploadText.style.display = 'block';
+            removeBtn.classList.remove('active');
+        }
+
+        function calculate() {
+            const cost = parseFloat(document.getElementById('costPrice').value) || 0;
             const sale = parseFloat(document.getElementById('salePrice').value) || 0;
             
-            if (original > 0 && sale > 0) {
-                const margin = ((sale - original) / original) * 100;
-                const profit = sale - original;
-                document.getElementById('profitMargin').value = margin.toFixed(2);
-                document.getElementById('profitAmount').value = profit.toFixed(2);
+            if (cost > 0 && sale > 0) {
+                const margin = ((sale - cost) / cost) * 100;
+                const profit = sale - cost;
+                
+                document.getElementById('margin').value = margin.toFixed(1) + '%';
+                document.getElementById('unitProfit').value = '$' + profit.toFixed(2);
             } else {
-                document.getElementById('profitMargin').value = '';
-                document.getElementById('profitAmount').value = '';
+                document.getElementById('margin').value = '';
+                document.getElementById('unitProfit').value = '';
             }
         }
 
-        async function addProduct() {
+        async function saveProduct() {
             const name = document.getElementById('productName').value.trim();
-            const originalPrice = parseFloat(document.getElementById('originalPrice').value) || 0;
-            const salePrice = parseFloat(document.getElementById('salePrice').value) || 0;
-            const margin = parseFloat(document.getElementById('profitMargin').value) || 0;
-            const profit = parseFloat(document.getElementById('profitAmount').value) || 0;
+            const cost = parseFloat(document.getElementById('costPrice').value) || 0;
+            const sale = parseFloat(document.getElementById('salePrice').value) || 0;
 
-            if (!name || originalPrice <= 0 || salePrice <= 0) {
-                alert('Por favor completa todos los campos obligatorios');
+            if (!name || cost <= 0 || sale <= 0) {
+                alert('Completa nombre, costo y precio de venta');
                 return;
             }
+
+            const margin = ((sale - cost) / cost) * 100;
+            const profit = sale - cost;
 
             const product = {
                 id: editingId || Date.now(),
                 name,
                 image: currentImage,
-                originalPrice,
-                salePrice,
+                cost,
+                sale,
                 margin,
                 profit,
-                date: new Date().toLocaleDateString()
+                date: new Date().toISOString()
             };
 
             if (editingId) {
                 const index = products.findIndex(p => p.id === editingId);
-                if (index !== -1) {
-                    products[index] = product;
-                }
+                products[index] = product;
                 editingId = null;
+                document.getElementById('saveBtn').textContent = 'Guardar Producto';
             } else {
                 products.push(product);
             }
@@ -599,187 +678,155 @@
             
             // Limpiar formulario
             document.getElementById('productName').value = '';
-            document.getElementById('originalPrice').value = '';
+            document.getElementById('costPrice').value = '';
             document.getElementById('salePrice').value = '';
-            document.getElementById('profitMargin').value = '';
-            document.getElementById('profitAmount').value = '';
+            document.getElementById('margin').value = '';
+            document.getElementById('unitProfit').value = '';
             removeImage();
 
-            renderProducts();
-            alert('Producto guardado exitosamente');
+            renderTable();
         }
 
-        async function loadProducts() {
+        async function loadData() {
             const saved = await localforage.getItem('products');
-            if (saved) {
-                products = saved;
-            }
-        }
-
-        async function loadGlobalCosts() {
-            const shipping = await localforage.getItem('totalShipping');
-            const taxes = await localforage.getItem('totalTaxes');
+            const shipping = await localforage.getItem('shipping');
+            const taxes = await localforage.getItem('taxes');
+            
+            if (saved) products = saved;
             if (shipping) document.getElementById('totalShipping').value = shipping;
             if (taxes) document.getElementById('totalTaxes').value = taxes;
         }
 
-        async function updateGlobalCosts() {
+        async function updateTotals() {
             const shipping = document.getElementById('totalShipping').value;
             const taxes = document.getElementById('totalTaxes').value;
-            await localforage.setItem('totalShipping', shipping);
-            await localforage.setItem('totalTaxes', taxes);
-            renderProducts();
+            await localforage.setItem('shipping', shipping);
+            await localforage.setItem('taxes', taxes);
+            renderTable();
         }
 
-        function renderProducts() {
-            const container = document.getElementById('productsList');
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const count = document.getElementById('productCount');
             
+            count.textContent = products.length;
+
             if (products.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div style="font-size: 4em; margin-bottom: 20px;">📭</div>
-                        <h3>No hay productos registrados</h3>
-                        <p>Agrega tu primer producto usando el formulario</p>
-                    </div>
+                tbody.innerHTML = `
+                    <tr class="empty-row">
+                        <td colspan="10">
+                            <div class="empty-state">
+                                <div class="empty-icon">📦</div>
+                                <div>No hay productos registrados</div>
+                                <div style="font-size: 12px; margin-top: 10px;">Agrega productos desde el formulario</div>
+                            </div>
+                        </td>
+                    </tr>
                 `;
-                updateSummary();
+                updateSummary(0, 0, 0, 0);
                 return;
             }
 
             const totalShipping = parseFloat(document.getElementById('totalShipping').value) || 0;
             const totalTaxes = parseFloat(document.getElementById('totalTaxes').value) || 0;
-            const shippingPerProduct = products.length > 0 ? totalShipping / products.length : 0;
-            const taxesPerProduct = products.length > 0 ? totalTaxes / products.length : 0;
+            const shippingPerItem = totalShipping / products.length;
+            const taxesPerItem = totalTaxes / products.length;
 
-            let html = `
-                <table class="products-table">
-                    <thead>
-                        <tr>
-                            <th>Imagen</th>
-                            <th>Producto</th>
-                            <th>Costo</th>
-                            <th>Venta</th>
-                            <th>Margen %</th>
-                            <th>Ganancia</th>
-                            <th>Envío/Prod</th>
-                            <th>Impuesto/Prod</th>
-                            <th>Ganancia Neta</th>
-                            <th class="no-print">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            let totalInvested = 0;
+            let html = '';
+            let totalCost = 0;
             let totalSales = 0;
-            let totalProfit = 0;
+            let totalGross = 0;
+            let totalNet = 0;
 
-            products.forEach(product => {
-                const netProfit = product.profit - shippingPerProduct - taxesPerProduct;
-                totalInvested += product.originalPrice;
-                totalSales += product.salePrice;
-                totalProfit += netProfit;
+            products.forEach(p => {
+                const netProfit = p.profit - shippingPerItem - taxesPerItem;
+                totalCost += p.cost;
+                totalSales += p.sale;
+                totalGross += p.profit;
+                totalNet += netProfit;
+
+                const profitClass = netProfit >= 0 ? 'profit-positive' : 'profit-negative';
 
                 html += `
                     <tr>
                         <td>
-                            ${product.image ? 
-                                `<img src="${product.image}" class="product-image" onclick="showImage('${product.image}')">` : 
-                                '<span style="color: #ccc; font-size: 2em;">📦</span>'}
+                            ${p.image ? 
+                                `<img src="${p.image}" class="product-img" onclick="showModal('${p.image}')">` : 
+                                '<div style="width:50px;height:50px;background:#f5f5f5;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:20px;">📦</div>'}
                         </td>
-                        <td><strong>${product.name}</strong></td>
-                        <td>$${product.originalPrice.toFixed(2)}</td>
-                        <td>$${product.salePrice.toFixed(2)}</td>
-                        <td>${product.margin.toFixed(2)}%</td>
-                        <td>$${product.profit.toFixed(2)}</td>
-                        <td>$${shippingPerProduct.toFixed(2)}</td>
-                        <td>$${taxesPerProduct.toFixed(2)}</td>
-                        <td style="color: ${netProfit >= 0 ? '#2ed573' : '#ff4757'}; font-weight: bold;">
-                            $${netProfit.toFixed(2)}
+                        <td>
+                            <div class="product-name">${p.name}</div>
+                            <div style="font-size: 11px; color: #999; margin-top: 2px;">${new Date(p.date).toLocaleDateString()}</div>
                         </td>
-                        <td class="no-print">
-                            <div class="action-btns">
-                                <button class="btn btn-warning" onclick="editProduct(${product.id})">✏️</button>
-                                <button class="btn btn-danger" onclick="deleteProduct(${product.id})">🗑️</button>
+                        <td class="number" style="text-align: right;">$${p.cost.toFixed(2)}</td>
+                        <td class="number" style="text-align: right;">$${p.sale.toFixed(2)}</td>
+                        <td class="number" style="text-align: right;">${p.margin.toFixed(1)}%</td>
+                        <td class="number" style="text-align: right; color: ${p.profit >= 0 ? '#2e7d32' : '#c62828'};">$${p.profit.toFixed(2)}</td>
+                        <td class="number" style="text-align: right; color: #999;">$${shippingPerItem.toFixed(2)}</td>
+                        <td class="number" style="text-align: right; color: #999;">$${taxesPerItem.toFixed(2)}</td>
+                        <td class="number ${profitClass}" style="text-align: right; font-weight: 600;">$${netProfit.toFixed(2)}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-icon" onclick="editProduct(${p.id})" title="Editar">✏️</button>
+                                <button class="btn-icon delete" onclick="deleteProduct(${p.id})" title="Eliminar">🗑️</button>
                             </div>
                         </td>
                     </tr>
                 `;
             });
 
-            html += '</tbody></table>';
-            container.innerHTML = html;
-
-            // Actualizar resumen
-            document.getElementById('totalInvested').textContent = `$${totalInvested.toFixed(2)}`;
-            document.getElementById('totalSales').textContent = `$${totalSales.toFixed(2)}`;
-            document.getElementById('totalProfit').textContent = `$${totalProfit.toFixed(2)}`;
-            document.getElementById('shippingPerProduct').textContent = `$${shippingPerProduct.toFixed(2)}`;
-            document.getElementById('taxesPerProduct').textContent = `$${taxesPerProduct.toFixed(2)}`;
-
-            // Cambiar color de ganancia total según sea positiva o negativa
-            const profitCard = document.querySelector('.summary-card.profit');
-            if (totalProfit < 0) {
-                profitCard.classList.remove('profit');
-                profitCard.classList.add('loss');
-            } else {
-                profitCard.classList.remove('loss');
-                profitCard.classList.add('profit');
-            }
+            tbody.innerHTML = html;
+            updateSummary(totalCost, totalSales, totalGross, totalNet);
         }
 
-        function updateSummary() {
-            document.getElementById('totalInvested').textContent = '$0.00';
-            document.getElementById('totalSales').textContent = '$0.00';
-            document.getElementById('totalProfit').textContent = '$0.00';
-            const shipping = parseFloat(document.getElementById('totalShipping').value) || 0;
-            const taxes = parseFloat(document.getElementById('totalTaxes').value) || 0;
-            document.getElementById('shippingPerProduct').textContent = products.length > 0 ? `$${(shipping/products.length).toFixed(2)}` : '$0.00';
-            document.getElementById('taxesPerProduct').textContent = products.length > 0 ? `$${(taxes/products.length).toFixed(2)}` : '$0.00';
+        function updateSummary(cost, sales, gross, net) {
+            document.getElementById('totalCost').textContent = '$' + cost.toFixed(2);
+            document.getElementById('totalSales').textContent = '$' + sales.toFixed(2);
+            document.getElementById('totalGross').textContent = '$' + gross.toFixed(2);
+            
+            const netEl = document.getElementById('totalNet');
+            netEl.textContent = '$' + net.toFixed(2);
+            netEl.className = 'total-value ' + (net >= 0 ? 'positive' : 'negative');
         }
 
         function editProduct(id) {
-            const product = products.find(p => p.id === id);
-            if (!product) return;
+            const p = products.find(x => x.id === id);
+            if (!p) return;
 
-            document.getElementById('productName').value = product.name;
-            document.getElementById('originalPrice').value = product.originalPrice;
-            document.getElementById('salePrice').value = product.salePrice;
-            document.getElementById('profitMargin').value = product.margin;
-            document.getElementById('profitAmount').value = product.profit;
+            document.getElementById('productName').value = p.name;
+            document.getElementById('costPrice').value = p.cost;
+            document.getElementById('salePrice').value = p.sale;
+            calculate();
 
-            if (product.image) {
-                currentImage = product.image;
-                const preview = document.getElementById('imagePreview');
-                preview.innerHTML = `<img src="${currentImage}" style="max-width: 100%; max-height: 100%;"><button class="remove-btn" onclick="removeImage()" style="display: block;">×</button>`;
-                preview.classList.add('has-image');
+            if (p.image) {
+                currentImage = p.image;
+                showImagePreview(p.image);
             }
 
             editingId = id;
+            document.getElementById('saveBtn').textContent = 'Actualizar Producto';
             window.scrollTo(0, 0);
         }
 
         async function deleteProduct(id) {
-            if (!confirm('¿Estás seguro de eliminar este producto?')) return;
-            
+            if (!confirm('¿Eliminar este producto?')) return;
             products = products.filter(p => p.id !== id);
             await localforage.setItem('products', products);
-            renderProducts();
+            renderTable();
         }
 
-        async function clearAllData() {
-            if (!confirm('¿Estás seguro de eliminar TODOS los productos? Esta acción no se puede deshacer.')) return;
-            
+        async function clearAll() {
+            if (!confirm('¿Eliminar TODOS los productos y datos?')) return;
             products = [];
             await localforage.removeItem('products');
-            await localforage.removeItem('totalShipping');
-            await localforage.removeItem('totalTaxes');
+            await localforage.removeItem('shipping');
+            await localforage.removeItem('taxes');
             document.getElementById('totalShipping').value = '';
             document.getElementById('totalTaxes').value = '';
-            renderProducts();
+            renderTable();
         }
 
-        function showImage(src) {
+        function showModal(src) {
             document.getElementById('modalImage').src = src;
             document.getElementById('imageModal').classList.add('active');
         }
@@ -788,77 +835,93 @@
             document.getElementById('imageModal').classList.remove('active');
         }
 
-        async function downloadPDF() {
+        async function exportPDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+            const doc = new jsPDF('l', 'mm', 'a4');
             
             const totalShipping = parseFloat(document.getElementById('totalShipping').value) || 0;
             const totalTaxes = parseFloat(document.getElementById('totalTaxes').value) || 0;
-            const shippingPerProduct = products.length > 0 ? totalShipping / products.length : 0;
-            const taxesPerProduct = products.length > 0 ? totalTaxes / products.length : 0;
+            const perItem = products.length > 0 ? totalShipping / products.length : 0;
+            const taxPerItem = products.length > 0 ? totalTaxes / products.length : 0;
 
-            // Título
-            doc.setFontSize(20);
-            doc.text('Reporte de Traslados - Control de Costos', 15, 20);
+            // Header
+            doc.setFontSize(18);
+            doc.text('Reporte de Traslados', 15, 20);
             
-            // Fecha
-            doc.setFontSize(12);
-            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 30);
-            
-            // Resumen
-            let yPos = 45;
-            doc.setFontSize(14);
-            doc.text('Resumen General:', 15, yPos);
-            
-            const totalInvested = products.reduce((sum, p) => sum + p.originalPrice, 0);
-            const totalSales = products.reduce((sum, p) => sum + p.salePrice, 0);
-            const totalNetProfit = products.reduce((sum, p) => sum + (p.profit - shippingPerProduct - taxesPerProduct), 0);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generado: ${new Date().toLocaleString()}`, 15, 28);
+            doc.text(`${products.length} productos`, 15, 33);
 
-            yPos += 10;
+            // Totales
+            let y = 45;
+            const totalCost = products.reduce((a, p) => a + p.cost, 0);
+            const totalSales = products.reduce((a, p) => a + p.sale, 0);
+            const totalGross = products.reduce((a, p) => a + p.profit, 0);
+            const totalNet = totalGross - totalShipping - totalTaxes;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(15, y, 260, 25, 'F');
+            
             doc.setFontSize(11);
-            doc.text(`Total Invertido: $${totalInvested.toFixed(2)}`, 15, yPos);
-            doc.text(`Total en Ventas: $${totalSales.toFixed(2)}`, 80, yPos);
-            doc.text(`Ganancia Neta Total: $${totalNetProfit.toFixed(2)}`, 150, yPos);
+            doc.setTextColor(0);
+            const cols = [
+                ['Total Invertido:', `$${totalCost.toFixed(2)}`],
+                ['Total Ventas:', `$${totalSales.toFixed(2)}`],
+                ['Ganancia Bruta:', `$${totalGross.toFixed(2)}`],
+                ['Ganancia Neta:', `$${totalNet.toFixed(2)}`]
+            ];
             
-            yPos += 7;
-            doc.text(`Costo de Envío Total: $${totalShipping.toFixed(2)}`, 15, yPos);
-            doc.text(`Impuestos Totales: $${totalTaxes.toFixed(2)}`, 80, yPos);
-            doc.text(`Envío por Producto: $${shippingPerProduct.toFixed(2)}`, 150, yPos);
-            doc.text(`Impuestos por Producto: $${taxesPerProduct.toFixed(2)}`, 220, yPos);
+            let x = 20;
+            cols.forEach(([label, value]) => {
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text(label, x, y + 8);
+                doc.setFontSize(12);
+                doc.setTextColor(0);
+                doc.text(value, x, y + 18);
+                x += 65;
+            });
 
-            // Tabla de productos
-            const tableData = products.map(p => [
+            // Tabla
+            const data = products.map(p => [
                 p.name,
-                `$${p.originalPrice.toFixed(2)}`,
-                `$${p.salePrice.toFixed(2)}`,
-                `${p.margin.toFixed(2)}%`,
+                `$${p.cost.toFixed(2)}`,
+                `$${p.sale.toFixed(2)}`,
+                `${p.margin.toFixed(1)}%`,
                 `$${p.profit.toFixed(2)}`,
-                `$${shippingPerProduct.toFixed(2)}`,
-                `$${taxesPerProduct.toFixed(2)}`,
-                `$${(p.profit - shippingPerProduct - taxesPerProduct).toFixed(2)}`
+                `$${perItem.toFixed(2)}`,
+                `$${taxPerItem.toFixed(2)}`,
+                `$${(p.profit - perItem - taxPerItem).toFixed(2)}`
             ]);
 
             doc.autoTable({
-                startY: yPos + 15,
-                head: [['Producto', 'Costo', 'Venta', 'Margen %', 'Ganancia Bruta', 'Envío/Prod', 'Impuesto/Prod', 'Ganancia Neta']],
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: [102, 126, 234] },
-                styles: { fontSize: 9 },
+                startY: y + 35,
+                head: [['Producto', 'Costo', 'Venta', 'Margen', 'Ganancia', 'Envío', 'Impuesto', 'Neto']],
+                body: data,
+                theme: 'plain',
+                headStyles: { 
+                    fillColor: [245, 245, 245],
+                    textColor: 0,
+                    fontSize: 9
+                },
+                styles: { 
+                    fontSize: 9,
+                    cellPadding: 3
+                },
                 columnStyles: {
-                    0: { cellWidth: 50 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 25 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 30 },
-                    5: { cellWidth: 25 },
-                    6: { cellWidth: 30 },
-                    7: { cellWidth: 30 }
+                    0: { cellWidth: 60 },
+                    1: { cellWidth: 25, halign: 'right' },
+                    2: { cellWidth: 25, halign: 'right' },
+                    3: { cellWidth: 20, halign: 'right' },
+                    4: { cellWidth: 25, halign: 'right' },
+                    5: { cellWidth: 25, halign: 'right' },
+                    6: { cellWidth: 25, halign: 'right' },
+                    7: { cellWidth: 25, halign: 'right' }
                 }
             });
 
-            // Guardar
-            doc.save(`Traslados_${new Date().toISOString().split('T')[0]}.pdf`);
+            doc.save(`traslados_${new Date().toISOString().split('T')[0]}.pdf`);
         }
     </script>
 </body>

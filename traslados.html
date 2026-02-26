@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Traslados - Control Completo de Costos</title>
+    <title>Traslados - Actualización Progresiva de Costos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -93,7 +93,7 @@
 
         .left-panel {
             display: grid;
-            grid-template-rows: auto 1fr;
+            grid-template-rows: auto auto 1fr;
             overflow: hidden;
             background: #fff;
             border-right: 1px solid #e0e0e0;
@@ -103,8 +103,6 @@
             background: #fafafa;
             padding: 20px;
             border-bottom: 2px solid #e0e0e0;
-            max-height: 300px;
-            overflow-y: auto;
         }
 
         .section-title {
@@ -114,16 +112,15 @@
             color: #444;
             margin-bottom: 15px;
             font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .config-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-        }
-
-        .config-row.three {
-            grid-template-columns: 1fr 1fr 1fr;
         }
 
         .form-group {
@@ -152,6 +149,11 @@
             border-color: #1a1a1a;
         }
 
+        .form-group input.updated {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
         .costs-display {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -169,6 +171,11 @@
             border: 2px solid #e0e0e0;
         }
 
+        .cost-item.highlight {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
         .cost-label {
             font-size: 10px;
             color: #666;
@@ -182,6 +189,28 @@
             font-weight: 800;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
+        }
+
+        .update-notice {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #856404;
+            display: none;
+        }
+
+        .update-notice.active {
+            display: block;
+        }
+
+        .update-notice.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
         }
 
         .product-form {
@@ -413,6 +442,11 @@
             background: #f8f8f8;
         }
 
+        tr.updated {
+            background: #e8f5e9;
+            transition: background 0.5s;
+        }
+
         .product-img {
             width: 45px;
             height: 45px;
@@ -578,7 +612,7 @@
 <body>
     <div class="app">
         <header class="header">
-            <h1>📦 TRASLADOS - CONTROL COMPLETO DE COSTOS</h1>
+            <h1>📦 TRASLADOS - ACTUALIZACIÓN PROGRESIVA</h1>
             <div class="header-actions">
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
@@ -588,8 +622,12 @@
 
         <div class="main">
             <div class="left-panel">
+                <!-- Paso 1: Configuración inicial -->
                 <div class="lote-config">
-                    <div class="section-title">COSTOS DEL LOTE (SE DISTRIBUYEN)</div>
+                    <div class="section-title">
+                        <span>PASO 1</span>
+                        DATOS INICIALES DEL LOTE
+                    </div>
                     
                     <div class="config-row">
                         <div class="form-group">
@@ -602,43 +640,57 @@
                         </div>
                     </div>
 
-                    <div class="config-row three">
-                        <div class="form-group">
-                            <label>ENVÍO PROVEEDOR ($)</label>
-                            <input type="number" id="loteVendorShipping" placeholder="0.00" step="0.01" oninput="updateLoteCosts()">
-                        </div>
-                        <div class="form-group">
-                            <label>ENVÍO TRASLADO ($)</label>
-                            <input type="number" id="loteShipping" placeholder="0.00" step="0.01" oninput="updateLoteCosts()">
-                        </div>
-                        <div class="form-group">
-                            <label>IMPUESTOS ($)</label>
-                            <input type="number" id="loteTaxes" placeholder="0.00" step="0.01" oninput="updateLoteCosts()">
-                        </div>
+                    <div class="form-group">
+                        <label>ENVÍO DEL PROVEEDOR ($) - AGREGAR PRIMERO</label>
+                        <input type="number" id="loteVendorShipping" placeholder="0.00" step="0.01" oninput="updateLoteCosts('vendor')">
                     </div>
-                    
+
                     <div class="costs-display">
                         <div class="cost-item">
                             <div class="cost-label">PRODUCTOS</div>
                             <div class="cost-value" id="countProducts">0</div>
                         </div>
-                        <div class="cost-item">
+                        <div class="cost-item" id="vendorCostBox">
                             <div class="cost-label">ENV. PROV/UNID</div>
                             <div class="cost-value" id="vendorShippingPerUnit">$0.00</div>
                         </div>
-                        <div class="cost-item">
+                        <div class="cost-item" id="trasladoCostBox" style="opacity: 0.4;">
                             <div class="cost-label">ENV. TRAS/UNID</div>
                             <div class="cost-value" id="shippingPerUnit">$0.00</div>
                         </div>
-                        <div class="cost-item">
+                        <div class="cost-item" id="impuestoCostBox" style="opacity: 0.4;">
                             <div class="cost-label">IMPUESTO/UNID</div>
                             <div class="cost-value" id="taxPerUnit">$0.00</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Paso 2: Actualización posterior -->
+                <div class="lote-config" style="background: #fff8e1; border-bottom: 3px solid #ffc107;">
+                    <div class="section-title">
+                        <span style="background: #ffc107; color: #1a1a1a; padding: 2px 8px; border-radius: 4px;">PASO 2</span>
+                        AGREGAR DESPUÉS (OPCIONAL AHORA)
+                    </div>
+                    
+                    <div class="config-row">
+                        <div class="form-group">
+                            <label>ENVÍO TRASLADO ($)</label>
+                            <input type="number" id="loteShipping" placeholder="Agregar después..." step="0.01" oninput="updateLoteCosts('traslado')">
+                        </div>
+                        <div class="form-group">
+                            <label>IMPUESTOS ($)</label>
+                            <input type="number" id="loteTaxes" placeholder="Agregar después..." step="0.01" oninput="updateLoteCosts('impuestos')">
+                        </div>
+                    </div>
+
+                    <div class="update-notice" id="updateNotice">
+                        ⚠️ Se actualizarán automáticamente todos los productos existentes con los nuevos costos
+                    </div>
+                </div>
+
+                <!-- Formulario de producto -->
                 <div class="product-form">
-                    <div class="section-title">AGREGAR PRODUCTO INDIVIDUAL</div>
+                    <div class="section-title">AGREGAR PRODUCTO</div>
                     
                     <input type="file" id="imageInput" accept="image/*" class="hidden">
                     <div class="image-upload" onclick="document.getElementById('imageInput').click()">
@@ -682,15 +734,15 @@
                             <span class="breakdown-label">COSTO DE COMPRA:</span>
                             <span class="breakdown-value" id="breakdownCost">$0.00</span>
                         </div>
-                        <div class="breakdown-row">
+                        <div class="breakdown-row" id="rowVendor" style="color: #2e7d32;">
                             <span class="breakdown-label">+ ENVÍO PROVEEDOR:</span>
                             <span class="breakdown-value" id="breakdownVendorShip">+$0.00</span>
                         </div>
-                        <div class="breakdown-row">
+                        <div class="breakdown-row" id="rowTraslado" style="opacity: 0.4;">
                             <span class="breakdown-label">+ ENVÍO TRASLADO:</span>
-                            <span class="breakdown-value" id="="breakdownShip">+$0.00</span>
+                            <span class="breakdown-value" id="breakdownShip">+$0.00</span>
                         </div>
-                        <div class="breakdown-row">
+                        <div class="breakdown-row" id="rowImpuesto" style="opacity: 0.4;">
                             <span class="breakdown-label">+ IMPUESTOS:</span>
                             <span class="breakdown-value" id="breakdownTax">+$0.00</span>
                         </div>
@@ -701,7 +753,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>GANANCIA NETA (DESPUÉS DE TODOS LOS COSTOS)</label>
+                        <label>GANANCIA NETA</label>
                         <input type="text" id="productNet" class="calculated" readonly style="font-weight: 900; font-size: 16px;">
                     </div>
 
@@ -758,7 +810,9 @@
                                         <div class="empty-icon">📦</div>
                                         <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
                                         <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
-                                            CONFIGURA LOS ENVÍOS (PROVEEDOR + TRASLADO) + IMPUESTOS Y AGREGA PRODUCTOS
+                                            1. AGREGA EL ENVÍO DEL PROVEEDOR<br>
+                                            2. COMIENZA A AGREGAR PRODUCTOS<br>
+                                            3. DESPUÉS AGREGA ENVÍO TRASLADO E IMPUESTOS
                                         </div>
                                     </div>
                                 </td>
@@ -772,8 +826,8 @@
                         <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a;">LOTE-001</span> | 
                         PRODUCTOS: <strong id="footerCount">0</strong> | 
                         ENV. PROV: <strong id="footerVendorShip">$0.00</strong> | 
-                        ENV. TRAS: <strong id="footerShip">$0.00</strong> | 
-                        IMPUESTOS: <strong id="footerTaxes">$0.00</strong>
+                        ENV. TRAS: <strong id="footerShip" style="color: #999;">$0.00</strong> | 
+                        IMPUESTOS: <strong id="footerTaxes" style="color: #999;">$0.00</strong>
                     </div>
                     <button class="btn-sm primary" onclick="finishLote()" style="padding: 10px 24px; font-size: 14px;">
                         ✓ FINALIZAR LOTE
@@ -790,7 +844,7 @@
 
     <script>
         localforage.config({
-            name: 'TrasladosBold',
+            name: 'TrasladosProgresivo',
             storeName: 'productos'
         });
 
@@ -807,6 +861,7 @@
         let currentImage = null;
         let editingProductId = null;
         let loteCounter = 1;
+        let hasProducts = false;
 
         window.onload = async function() {
             document.getElementById('loteDate').value = new Date().toLocaleDateString();
@@ -844,11 +899,14 @@
             document.getElementById('removeImage').classList.remove('active');
         }
 
-        function updateLoteCosts() {
+        function updateLoteCosts(source) {
             const vendorShip = parseFloat(document.getElementById('loteVendorShipping').value) || 0;
             const ship = parseFloat(document.getElementById('loteShipping').value) || 0;
             const taxes = parseFloat(document.getElementById('loteTaxes').value) || 0;
             const count = currentLote.products.length || 1;
+            
+            // Detectar si estamos agregando costos después de tener productos
+            const isUpdatingExisting = hasProducts && (source === 'traslado' || source === 'impuestos');
             
             currentLote.vendorShipping = vendorShip;
             currentLote.shipping = ship;
@@ -858,6 +916,7 @@
             const shipPerUnit = count > 0 ? ship / count : 0;
             const taxPerUnit = count > 0 ? taxes / count : 0;
             
+            // Actualizar visualización
             document.getElementById('countProducts').textContent = currentLote.products.length;
             document.getElementById('vendorShippingPerUnit').textContent = '$' + vendorPerUnit.toFixed(2);
             document.getElementById('shippingPerUnit').textContent = '$' + shipPerUnit.toFixed(2);
@@ -867,12 +926,48 @@
             document.getElementById('footerShip').textContent = '$' + ship.toFixed(2);
             document.getElementById('footerTaxes').textContent = '$' + taxes.toFixed(2);
             
-            recalculateAllProducts();
+            // Destacar visualmente los costos activos
+            if (vendorShip > 0) {
+                document.getElementById('vendorCostBox').classList.add('highlight');
+                document.getElementById('rowVendor').style.opacity = '1';
+            }
+            if (ship > 0) {
+                document.getElementById('trasladoCostBox').style.opacity = '1';
+                document.getElementById('rowTraslado').style.opacity = '1';
+                document.getElementById('footerShip').style.color = '#1a1a1a';
+            }
+            if (taxes > 0) {
+                document.getElementById('impuestoCostBox').style.opacity = '1';
+                document.getElementById('rowImpuesto').style.opacity = '1';
+                document.getElementById('footerTaxes').style.color = '#1a1a1a';
+            }
+            
+            // Mostrar aviso de actualización si se agregan costos después
+            const notice = document.getElementById('updateNotice');
+            if (isUpdatingExisting) {
+                notice.textContent = `✅ Se han actualizado ${currentLote.products.length} productos con los nuevos costos de ${source.toUpperCase()}`;
+                notice.classList.add('success', 'active');
+                
+                // Quitar clase success después de 3 segundos
+                setTimeout(() => {
+                    notice.classList.remove('success');
+                    notice.textContent = '⚠️ Se actualizarán automáticamente todos los productos existentes con los nuevos costos';
+                }, 3000);
+            } else if (currentLote.products.length > 0) {
+                notice.classList.add('active');
+            } else {
+                notice.classList.remove('active');
+            }
+            
+            // Recalcular todos los productos existentes
+            recalculateAllProducts(isUpdatingExisting);
         }
 
-        function recalculateAllProducts() {
+        function recalculateAllProducts(highlightChanges = false) {
             const count = currentLote.products.length;
             if (count === 0) return;
+            
+            hasProducts = true;
             
             const vendorPerUnit = currentLote.vendorShipping / count;
             const shipPerUnit = currentLote.shipping / count;
@@ -886,7 +981,7 @@
                 p.netProfit = p.price - p.realCost;
             });
             
-            renderTable();
+            renderTable(highlightChanges);
             updateSummary();
         }
 
@@ -968,8 +1063,10 @@
                 document.getElementById('cancelBtn').classList.add('hidden');
             } else {
                 currentLote.products.push(product);
+                hasProducts = true;
             }
             
+            // Recalcular todos con la nueva distribución
             recalculateAllProducts();
             clearForm();
             saveData();
@@ -990,7 +1087,7 @@
             removeImage();
         }
 
-        function renderTable() {
+        function renderTable(highlightChanges = false) {
             const tbody = document.getElementById('tableBody');
             const products = currentLote.products;
             
@@ -1005,7 +1102,9 @@
                                 <div class="empty-icon">📦</div>
                                 <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
                                 <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
-                                    CONFIGURA LOS ENVÍOS (PROVEEDOR + TRASLADO) + IMPUESTOS Y AGREGA PRODUCTOS
+                                    1. AGREGA EL ENVÍO DEL PROVEEDOR<br>
+                                    2. COMIENZA A AGREGAR PRODUCTOS<br>
+                                    3. DESPUÉS AGREGA ENVÍO TRASLADO E IMPUESTOS
                                 </div>
                             </div>
                         </td>
@@ -1017,8 +1116,9 @@
             
             let html = '';
             products.forEach((p, index) => {
+                const highlightClass = highlightChanges ? 'updated' : '';
                 html += `
-                    <tr>
+                    <tr class="${highlightClass}">
                         <td><span class="badge">${index + 1}</span></td>
                         <td>
                             ${p.image ? 
@@ -1030,9 +1130,9 @@
                             <div class="product-meta">${currentLote.id}</div>
                         </td>
                         <td class="numeric" style="font-weight: 800;">$${p.cost.toFixed(2)}</td>
-                        <td class="numeric" style="color: #888; font-size: 11px;">+$${p.vendorShippingShare.toFixed(2)}</td>
-                        <td class="numeric" style="color: #888; font-size: 11px;">+$${p.shippingShare.toFixed(2)}</td>
-                        <td class="numeric" style="color: #888; font-size: 11px;">+$${p.taxShare.toFixed(2)}</td>
+                        <td class="numeric" style="color: #2e7d32; font-size: 11px; font-weight: 700;">+$${p.vendorShippingShare.toFixed(2)}</td>
+                        <td class="numeric" style="color: #666; font-size: 11px;">+$${p.shippingShare.toFixed(2)}</td>
+                        <td class="numeric" style="color: #666; font-size: 11px;">+$${p.taxShare.toFixed(2)}</td>
                         <td class="numeric" style="font-weight: 900; background: #f5f5f5; font-size: 14px;">$${p.realCost.toFixed(2)}</td>
                         <td class="numeric" style="font-weight: 800;">$${p.price.toFixed(2)}</td>
                         <td class="numeric ${p.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size: 14px;">
@@ -1050,6 +1150,15 @@
             
             tbody.innerHTML = html;
             updateSummary();
+            
+            // Quitar highlight después de 1 segundo
+            if (highlightChanges) {
+                setTimeout(() => {
+                    document.querySelectorAll('tr.updated').forEach(row => {
+                        row.classList.remove('updated');
+                    });
+                }, 1000);
+            }
         }
 
         function updateSummary() {
@@ -1099,6 +1208,7 @@
         function deleteProduct(id) {
             if (!confirm('¿ELIMINAR ESTE PRODUCTO?')) return;
             currentLote.products = currentLote.products.filter(p => p.id !== id);
+            if (currentLote.products.length === 0) hasProducts = false;
             recalculateAllProducts();
             saveData();
         }
@@ -1118,12 +1228,23 @@
                 taxes: 0,
                 products: []
             };
+            hasProducts = false;
             
             document.getElementById('loteId').value = currentLote.id;
             document.getElementById('loteVendorShipping').value = '';
             document.getElementById('loteShipping').value = '';
             document.getElementById('loteTaxes').value = '';
             document.getElementById('currentLoteId').textContent = currentLote.id.toUpperCase();
+            
+            // Reset visual indicators
+            document.getElementById('trasladoCostBox').style.opacity = '0.4';
+            document.getElementById('impuestoCostBox').style.opacity = '0.4';
+            document.getElementById('rowTraslado').style.opacity = '0.4';
+            document.getElementById('rowImpuesto').style.opacity = '0.4';
+            document.getElementById('vendorCostBox').classList.remove('highlight');
+            document.getElementById('footerShip').style.color = '#999';
+            document.getElementById('footerTaxes').style.color = '#999';
+            document.getElementById('updateNotice').classList.remove('active');
             
             updateLoteCosts();
             renderTable();
@@ -1148,7 +1269,7 @@
         async function saveData() {
             await localforage.setItem('currentLote', currentLote);
             await localforage.setItem('allLotes', allLotes);
-            await localforage.setItem('loteCounter', loteCounter);
+            await localforById('loteCounter', loteCounter);
         }
 
         async function loadData() {
@@ -1158,11 +1279,28 @@
             
             if (savedCurrent) {
                 currentLote = savedCurrent;
+                hasProducts = currentLote.products.length > 0;
                 document.getElementById('loteId').value = currentLote.id;
                 document.getElementById('loteVendorShipping').value = currentLote.vendorShipping || '';
                 document.getElementById('loteShipping').value = currentLote.shipping || '';
                 document.getElementById('loteTaxes').value = currentLote.taxes || '';
                 document.getElementById('currentLoteId').textContent = currentLote.id.toUpperCase();
+                
+                // Restore visual states
+                if (currentLote.vendorShipping > 0) {
+                    document.getElementById('vendorCostBox').classList.add('highlight');
+                    document.getElementById('rowVendor').style.opacity = '1';
+                }
+                if (currentLote.shipping > 0) {
+                    document.getElementById('trasladoCostBox').style.opacity = '1';
+                    document.getElementById('rowTraslado').style.opacity = '1';
+                    document.getElementById('footerShip').style.color = '#1a1a1a';
+                }
+                if (currentLote.taxes > 0) {
+                    document.getElementById('impuestoCostBox').style.opacity = '1';
+                    document.getElementById('rowImpuesto').style.opacity = '1';
+                    document.getElementById('footerTaxes').style.color = '#1a1a1a';
+                }
             }
             
             if (savedAll) allLotes = savedAll;
@@ -1182,12 +1320,23 @@
             };
             allLotes = [];
             loteCounter = 1;
+            hasProducts = false;
             
             document.getElementById('loteId').value = 'Lote-001';
             document.getElementById('loteVendorShipping').value = '';
             document.getElementById('loteShipping').value = '';
             document.getElementById('loteTaxes').value = '';
             document.getElementById('currentLoteId').textContent = 'LOTE-001';
+            
+            // Reset visuals
+            document.getElementById('trasladoCostBox').style.opacity = '0.4';
+            document.getElementById('impuestoCostBox').style.opacity = '0.4';
+            document.getElementById('rowTraslado').style.opacity = '0.4';
+            document.getElementById('rowImpuesto').style.opacity = '0.4';
+            document.getElementById('vendorCostBox').classList.remove('highlight');
+            document.getElementById('footerShip').style.color = '#999';
+            document.getElementById('footerTaxes').style.color = '#999';
+            document.getElementById('updateNotice').classList.remove('active');
             
             await localforage.removeItem('currentLote');
             await localforage.removeItem('allLotes');

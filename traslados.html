@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Traslados - Actualización Progresiva de Costos</title>
+    <title>Traslados - Gestión por Pasos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -93,68 +93,131 @@
 
         .left-panel {
             display: grid;
-            grid-template-rows: auto auto 1fr;
+            grid-template-rows: auto 1fr;
             overflow: hidden;
             background: #fff;
             border-right: 1px solid #e0e0e0;
         }
 
-        .lote-config {
+        /* Step Buttons Section */
+        .steps-section {
             background: #fafafa;
             padding: 20px;
             border-bottom: 2px solid #e0e0e0;
         }
 
         .section-title {
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #444;
+            color: #666;
             margin-bottom: 15px;
             font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
-        .config-row {
+        .step-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
 
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            color: #333;
-            margin-bottom: 4px;
-            font-weight: 700;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px 12px;
+        .step-btn {
+            padding: 20px 15px;
             border: 2px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #1a1a1a;
+        .step-btn:hover {
+            border-color: #999;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        .form-group input.updated {
+        .step-btn.active {
             border-color: #2e7d32;
             background: #e8f5e9;
         }
 
-        .costs-display {
+        .step-btn.completed {
+            border-color: #1a1a1a;
+            background: #f5f5f5;
+        }
+
+        .step-btn.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #2e7d32;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #1a1a1a;
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .step-btn.active .step-number {
+            background: #2e7d32;
+        }
+
+        .step-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .step-desc {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .step-status {
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* Cost Summary */
+        .cost-summary {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
@@ -165,19 +228,19 @@
 
         .cost-item {
             text-align: center;
-            padding: 12px;
+            padding: 10px;
             background: #fff;
             border-radius: 4px;
             border: 2px solid #e0e0e0;
         }
 
-        .cost-item.highlight {
+        .cost-item.active {
             border-color: #2e7d32;
             background: #e8f5e9;
         }
 
         .cost-label {
-            font-size: 10px;
+            font-size: 9px;
             color: #666;
             text-transform: uppercase;
             margin-bottom: 4px;
@@ -185,37 +248,25 @@
         }
 
         .cost-value {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 800;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
         }
 
-        .update-notice {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 4px;
-            padding: 12px;
-            margin-top: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #856404;
-            display: none;
-        }
-
-        .update-notice.active {
-            display: block;
-        }
-
-        .update-notice.success {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-
+        /* Product Form */
         .product-form {
             padding: 20px;
             overflow-y: auto;
+        }
+
+        .form-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #444;
+            margin-bottom: 15px;
+            font-weight: 700;
         }
 
         .image-upload {
@@ -268,6 +319,32 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: #333;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a1a1a;
         }
 
         .calculated {
@@ -347,6 +424,7 @@
             display: none;
         }
 
+        /* Right Panel */
         .right-panel {
             display: grid;
             grid-template-rows: auto 1fr auto;
@@ -556,7 +634,180 @@
             opacity: 0.3;
         }
 
-        .modal {
+        /* Modals */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            background: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-btn.primary {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .modal-btn.secondary {
+            background: #fff;
+            color: #666;
+            border: 2px solid #ddd;
+        }
+
+        .modal-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #0d47a1;
+            font-weight: 600;
+        }
+
+        .info-box.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .info-box.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .form-row {
+            margin-bottom: 20px;
+        }
+
+        .form-row label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .form-row input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-row input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+        }
+
+        .current-value {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #666;
+        }
+
+        .current-value strong {
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Image Modal */
+        .image-modal {
             display: none;
             position: fixed;
             top: 0;
@@ -564,23 +815,23 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.95);
-            z-index: 1000;
+            z-index: 2000;
             justify-content: center;
             align-items: center;
         }
 
-        .modal.active {
+        .image-modal.active {
             display: flex;
         }
 
-        .modal img {
+        .image-modal img {
             max-width: 90%;
             max-height: 90%;
             object-fit: contain;
             border: 4px solid #fff;
         }
 
-        .modal-close {
+        .image-modal-close {
             position: absolute;
             top: 30px;
             right: 30px;
@@ -612,7 +863,7 @@
 <body>
     <div class="app">
         <header class="header">
-            <h1>📦 TRASLADOS - ACTUALIZACIÓN PROGRESIVA</h1>
+            <h1>📦 TRASLADOS - GESTIÓN POR PASOS</h1>
             <div class="header-actions">
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
@@ -621,76 +872,51 @@
         </header>
 
         <div class="main">
+            <!-- Left Panel -->
             <div class="left-panel">
-                <!-- Paso 1: Configuración inicial -->
-                <div class="lote-config">
-                    <div class="section-title">
-                        <span>PASO 1</span>
-                        DATOS INICIALES DEL LOTE
-                    </div>
+                <!-- Step Buttons -->
+                <div class="steps-section">
+                    <div class="section-title">CONFIGURACIÓN DEL LOTE</div>
                     
-                    <div class="config-row">
-                        <div class="form-group">
-                            <label>ID DEL LOTE</label>
-                            <input type="text" id="loteId" value="Lote-001" readonly style="background: #e8e8e8; font-weight: 800;">
-                        </div>
-                        <div class="form-group">
-                            <label>FECHA</label>
-                            <input type="text" id="loteDate" readonly style="background: #e8e8e8; font-weight: 700;">
-                        </div>
+                    <div class="step-buttons">
+                        <button class="step-btn" id="btnStep1" onclick="openStep1Modal()">
+                            <div class="step-number">1</div>
+                            <div class="step-title">Datos Iniciales</div>
+                            <div class="step-desc">Envío del proveedor y datos básicos del lote</div>
+                            <div class="step-status status-pending" id="statusStep1">PENDIENTE</div>
+                        </button>
+
+                        <button class="step-btn" id="btnStep2" onclick="openStep2Modal()">
+                            <div class="step-number">2</div>
+                            <div class="step-title">Costos Finales</div>
+                            <div class="step-desc">Envío traslado e impuestos (agregar después)</div>
+                            <div class="step-status status-pending" id="statusStep2">OPCIONAL</div>
+                        </button>
                     </div>
 
-                    <div class="form-group">
-                        <label>ENVÍO DEL PROVEEDOR ($) - AGREGAR PRIMERO</label>
-                        <input type="number" id="loteVendorShipping" placeholder="0.00" step="0.01" oninput="updateLoteCosts('vendor')">
-                    </div>
-
-                    <div class="costs-display">
-                        <div class="cost-item">
+                    <div class="cost-summary">
+                        <div class="cost-item" id="boxProducts">
                             <div class="cost-label">PRODUCTOS</div>
                             <div class="cost-value" id="countProducts">0</div>
                         </div>
-                        <div class="cost-item" id="vendorCostBox">
-                            <div class="cost-label">ENV. PROV/UNID</div>
-                            <div class="cost-value" id="vendorShippingPerUnit">$0.00</div>
+                        <div class="cost-item" id="boxVendor">
+                            <div class="cost-label">ENV. PROVEEDOR</div>
+                            <div class="cost-value" id="displayVendorShip">$0.00</div>
                         </div>
-                        <div class="cost-item" id="trasladoCostBox" style="opacity: 0.4;">
-                            <div class="cost-label">ENV. TRAS/UNID</div>
-                            <div class="cost-value" id="shippingPerUnit">$0.00</div>
+                        <div class="cost-item" id="boxTraslado">
+                            <div class="cost-label">ENV. TRASLADO</div>
+                            <div class="cost-value" id="displayShip">$0.00</div>
                         </div>
-                        <div class="cost-item" id="impuestoCostBox" style="opacity: 0.4;">
-                            <div class="cost-label">IMPUESTO/UNID</div>
-                            <div class="cost-value" id="taxPerUnit">$0.00</div>
+                        <div class="cost-item" id="boxImpuesto">
+                            <div class="cost-label">IMPUESTOS</div>
+                            <div class="cost-value" id="displayTaxes">$0.00</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Paso 2: Actualización posterior -->
-                <div class="lote-config" style="background: #fff8e1; border-bottom: 3px solid #ffc107;">
-                    <div class="section-title">
-                        <span style="background: #ffc107; color: #1a1a1a; padding: 2px 8px; border-radius: 4px;">PASO 2</span>
-                        AGREGAR DESPUÉS (OPCIONAL AHORA)
-                    </div>
-                    
-                    <div class="config-row">
-                        <div class="form-group">
-                            <label>ENVÍO TRASLADO ($)</label>
-                            <input type="number" id="loteShipping" placeholder="Agregar después..." step="0.01" oninput="updateLoteCosts('traslado')">
-                        </div>
-                        <div class="form-group">
-                            <label>IMPUESTOS ($)</label>
-                            <input type="number" id="loteTaxes" placeholder="Agregar después..." step="0.01" oninput="updateLoteCosts('impuestos')">
-                        </div>
-                    </div>
-
-                    <div class="update-notice" id="updateNotice">
-                        ⚠️ Se actualizarán automáticamente todos los productos existentes con los nuevos costos
-                    </div>
-                </div>
-
-                <!-- Formulario de producto -->
+                <!-- Product Form -->
                 <div class="product-form">
-                    <div class="section-title">AGREGAR PRODUCTO</div>
+                    <div class="form-section-title">AGREGAR PRODUCTO</div>
                     
                     <input type="file" id="imageInput" accept="image/*" class="hidden">
                     <div class="image-upload" onclick="document.getElementById('imageInput').click()">
@@ -734,7 +960,7 @@
                             <span class="breakdown-label">COSTO DE COMPRA:</span>
                             <span class="breakdown-value" id="breakdownCost">$0.00</span>
                         </div>
-                        <div class="breakdown-row" id="rowVendor" style="color: #2e7d32;">
+                        <div class="breakdown-row" id="rowVendor">
                             <span class="breakdown-label">+ ENVÍO PROVEEDOR:</span>
                             <span class="breakdown-value" id="breakdownVendorShip">+$0.00</span>
                         </div>
@@ -762,6 +988,7 @@
                 </div>
             </div>
 
+            <!-- Right Panel -->
             <div class="right-panel">
                 <div class="summary-bar">
                     <div class="summary-item">
@@ -810,9 +1037,9 @@
                                         <div class="empty-icon">📦</div>
                                         <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
                                         <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
-                                            1. AGREGA EL ENVÍO DEL PROVEEDOR<br>
-                                            2. COMIENZA A AGREGAR PRODUCTOS<br>
-                                            3. DESPUÉS AGREGA ENVÍO TRASLADO E IMPUESTOS
+                                            1. CLICK EN "PASO 1" PARA CONFIGURAR EL LOTE<br>
+                                            2. AGREGA PRODUCTOS UNO POR UNO<br>
+                                            3. DESPUÉS CLICK EN "PASO 2" PARA COSTOS FINALES
                                         </div>
                                     </div>
                                 </td>
@@ -837,14 +1064,116 @@
         </div>
     </div>
 
-    <div class="modal" id="imageModal" onclick="closeModal()">
-        <span class="modal-close">&times;</span>
+    <!-- Modal Paso 1 -->
+    <div class="modal-overlay" id="modalStep1">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📋 PASO 1: DATOS INICIALES DEL LOTE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalStep1')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box">
+                    Configure primero el envío que cobra el proveedor/vendedor donde compra los productos.
+                </div>
+                
+                <div class="form-row">
+                    <label>ID DEL LOTE</label>
+                    <input type="text" id="modalLoteId" readonly style="background: #f0f0f0;">
+                </div>
+
+                <div class="form-row">
+                    <label>FECHA</label>
+                    <input type="text" id="modalLoteDate" readonly style="background: #f0f0f0;">
+                </div>
+
+                <div class="form-row">
+                    <label>ENVÍO DEL PROVEEDOR ($)</label>
+                    <input type="number" id="modalVendorShipping" placeholder="0.00" step="0.01" autofocus>
+                </div>
+
+                <div class="current-value" id="currentVendorValue" style="display: none;">
+                    Valor actual: <strong>$0.00</strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalStep1')">CANCELAR</button>
+                <button class="modal-btn primary" onclick="saveStep1()">GUARDAR Y CONTINUAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Paso 2 -->
+    <div class="modal-overlay" id="modalStep2">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📋 PASO 2: COSTOS FINALES DEL LOTE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalStep2')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box warning" id="updateWarning">
+                    ⚠️ Al modificar estos valores se recalcularán automáticamente todos los productos existentes.
+                </div>
+                
+                <div class="info-box success" id="updateSuccess" style="display: none;">
+                    ✅ Valores actualizados correctamente.
+                </div>
+
+                <div class="form-row">
+                    <label>ENVÍO DE TRASLADO ($)</label>
+                    <input type="number" id="modalShipping" placeholder="0.00" step="0.01">
+                    <div class="current-value" id="currentShipValue">
+                        Valor actual: <strong>$0.00</strong>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label>IMPUESTOS ($)</label>
+                    <input type="number" id="modalTaxes" placeholder="0.00" step="0.01">
+                    <div class="current-value" id="currentTaxValue">
+                        Valor actual: <strong>$0.00</strong>
+                    </div>
+                </div>
+
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #666; margin-bottom: 10px; text-transform: uppercase;">
+                        Resumen de Costos por Unidad
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                        <div>
+                            <span style="color: #666;">Envío Proveedor:</span>
+                            <strong id="summaryVendorPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                        </div>
+                        <div>
+                            <span style="color: #666;">Envío Traslado:</span>
+                            <strong id="summaryShipPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                        </div>
+                        <div>
+                            <span style="color: #666;">Impuestos:</span>
+                            <strong id="summaryTaxPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                        </div>
+                        <div style="background: #1a1a1a; color: #fff; padding: 8px; border-radius: 4px; text-align: center;">
+                            <span style="font-size: 10px;">TOTAL EXTRA/UNID</span>
+                            <strong id="summaryTotalPerUnit" style="display: block; font-family: monospace; font-size: 18px;">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalStep2')">CANCELAR</button>
+                <button class="modal-btn primary" onclick="saveStep2()">ACTUALIZAR COSTOS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+        <span class="image-modal-close">&times;</span>
         <img id="modalImage" src="" alt="Producto">
     </div>
 
     <script>
         localforage.config({
-            name: 'TrasladosProgresivo',
+            name: 'TrasladosPasos',
             storeName: 'productos'
         });
 
@@ -861,15 +1190,157 @@
         let currentImage = null;
         let editingProductId = null;
         let loteCounter = 1;
-        let hasProducts = false;
+        let step1Completed = false;
 
         window.onload = async function() {
-            document.getElementById('loteDate').value = new Date().toLocaleDateString();
+            document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
             await loadData();
-            updateLoteCosts();
+            updateUI();
             renderTable();
         };
 
+        // Modal Functions
+        function openStep1Modal() {
+            document.getElementById('modalLoteId').value = currentLote.id;
+            document.getElementById('modalLoteDate').value = currentLote.date;
+            document.getElementById('modalVendorShipping').value = currentLote.vendorShipping || '';
+            
+            const currentVal = document.getElementById('currentVendorValue');
+            if (currentLote.vendorShipping > 0) {
+                currentVal.style.display = 'block';
+                currentVal.innerHTML = `Valor actual: <strong>$${currentLote.vendorShipping.toFixed(2)}</strong>`;
+            } else {
+                currentVal.style.display = 'none';
+            }
+            
+            document.getElementById('modalStep1').classList.add('active');
+            setTimeout(() => document.getElementById('modalVendorShipping').focus(), 100);
+        }
+
+        function openStep2Modal() {
+            document.getElementById('modalShipping').value = currentLote.shipping || '';
+            document.getElementById('modalTaxes').value = currentLote.taxes || '';
+            
+            // Actualizar valores actuales mostrados
+            document.getElementById('currentShipValue').innerHTML = `Valor actual: <strong>$${currentLote.shipping.toFixed(2)}</strong>`;
+            document.getElementById('currentTaxValue').innerHTML = `Valor actual: <strong>$${currentLote.taxes.toFixed(2)}</strong>`;
+            
+            // Calcular y mostrar por unidad
+            const count = currentLote.products.length || 1;
+            const vendorPerUnit = currentLote.vendorShipping / count;
+            const shipPerUnit = currentLote.shipping / count;
+            const taxPerUnit = currentLote.taxes / count;
+            
+            document.getElementById('summaryVendorPerUnit').textContent = '$' + vendorPerUnit.toFixed(2);
+            document.getElementById('summaryShipPerUnit').textContent = '$' + shipPerUnit.toFixed(2);
+            document.getElementById('summaryTaxPerUnit').textContent = '$' + taxPerUnit.toFixed(2);
+            document.getElementById('summaryTotalPerUnit').textContent = '$' + (vendorPerUnit + shipPerUnit + taxPerUnit).toFixed(2);
+            
+            // Resetear mensajes
+            document.getElementById('updateWarning').style.display = currentLote.products.length > 0 ? 'block' : 'none';
+            document.getElementById('updateSuccess').style.display = 'none';
+            
+            document.getElementById('modalStep2').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function saveStep1() {
+            const vendorShip = parseFloat(document.getElementById('modalVendorShipping').value) || 0;
+            
+            if (vendorShip <= 0) {
+                alert('DEBES INGRESAR EL ENVÍO DEL PROVEEDOR');
+                return;
+            }
+            
+            currentLote.vendorShipping = vendorShip;
+            step1Completed = true;
+            
+            closeModal('modalStep1');
+            updateUI();
+            recalculateAllProducts();
+            saveData();
+        }
+
+        function saveStep2() {
+            const ship = parseFloat(document.getElementById('modalShipping').value) || 0;
+            const taxes = parseFloat(document.getElementById('modalTaxes').value) || 0;
+            
+            currentLote.shipping = ship;
+            currentLote.taxes = taxes;
+            
+            closeModal('modalStep2');
+            updateUI();
+            
+            // Recalcular y mostrar éxito
+            if (currentLote.products.length > 0) {
+                recalculateAllProducts(true);
+                document.getElementById('updateSuccess').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('updateSuccess').style.display = 'none';
+                }, 2000);
+            }
+            
+            saveData();
+        }
+
+        function updateUI() {
+            // Actualizar botones de pasos
+            const btnStep1 = document.getElementById('btnStep1');
+            const btnStep2 = document.getElementById('btnStep2');
+            const statusStep1 = document.getElementById('statusStep1');
+            const statusStep2 = document.getElementById('statusStep2');
+            
+            if (currentLote.vendorShipping > 0) {
+                btnStep1.classList.add('completed');
+                btnStep1.classList.remove('active');
+                statusStep1.textContent = 'COMPLETADO';
+                statusStep1.className = 'step-status status-done';
+            } else {
+                btnStep1.classList.remove('completed');
+                statusStep1.textContent = 'PENDIENTE';
+                statusStep1.className = 'step-status status-pending';
+            }
+            
+            if (currentLote.shipping > 0 || currentLote.taxes > 0) {
+                btnStep2.classList.add('completed');
+                statusStep2.textContent = 'AGREGADO';
+                statusStep2.className = 'step-status status-done';
+            } else {
+                btnStep2.classList.remove('completed');
+                statusStep2.textContent = 'OPCIONAL';
+                statusStep2.className = 'step-status status-pending';
+            }
+            
+            // Actualizar cajas de costos
+            document.getElementById('displayVendorShip').textContent = '$' + currentLote.vendorShipping.toFixed(2);
+            document.getElementById('displayShip').textContent = '$' + currentLote.shipping.toFixed(2);
+            document.getElementById('displayTaxes').textContent = '$' + currentLote.taxes.toFixed(2);
+            document.getElementById('countProducts').textContent = currentLote.products.length;
+            
+            // Destacar cajas activas
+            if (currentLote.vendorShipping > 0) {
+                document.getElementById('boxVendor').classList.add('active');
+                document.getElementById('rowVendor').style.opacity = '1';
+                document.getElementById('footerVendorShip').textContent = '$' + currentLote.vendorShipping.toFixed(2);
+            }
+            if (currentLote.shipping > 0) {
+                document.getElementById('boxTraslado').classList.add('active');
+                document.getElementById('rowTraslado').style.opacity = '1';
+                document.getElementById('footerShip').style.color = '#1a1a1a';
+                document.getElementById('footerShip').textContent = '$' + currentLote.shipping.toFixed(2);
+            }
+            if (currentLote.taxes > 0) {
+                document.getElementById('boxImpuesto').classList.add('active');
+                document.getElementById('rowImpuesto').style.opacity = '1';
+                document.getElementById('footerTaxes').style.color = '#1a1a1a';
+                document.getElementById('footerTaxes').textContent = '$' + currentLote.taxes.toFixed(2);
+            }
+        }
+
+        // Image handling
         document.getElementById('imageInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -899,75 +1370,9 @@
             document.getElementById('removeImage').classList.remove('active');
         }
 
-        function updateLoteCosts(source) {
-            const vendorShip = parseFloat(document.getElementById('loteVendorShipping').value) || 0;
-            const ship = parseFloat(document.getElementById('loteShipping').value) || 0;
-            const taxes = parseFloat(document.getElementById('loteTaxes').value) || 0;
-            const count = currentLote.products.length || 1;
-            
-            // Detectar si estamos agregando costos después de tener productos
-            const isUpdatingExisting = hasProducts && (source === 'traslado' || source === 'impuestos');
-            
-            currentLote.vendorShipping = vendorShip;
-            currentLote.shipping = ship;
-            currentLote.taxes = taxes;
-            
-            const vendorPerUnit = count > 0 ? vendorShip / count : 0;
-            const shipPerUnit = count > 0 ? ship / count : 0;
-            const taxPerUnit = count > 0 ? taxes / count : 0;
-            
-            // Actualizar visualización
-            document.getElementById('countProducts').textContent = currentLote.products.length;
-            document.getElementById('vendorShippingPerUnit').textContent = '$' + vendorPerUnit.toFixed(2);
-            document.getElementById('shippingPerUnit').textContent = '$' + shipPerUnit.toFixed(2);
-            document.getElementById('taxPerUnit').textContent = '$' + taxPerUnit.toFixed(2);
-            
-            document.getElementById('footerVendorShip').textContent = '$' + vendorShip.toFixed(2);
-            document.getElementById('footerShip').textContent = '$' + ship.toFixed(2);
-            document.getElementById('footerTaxes').textContent = '$' + taxes.toFixed(2);
-            
-            // Destacar visualmente los costos activos
-            if (vendorShip > 0) {
-                document.getElementById('vendorCostBox').classList.add('highlight');
-                document.getElementById('rowVendor').style.opacity = '1';
-            }
-            if (ship > 0) {
-                document.getElementById('trasladoCostBox').style.opacity = '1';
-                document.getElementById('rowTraslado').style.opacity = '1';
-                document.getElementById('footerShip').style.color = '#1a1a1a';
-            }
-            if (taxes > 0) {
-                document.getElementById('impuestoCostBox').style.opacity = '1';
-                document.getElementById('rowImpuesto').style.opacity = '1';
-                document.getElementById('footerTaxes').style.color = '#1a1a1a';
-            }
-            
-            // Mostrar aviso de actualización si se agregan costos después
-            const notice = document.getElementById('updateNotice');
-            if (isUpdatingExisting) {
-                notice.textContent = `✅ Se han actualizado ${currentLote.products.length} productos con los nuevos costos de ${source.toUpperCase()}`;
-                notice.classList.add('success', 'active');
-                
-                // Quitar clase success después de 3 segundos
-                setTimeout(() => {
-                    notice.classList.remove('success');
-                    notice.textContent = '⚠️ Se actualizarán automáticamente todos los productos existentes con los nuevos costos';
-                }, 3000);
-            } else if (currentLote.products.length > 0) {
-                notice.classList.add('active');
-            } else {
-                notice.classList.remove('active');
-            }
-            
-            // Recalcular todos los productos existentes
-            recalculateAllProducts(isUpdatingExisting);
-        }
-
-        function recalculateAllProducts(highlightChanges = false) {
+        function recalculateAllProducts(highlight = false) {
             const count = currentLote.products.length;
             if (count === 0) return;
-            
-            hasProducts = true;
             
             const vendorPerUnit = currentLote.vendorShipping / count;
             const shipPerUnit = currentLote.shipping / count;
@@ -981,8 +1386,9 @@
                 p.netProfit = p.price - p.realCost;
             });
             
-            renderTable(highlightChanges);
+            renderTable(highlight);
             updateSummary();
+            updateUI();
         }
 
         function calculateProduct() {
@@ -1019,6 +1425,12 @@
         }
 
         function saveProduct() {
+            if (!step1Completed && currentLote.vendorShipping <= 0) {
+                alert('PRIMERO DEBES CONFIGURAR EL PASO 1 (ENVÍO DEL PROVEEDOR)');
+                openStep1Modal();
+                return;
+            }
+            
             const name = document.getElementById('productName').value.trim();
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
@@ -1063,10 +1475,8 @@
                 document.getElementById('cancelBtn').classList.add('hidden');
             } else {
                 currentLote.products.push(product);
-                hasProducts = true;
             }
             
-            // Recalcular todos con la nueva distribución
             recalculateAllProducts();
             clearForm();
             saveData();
@@ -1087,7 +1497,7 @@
             removeImage();
         }
 
-        function renderTable(highlightChanges = false) {
+        function renderTable(highlight = false) {
             const tbody = document.getElementById('tableBody');
             const products = currentLote.products;
             
@@ -1102,9 +1512,9 @@
                                 <div class="empty-icon">📦</div>
                                 <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
                                 <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
-                                    1. AGREGA EL ENVÍO DEL PROVEEDOR<br>
-                                    2. COMIENZA A AGREGAR PRODUCTOS<br>
-                                    3. DESPUÉS AGREGA ENVÍO TRASLADO E IMPUESTOS
+                                    1. CLICK EN "PASO 1" PARA CONFIGURAR EL LOTE<br>
+                                    2. AGREGA PRODUCTOS UNO POR UNO<br>
+                                    3. DESPUÉS CLICK EN "PASO 2" PARA COSTOS FINALES
                                 </div>
                             </div>
                         </td>
@@ -1116,13 +1526,13 @@
             
             let html = '';
             products.forEach((p, index) => {
-                const highlightClass = highlightChanges ? 'updated' : '';
+                const highlightClass = highlight ? 'updated' : '';
                 html += `
                     <tr class="${highlightClass}">
                         <td><span class="badge">${index + 1}</span></td>
                         <td>
                             ${p.image ? 
-                                `<img src="${p.image}" class="product-img" onclick="showModal('${p.image}')">` : 
+                                `<img src="${p.image}" class="product-img" onclick="showImageModal('${p.image}')">` : 
                                 '<div style="width:45px;height:45px;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:18px; font-weight: 700;">📦</div>'}
                         </td>
                         <td>
@@ -1151,8 +1561,7 @@
             tbody.innerHTML = html;
             updateSummary();
             
-            // Quitar highlight después de 1 segundo
-            if (highlightChanges) {
+            if (highlight) {
                 setTimeout(() => {
                     document.querySelectorAll('tr.updated').forEach(row => {
                         row.classList.remove('updated');
@@ -1208,7 +1617,7 @@
         function deleteProduct(id) {
             if (!confirm('¿ELIMINAR ESTE PRODUCTO?')) return;
             currentLote.products = currentLote.products.filter(p => p.id !== id);
-            if (currentLote.products.length === 0) hasProducts = false;
+            if (currentLote.products.length === 0) step1Completed = false;
             recalculateAllProducts();
             saveData();
         }
@@ -1228,25 +1637,26 @@
                 taxes: 0,
                 products: []
             };
-            hasProducts = false;
+            step1Completed = false;
             
-            document.getElementById('loteId').value = currentLote.id;
-            document.getElementById('loteVendorShipping').value = '';
-            document.getElementById('loteShipping').value = '';
-            document.getElementById('loteTaxes').value = '';
-            document.getElementById('currentLoteId').textContent = currentLote.id.toUpperCase();
+            // Reset UI
+            document.getElementById('btnStep1').classList.remove('completed', 'active');
+            document.getElementById('btnStep2').classList.remove('completed');
+            document.getElementById('statusStep1').textContent = 'PENDIENTE';
+            document.getElementById('statusStep1').className = 'step-status status-pending';
+            document.getElementById('statusStep2').textContent = 'OPCIONAL';
+            document.getElementById('statusStep2').className = 'step-status status-pending';
             
-            // Reset visual indicators
-            document.getElementById('trasladoCostBox').style.opacity = '0.4';
-            document.getElementById('impuestoCostBox').style.opacity = '0.4';
+            // Reset cost boxes
+            ['boxVendor', 'boxTraslado', 'boxImpuesto'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            
+            document.getElementById('rowVendor').style.opacity = '1';
             document.getElementById('rowTraslado').style.opacity = '0.4';
             document.getElementById('rowImpuesto').style.opacity = '0.4';
-            document.getElementById('vendorCostBox').classList.remove('highlight');
-            document.getElementById('footerShip').style.color = '#999';
-            document.getElementById('footerTaxes').style.color = '#999';
-            document.getElementById('updateNotice').classList.remove('active');
             
-            updateLoteCosts();
+            updateUI();
             renderTable();
             clearForm();
         }
@@ -1269,7 +1679,7 @@
         async function saveData() {
             await localforage.setItem('currentLote', currentLote);
             await localforage.setItem('allLotes', allLotes);
-            await localforById('loteCounter', loteCounter);
+            await localforage.setItem('loteCounter', loteCounter);
         }
 
         async function loadData() {
@@ -1279,28 +1689,7 @@
             
             if (savedCurrent) {
                 currentLote = savedCurrent;
-                hasProducts = currentLote.products.length > 0;
-                document.getElementById('loteId').value = currentLote.id;
-                document.getElementById('loteVendorShipping').value = currentLote.vendorShipping || '';
-                document.getElementById('loteShipping').value = currentLote.shipping || '';
-                document.getElementById('loteTaxes').value = currentLote.taxes || '';
-                document.getElementById('currentLoteId').textContent = currentLote.id.toUpperCase();
-                
-                // Restore visual states
-                if (currentLote.vendorShipping > 0) {
-                    document.getElementById('vendorCostBox').classList.add('highlight');
-                    document.getElementById('rowVendor').style.opacity = '1';
-                }
-                if (currentLote.shipping > 0) {
-                    document.getElementById('trasladoCostBox').style.opacity = '1';
-                    document.getElementById('rowTraslado').style.opacity = '1';
-                    document.getElementById('footerShip').style.color = '#1a1a1a';
-                }
-                if (currentLote.taxes > 0) {
-                    document.getElementById('impuestoCostBox').style.opacity = '1';
-                    document.getElementById('rowImpuesto').style.opacity = '1';
-                    document.getElementById('footerTaxes').style.color = '#1a1a1a';
-                }
+                step1Completed = currentLote.vendorShipping > 0;
             }
             
             if (savedAll) allLotes = savedAll;
@@ -1320,39 +1709,27 @@
             };
             allLotes = [];
             loteCounter = 1;
-            hasProducts = false;
+            step1Completed = false;
             
-            document.getElementById('loteId').value = 'Lote-001';
-            document.getElementById('loteVendorShipping').value = '';
-            document.getElementById('loteShipping').value = '';
-            document.getElementById('loteTaxes').value = '';
-            document.getElementById('currentLoteId').textContent = 'LOTE-001';
-            
-            // Reset visuals
-            document.getElementById('trasladoCostBox').style.opacity = '0.4';
-            document.getElementById('impuestoCostBox').style.opacity = '0.4';
-            document.getElementById('rowTraslado').style.opacity = '0.4';
-            document.getElementById('rowImpuesto').style.opacity = '0.4';
-            document.getElementById('vendorCostBox').classList.remove('highlight');
-            document.getElementById('footerShip').style.color = '#999';
-            document.getElementById('footerTaxes').style.color = '#999';
-            document.getElementById('updateNotice').classList.remove('active');
+            // Reset all UI
+            document.getElementById('btnStep1').classList.remove('completed', 'active');
+            document.getElementById('btnStep2').classList.remove('completed');
             
             await localforage.removeItem('currentLote');
             await localforage.removeItem('allLotes');
             await localforage.removeItem('loteCounter');
             
-            updateLoteCosts();
+            updateUI();
             renderTable();
             clearForm();
         }
 
-        function showModal(src) {
+        function showImageModal(src) {
             document.getElementById('modalImage').src = src;
             document.getElementById('imageModal').classList.add('active');
         }
 
-        function closeModal() {
+        function closeImageModal() {
             document.getElementById('imageModal').classList.remove('active');
         }
 
@@ -1424,7 +1801,7 @@
                 theme: 'plain',
                 headStyles: { 
                     fillColor: [230, 230, 230],
-                    textColor: 0,
+                    textTextColor: 0,
                     fontSize: 10,
                     fontStyle: 'bold',
                     halign: 'center'
@@ -1450,6 +1827,15 @@
             
             doc.save(`${currentLote.id.toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
         }
+
+        // Close modals on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal('modalStep1');
+                closeModal('modalStep2');
+                closeImageModal();
+            }
+        });
     </script>
 </body>
 </html>

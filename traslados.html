@@ -72,6 +72,68 @@
             font-weight: 700;
         }
 
+        .btn-sm.kiosk-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.6);
+            font-size: 16px;
+            padding: 8px 12px;
+        }
+
+        .btn-sm.kiosk-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .btn-sm.kiosk-btn.active {
+            background: #fff;
+            color: #B5838D;
+        }
+
+        .exit-kiosk {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #B5838D;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .exit-kiosk:hover {
+            background: #a0707a;
+            animation: none;
+        }
+
+        .exit-kiosk.show {
+            display: block;
+        }
+
+        /* Estilos para modo kiosko */
+        body.kiosk-mode {
+            overflow: hidden;
+        }
+
+        body.kiosk-mode .app {
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9998;
+        }
+
         .main {
             display: grid;
             grid-template-columns: 1fr 2fr;
@@ -858,13 +920,47 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #999;
         }
+
+        /* Notificación de modo kiosko */
+        .kiosk-notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: #B5838D;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .kiosk-notification.show {
+            transform: translateX(0);
+        }
     </style>
 </head>
 <body>
+    <!-- Botón para salir del modo kiosko -->
+    <button class="exit-kiosk" id="exitKioskBtn" onclick="toggleKioskMode()" title="Salir del modo pantalla completa">
+        ⛔ SALIR DEL MODO KIOSKO (ESC)
+    </button>
+
+    <!-- Notificación -->
+    <div class="kiosk-notification" id="kioskNotification">
+        🖥️ Modo Kiosko activado - Presiona ESC o el botón superior derecho para salir
+    </div>
+
     <div class="app">
         <header class="header">
             <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
             <div class="header-actions">
+                <button class="btn-sm kiosk-btn" id="kioskBtn" onclick="toggleKioskMode()" title="Activar modo pantalla completa">
+                    🖥️
+                </button>
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
                 <button class="btn-sm" onclick="clearAll()" style="color: #ffebee; border-color: rgba(255,255,255,0.4);">🗑️ LIMPIAR TODO</button>
@@ -1191,13 +1287,88 @@
         let editingProductId = null;
         let loteCounter = 1;
         let step1Completed = false;
+        let isKioskMode = false;
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
             await loadData();
             updateUI();
             renderTable();
+            
+            // Detectar cambios en pantalla completa
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         };
+
+        // Función para activar/desactivar modo kiosko
+        function toggleKioskMode() {
+            if (!isKioskMode) {
+                // Activar pantalla completa
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+                
+                // Agregar clase para estilos de kiosko
+                document.body.classList.add('kiosk-mode');
+                isKioskMode = true;
+                
+                // Mostrar botón de salida y notificación
+                document.getElementById('exitKioskBtn').classList.add('show');
+                document.getElementById('kioskBtn').classList.add('active');
+                
+                // Mostrar notificación
+                const notif = document.getElementById('kioskNotification');
+                notif.classList.add('show');
+                setTimeout(() => {
+                    notif.classList.remove('show');
+                }, 4000);
+                
+            } else {
+                // Salir de pantalla completa
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+                
+                // Quitar clase de kiosko
+                document.body.classList.remove('kiosk-mode');
+                isKioskMode = false;
+                
+                // Ocultar botón de salida
+                document.getElementById('exitKioskBtn').classList.remove('show');
+                document.getElementById('kioskBtn').classList.remove('active');
+            }
+        }
+
+        // Manejar cambios de pantalla completa (por si el usuario usa ESC)
+        function handleFullscreenChange() {
+            const fullscreenElement = document.fullscreenElement || 
+                                    document.webkitFullscreenElement || 
+                                    document.mozFullScreenElement || 
+                                    document.msFullscreenElement;
+            
+            if (!fullscreenElement && isKioskMode) {
+                // Se salió de pantalla completa (probablemente con ESC)
+                document.body.classList.remove('kiosk-mode');
+                isKioskMode = false;
+                document.getElementById('exitKioskBtn').classList.remove('show');
+                document.getElementById('kioskBtn').classList.remove('active');
+            }
+        }
 
         // Modal Functions
         function openStep1Modal() {
@@ -1831,9 +2002,14 @@
         // Close modals on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                closeModal('modalStep1');
-                closeModal('modalStep2');
-                closeImageModal();
+                // Si estamos en modo kiosko, salir primero de ese modo
+                if (isKioskMode) {
+                    toggleKioskMode();
+                } else {
+                    closeModal('modalStep1');
+                    closeModal('modalStep2');
+                    closeImageModal();
+                }
             }
         });
     </script>

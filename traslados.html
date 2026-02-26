@@ -77,6 +77,7 @@
             border: 1px solid rgba(255,255,255,0.6);
             font-size: 16px;
             padding: 8px 12px;
+            min-width: 40px;
         }
 
         .btn-sm.kiosk-btn:hover {
@@ -86,38 +87,12 @@
         .btn-sm.kiosk-btn.active {
             background: #fff;
             color: #B5838D;
-        }
-
-        .exit-kiosk {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            background: #B5838D;
-            color: #fff;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .exit-kiosk:hover {
-            background: #a0707a;
-            animation: none;
-        }
-
-        .exit-kiosk.show {
-            display: block;
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
         }
 
         /* Estilos para modo kiosko */
@@ -128,10 +103,6 @@
         body.kiosk-mode .app {
             height: 100vh;
             width: 100vw;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 9998;
         }
 
         .main {
@@ -696,7 +667,7 @@
             opacity: 0.3;
         }
 
-        /* Modals */
+        /* Modals - Z-index alto para modo kiosko */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -705,7 +676,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.7);
-            z-index: 1000;
+            z-index: 2147483647; /* Máximo z-index */
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(4px);
@@ -723,6 +694,8 @@
             max-height: 90vh;
             overflow: hidden;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2147483647;
         }
 
         .modal-header {
@@ -877,7 +850,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.95);
-            z-index: 2000;
+            z-index: 2147483647;
             justify-content: center;
             align-items: center;
         }
@@ -901,6 +874,7 @@
             font-size: 36px;
             cursor: pointer;
             font-weight: 300;
+            z-index: 2147483647;
         }
 
         ::-webkit-scrollbar {
@@ -921,44 +895,22 @@
             background: #999;
         }
 
-        /* Notificación de modo kiosko */
-        .kiosk-notification {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background: #B5838D;
-            color: #fff;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 9999;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-        }
-
-        .kiosk-notification.show {
-            transform: translateX(0);
+        /* Input file invisible pero funcional */
+        .hidden-file-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
-    <!-- Botón para salir del modo kiosko -->
-    <button class="exit-kiosk" id="exitKioskBtn" onclick="toggleKioskMode()" title="Salir del modo pantalla completa">
-        ⛔ SALIR DEL MODO KIOSKO (ESC)
-    </button>
-
-    <!-- Notificación -->
-    <div class="kiosk-notification" id="kioskNotification">
-        🖥️ Modo Kiosko activado - Presiona ESC o el botón superior derecho para salir
-    </div>
-
     <div class="app">
         <header class="header">
             <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
             <div class="header-actions">
-                <button class="btn-sm kiosk-btn" id="kioskBtn" onclick="toggleKioskMode()" title="Activar modo pantalla completa">
+                <button class="btn-sm kiosk-btn" id="kioskBtn" onclick="toggleKioskMode()" title="Activar/Desactivar modo pantalla completa">
                     🖥️
                 </button>
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
@@ -1014,8 +966,10 @@
                 <div class="product-form">
                     <div class="form-section-title">AGREGAR PRODUCTO</div>
                     
-                    <input type="file" id="imageInput" accept="image/*" class="hidden">
-                    <div class="image-upload" onclick="document.getElementById('imageInput').click()">
+                    <!-- Input file fuera del flujo normal para evitar problemas en modo kiosko -->
+                    <input type="file" id="imageInput" accept="image/*" class="hidden-file-input" tabindex="-1">
+                    
+                    <div class="image-upload" onclick="triggerFileInput()">
                         <img id="imagePreview" class="image-preview">
                         <div class="upload-text" id="uploadText">
                             📷 CLICK PARA SUBIR IMAGEN
@@ -1295,6 +1249,9 @@
             updateUI();
             renderTable();
             
+            // Configurar listener para input file
+            setupImageInput();
+            
             // Detectar cambios en pantalla completa
             document.addEventListener('fullscreenchange', handleFullscreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -1302,13 +1259,42 @@
             document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         };
 
-        // Función para activar/desactivar modo kiosko
+        // Configurar input de imagen de forma segura
+        function setupImageInput() {
+            const input = document.getElementById('imageInput');
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        currentImage = event.target.result;
+                        showImagePreview(currentImage);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Función segura para abrir selector de archivos
+        function triggerFileInput() {
+            const input = document.getElementById('imageInput');
+            // Resetear valor para permitir seleccionar el mismo archivo
+            input.value = '';
+            // Usar click() con un pequeño delay para evitar conflictos en modo kiosko
+            setTimeout(() => {
+                input.click();
+            }, 10);
+        }
+
+        // Función para activar/desactivar modo kiosko (mismo botón)
         function toggleKioskMode() {
             if (!isKioskMode) {
                 // Activar pantalla completa
                 const elem = document.documentElement;
                 if (elem.requestFullscreen) {
-                    elem.requestFullscreen();
+                    elem.requestFullscreen().catch(err => {
+                        console.log('Error al activar fullscreen:', err);
+                    });
                 } else if (elem.webkitRequestFullscreen) {
                     elem.webkitRequestFullscreen();
                 } else if (elem.mozRequestFullScreen) {
@@ -1321,21 +1307,17 @@
                 document.body.classList.add('kiosk-mode');
                 isKioskMode = true;
                 
-                // Mostrar botón de salida y notificación
-                document.getElementById('exitKioskBtn').classList.add('show');
-                document.getElementById('kioskBtn').classList.add('active');
-                
-                // Mostrar notificación
-                const notif = document.getElementById('kioskNotification');
-                notif.classList.add('show');
-                setTimeout(() => {
-                    notif.classList.remove('show');
-                }, 4000);
+                // Actualizar botón
+                const btn = document.getElementById('kioskBtn');
+                btn.classList.add('active');
+                btn.title = "Desactivar modo pantalla completa";
                 
             } else {
                 // Salir de pantalla completa
                 if (document.exitFullscreen) {
-                    document.exitFullscreen();
+                    document.exitFullscreen().catch(err => {
+                        console.log('Error al salir de fullscreen:', err);
+                    });
                 } else if (document.webkitExitFullscreen) {
                     document.webkitExitFullscreen();
                 } else if (document.mozCancelFullScreen) {
@@ -1348,9 +1330,10 @@
                 document.body.classList.remove('kiosk-mode');
                 isKioskMode = false;
                 
-                // Ocultar botón de salida
-                document.getElementById('exitKioskBtn').classList.remove('show');
-                document.getElementById('kioskBtn').classList.remove('active');
+                // Actualizar botón
+                const btn = document.getElementById('kioskBtn');
+                btn.classList.remove('active');
+                btn.title = "Activar modo pantalla completa";
             }
         }
 
@@ -1365,12 +1348,20 @@
                 // Se salió de pantalla completa (probablemente con ESC)
                 document.body.classList.remove('kiosk-mode');
                 isKioskMode = false;
-                document.getElementById('exitKioskBtn').classList.remove('show');
-                document.getElementById('kioskBtn').classList.remove('active');
+                const btn = document.getElementById('kioskBtn');
+                btn.classList.remove('active');
+                btn.title = "Activar modo pantalla completa";
+            } else if (fullscreenElement && !isKioskMode) {
+                // Entró a pantalla completa por otro medio
+                document.body.classList.add('kiosk-mode');
+                isKioskMode = true;
+                const btn = document.getElementById('kioskBtn');
+                btn.classList.add('active');
+                btn.title = "Desactivar modo pantalla completa";
             }
         }
 
-        // Modal Functions
+        // Modal Functions - Asegurar que funcionen en modo kiosko
         function openStep1Modal() {
             document.getElementById('modalLoteId').value = currentLote.id;
             document.getElementById('modalLoteDate').value = currentLote.date;
@@ -1384,8 +1375,15 @@
                 currentVal.style.display = 'none';
             }
             
-            document.getElementById('modalStep1').classList.add('active');
-            setTimeout(() => document.getElementById('modalVendorShipping').focus(), 100);
+            const modal = document.getElementById('modalStep1');
+            modal.classList.add('active');
+            modal.style.display = 'flex'; // Forzar display en modo kiosko
+            
+            // Forzar focus después de un pequeño delay
+            setTimeout(() => {
+                const input = document.getElementById('modalVendorShipping');
+                if (input) input.focus();
+            }, 100);
         }
 
         function openStep2Modal() {
@@ -1411,11 +1409,15 @@
             document.getElementById('updateWarning').style.display = currentLote.products.length > 0 ? 'block' : 'none';
             document.getElementById('updateSuccess').style.display = 'none';
             
-            document.getElementById('modalStep2').classList.add('active');
+            const modal = document.getElementById('modalStep2');
+            modal.classList.add('active');
+            modal.style.display = 'flex'; // Forzar display en modo kiosko
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+            modal.style.display = ''; // Resetear display
         }
 
         function saveStep1() {
@@ -1510,19 +1512,6 @@
                 document.getElementById('footerTaxes').textContent = '$' + currentLote.taxes.toFixed(2);
             }
         }
-
-        // Image handling
-        document.getElementById('imageInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    currentImage = event.target.result;
-                    showImagePreview(currentImage);
-                };
-                reader.readAsDataURL(file);
-            }
-        });
 
         function showImagePreview(src) {
             document.getElementById('imagePreview').src = src;
@@ -2002,14 +1991,9 @@
         // Close modals on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                // Si estamos en modo kiosko, salir primero de ese modo
-                if (isKioskMode) {
-                    toggleKioskMode();
-                } else {
-                    closeModal('modalStep1');
-                    closeModal('modalStep2');
-                    closeImageModal();
-                }
+                closeModal('modalStep1');
+                closeModal('modalStep2');
+                closeImageModal();
             }
         });
     </script>

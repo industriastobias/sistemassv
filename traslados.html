@@ -460,9 +460,10 @@
             background: #fff;
         }
 
+        /* MODIFICADO: Ahora son 6 columnas en lugar de 5 */
         .summary-bar {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 2px;
             background: #d0d0d0;
         }
@@ -487,6 +488,12 @@
             font-weight: 900;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
+        }
+
+        /* NUEVO: Estilo especial para el total de unidades */
+        .summary-value.units-total {
+            color: #B5838D;
+            font-size: 22px;
         }
 
         .summary-value.positive {
@@ -1214,10 +1221,16 @@
 
             <!-- Right Panel -->
             <div class="right-panel">
+                <!-- MODIFICADO: Agregado TOTAL UNIDADES junto a TOTAL PRODUCTOS -->
                 <div class="summary-bar">
                     <div class="summary-item">
                         <div class="summary-label">TOTAL PRODUCTOS</div>
                         <div class="summary-value" id="totalProducts">0</div>
+                    </div>
+                    <!-- NUEVO: Total de unidades -->
+                    <div class="summary-item" style="background: #fafafa;">
+                        <div class="summary-label" style="color: #B5838D;">TOTAL UNIDADES</div>
+                        <div class="summary-value units-total" id="totalUnits">0</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">INVERSIÓN TOTAL</div>
@@ -1277,6 +1290,7 @@
                     <div class="lote-info">
                         <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a;">LOTE-001</span> | 
                         PRODUCTOS: <strong id="footerCount">0</strong> | 
+                        UNIDADES: <strong id="footerUnits" style="color: #B5838D;">0</strong> |
                         ENV. PROV: <strong id="footerVendorShip">$0.00</strong> | 
                         ENV. TRAS: <strong id="footerShip" style="color: #999;">$0.00</strong> | 
                         IMPUESTOS: <strong id="footerTaxes" style="color: #999;">$0.00</strong>
@@ -1932,8 +1946,14 @@
             const tbody = document.getElementById('tableBody');
             const products = currentLote.products;
             
+            // MODIFICADO: Actualizar tanto productos como unidades
             document.getElementById('totalProducts').textContent = products.length;
             document.getElementById('footerCount').textContent = products.length;
+            
+            // NUEVO: Calcular y mostrar total de unidades
+            const totalUnits = products.reduce((sum, p) => sum + p.units, 0);
+            document.getElementById('totalUnits').textContent = totalUnits;
+            document.getElementById('footerUnits').textContent = totalUnits;
             
             if (products.length === 0) {
                 tbody.innerHTML = `
@@ -2181,6 +2201,8 @@
             const totalInvestment = totalCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
             const totalSales = currentLote.products.reduce((a, p) => a + p.price, 0);
             const totalNet = currentLote.products.reduce((a, p) => a + p.netProfit, 0);
+            // NUEVO: Calcular total de unidades para el PDF
+            const totalUnits = currentLote.products.reduce((a, p) => a + p.units, 0);
             
             doc.setFillColor(240, 240, 240);
             doc.rect(15, y, 260, 22, 'F');
@@ -2189,6 +2211,7 @@
             doc.setFontSize(10);
             const metrics = [
                 [`PRODUCTOS:`, currentLote.products.length.toString()],
+                [`UNIDADES:`, totalUnits.toString()], // NUEVO
                 [`ENVÍO PROV:`, `$${currentLote.vendorShipping.toFixed(2)}`],
                 [`ENVÍO TRAS:`, `$${currentLote.shipping.toFixed(2)}`],
                 [`IMPUESTOS:`, `$${currentLote.taxes.toFixed(2)}`],
@@ -2206,7 +2229,7 @@
                 doc.setFontSize(11);
                 doc.setFont(undefined, 'bold');
                 doc.text(value, x, y + 16);
-                x += 43;
+                x += 36; // Ajustado para 7 métricas
             });
             
             const data = currentLote.products.map((p, i) => [

@@ -895,6 +895,13 @@
       margin-top: 0.5rem;
     }
 
+    /* CORRECCIÓN: Scroll en modal de editar */
+    #editPendingModal .modal-content {
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
     @media (max-width: 768px) {
       .cod-horizontal-layout {
         flex-direction: column;
@@ -1170,9 +1177,9 @@
     </div>
   </div>
 
-  <!-- MODAL EDITAR PENDIENTE COD - TAMBIÉN HORIZONTAL -->
+  <!-- MODAL EDITAR PENDIENTE COD - TAMBIÉN HORIZONTAL CON SCROLL -->
   <div id="editPendingModal" class="modal">
-    <div class="modal-content" style="max-width:900px;">
+    <div class="modal-content" style="max-width:900px; max-height:90vh; overflow-y:auto;">
       <span class="close" onclick="closeEditPendingModal()">&times;</span>
       <h2>✏️ Editar Pedido COD</h2>
       
@@ -1462,13 +1469,6 @@
         const imgBlob = await localforage.getItem(`img_${p.code}`);
         const imgUrl = imgBlob ? URL.createObjectURL(imgBlob) : '';
         
-        // Generar imagen de código de barras si no existe
-        let barcodeImgUrl = '';
-        const barcodeBlob = await localforage.getItem(`barcodeimg_${p.code}`);
-        if (barcodeBlob) {
-          barcodeImgUrl = URL.createObjectURL(barcodeBlob);
-        }
-        
         html += `
           <tr>
             <td style="text-align:center;">
@@ -1667,25 +1667,44 @@
       alert('✅ Pedido actualizado correctamente');
     }
     
+    // CORRECCIÓN: Al cobrar, si pagamos nosotros la comisión, registrar precio neto
     function markPendingAsPaid(index) {
       if (!confirm('¿Confirmar que recibiste el pago por este pedido?')) return;
       
       let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
       const item = pending[index];
       
+      // Calcular precio neto si la comisión la pagamos nosotros
+      let finalPrice = item.price;
+      let finalTotal = item.total;
+      
+      if (item.whoPaysCommission === 'we' && item.codCommissionAmount > 0) {
+        // Si nosotros pagamos la comisión, el precio real es menor
+        const commissionPerUnit = item.codCommissionAmount / item.quantity;
+        finalPrice = item.price - commissionPerUnit;
+        finalTotal = finalPrice * item.quantity;
+        
+        // Asegurar que no sea negativo
+        if (finalPrice < 0) finalPrice = 0;
+        if (finalTotal < 0) finalTotal = 0;
+      }
+      
       // Mover a ventas completadas con info COD
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
       soldInventory.push({
         ...item,
+        price: finalPrice,                    // Precio neto (con comisión descontada si aplica)
+        total: finalTotal,                    // Total real recibido
+        originalPrice: item.price,            // Guardar precio original por referencia
         status: 'paid',
         paidDate: new Date().toISOString(),
         seller: item.seller || 'Sistema',
         codDetails: {
           shipping: item.codShipping || 0,
           commission: item.codCommissionAmount || 0,
-          insurance: item.codInsurance || 0,
           whoPaidCommission: item.whoPaysCommission || 'client',
-          totalCollected: item.totalToCollect || (item.price * item.quantity)
+          totalCollected: item.totalToCollect || (item.price * item.quantity),
+          netReceived: finalTotal             // Lo que realmente ingresó
         }
       });
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
@@ -1698,7 +1717,7 @@
       updateDash();
       
       beepOK();
-      alert('✅ Pedido cobrado y movido al historial de ventas');
+      alert('✅ Pedido cobrado y movido al historial de ventas\nPrecio registrado: $' + finalPrice.toFixed(2));
     }
     
     function deletePending(index) {
@@ -1939,74 +1958,6 @@
       }
     }
     
-    function loadSalesHistory() { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); renderSalesTable(sales); }
-    function filterSales() { const name = document.getElementById('salesSearchName').value.trim().toLowerCase(); const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); const filtered = name ? sales.filter(s => s.name.toLowerCase().includes(name)) : sales; renderSalesTable(filtered); }
-    function clearSalesFilter() { document.getElementById('salesSearchName').value = ''; loadSalesHistory(); }
-    function renderSalesTable(sales) { const tbody = document.getElementById('salesList'); if (!sales.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Sin ventas registradas</td></tr>'; return; } tbody.innerHTML = sales.map((s, i) => `<tr><td>${i + 1}</td><td>${s.name}</td><td>${s.code}</td><td>${s.quantity}</td><td>$${s.price}</td><td>$${s.total}</td></tr>`).join(''); }
-    function exportSalesCSV() { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (!sales.length) { alert('No hay ventas para exportar'); return; } const headers = ['Nombre', 'Código', 'Cantidad', 'Precio Unitario', 'Total']; const rows = sales.map(s => [s.name, s.code, s.quantity, s.price, s.total]); let csv = headers.join(',') + '\n'; rows.forEach(r => csv += r.join(',') + '\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'ventas.csv'; a.click(); URL.revokeObjectURL(url); }
-    function openImageModal(src) { const overlay = document.createElement('div'); overlay.className = 'full-image-overlay'; const img = document.createElement('img'); img.src = src; overlay.appendChild(img); document.body.appendChild(overlay); overlay.addEventListener('click', () => document.body.removeChild(overlay)); }
-    function openPriceModal(index) { const pwd = prompt('Ingrese la contraseña para editar precios:'); if (pwd !== PASSWORD_EDIT) { alert('Contraseña incorrecta'); return; } currentPriceIndex = index; const item = inventory[index]; document.getElementById('newPrice').value = item.price; document.getElementById('priceModal').style.display = 'block'; }
-    function closePriceModal() { document.getElementById('priceModal').style.display = 'none'; }
-    function saveNewPrice() { const newPrice = parseFloat(document.getElementById('newPrice').value); if (isNaN(newPrice) || newPrice < 0) { alert('Precio inválido'); return; } inventory[currentPriceIndex].price = newPrice; localStorage.setItem('inventory', JSON.stringify(inventory)); closePriceModal(); filterInventory(); document.getElementById('resultMessage').textContent = 'Precio actualizado'; document.getElementById('resultMessage').style.display = 'block'; setTimeout(() => document.getElementById('resultMessage').style.display = 'none', 2000); }
-    function highlightText(text, search) { if (!search) return text; const regex = new RegExp(`(${search})`, 'gi'); return text.replace(regex, '<mark>$1</mark>'); }
-    function applyFilters() { filterInventory(); }
-    
-    function openDescriptionModal(index) {
-      const item = inventory[index];
-      document.getElementById('descriptionContent').textContent = item.description || 'Sin descripción disponible.';
-      document.getElementById('descriptionModal').style.display = 'block';
-    }
-    
-    function closeDescriptionModal() {
-      document.getElementById('descriptionModal').style.display = 'none';
-    }
-    
-    function filterInventory() { 
-      const name = document.getElementById('searchName').value.trim().toLowerCase(), 
-            category = document.getElementById('searchCategory').value, 
-            code = document.getElementById('searchCode').value.trim().toLowerCase(), 
-            minPrice = parseFloat(document.getElementById('minPrice').value) || 0, 
-            maxPrice = parseFloat(document.getElementById('maxPrice').value) || Infinity, 
-            lowStock = document.getElementById('lowStockOnly').checked,
-            searchDate = document.getElementById('searchDate').value;
-            
-      let filtered = inventory.filter(it => { 
-        const okName = !name || it.name.toLowerCase().includes(name); 
-        const okCat = !category || it.category === category; 
-        const okCode = !code || it.barcode.toLowerCase().includes(code); 
-        const price = it.price * (1 - it.discount / 100); 
-        const okPrice = price >= minPrice && price <= maxPrice; 
-        const okStock = !lowStock || it.quantity <= (it.stockMin || 0); 
-        
-        let okDate = true;
-        if (searchDate) {
-          const itemDate = new Date(it.date).toISOString().split('T')[0];
-          okDate = itemDate === searchDate;
-        }
-        
-        return okName && okCat && okCode && okPrice && okStock && okDate; 
-      }); 
-      renderInventoryWithHighlight(filtered, name); 
-      document.getElementById('resultMessage').style.display = 'none'; 
-    }
-    
-    function clearAllFilters() { 
-      ['searchName', 'searchCategory', 'searchCode', 'minPrice', 'maxPrice', 'lowStockOnly', 'goToRow', 'searchDate'].forEach(id => { 
-        const el = document.getElementById(id); 
-        if (el.type === 'checkbox') el.checked = false; 
-        else el.value = ''; 
-      }); 
-      document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight')); 
-      filterInventory(); 
-    }
-    
-    function renderInventoryWithHighlight(filteredInventory, searchName) { const list = document.getElementById('inventoryList'), cards = document.getElementById('cardsView'), noResults = document.getElementById('noResultsMessage'), resultMsg = document.getElementById('resultMessage');
-      if (filteredInventory.length === 0) { list.innerHTML = ''; cards.innerHTML = ''; noResults.style.display = 'block'; resultMsg.style.display = 'none'; return; } noResults.style.display = 'none'; const sorted = [...filteredInventory].sort((a, b) => b.quantity - a.quantity);
-      list.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<tr id="product-${idx}" data-real-index="${inventory.indexOf(item)}"><td>${idx + 1}</td><td><img id="img-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>${highlightText(item.name, searchName)}</td><td>${item.barcode}</td><td><img id="barcodeimg-${idx}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal(this.src)" /></td><td>$${item.price}</td><td>${item.discount}%</td><td>$${priceWithDiscount}</td><td>${new Date(item.date).toLocaleString('es-ES')}</td><td>${highlightText(item.category, searchName)}</td><td>${item.quantity}</td><td><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button><button class="btn-view" onclick="openDescriptionModal(${inventory.indexOf(item)})" title="Ver descripción">👁️</button></td></tr>`; }).join('');
-      cards.innerHTML = sorted.map((item, idx) => { const priceWithDiscount = (item.price * (1 - item.discount / 100)).toFixed(2); return `<div class="card" data-real-index="${inventory.indexOf(item)}"><img id="card-img-${idx}" onclick="openImageModal(this.src)" /><div><strong>${highlightText(item.name, searchName)}</strong></div><div>Barras: ${item.barcode}</div><div><img id="card-barcodeimg-${idx}" style="height:60px;cursor:pointer" onclick="openImageModal(this.src)" /></div><div>Precio: $${priceWithDiscount} <small>(${item.discount}% dto)</small></div><div>Stock: <strong>${item.quantity}</strong></div><div>Cat: ${highlightText(item.category, searchName)}</div><div>Fecha: ${new Date(item.date).toLocaleString('es-ES')}</div><div class="card-footer"><button class="stamp" onclick="markSold(${inventory.indexOf(item)})">Vender</button><button class="btn-edit" onclick="openPriceModal(${inventory.indexOf(item)})" title="Editar precio">✏️</button><button class="btn-view" onclick="openDescriptionModal(${inventory.indexOf(item)})" title="Ver descripción">👁️</button></div></div>`; }).join('');
-      setTimeout(() => { sorted.forEach((item, idx) => { localforage.getItem(`img_${item.code}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const imgTbl = document.getElementById(`img-${idx}`); const imgCard = document.getElementById(`card-img-${idx}`); if (imgTbl) imgTbl.src = url; if (imgCard) imgCard.src = url; } }); localforage.getItem(`barcodeimg_${item.barcode}`).then(blob => { if (blob) { const url = URL.createObjectURL(blob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } else { const canvas = document.createElement('canvas'); JsBarcode(canvas, item.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: true }); canvas.toBlob(barcodeBlob => { if (barcodeBlob) { localforage.setItem(`barcodeimg_${item.barcode}`, barcodeBlob); const url = URL.createObjectURL(barcodeBlob); const tblImg = document.getElementById(`barcodeimg-${idx}`); const cardImg = document.getElementById(`card-barcodeimg-${idx}`); if (tblImg) tblImg.src = url; if (cardImg) cardImg.src = url; } }); } }); }); }, 100); updateDash(); }
-    function toggleView() { const btn = document.getElementById('toggleViewBtn'), table = document.getElementById('tableView'), cards = document.getElementById('cardsView'); if (currentView === 'table') { currentView = 'cards'; table.style.display = 'none'; cards.style.display = 'flex'; btn.textContent = 'Ver Tabla'; } else { currentView = 'table'; table.style.display = 'block'; cards.style.display = 'none'; btn.textContent = 'Ver Tarjetas'; } localStorage.setItem('preferredView', currentView); }
-
     function goToRow() { const row = parseInt(document.getElementById('goToRow').value); if (currentView === 'table') { const rows = document.querySelectorAll('#inventoryList tr'); rows.forEach(r => r.classList.remove('highlight')); if (row >= 1 && row <= rows.length) { const target = rows[row - 1]; target.classList.add('highlight'); target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } else alert('Fila fuera de rango.'); } else { const cards = document.querySelectorAll('.card'); cards.forEach(c => c.classList.remove('highlight')); if (row >= 1 && row <= cards.length) { const target = cards[row - 1]; target.classList.add('highlight'); target.scrollIntoView({ behavior: 'smooth', block: 'center' }); } else alert('Fila fuera de rango.'); } }
     function openSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'block'; renderSalesHistory(); }
     function closeSalesHistoryModal() { document.getElementById('salesHistoryModal').style.display = 'none'; }

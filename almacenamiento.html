@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -1170,9 +1170,9 @@
     </div>
   </div>
 
-  <!-- MODAL EDITAR PENDIENTE COD - TAMBIÉN HORIZONTAL -->
+  <!-- MODAL EDITAR PENDIENTE COD - TAMBIÉN HORIZONTAL Y MÁS ANCHO -->
   <div id="editPendingModal" class="modal">
-    <div class="modal-content" style="max-width:900px;">
+    <div class="modal-content" style="max-width:1200px;">
       <span class="close" onclick="closeEditPendingModal()">&times;</span>
       <h2>✏️ Editar Pedido COD</h2>
       
@@ -1597,7 +1597,7 @@
       if (whoPays === 'client') {
         // Cliente paga: comisión se suma al total
         totalToCollect = productTotal + shipping + commissionAmount + insurance;
-        netProfit = productTotal - commissionAmount;
+        netProfit = productTotal;
         document.getElementById('editCalcCommissionLabel').textContent = 'Comisión (sumada al total):';
         document.getElementById('editCalcCommission').className = '';
       } else {
@@ -1675,8 +1675,21 @@
       
       // Mover a ventas completadas con info COD
       let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+      
+      // Calcular el precio real de venta según quién pagó la comisión
+      let finalPrice = item.price;
+      let finalTotal = item.total;
+      
+      if (item.whoPaysCommission === 'we' && item.codCommissionAmount) {
+        // Si pagamos nosotros, el precio efectivo es menor (descuenta comisión)
+        finalPrice = item.price - (item.codCommissionAmount / item.quantity);
+        finalTotal = finalPrice * item.quantity;
+      }
+      
       soldInventory.push({
         ...item,
+        price: finalPrice,
+        total: finalTotal,
         status: 'paid',
         paidDate: new Date().toISOString(),
         seller: item.seller || 'Sistema',
@@ -1816,14 +1829,14 @@
       if (currentWhoPays === 'client') {
         // Cliente paga: la comisión se suma al total que paga el cliente
         totalToCollect = productTotal + shipping + commissionAmount + insurance;
-        netProfit = productTotal - commissionAmount; // Nosotros pagamos la comisión a la transportadora
+        netProfit = productTotal; // Nosotros recibimos el total del producto
         
         document.getElementById('calcCommissionLabel').textContent = 'Comisión (sumada al total):';
         document.getElementById('calcCommission').style.color = 'inherit';
       } else {
         // Nosotros pagamos: la comisión se descuenta de nuestra ganancia, no se suma al total del cliente
         totalToCollect = productTotal + shipping + insurance;
-        netProfit = productTotal - commissionAmount;
+        netProfit = productTotal - commissionAmount; // Descontamos la comisión de nuestra ganancia
         
         document.getElementById('calcCommissionLabel').textContent = 'Comisión (descontada de tu ganancia):';
         document.getElementById('calcCommission').style.color = 'var(--danger)';
@@ -1896,16 +1909,24 @@
         }
         
         let totalToCollect;
+        let effectivePrice = soldPrice;
+        let effectiveTotal = productTotal;
+        
         if (currentWhoPays === 'client') {
           totalToCollect = productTotal + shipping + commissionAmount + insurance;
         } else {
           totalToCollect = productTotal + shipping + insurance;
+          // Si pagamos nosotros, el precio efectivo es menor (para reflejar ganancia real)
+          effectivePrice = soldPrice - (commissionAmount / soldQty);
+          effectiveTotal = effectivePrice * soldQty;
         }
         
         // Guardar en pendientes con info COD completa
         let pendingInventory = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
         pendingInventory.push({
           ...baseSaleData,
+          price: effectivePrice, // Precio ajustado si pagamos comisión
+          total: effectiveTotal,
           isCOD: true,
           codShipping: shipping,
           codCommissionType: commissionType,

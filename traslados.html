@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -20,12 +21,13 @@
             color: #1a1a1a;
             height: 100vh;
             overflow: hidden;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 16px;
         }
 
         .app {
             display: grid;
-            grid-template-rows: 60px 1fr;
+            grid-template-rows: 70px 1fr;
             height: 100vh;
         }
 
@@ -39,55 +41,61 @@
         }
 
         .header h1 {
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 22px;
+            font-weight: 800;
             letter-spacing: 0.5px;
         }
 
         .header-actions {
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
         .btn-sm {
-            padding: 8px 16px;
-            border: 1px solid rgba(255,255,255,0.4);
+            padding: 10px 18px;
+            border: 2px solid rgba(255,255,255,0.4);
             background: transparent;
             color: #fff;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
             transition: all 0.2s;
         }
 
         .btn-sm:hover {
             background: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
         }
 
         .btn-sm.primary {
             background: #fff;
             color: #B5838D;
             border-color: #fff;
-            font-weight: 700;
+            font-weight: 800;
         }
 
-        .btn-sm.kiosk-btn {
+        .btn-sm.kiosk-btn, .btn-sm.table-btn, .btn-sm.zip-btn, .btn-sm.hide-btn {
             background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.6);
-            font-size: 16px;
-            padding: 8px 12px;
-            min-width: 40px;
+            border: 2px solid rgba(255,255,255,0.6);
+            font-size: 18px;
+            padding: 10px 14px;
+            min-width: 44px;
         }
 
-        .btn-sm.kiosk-btn:hover {
+        .btn-sm.kiosk-btn:hover, .btn-sm.table-btn:hover, .btn-sm.zip-btn:hover, .btn-sm.hide-btn:hover {
             background: rgba(255,255,255,0.3);
         }
 
-        .btn-sm.kiosk-btn.active {
+        .btn-sm.kiosk-btn.active, .btn-sm.table-btn.active {
             background: #fff;
             color: #B5838D;
             animation: pulse 2s infinite;
+        }
+
+        .btn-sm.hide-btn.active {
+            background: #fff;
+            color: #B5838D;
         }
 
         @keyframes pulse {
@@ -133,30 +141,30 @@
 
         .steps-section {
             background: #fafafa;
-            padding: 20px;
+            padding: 25px;
             border-bottom: 2px solid #e0e0e0;
         }
 
         .section-title {
-            font-size: 11px;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #666;
-            margin-bottom: 15px;
-            font-weight: 700;
+            margin-bottom: 18px;
+            font-weight: 800;
         }
 
         .step-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 15px;
         }
 
         .step-btn {
-            padding: 20px 15px;
-            border: 2px solid #ddd;
+            padding: 25px 18px;
+            border: 3px solid #ddd;
             background: #fff;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             text-align: left;
             transition: all 0.3s ease;
@@ -182,32 +190,32 @@
         .step-btn.completed::after {
             content: '✓';
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 12px;
+            right: 12px;
             background: #2e7d32;
             color: #fff;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 16px;
+            font-weight: 800;
         }
 
         .step-number {
             display: inline-block;
             background: #1a1a1a;
             color: #fff;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             text-align: center;
-            line-height: 28px;
-            font-size: 14px;
-            font-weight: 800;
-            margin-bottom: 8px;
+            line-height: 32px;
+            font-size: 16px;
+            font-weight: 900;
+            margin-bottom: 10px;
         }
 
         .step-btn.active .step-number {
@@ -215,25 +223,26 @@
         }
 
         .step-title {
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 800;
             color: #1a1a1a;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             text-transform: uppercase;
         }
 
         .step-desc {
-            font-size: 11px;
+            font-size: 13px;
             color: #666;
             line-height: 1.4;
+            font-weight: 600;
         }
 
         .step-status {
-            font-size: 10px;
-            font-weight: 700;
-            margin-top: 8px;
-            padding: 4px 8px;
-            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 10px;
+            padding: 6px 10px;
+            border-radius: 6px;
             display: inline-block;
         }
 
@@ -250,18 +259,18 @@
         .cost-summary {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-top: 15px;
-            padding-top: 15px;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
             border-top: 2px solid #e0e0e0;
         }
 
         .cost-item {
             text-align: center;
-            padding: 10px;
+            padding: 15px;
             background: #fff;
-            border-radius: 4px;
-            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            border: 3px solid #e0e0e0;
         }
 
         .cost-item.active {
@@ -270,41 +279,41 @@
         }
 
         .cost-label {
-            font-size: 9px;
+            font-size: 11px;
             color: #666;
             text-transform: uppercase;
-            margin-bottom: 4px;
-            font-weight: 700;
+            margin-bottom: 6px;
+            font-weight: 800;
         }
 
         .cost-value {
-            font-size: 13px;
-            font-weight: 800;
+            font-size: 18px;
+            font-weight: 900;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
         }
 
         .product-form {
-            padding: 20px;
+            padding: 25px;
             overflow-y: auto;
         }
 
         .form-section-title {
-            font-size: 12px;
+            font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #444;
-            margin-bottom: 15px;
-            font-weight: 700;
+            margin-bottom: 18px;
+            font-weight: 800;
         }
 
         .image-upload {
             border: 3px dashed #bbb;
-            border-radius: 4px;
-            padding: 20px;
+            border-radius: 8px;
+            padding: 25px;
             text-align: center;
             cursor: pointer;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
             background: #fafafa;
         }
 
@@ -315,10 +324,10 @@
 
         .image-preview {
             max-width: 100%;
-            max-height: 120px;
+            max-height: 140px;
             display: none;
-            margin: 0 auto 10px;
-            border-radius: 4px;
+            margin: 0 auto 12px;
+            border-radius: 8px;
         }
 
         .image-preview.active {
@@ -327,17 +336,17 @@
 
         .upload-text {
             color: #777;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 15px;
+            font-weight: 700;
         }
 
         .remove-image {
-            font-size: 12px;
+            font-size: 14px;
             color: #666;
             text-decoration: underline;
             cursor: pointer;
             display: none;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .remove-image.active {
@@ -347,28 +356,28 @@
         .input-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 15px;
         }
 
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             display: block;
-            font-size: 11px;
+            font-size: 13px;
             color: #333;
-            margin-bottom: 4px;
-            font-weight: 700;
+            margin-bottom: 6px;
+            font-weight: 800;
         }
 
         .form-group input {
             width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 14px 16px;
+            border: 3px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
         }
 
         .form-group input:focus {
@@ -379,74 +388,77 @@
         .calculated {
             background: #e8e8e8;
             color: #444;
-            font-weight: 700;
+            font-weight: 800;
+            font-size: 18px;
         }
 
         .cost-breakdown {
             background: #f5f5f5;
-            border: 2px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 15px 0;
+            border: 3px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 18px 0;
         }
 
         .breakdown-title {
-            font-size: 11px;
+            font-size: 13px;
             color: #444;
             text-transform: uppercase;
-            margin-bottom: 10px;
-            font-weight: 800;
+            margin-bottom: 12px;
+            font-weight: 900;
         }
 
         .breakdown-row {
             display: flex;
             justify-content: space-between;
-            font-size: 13px;
-            margin-bottom: 6px;
-            padding: 4px 0;
+            font-size: 15px;
+            margin-bottom: 8px;
+            padding: 6px 0;
             border-bottom: 1px solid #e0e0e0;
         }
 
         .breakdown-row:last-child {
             border-bottom: none;
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
             border-top: 3px solid #ccc;
         }
 
         .breakdown-label {
             color: #555;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .breakdown-value {
             font-family: 'Courier New', monospace;
             color: #1a1a1a;
-            font-weight: 800;
+            font-weight: 900;
+            font-size: 16px;
         }
 
         .btn-submit {
             width: 100%;
-            padding: 14px;
+            padding: 18px;
             background: #B5838D;
             color: #fff;
             border: none;
-            border-radius: 4px;
-            font-size: 15px;
-            font-weight: 800;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: 900;
             cursor: pointer;
-            margin-top: 12px;
+            margin-top: 15px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .btn-submit:hover {
             background: #a0707a;
+            transform: translateY(-1px);
         }
 
         .btn-submit.secondary {
             background: #666;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .hidden {
@@ -460,40 +472,38 @@
             background: #fff;
         }
 
-        /* MODIFICADO: Ahora son 6 columnas en lugar de 5 */
         .summary-bar {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 2px;
+            gap: 3px;
             background: #d0d0d0;
         }
 
         .summary-item {
             background: #fff;
-            padding: 18px 10px;
+            padding: 22px 12px;
             text-align: center;
         }
 
         .summary-label {
-            font-size: 11px;
+            font-size: 13px;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
-            font-weight: 800;
+            margin-bottom: 8px;
+            font-weight: 900;
         }
 
         .summary-value {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 900;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
         }
 
-        /* NUEVO: Estilo especial para el total de unidades */
         .summary-value.units-total {
             color: #B5838D;
-            font-size: 22px;
+            font-size: 26px;
         }
 
         .summary-value.positive {
@@ -512,7 +522,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 15px;
         }
 
         thead {
@@ -523,11 +533,11 @@
         }
 
         th {
-            padding: 14px 10px;
+            padding: 18px 12px;
             text-align: left;
-            font-weight: 800;
+            font-weight: 900;
             color: #444;
-            font-size: 11px;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             border-bottom: 3px solid #d0d0d0;
@@ -539,16 +549,18 @@
         }
 
         td {
-            padding: 14px 10px;
+            padding: 18px 12px;
             border-bottom: 2px solid #f0f0f0;
             vertical-align: middle;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 16px;
         }
 
         td.numeric {
             text-align: right;
             font-family: 'Courier New', monospace;
-            font-weight: 700;
+            font-weight: 800;
+            font-size: 17px;
         }
 
         tr:hover {
@@ -561,32 +573,32 @@
         }
 
         .product-img {
-            width: 45px;
-            height: 45px;
+            width: 55px;
+            height: 55px;
             object-fit: cover;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            border: 2px solid #e0e0e0;
+            border: 3px solid #e0e0e0;
         }
 
         .product-name {
-            font-weight: 800;
+            font-weight: 900;
             color: #1a1a1a;
-            font-size: 14px;
+            font-size: 16px;
         }
 
         .product-meta {
-            font-size: 11px;
+            font-size: 13px;
             color: #777;
-            margin-top: 3px;
-            font-weight: 600;
+            margin-top: 4px;
+            font-weight: 700;
         }
 
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 900;
             background: #1a1a1a;
             color: #fff;
@@ -595,30 +607,32 @@
         .profit-positive {
             color: #2e7d32;
             font-weight: 900;
+            font-size: 18px;
         }
 
         .profit-negative {
             color: #c62828;
             font-weight: 900;
+            font-size: 18px;
         }
 
         .actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
         }
 
         .btn-icon {
-            width: 32px;
-            height: 32px;
-            border: 2px solid #ccc;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ccc;
             background: #fff;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .btn-icon:hover {
@@ -633,18 +647,18 @@
         }
 
         .panel-footer {
-            padding: 18px 25px;
+            padding: 22px 25px;
             background: #f5f5f5;
-            border-top: 2px solid #e0e0e0;
+            border-top: 3px solid #e0e0e0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .lote-info {
-            font-size: 13px;
+            font-size: 15px;
             color: #555;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .lote-info strong {
@@ -660,12 +674,13 @@
             justify-content: center;
             color: #888;
             padding: 40px;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 16px;
         }
 
         .empty-icon {
-            font-size: 56px;
-            margin-bottom: 20px;
+            font-size: 64px;
+            margin-bottom: 25px;
             opacity: 0.3;
         }
 
@@ -702,15 +717,15 @@
         .modal-header {
             background: #B5838D;
             color: #fff;
-            padding: 20px 25px;
+            padding: 22px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .modal-title {
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 18px;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -719,10 +734,10 @@
             background: none;
             border: none;
             color: #fff;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
-            width: 36px;
-            height: 36px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -741,20 +756,20 @@
         }
 
         .modal-footer {
-            padding: 20px 25px;
+            padding: 22px 25px;
             background: #f5f5f5;
-            border-top: 1px solid #e0e0e0;
+            border-top: 2px solid #e0e0e0;
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
 
         .modal-btn {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 700;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 800;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -768,7 +783,7 @@
         .modal-btn.secondary {
             background: #fff;
             color: #666;
-            border: 2px solid #ddd;
+            border: 3px solid #ddd;
         }
 
         .modal-btn:hover {
@@ -779,12 +794,12 @@
         .info-box {
             background: #e3f2fd;
             border-left: 4px solid #2196f3;
-            padding: 12px 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 15px 18px;
+            margin-bottom: 22px;
+            border-radius: 8px;
+            font-size: 14px;
             color: #0d47a1;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .info-box.warning {
@@ -800,25 +815,25 @@
         }
 
         .form-row {
-            margin-bottom: 20px;
+            margin-bottom: 22px;
         }
 
         .form-row label {
             display: block;
-            font-size: 12px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 800;
             color: #333;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             text-transform: uppercase;
         }
 
         .form-row input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 700;
+            padding: 14px 18px;
+            border: 3px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 800;
             font-family: 'Courier New', monospace;
         }
 
@@ -829,17 +844,18 @@
 
         .current-value {
             background: #f5f5f5;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 700;
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 15px;
+            font-weight: 800;
             color: #666;
         }
 
         .current-value strong {
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
+            font-size: 18px;
         }
 
         .image-modal {
@@ -871,15 +887,15 @@
             top: 30px;
             right: 30px;
             color: #fff;
-            font-size: 36px;
+            font-size: 40px;
             cursor: pointer;
             font-weight: 300;
             z-index: 2147483647;
         }
 
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
         }
 
         ::-webkit-scrollbar-track {
@@ -888,7 +904,7 @@
 
         ::-webkit-scrollbar-thumb {
             background: #bbb;
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
@@ -903,33 +919,32 @@
             overflow: hidden;
         }
 
-        /* NUEVOS ESTILOS PARA UNIDADES Y BOTÓN DE DESGLOSE */
         .units-row {
             display: grid;
             grid-template-columns: 1fr 2fr;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
         .units-display {
             background: #e8f5e9;
-            border: 2px solid #2e7d32;
-            border-radius: 4px;
-            padding: 10px 12px;
+            border: 3px solid #2e7d32;
+            border-radius: 8px;
+            padding: 14px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
         .units-label {
-            font-size: 11px;
+            font-size: 13px;
             color: #2e7d32;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
         }
 
         .units-value {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: 900;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
@@ -937,18 +952,18 @@
 
         .btn-breakdown {
             width: 100%;
-            padding: 12px;
+            padding: 16px;
             background: #fff;
-            border: 2px dashed #B5838D;
+            border: 3px dashed #B5838D;
             color: #B5838D;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 800;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 900;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             transition: all 0.2s;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
         }
 
         .btn-breakdown:hover {
@@ -968,15 +983,15 @@
         .breakdown-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 18px;
+            margin-bottom: 22px;
         }
 
         .breakdown-card {
             background: #f8f8f8;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
             text-align: center;
         }
 
@@ -991,15 +1006,15 @@
         }
 
         .breakdown-card-title {
-            font-size: 10px;
+            font-size: 12px;
             color: #666;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            font-weight: 700;
+            margin-bottom: 10px;
+            font-weight: 800;
         }
 
         .breakdown-card-value {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 900;
             color: #1a1a1a;
             font-family: 'Courier New', monospace;
@@ -1007,65 +1022,66 @@
 
         .breakdown-details {
             background: #fff;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 15px;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 18px;
         }
 
         .breakdown-details-title {
-            font-size: 12px;
+            font-size: 14px;
             color: #444;
             text-transform: uppercase;
-            margin-bottom: 15px;
-            font-weight: 800;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
+            margin-bottom: 18px;
+            font-weight: 900;
+            border-bottom: 3px solid #e0e0e0;
+            padding-bottom: 12px;
         }
 
         .breakdown-detail-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
+            font-size: 15px;
         }
 
         .breakdown-detail-row:last-child {
             border-bottom: none;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 2px solid #ddd;
-            font-weight: 800;
-            font-size: 14px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 3px solid #ddd;
+            font-weight: 900;
+            font-size: 16px;
         }
 
         .breakdown-detail-label {
             color: #555;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .breakdown-detail-value {
             font-family: 'Courier New', monospace;
-            font-weight: 700;
+            font-weight: 800;
             color: #1a1a1a;
+            font-size: 16px;
         }
 
         .units-input-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .units-btn {
-            width: 36px;
-            height: 36px;
-            border: 2px solid #ddd;
+            width: 44px;
+            height: 44px;
+            border: 3px solid #ddd;
             background: #fff;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 22px;
+            font-weight: 900;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1080,8 +1096,189 @@
         .units-input {
             flex: 1;
             text-align: center;
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        /* NUEVO: Vista de tabla fullscreen */
+        .table-fullscreen-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            z-index: 2147483646;
+            flex-direction: column;
+        }
+
+        .table-fullscreen-view.active {
+            display: flex;
+        }
+
+        .table-fullscreen-header {
+            background: #B5838D;
+            color: #fff;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .table-fullscreen-header h2 {
+            font-size: 24px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .table-fullscreen-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .fullscreen-btn {
+            padding: 12px 24px;
+            border: 2px solid rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 800;
+            transition: all 0.2s;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .fullscreen-btn.close-btn {
+            background: #fff;
+            color: #B5838D;
+            border-color: #fff;
+        }
+
+        .fullscreen-btn.close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .table-fullscreen-content {
+            flex: 1;
+            overflow: auto;
+            padding: 30px;
+            background: #f8f8f8;
+        }
+
+        .table-fullscreen-content table {
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-fullscreen-content th {
+            padding: 22px 16px;
+            font-size: 15px;
+            background: #f0f0f0;
+        }
+
+        .table-fullscreen-content td {
+            padding: 20px 16px;
+            font-size: 17px;
+        }
+
+        .table-fullscreen-content .product-name {
+            font-size: 18px;
+        }
+
+        .table-fullscreen-content .badge {
+            font-size: 16px;
+            padding: 8px 12px;
+        }
+
+        .table-fullscreen-content .product-img {
+            width: 60px;
+            height: 60px;
+        }
+
+        /* Modo ocultar números */
+        body.hide-numbers .summary-value,
+        body.hide-numbers .cost-value,
+        body.hide-numbers td.numeric,
+        body.hide-numbers .breakdown-value,
+        body.hide-numbers .breakdown-card-value,
+        body.hide-numbers .breakdown-detail-value,
+        body.hide-numbers .units-value,
+        body.hide-numbers .current-value strong,
+        body.hide-numbers input.calculated {
+            color: transparent !important;
+            text-shadow: 0 0 8px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+
+        body.hide-numbers .profit-positive,
+        body.hide-numbers .profit-negative {
+            color: transparent !important;
+            text-shadow: 0 0 8px rgba(46,125,50,0.5);
+        }
+
+        body.hide-numbers .profit-negative {
+            text-shadow: 0 0 8px rgba(198,40,40,0.5);
+        }
+
+        /* Modal ZIP */
+        .zip-options {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .zip-option-btn {
+            padding: 20px;
+            border: 3px solid #e0e0e0;
+            background: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .zip-option-btn:hover {
+            border-color: #B5838D;
+            background: #fafafa;
+            transform: translateX(5px);
+        }
+
+        .zip-option-icon {
+            font-size: 32px;
+        }
+
+        .zip-option-text {
+            flex: 1;
+        }
+
+        .zip-option-title {
             font-size: 16px;
             font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .zip-option-desc {
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        input[type="file"].zip-input {
+            display: none;
         }
     </style>
 </head>
@@ -1090,6 +1287,15 @@
         <header class="header">
             <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
             <div class="header-actions">
+                <button class="btn-sm hide-btn" id="hideBtn" onclick="toggleHideNumbers()" title="Ocultar/Mostrar números">
+                    👁️
+                </button>
+                <button class="btn-sm zip-btn" onclick="openZipModal()" title="Exportar/Importar ZIP">
+                    🗜️
+                </button>
+                <button class="btn-sm table-btn" id="tableViewBtn" onclick="toggleTableFullscreen()" title="Ver solo tabla">
+                    📊
+                </button>
                 <button class="btn-sm kiosk-btn" id="kioskBtn" onclick="toggleKioskMode()" title="Activar/Desactivar modo pantalla completa">
                     🖥️
                 </button>
@@ -1161,7 +1367,7 @@
                         <input type="text" id="productName" placeholder="Ej: Reloj">
                     </div>
 
-                    <!-- NUEVO: Selector de Unidades -->
+                    <!-- Selector de Unidades -->
                     <div class="form-group">
                         <label>CANTIDAD DE UNIDADES</label>
                         <div class="units-input-group">
@@ -1182,13 +1388,13 @@
                         </div>
                     </div>
 
-                    <!-- NUEVO: Display de Totales -->
+                    <!-- Display de Totales -->
                     <div class="units-row">
                         <div class="units-display">
                             <span class="units-label">Total Unidades:</span>
                             <span class="units-value" id="displayTotalUnits">1</span>
                         </div>
-                        <div style="font-size: 11px; color: #666; display: flex; align-items: center;">
+                        <div style="font-size: 13px; color: #666; display: flex; align-items: center; font-weight: 700;">
                             Los cálculos se multiplican automáticamente
                         </div>
                     </div>
@@ -1204,14 +1410,14 @@
                         </div>
                     </div>
 
-                    <!-- NUEVO: Botón de Desglose -->
+                    <!-- Botón de Desglose -->
                     <button class="btn-breakdown" onclick="openBreakdownModal()">
                         Ver Desglose de Costos por Unidad
                     </button>
 
                     <div class="form-group">
                         <label>GANANCIA NETA TOTAL</label>
-                        <input type="text" id="productNet" class="calculated" readonly style="font-weight: 900; font-size: 16px;">
+                        <input type="text" id="productNet" class="calculated" readonly style="font-weight: 900; font-size: 18px;">
                     </div>
 
                     <button class="btn-submit" id="saveBtn" onclick="saveProduct()">➕ AGREGAR PRODUCTO AL LOTE</button>
@@ -1221,13 +1427,12 @@
 
             <!-- Right Panel -->
             <div class="right-panel">
-                <!-- MODIFICADO: Agregado TOTAL UNIDADES junto a TOTAL PRODUCTOS -->
+                <!-- Summary Bar -->
                 <div class="summary-bar">
                     <div class="summary-item">
                         <div class="summary-label">TOTAL PRODUCTOS</div>
                         <div class="summary-value" id="totalProducts">0</div>
                     </div>
-                    <!-- NUEVO: Total de unidades -->
                     <div class="summary-item" style="background: #fafafa;">
                         <div class="summary-label" style="color: #B5838D;">TOTAL UNIDADES</div>
                         <div class="summary-value units-total" id="totalUnits">0</div>
@@ -1254,18 +1459,18 @@
                     <table id="productsTable">
                         <thead>
                             <tr>
-                                <th style="width: 50px;">#</th>
-                                <th style="width: 60px;">IMG</th>
+                                <th style="width: 60px;">#</th>
+                                <th style="width: 70px;">IMG</th>
                                 <th>PRODUCTO</th>
                                 <th class="numeric">UNID</th>
                                 <th class="numeric">COMPRA</th>
-                                <th class="numeric" style="font-size: 9px;">+ENV.PROV</th>
-                                <th class="numeric" style="font-size: 9px;">+ENV.TRAS</th>
-                                <th class="numeric" style="font-size: 9px;">+IMP</th>
+                                <th class="numeric" style="font-size: 11px;">+ENV.PROV</th>
+                                <th class="numeric" style="font-size: 11px;">+ENV.TRAS</th>
+                                <th class="numeric" style="font-size: 11px;">+IMP</th>
                                 <th class="numeric">COSTO REAL</th>
                                 <th class="numeric">VENTA</th>
                                 <th class="numeric">GANANCIA</th>
-                                <th style="width: 80px;"></th>
+                                <th style="width: 100px;"></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -1274,7 +1479,7 @@
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
-                                        <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
+                                        <div style="font-size: 15px; margin-top: 12px; opacity: 0.8;">
                                             1. CLICK EN "PASO 1" PARA CONFIGURAR EL LOTE<br>
                                             2. AGREGA PRODUCTOS UNO POR UNO<br>
                                             3. DESPUÉS CLICK EN "PASO 2" PARA COSTOS FINALES
@@ -1288,18 +1493,36 @@
 
                 <div class="panel-footer">
                     <div class="lote-info">
-                        <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a;">LOTE-001</span> | 
+                        <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a; font-size: 17px;">LOTE-001</span> | 
                         PRODUCTOS: <strong id="footerCount">0</strong> | 
                         UNIDADES: <strong id="footerUnits" style="color: #B5838D;">0</strong> |
                         ENV. PROV: <strong id="footerVendorShip">$0.00</strong> | 
                         ENV. TRAS: <strong id="footerShip" style="color: #999;">$0.00</strong> | 
                         IMPUESTOS: <strong id="footerTaxes" style="color: #999;">$0.00</strong>
                     </div>
-                    <button class="btn-sm primary" onclick="finishLote()" style="padding: 10px 24px; font-size: 14px;">
+                    <button class="btn-sm primary" onclick="finishLote()" style="padding: 12px 28px; font-size: 16px;">
                         ✓ FINALIZAR LOTE
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Vista Fullscreen de Tabla -->
+    <div class="table-fullscreen-view" id="tableFullscreenView">
+        <div class="table-fullscreen-header">
+            <h2>📊 VISTA DETALLADA DE PRODUCTOS - <span id="fullscreenLoteId">LOTE-001</span></h2>
+            <div class="table-fullscreen-actions">
+                <button class="fullscreen-btn" onclick="toggleHideNumbers()" id="fullscreenHideBtn">
+                    👁️ Ocultar Números
+                </button>
+                <button class="fullscreen-btn close-btn" onclick="toggleTableFullscreen()">
+                    ✕ CERRAR VISTA
+                </button>
+            </div>
+        </div>
+        <div class="table-fullscreen-content" id="fullscreenTableContainer">
+            <!-- La tabla se clonará aquí -->
         </div>
     </div>
 
@@ -1373,26 +1596,26 @@
                     </div>
                 </div>
 
-                <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 15px;">
-                    <div style="font-size: 11px; font-weight: 700; color: #666; margin-bottom: 10px; text-transform: uppercase;">
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                    <div style="font-size: 13px; font-weight: 800; color: #666; margin-bottom: 15px; text-transform: uppercase;">
                         Resumen de Costos por Unidad
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 15px;">
                         <div>
-                            <span style="color: #666;">Envío Proveedor:</span>
-                            <strong id="summaryVendorPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                            <span style="color: #666; font-weight: 700;">Envío Proveedor:</span>
+                            <strong id="summaryVendorPerUnit" style="display: block; font-family: monospace; font-size: 20px; margin-top: 5px;">$0.00</strong>
                         </div>
                         <div>
-                            <span style="color: #666;">Envío Traslado:</span>
-                            <strong id="summaryShipPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                            <span style="color: #666; font-weight: 700;">Envío Traslado:</span>
+                            <strong id="summaryShipPerUnit" style="display: block; font-family: monospace; font-size: 20px; margin-top: 5px;">$0.00</strong>
                         </div>
                         <div>
-                            <span style="color: #666;">Impuestos:</span>
-                            <strong id="summaryTaxPerUnit" style="display: block; font-family: monospace; font-size: 16px;">$0.00</strong>
+                            <span style="color: #666; font-weight: 700;">Impuestos:</span>
+                            <strong id="summaryTaxPerUnit" style="display: block; font-family: monospace; font-size: 20px; margin-top: 5px;">$0.00</strong>
                         </div>
-                        <div style="background: #B5838D; color: #fff; padding: 8px; border-radius: 4px; text-align: center;">
-                            <span style="font-size: 10px;">TOTAL EXTRA/UNID</span>
-                            <strong id="summaryTotalPerUnit" style="display: block; font-family: monospace; font-size: 18px;">$0.00</strong>
+                        <div style="background: #B5838D; color: #fff; padding: 12px; border-radius: 8px; text-align: center;">
+                            <span style="font-size: 12px; font-weight: 700;">TOTAL EXTRA/UNID</span>
+                            <strong id="summaryTotalPerUnit" style="display: block; font-family: monospace; font-size: 22px; margin-top: 5px;">$0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -1404,7 +1627,7 @@
         </div>
     </div>
 
-    <!-- NUEVO: Modal de Desglose de Costos -->
+    <!-- Modal de Desglose de Costos -->
     <div class="modal-overlay" id="modalBreakdown">
         <div class="modal-content breakdown-modal-content">
             <div class="modal-header">
@@ -1449,26 +1672,67 @@
                         <span class="breakdown-detail-label">+ Impuestos (por unidad):</span>
                         <span class="breakdown-detail-value" id="detailTax">+$0.00</span>
                     </div>
-                    <div class="breakdown-detail-row" style="background: #f5f5f5; padding: 12px; border-radius: 4px;">
+                    <div class="breakdown-detail-row" style="background: #f5f5f5; padding: 15px; border-radius: 6px;">
                         <span class="breakdown-detail-label">= COSTO REAL TOTAL:</span>
-                        <span class="breakdown-detail-value" id="detailTotalCost" style="font-size: 16px; color: #B5838D;">$0.00</span>
+                        <span class="breakdown-detail-value" id="detailTotalCost" style="font-size: 20px; color: #B5838D;">$0.00</span>
                     </div>
-                    <div class="breakdown-detail-row" style="margin-top: 10px;">
+                    <div class="breakdown-detail-row" style="margin-top: 12px;">
                         <span class="breakdown-detail-label">Precio de Venta:</span>
                         <span class="breakdown-detail-value" id="detailSalePrice">$0.00</span>
                     </div>
-                    <div class="breakdown-detail-row" style="color: #2e7d32; font-size: 16px;">
+                    <div class="breakdown-detail-row" style="color: #2e7d32; font-size: 18px;">
                         <span class="breakdown-detail-label">GANANCIA NETA POR UNIDAD:</span>
                         <span class="breakdown-detail-value" id="detailNetProfit" style="font-weight: 900;">$0.00</span>
                     </div>
                 </div>
 
-                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px 15px; margin-top: 20px; border-radius: 4px; font-size: 12px; color: #0d47a1; font-weight: 600;">
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px 18px; margin-top: 25px; border-radius: 8px; font-size: 14px; color: #0d47a1; font-weight: 700;">
                     <strong>Nota:</strong> Estos cálculos son por unidad individual. El total se multiplica por la cantidad de unidades ingresadas.
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn primary" onclick="closeModal('modalBreakdown')">CERRAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ZIP Export/Import -->
+    <div class="modal-overlay" id="modalZip">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">🗜️ EXPORTAR / IMPORTAR DATOS</div>
+                <button class="modal-close-btn" onclick="closeModal('modalZip')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box">
+                    Guarda todos tus lotes y productos en un archivo ZIP o restaura datos desde un archivo anterior.
+                </div>
+                
+                <div class="zip-options">
+                    <button class="zip-option-btn" onclick="exportToZip()">
+                        <div class="zip-option-icon">📦</div>
+                        <div class="zip-option-text">
+                            <div class="zip-option-title">EXPORTAR A ZIP</div>
+                            <div class="zip-option-desc">Guarda todos los lotes, productos e imágenes en un archivo comprimido</div>
+                        </div>
+                    </button>
+
+                    <button class="zip-option-btn" onclick="document.getElementById('zipFileInput').click()">
+                        <div class="zip-option-icon">📂</div>
+                        <div class="zip-option-text">
+                            <div class="zip-option-title">IMPORTAR DESDE ZIP</div>
+                            <div class="zip-option-desc">Restaura datos desde un archivo ZIP previamente exportado</div>
+                        </div>
+                    </button>
+                    <input type="file" id="zipFileInput" class="zip-input" accept=".zip" onchange="importFromZip(this)">
+                </div>
+
+                <div class="info-box warning" style="margin-top: 20px;">
+                    ⚠️ Al importar, los datos actuales serán reemplazados. Asegúrate de exportar primero si necesitas guardar el estado actual.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalZip')">CERRAR</button>
             </div>
         </div>
     </div>
@@ -1500,6 +1764,8 @@
         let loteCounter = 1;
         let step1Completed = false;
         let isKioskMode = false;
+        let isTableFullscreen = false;
+        let hideNumbersMode = false;
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
@@ -1536,6 +1802,213 @@
             setTimeout(() => {
                 input.click();
             }, 10);
+        }
+
+        // NUEVO: Toggle para ocultar números
+        function toggleHideNumbers() {
+            hideNumbersMode = !hideNumbersMode;
+            document.body.classList.toggle('hide-numbers', hideNumbersMode);
+            
+            const btn = document.getElementById('hideBtn');
+            const fullscreenBtn = document.getElementById('fullscreenHideBtn');
+            
+            if (hideNumbersMode) {
+                btn.classList.add('active');
+                btn.innerHTML = '🙈';
+                btn.title = 'Mostrar números';
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerHTML = '👁️ Mostrar Números';
+                }
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '👁️';
+                btn.title = 'Ocultar números';
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerHTML = '🙈 Ocultar Números';
+                }
+            }
+        }
+
+        // NUEVO: Vista fullscreen de tabla
+        function toggleTableFullscreen() {
+            isTableFullscreen = !isTableFullscreen;
+            const view = document.getElementById('tableFullscreenView');
+            const btn = document.getElementById('tableViewBtn');
+            
+            if (isTableFullscreen) {
+                // Clonar la tabla actual
+                const container = document.getElementById('fullscreenTableContainer');
+                const originalTable = document.getElementById('productsTable');
+                
+                // Limpiar contenedor
+                container.innerHTML = '';
+                
+                // Crear nueva tabla con los datos actuales
+                const tableClone = document.createElement('table');
+                tableClone.innerHTML = originalTable.innerHTML;
+                
+                // Actualizar el ID del lote
+                document.getElementById('fullscreenLoteId').textContent = currentLote.id;
+                
+                container.appendChild(tableClone);
+                
+                // Aplicar modo ocultar números si está activo
+                if (hideNumbersMode) {
+                    document.getElementById('tableFullscreenView').classList.add('hide-numbers');
+                }
+                
+                view.classList.add('active');
+                btn.classList.add('active');
+                btn.title = 'Cerrar vista de tabla';
+            } else {
+                view.classList.remove('active');
+                view.classList.remove('hide-numbers');
+                btn.classList.remove('active');
+                btn.title = 'Ver solo tabla';
+            }
+        }
+
+        // NUEVO: Exportar a ZIP
+        async function exportToZip() {
+            const zip = new JSZip();
+            
+            // Crear carpeta para imágenes
+            const imgFolder = zip.folder("imagenes");
+            
+            // Preparar datos sin imágenes base64 (para reducir tamaño)
+            const dataToExport = {
+                currentLote: {
+                    ...currentLote,
+                    products: currentLote.products.map(p => ({
+                        ...p,
+                        image: p.image ? `imagenes/${p.id}.jpg` : null
+                    }))
+                },
+                allLotes: allLotes.map(lote => ({
+                    ...lote,
+                    products: lote.products.map(p => ({
+                        ...p,
+                        image: p.image ? `imagenes/${p.id}.jpg` : null
+                    }))
+                })),
+                loteCounter: loteCounter,
+                exportDate: new Date().toISOString()
+            };
+            
+            // Agregar JSON de datos
+            zip.file("datos.json", JSON.stringify(dataToExport, null, 2));
+            
+            // Agregar imágenes
+            for (const lote of [currentLote, ...allLotes]) {
+                for (const product of lote.products) {
+                    if (product.image && product.image.startsWith('data:image')) {
+                        const base64Data = product.image.split(',')[1];
+                        imgFolder.file(`${product.id}.jpg`, base64Data, {base64: true});
+                    }
+                }
+            }
+            
+            // Generar ZIP
+            const content = await zip.generateAsync({type: "blob"});
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `KLOHESV_Backup_${currentLote.id}_${new Date().toISOString().split('T')[0]}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            closeModal('modalZip');
+            alert('✅ Datos exportados correctamente');
+        }
+
+        // NUEVO: Importar desde ZIP
+        async function importFromZip(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (!confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
+                input.value = '';
+                return;
+            }
+            
+            try {
+                const zip = await JSZip.loadAsync(file);
+                
+                // Leer datos JSON
+                const jsonFile = zip.file("datos.json");
+                if (!jsonFile) {
+                    throw new Error("Archivo datos.json no encontrado en el ZIP");
+                }
+                
+                const jsonContent = await jsonFile.async("string");
+                const data = JSON.parse(jsonContent);
+                
+                // Restaurar imágenes
+                const imgFolder = zip.folder("imagenes");
+                const restoreProductImages = async (product) => {
+                    if (product.image && product.image.startsWith('imagenes/')) {
+                        const imageName = product.image.replace('imagenes/', '');
+                        const imageFile = imgFolder?.file(imageName);
+                        if (imageFile) {
+                            const base64 = await imageFile.async("base64");
+                            product.image = `data:image/jpeg;base64,${base64}`;
+                        } else {
+                            product.image = null;
+                        }
+                    }
+                    return product;
+                };
+                
+                // Restaurar currentLote
+                if (data.currentLote) {
+                    currentLote = data.currentLote;
+                    if (currentLote.products) {
+                        currentLote.products = await Promise.all(
+                            currentLote.products.map(restoreProductImages)
+                        );
+                    }
+                }
+                
+                // Restaurar allLotes
+                if (data.allLotes) {
+                    allLotes = await Promise.all(
+                        data.allLotes.map(async (lote) => ({
+                            ...lote,
+                            products: await Promise.all(
+                                lote.products.map(restoreProductImages)
+                            )
+                        }))
+                    );
+                }
+                
+                if (data.loteCounter) {
+                    loteCounter = data.loteCounter;
+                }
+                
+                step1Completed = currentLote.vendorShipping > 0;
+                
+                await saveData();
+                updateUI();
+                renderTable();
+                clearForm();
+                
+                closeModal('modalZip');
+                alert('✅ Datos importados correctamente');
+                
+            } catch (error) {
+                alert('❌ Error al importar: ' + error.message);
+                console.error(error);
+            }
+            
+            input.value = '';
+        }
+
+        function openZipModal() {
+            const modal = document.getElementById('modalZip');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
         }
 
         function toggleKioskMode() {
@@ -1760,7 +2233,6 @@
             document.getElementById('removeImage').classList.remove('active');
         }
 
-        // NUEVA FUNCIÓN: Ajustar unidades
         function adjustUnits(delta) {
             const input = document.getElementById('productUnits');
             let value = parseInt(input.value) || 1;
@@ -1771,7 +2243,6 @@
             calculateProduct();
         }
 
-        // NUEVA FUNCIÓN: Abrir modal de desglose
         function openBreakdownModal() {
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
@@ -1792,7 +2263,6 @@
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
             const netProfit = price - realCost;
             
-            // Llenar modal
             document.getElementById('breakdownModalCost').textContent = '$' + cost.toFixed(2);
             document.getElementById('breakdownModalPrice').textContent = '$' + price.toFixed(2);
             document.getElementById('breakdownModalMargin').textContent = margin.toFixed(1) + '%';
@@ -1946,11 +2416,9 @@
             const tbody = document.getElementById('tableBody');
             const products = currentLote.products;
             
-            // MODIFICADO: Actualizar tanto productos como unidades
             document.getElementById('totalProducts').textContent = products.length;
             document.getElementById('footerCount').textContent = products.length;
             
-            // NUEVO: Calcular y mostrar total de unidades
             const totalUnits = products.reduce((sum, p) => sum + p.units, 0);
             document.getElementById('totalUnits').textContent = totalUnits;
             document.getElementById('footerUnits').textContent = totalUnits;
@@ -1962,7 +2430,7 @@
                             <div class="empty-state">
                                 <div class="empty-icon">📦</div>
                                 <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
-                                <div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">
+                                <div style="font-size: 15px; margin-top: 12px; opacity: 0.8;">
                                     1. CLICK EN "PASO 1" PARA CONFIGURAR EL LOTE<br>
                                     2. AGREGA PRODUCTOS UNO POR UNO<br>
                                     3. DESPUÉS CLICK EN "PASO 2" PARA COSTOS FINALES
@@ -1984,20 +2452,20 @@
                         <td>
                             ${p.image ? 
                                 `<img src="${p.image}" class="product-img" onclick="showImageModal('${p.image}')">` : 
-                                '<div style="width:45px;height:45px;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:18px; font-weight: 700;">📦</div>'}
+                                '<div style="width:55px;height:55px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:20px; font-weight: 800;">📦</div>'}
                         </td>
                         <td>
                             <div class="product-name">${p.name}</div>
                             <div class="product-meta">${currentLote.id}</div>
                         </td>
-                        <td class="numeric" style="font-weight: 800; color: #B5838D;">${p.units}</td>
-                        <td class="numeric" style="font-weight: 800;">$${p.cost.toFixed(2)}</td>
-                        <td class="numeric" style="color: #2e7d32; font-size: 11px; font-weight: 700;">+$${(p.vendorShippingShare * p.units).toFixed(2)}</td>
-                        <td class="numeric" style="color: #666; font-size: 11px;">+$${(p.shippingShare * p.units).toFixed(2)}</td>
-                        <td class="numeric" style="color: #666; font-size: 11px;">+$${(p.taxShare * p.units).toFixed(2)}</td>
-                        <td class="numeric" style="font-weight: 900; background: #f5f5f5; font-size: 14px;">$${p.totalRealCost.toFixed(2)}</td>
-                        <td class="numeric" style="font-weight: 800;">$${p.price.toFixed(2)}</td>
-                        <td class="numeric ${p.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size: 14px;">
+                        <td class="numeric" style="font-weight: 900; color: #B5838D; font-size: 18px;">${p.units}</td>
+                        <td class="numeric" style="font-weight: 900; font-size: 17px;">$${p.cost.toFixed(2)}</td>
+                        <td class="numeric" style="color: #2e7d32; font-size: 13px; font-weight: 800;">+$${(p.vendorShippingShare * p.units).toFixed(2)}</td>
+                        <td class="numeric" style="color: #666; font-size: 13px; font-weight: 700;">+$${(p.shippingShare * p.units).toFixed(2)}</td>
+                        <td class="numeric" style="color: #666; font-size: 13px; font-weight: 700;">+$${(p.taxShare * p.units).toFixed(2)}</td>
+                        <td class="numeric" style="font-weight: 900; background: #f5f5f5; font-size: 17px;">$${p.totalRealCost.toFixed(2)}</td>
+                        <td class="numeric" style="font-weight: 900; font-size: 17px;">$${p.price.toFixed(2)}</td>
+                        <td class="numeric ${p.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size: 18px;">
                             $${p.netProfit.toFixed(2)}
                         </td>
                         <td>
@@ -2185,33 +2653,32 @@
             const doc = new jsPDF('l', 'mm', 'a4');
             
             doc.setFillColor(181, 131, 141);
-            doc.rect(0, 0, 300, 22, 'F');
+            doc.rect(0, 0, 300, 25, 'F');
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
+            doc.setFontSize(18);
             doc.setFont(undefined, 'bold');
-            doc.text(`REPORTE: ${currentLote.id.toUpperCase()}`, 15, 15);
+            doc.text(`REPORTE: ${currentLote.id.toUpperCase()}`, 15, 17);
             
             doc.setTextColor(200);
-            doc.setFontSize(10);
+            doc.setFontSize(11);
             doc.setFont(undefined, 'normal');
-            doc.text(`${currentLote.products.length} PRODUCTOS`, 250, 15);
+            doc.text(`${currentLote.products.length} PRODUCTOS`, 250, 17);
             
-            let y = 32;
+            let y = 35;
             const totalCost = currentLote.products.reduce((a, p) => a + p.cost, 0);
             const totalInvestment = totalCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
             const totalSales = currentLote.products.reduce((a, p) => a + p.price, 0);
             const totalNet = currentLote.products.reduce((a, p) => a + p.netProfit, 0);
-            // NUEVO: Calcular total de unidades para el PDF
             const totalUnits = currentLote.products.reduce((a, p) => a + p.units, 0);
             
             doc.setFillColor(240, 240, 240);
-            doc.rect(15, y, 260, 22, 'F');
+            doc.rect(15, y, 260, 25, 'F');
             
             doc.setTextColor(0);
-            doc.setFontSize(10);
+            doc.setFontSize(11);
             const metrics = [
                 [`PRODUCTOS:`, currentLote.products.length.toString()],
-                [`UNIDADES:`, totalUnits.toString()], // NUEVO
+                [`UNIDADES:`, totalUnits.toString()],
                 [`ENVÍO PROV:`, `$${currentLote.vendorShipping.toFixed(2)}`],
                 [`ENVÍO TRAS:`, `$${currentLote.shipping.toFixed(2)}`],
                 [`IMPUESTOS:`, `$${currentLote.taxes.toFixed(2)}`],
@@ -2222,14 +2689,14 @@
             let x = 20;
             metrics.forEach(([label, value]) => {
                 doc.setTextColor(100);
-                doc.setFontSize(8);
+                doc.setFontSize(9);
                 doc.setFont(undefined, 'bold');
-                doc.text(label, x, y + 7);
+                doc.text(label, x, y + 8);
                 doc.setTextColor(0);
-                doc.setFontSize(11);
+                doc.setFontSize(13);
                 doc.setFont(undefined, 'bold');
-                doc.text(value, x, y + 16);
-                x += 36; // Ajustado para 7 métricas
+                doc.text(value, x, y + 19);
+                x += 36;
             });
             
             const data = currentLote.products.map((p, i) => [
@@ -2246,20 +2713,20 @@
             ]);
             
             doc.autoTable({
-                startY: y + 30,
+                startY: y + 35,
                 head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'VENTA', 'GANANCIA']],
                 body: data,
                 theme: 'plain',
                 headStyles: { 
                     fillColor: [230, 230, 230],
                     textTextColor: 0,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontStyle: 'bold',
                     halign: 'center'
                 },
                 styles: { 
-                    fontSize: 10,
-                    cellPadding: 4,
+                    fontSize: 11,
+                    cellPadding: 5,
                     font: 'helvetica',
                     fontStyle: 'bold'
                 },
@@ -2282,10 +2749,15 @@
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                closeModal('modalStep1');
-                closeModal('modalStep2');
-                closeModal('modalBreakdown');
-                closeImageModal();
+                if (isTableFullscreen) {
+                    toggleTableFullscreen();
+                } else {
+                    closeModal('modalStep1');
+                    closeModal('modalStep2');
+                    closeModal('modalBreakdown');
+                    closeModal('modalZip');
+                    closeImageModal();
+                }
             }
         });
     </script>

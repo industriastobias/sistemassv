@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización de Productos KLOHESV</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -1283,6 +1283,31 @@
         input[type="file"].zip-input {
             display: none;
         }
+        
+        /* NUEVO: Estilos para precio de venta por unidad */
+        .price-unit-display {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .price-unit-label {
+            font-size: 10px;
+            color: #e65100;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        
+        .price-unit-value {
+            font-size: 20px;
+            font-weight: 900;
+            color: #e65100;
+            font-family: 'Courier New', monospace;
+        }
     </style>
 </head>
 <body>
@@ -1391,6 +1416,12 @@
                         </div>
                     </div>
 
+                    <!-- NUEVO: Display de Precio de Venta por Unidad -->
+                    <div class="price-unit-display" id="priceUnitDisplay" style="display: none;">
+                        <div class="price-unit-label">PRECIO DE VENTA POR UNIDAD</div>
+                        <div class="price-unit-value" id="priceUnitValue">$0.00</div>
+                    </div>
+
                     <!-- Display de Totales -->
                     <div class="units-row">
                         <div class="units-display">
@@ -1471,14 +1502,15 @@
                                 <th class="numeric" style="font-size: 9px;">+ENV.TRAS</th>
                                 <th class="numeric" style="font-size: 9px;">+IMP</th>
                                 <th class="numeric">COSTO REAL</th>
-                                <th class="numeric">VENTA</th>
+                                <th class="numeric">VENTA UNIT</th>
+                                <th class="numeric">VENTA TOTAL</th>
                                 <th class="numeric">GANANCIA</th>
                                 <th style="width: 70px;"></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
                             <tr class="empty-row">
-                                <td colspan="12">
+                                <td colspan="13">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
@@ -1643,16 +1675,16 @@
                         <div class="breakdown-card-title">Costo de Compra</div>
                         <div class="breakdown-card-value" id="breakdownModalCost">$0.00</div>
                     </div>
-                    <div class="breakdown-card">
-                        <div class="breakdown-card-title">Precio de Venta</div>
-                        <div class="breakdown-card-value" id="breakdownModalPrice">$0.00</div>
+                    <div class="breakdown-card" style="background: #fff3e0; border-color: #ff9800;">
+                        <div class="breakdown-card-title" style="color: #e65100;">Precio de Venta Unitario</div>
+                        <div class="breakdown-card-value" id="breakdownModalPrice" style="color: #e65100;">$0.00</div>
                     </div>
                     <div class="breakdown-card">
                         <div class="breakdown-card-title">Margen (%)</div>
                         <div class="breakdown-card-value" id="breakdownModalMargin">0%</div>
                     </div>
                     <div class="breakdown-card highlight">
-                        <div class="breakdown-card-title">Ganancia Bruta</div>
+                        <div class="breakdown-card-title">Ganancia Bruta Unit</div>
                         <div class="breakdown-card-value" id="breakdownModalGross">$0.00</div>
                     </div>
                 </div>
@@ -1676,21 +1708,22 @@
                         <span class="breakdown-detail-value" id="detailTax">+$0.00</span>
                     </div>
                     <div class="breakdown-detail-row" style="background: #f5f5f5; padding: 12px; border-radius: 4px;">
-                        <span class="breakdown-detail-label">= COSTO REAL TOTAL:</span>
+                        <span class="breakdown-detail-label">= COSTO REAL TOTAL POR UNIDAD:</span>
                         <span class="breakdown-detail-value" id="detailTotalCost" style="font-size: 16px; color: #B5838D;">$0.00</span>
                     </div>
-                    <div class="breakdown-detail-row" style="margin-top: 8px;">
-                        <span class="breakdown-detail-label">Precio de Venta:</span>
-                        <span class="breakdown-detail-value" id="detailSalePrice">$0.00</span>
+                    <div class="breakdown-detail-row" style="margin-top: 8px; background: #fff3e0; padding: 8px; border-radius: 4px;">
+                        <span class="breakdown-detail-label" style="color: #e65100;">Precio de Venta por Unidad:</span>
+                        <span class="breakdown-detail-value" id="detailSalePrice" style="color: #e65100; font-weight: 900;">$0.00</span>
                     </div>
-                    <div class="breakdown-detail-row" style="color: #2e7d32; font-size: 14px;">
+                    <div class="breakdown-detail-row" style="color: #2e7d32; font-size: 14px; background: #e8f5e9; padding: 12px; border-radius: 4px; margin-top: 8px;">
                         <span class="breakdown-detail-label">GANANCIA NETA POR UNIDAD:</span>
-                        <span class="breakdown-detail-value" id="detailNetProfit" style="font-weight: 900;">$0.00</span>
+                        <span class="breakdown-detail-value" id="detailNetProfit" style="font-weight: 900; font-size: 16px;">$0.00</span>
                     </div>
                 </div>
 
                 <div style="background: #e3f2fd; border-left: 3px solid #2196f3; padding: 12px 15px; margin-top: 20px; border-radius: 6px; font-size: 12px; color: #0d47a1; font-weight: 700;">
-                    <strong>Nota:</strong> Estos cálculos son por unidad individual. El total se multiplica por la cantidad de unidades ingresadas.
+                    <strong>Fórmula:</strong> Venta Unitario − Costo Real = Ganancia Neta<br>
+                    <small>La ganancia neta siempre será menor o igual a la ganancia bruta</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2261,15 +2294,21 @@
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
-            const margin = ((price - cost) / cost) * 100;
-            const grossProfit = price - cost;
+            // CORREGIDO: Cálculo correcto de ganancias
+            // Ganancia Bruta = Venta - Costo de Compra (sin gastos adicionales)
+            const grossProfitPerUnit = price - cost;
+            
+            // Costo Real = Costo de Compra + Todos los gastos adicionales
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
-            const netProfit = price - realCost;
+            
+            // Ganancia Neta = Venta - Costo Real (después de todos los gastos)
+            // La ganancia neta SIEMPRE debe ser menor o igual a la ganancia bruta
+            const netProfitPerUnit = price - realCost;
             
             document.getElementById('breakdownModalCost').textContent = '$' + cost.toFixed(2);
             document.getElementById('breakdownModalPrice').textContent = '$' + price.toFixed(2);
-            document.getElementById('breakdownModalMargin').textContent = margin.toFixed(1) + '%';
-            document.getElementById('breakdownModalGross').textContent = '$' + grossProfit.toFixed(2);
+            document.getElementById('breakdownModalMargin').textContent = ((price - cost) / cost * 100).toFixed(1) + '%';
+            document.getElementById('breakdownModalGross').textContent = '$' + grossProfitPerUnit.toFixed(2);
             
             document.getElementById('detailBaseCost').textContent = '$' + cost.toFixed(2);
             document.getElementById('detailVendorShip').textContent = '+$' + vendorPerUnit.toFixed(2);
@@ -2279,8 +2318,8 @@
             document.getElementById('detailSalePrice').textContent = '$' + price.toFixed(2);
             
             const netEl = document.getElementById('detailNetProfit');
-            netEl.textContent = '$' + netProfit.toFixed(2);
-            netEl.style.color = netProfit >= 0 ? '#2e7d32' : '#c62828';
+            netEl.textContent = '$' + netProfitPerUnit.toFixed(2);
+            netEl.style.color = netProfitPerUnit >= 0 ? '#2e7d32' : '#c62828';
             
             const modal = document.getElementById('modalBreakdown');
             modal.classList.add('active');
@@ -2299,9 +2338,17 @@
                 p.vendorShippingShare = vendorPerUnit;
                 p.shippingShare = shipPerUnit;
                 p.taxShare = taxPerUnit;
+                
+                // CORREGIDO: Cálculo correcto del costo real por unidad
                 p.realCost = p.unitCost + vendorPerUnit + shipPerUnit + taxPerUnit;
                 p.totalRealCost = p.realCost * p.units;
-                p.netProfit = (p.price - p.realCost) * p.units;
+                
+                // CORREGIDO: Ganancia bruta = Venta - Costo de compra (sin gastos extras)
+                p.grossProfit = (p.unitPrice - p.unitCost) * p.units;
+                
+                // CORREGIDO: Ganancia neta = Venta - Costo real (con todos los gastos)
+                // Esto asegura que la ganancia neta <= ganancia bruta
+                p.netProfit = (p.unitPrice - p.realCost) * p.units;
             });
             
             renderTable(highlight);
@@ -2316,16 +2363,36 @@
             
             document.getElementById('displayTotalUnits').textContent = units;
             
+            // NUEVO: Mostrar precio de venta por unidad
+            const priceUnitDisplay = document.getElementById('priceUnitDisplay');
+            const priceUnitValue = document.getElementById('priceUnitValue');
+            
+            if (price > 0) {
+                priceUnitDisplay.style.display = 'block';
+                priceUnitValue.textContent = '$' + price.toFixed(2);
+            } else {
+                priceUnitDisplay.style.display = 'none';
+            }
+            
             const newCount = currentLote.products.length + 1;
             const vendorPerUnit = currentLote.vendorShipping / newCount;
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
             if (cost > 0 && price > 0) {
+                // CORREGIDO: Cálculo correcto de ganancias
                 const margin = ((price - cost) / cost) * 100;
+                
+                // Ganancia Bruta = (Precio Venta - Costo Compra) × Unidades
+                // No incluye gastos adicionales
                 const grossProfitPerUnit = price - cost;
                 const grossProfitTotal = grossProfitPerUnit * units;
+                
+                // Costo Real incluye todos los gastos
                 const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
+                
+                // Ganancia Neta = (Precio Venta - Costo Real) × Unidades
+                // Siempre será menor o igual a la ganancia bruta
                 const netProfitPerUnit = price - realCost;
                 const netProfitTotal = netProfitPerUnit * units;
                 
@@ -2362,9 +2429,16 @@
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
+            // CORREGIDO: Cálculo correcto de ganancias
             const margin = ((price - cost) / cost) * 100;
+            
+            // Ganancia Bruta: Venta - Costo de compra (sin gastos extras)
             const grossProfitPerUnit = price - cost;
+            
+            // Costo Real: Incluye todos los gastos
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
+            
+            // Ganancia Neta: Venta - Costo Real (siempre <= ganancia bruta)
             const netProfitPerUnit = price - realCost;
             
             const product = {
@@ -2378,12 +2452,14 @@
                 cost: cost * units,
                 price: price * units,
                 margin: margin,
+                // CORREGIDO: Ganancia bruta sin gastos adicionales
                 grossProfit: grossProfitPerUnit * units,
                 vendorShippingShare: vendorPerUnit,
                 shippingShare: shipPerUnit,
                 taxShare: taxPerUnit,
                 realCost: realCost,
                 totalRealCost: realCost * units,
+                // CORREGIDO: Ganancia neta después de todos los gastos
                 netProfit: netProfitPerUnit * units,
                 date: new Date().toISOString()
             };
@@ -2412,6 +2488,7 @@
             document.getElementById('productMargin').value = '';
             document.getElementById('productGross').value = '';
             document.getElementById('productNet').value = '';
+            document.getElementById('priceUnitDisplay').style.display = 'none';
             removeImage();
         }
 
@@ -2429,7 +2506,7 @@
             if (products.length === 0) {
                 tbody.innerHTML = `
                     <tr class="empty-row">
-                        <td colspan="12">
+                        <td colspan="13">
                             <div class="empty-state">
                                 <div class="empty-icon">📦</div>
                                 <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
@@ -2467,6 +2544,7 @@
                         <td class="numeric" style="color: #666; font-size: 10px; font-weight: 700;">+$${(p.shippingShare * p.units).toFixed(2)}</td>
                         <td class="numeric" style="color: #666; font-size: 10px; font-weight: 700;">+$${(p.taxShare * p.units).toFixed(2)}</td>
                         <td class="numeric" style="font-weight: 900; background: #f5f5f5; font-size: 13px;">$${p.totalRealCost.toFixed(2)}</td>
+                        <td class="numeric" style="font-weight: 900; color: #e65100; font-size: 13px;">$${p.unitPrice.toFixed(2)}</td>
                         <td class="numeric" style="font-weight: 900; font-size: 13px;">$${p.price.toFixed(2)}</td>
                         <td class="numeric ${p.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size: 14px;">
                             $${p.netProfit.toFixed(2)}
@@ -2495,10 +2573,19 @@
 
         function updateSummary() {
             const products = currentLote.products;
-            const totalCost = products.reduce((a, p) => a + p.cost, 0);
-            const totalInvestment = totalCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
+            
+            // Inversión total = Costo de compra de todos los productos + todos los gastos del lote
+            const totalPurchaseCost = products.reduce((a, p) => a + p.cost, 0);
+            const totalInvestment = totalPurchaseCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
+            
+            // Ventas proyectadas = Suma de (precio de venta × unidades)
             const totalSales = products.reduce((a, p) => a + p.price, 0);
+            
+            // CORREGIDO: Ganancia Bruta = Ventas - Costos de compra (sin gastos adicionales)
             const totalGross = products.reduce((a, p) => a + p.grossProfit, 0);
+            
+            // CORREGIDO: Ganancia Neta = Ventas - Costos Reales (con todos los gastos)
+            // Esto asegura que nunca supere la ganancia bruta
             const totalNet = products.reduce((a, p) => a + p.netProfit, 0);
             
             document.getElementById('totalInvestment').textContent = '$' + totalInvestment.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -2519,6 +2606,10 @@
             document.getElementById('productPrice').value = p.unitPrice;
             document.getElementById('productUnits').value = p.units;
             document.getElementById('displayTotalUnits').textContent = p.units;
+            
+            // NUEVO: Mostrar precio de venta por unidad al editar
+            document.getElementById('priceUnitDisplay').style.display = 'block';
+            document.getElementById('priceUnitValue').textContent = '$' + p.unitPrice.toFixed(2);
             
             if (p.image) {
                 currentImage = p.image;
@@ -2711,13 +2802,14 @@
                 `$${(p.shippingShare * p.units).toFixed(2)}`,
                 `$${(p.taxShare * p.units).toFixed(2)}`,
                 `$${p.totalRealCost.toFixed(2)}`,
+                `$${p.unitPrice.toFixed(2)}`,
                 `$${p.price.toFixed(2)}`,
                 `$${p.netProfit.toFixed(2)}`
             ]);
             
             doc.autoTable({
                 startY: y + 28,
-                head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'VENTA', 'GANANCIA']],
+                head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'P.UNIT', 'VENTA', 'GANANCIA']],
                 body: data,
                 theme: 'plain',
                 headStyles: { 
@@ -2735,15 +2827,16 @@
                 },
                 columnStyles: {
                     0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 45 },
+                    1: { cellWidth: 40 },
                     2: { cellWidth: 12, halign: 'center' },
-                    3: { cellWidth: 20, halign: 'right' },
-                    4: { cellWidth: 18, halign: 'right' },
-                    5: { cellWidth: 18, halign: 'right' },
-                    6: { cellWidth: 18, halign: 'right' },
-                    7: { cellWidth: 22, halign: 'right' },
-                    8: { cellWidth: 22, halign: 'right' },
-                    9: { cellWidth: 22, halign: 'right' }
+                    3: { cellWidth: 18, halign: 'right' },
+                    4: { cellWidth: 16, halign: 'right' },
+                    5: { cellWidth: 16, halign: 'right' },
+                    6: { cellWidth: 16, halign: 'right' },
+                    7: { cellWidth: 20, halign: 'right' },
+                    8: { cellWidth: 18, halign: 'right' },
+                    9: { cellWidth: 20, halign: 'right' },
+                    10: { cellWidth: 20, halign: 'right' }
                 }
             });
             

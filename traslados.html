@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización de Productos KLOHESV</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js   "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js   "></script>
     <style>
         * {
             margin: 0;
@@ -75,41 +75,14 @@
             font-weight: 800;
         }
 
-        .btn-sm.kiosk-btn, .btn-sm.table-btn, .btn-sm.zip-btn, .btn-sm.hide-btn {
+        .btn-sm.historial-btn {
             background: rgba(255,255,255,0.2);
             border: 2px solid rgba(255,255,255,0.6);
-            font-size: 14px;
-            padding: 6px 8px;
-            min-width: 32px;
         }
 
-        .btn-sm.kiosk-btn:hover, .btn-sm.table-btn:hover, .btn-sm.zip-btn:hover, .btn-sm.hide-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        .btn-sm.kiosk-btn.active, .btn-sm.table-btn.active {
+        .btn-sm.historial-btn.active {
             background: #fff;
             color: #B5838D;
-            animation: pulse 2s infinite;
-        }
-
-        .btn-sm.hide-btn.active {
-            background: #fff;
-            color: #B5838D;
-        }
-
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
-            50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
-        }
-
-        body.kiosk-mode {
-            overflow: hidden;
-        }
-
-        body.kiosk-mode .app {
-            height: 100vh;
-            width: 100vw;
         }
 
         .main {
@@ -118,19 +91,203 @@
             overflow: hidden;
         }
 
-        @media (max-width: 1100px) {
-            .main {
-                grid-template-columns: 280px 1fr;
-            }
+        /* Panel de Historial */
+        .historial-panel {
+            display: none;
+            position: fixed;
+            top: 50px;
+            right: 0;
+            width: 400px;
+            height: calc(100vh - 50px);
+            background: #fff;
+            border-left: 3px solid #B5838D;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+            z-index: 1000;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        @media (max-width: 900px) {
-            .main {
-                grid-template-columns: 1fr;
-                overflow-y: auto;
-            }
+        .historial-panel.active {
+            display: flex;
         }
 
+        .historial-header {
+            background: #B5838D;
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .historial-header h3 {
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .historial-header button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .historial-header button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .historial-stats {
+            background: #f8f8f8;
+            padding: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 900;
+            color: #B5838D;
+        }
+
+        .historial-lista {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .lote-card {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .lote-card:hover {
+            border-color: #B5838D;
+            transform: translateX(-3px);
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .lote-card.selected {
+            border-color: #B5838D;
+            background: #f8f0f2;
+        }
+
+        .lote-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .lote-id {
+            font-size: 14px;
+            font-weight: 900;
+            color: #B5838D;
+        }
+
+        .lote-date {
+            font-size: 11px;
+            color: #666;
+            font-weight: 700;
+        }
+
+        .lote-preview {
+            font-size: 12px;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .lote-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 11px;
+            color: #555;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .lote-stats span {
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .lote-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .lote-btn {
+            flex: 1;
+            padding: 6px;
+            border: 2px solid #e0e0e0;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .lote-btn:hover {
+            border-color: #B5838D;
+        }
+
+        .lote-btn.delete:hover {
+            border-color: #c62828;
+            color: #c62828;
+        }
+
+        .badge-historial {
+            background: #B5838D;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            margin-left: 5px;
+        }
+
+        .empty-historial {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-weight: 700;
+        }
+
+        /* Resto de estilos existentes */
         .left-panel {
             display: flex;
             flex-direction: column;
@@ -1103,188 +1260,6 @@
             font-weight: 900;
         }
 
-        /* NUEVO: Vista de tabla fullscreen */
-        .table-fullscreen-view {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #fff;
-            z-index: 2147483646;
-            flex-direction: column;
-        }
-
-        .table-fullscreen-view.active {
-            display: flex;
-        }
-
-        .table-fullscreen-header {
-            background: #B5838D;
-            color: #fff;
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.2);
-        }
-
-        .table-fullscreen-header h2 {
-            font-size: 18px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .table-fullscreen-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .fullscreen-btn {
-            padding: 8px 16px;
-            border: 2px solid rgba(255,255,255,0.6);
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 800;
-            transition: all 0.2s;
-        }
-
-        .fullscreen-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-1px);
-        }
-
-        .fullscreen-btn.close-btn {
-            background: #fff;
-            color: #B5838D;
-            border-color: #fff;
-        }
-
-        .fullscreen-btn.close-btn:hover {
-            background: #f0f0f0;
-        }
-
-        .table-fullscreen-content {
-            flex: 1;
-            overflow: auto;
-            padding: 20px;
-            background: #f8f8f8;
-        }
-
-        .table-fullscreen-content table {
-            background: #fff;
-            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .table-fullscreen-content th {
-            padding: 15px 12px;
-            font-size: 12px;
-            background: #f0f0f0;
-        }
-
-        .table-fullscreen-content td {
-            padding: 14px 12px;
-            font-size: 14px;
-        }
-
-        .table-fullscreen-content .product-name {
-            font-size: 15px;
-        }
-
-        .table-fullscreen-content .badge {
-            font-size: 13px;
-            padding: 6px 10px;
-        }
-
-        .table-fullscreen-content .product-img {
-            width: 50px;
-            height: 50px;
-        }
-
-        /* Modo ocultar números */
-        body.hide-numbers .summary-value,
-        body.hide-numbers .cost-value,
-        body.hide-numbers td.numeric,
-        body.hide-numbers .breakdown-value,
-        body.hide-numbers .breakdown-card-value,
-        body.hide-numbers .breakdown-detail-value,
-        body.hide-numbers .units-value,
-        body.hide-numbers .current-value strong,
-        body.hide-numbers input.calculated {
-            color: transparent !important;
-            text-shadow: 0 0 6px rgba(0,0,0,0.5);
-            user-select: none;
-        }
-
-        body.hide-numbers .profit-positive,
-        body.hide-numbers .profit-negative {
-            color: transparent !important;
-            text-shadow: 0 0 6px rgba(46,125,50,0.5);
-        }
-
-        body.hide-numbers .profit-negative {
-            text-shadow: 0 0 6px rgba(198,40,40,0.5);
-        }
-
-        /* Modal ZIP */
-        .zip-options {
-            display: grid;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .zip-option-btn {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            background: #fff;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .zip-option-btn:hover {
-            border-color: #B5838D;
-            background: #fafafa;
-            transform: translateX(3px);
-        }
-
-        .zip-option-icon {
-            font-size: 24px;
-        }
-
-        .zip-option-text {
-            flex: 1;
-        }
-
-        .zip-option-title {
-            font-size: 13px;
-            font-weight: 800;
-            color: #1a1a1a;
-            margin-bottom: 2px;
-        }
-
-        .zip-option-desc {
-            font-size: 11px;
-            color: #666;
-            font-weight: 600;
-        }
-
-        input[type="file"].zip-input {
-            display: none;
-        }
-        
-        /* NUEVO: Estilos para precio de venta por unidad */
         .price-unit-display {
             background: #fff3e0;
             border: 2px solid #ff9800;
@@ -1315,23 +1290,35 @@
         <header class="header">
             <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
             <div class="header-actions">
-                <button class="btn-sm hide-btn" id="hideBtn" onclick="toggleHideNumbers()" title="Ocultar/Mostrar números">
-                    👁️
-                </button>
-                <button class="btn-sm zip-btn" onclick="openZipModal()" title="Exportar/Importar ZIP">
-                    🗜️
-                </button>
-                <button class="btn-sm table-btn" id="tableViewBtn" onclick="toggleTableFullscreen()" title="Ver solo tabla">
-                    📊
-                </button>
-                <button class="btn-sm kiosk-btn" id="kioskBtn" onclick="toggleKioskMode()" title="Activar/Desactivar modo pantalla completa">
-                    🖥️
+                <button class="btn-sm historial-btn" id="historialBtn" onclick="toggleHistorial()" title="Ver historial de lotes">
+                    📋 HISTORIAL
                 </button>
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
                 <button class="btn-sm" onclick="clearAll()" style="color: #ffebee; border-color: rgba(255,255,255,0.4);">🗑️ LIMPIAR TODO</button>
             </div>
         </header>
+
+        <!-- Panel de Historial -->
+        <div class="historial-panel" id="historialPanel">
+            <div class="historial-header">
+                <h3>📋 HISTORIAL DE LOTES</h3>
+                <button onclick="toggleHistorial()">✕</button>
+            </div>
+            <div class="historial-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Total Lotes</div>
+                    <div class="stat-value" id="totalLotesCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Productos</div>
+                    <div class="stat-value" id="totalProductosHistorial">0</div>
+                </div>
+            </div>
+            <div class="historial-lista" id="historialLista">
+                <!-- Los lotes se cargarán aquí dinámicamente -->
+            </div>
+        </div>
 
         <div class="main">
             <!-- Left Panel -->
@@ -1416,7 +1403,7 @@
                         </div>
                     </div>
 
-                    <!-- NUEVO: Display de Precio de Venta por Unidad -->
+                    <!-- Display de Precio de Venta por Unidad -->
                     <div class="price-unit-display" id="priceUnitDisplay" style="display: none;">
                         <div class="price-unit-label">PRECIO DE VENTA POR UNIDAD</div>
                         <div class="price-unit-value" id="priceUnitValue">$0.00</div>
@@ -1540,24 +1527,6 @@
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Vista Fullscreen de Tabla -->
-    <div class="table-fullscreen-view" id="tableFullscreenView">
-        <div class="table-fullscreen-header">
-            <h2>📊 VISTA DETALLADA DE PRODUCTOS - <span id="fullscreenLoteId">LOTE-001</span></h2>
-            <div class="table-fullscreen-actions">
-                <button class="fullscreen-btn" onclick="toggleHideNumbers()" id="fullscreenHideBtn">
-                    👁️ Ocultar Números
-                </button>
-                <button class="fullscreen-btn close-btn" onclick="toggleTableFullscreen()">
-                    ✕ CERRAR VISTA
-                </button>
-            </div>
-        </div>
-        <div class="table-fullscreen-content" id="fullscreenTableContainer">
-            <!-- La tabla se clonará aquí -->
         </div>
     </div>
 
@@ -1734,43 +1703,35 @@
         </div>
     </div>
 
-    <!-- Modal ZIP Export/Import -->
-    <div class="modal-overlay" id="modalZip">
+    <!-- Modal Confirmación -->
+    <div class="modal-overlay" id="modalConfirm">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">🗜️ EXPORTAR / IMPORTAR DATOS</div>
-                <button class="modal-close-btn" onclick="closeModal('modalZip')">&times;</button>
+                <div class="modal-title">⚠️ CONFIRMAR ACCIÓN</div>
+                <button class="modal-close-btn" onclick="closeModal('modalConfirm')">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="info-box">
-                    Guarda todos tus lotes y productos en un archivo ZIP o restaura datos desde un archivo anterior.
-                </div>
-                
-                <div class="zip-options">
-                    <button class="zip-option-btn" onclick="exportToZip()">
-                        <div class="zip-option-icon">📦</div>
-                        <div class="zip-option-text">
-                            <div class="zip-option-title">EXPORTAR A ZIP</div>
-                            <div class="zip-option-desc">Guarda todos los lotes, productos e imágenes en un archivo comprimido</div>
-                        </div>
-                    </button>
-
-                    <button class="zip-option-btn" onclick="document.getElementById('zipFileInput').click()">
-                        <div class="zip-option-icon">📂</div>
-                        <div class="zip-option-text">
-                            <div class="zip-option-title">IMPORTAR DESDE ZIP</div>
-                            <div class="zip-option-desc">Restaura datos desde un archivo ZIP previamente exportado</div>
-                        </div>
-                    </button>
-                    <input type="file" id="zipFileInput" class="zip-input" accept=".zip" onchange="importFromZip(this)">
-                </div>
-
-                <div class="info-box warning" style="margin-top: 15px;">
-                    ⚠️ Al importar, los datos actuales serán reemplazados. Asegúrate de exportar primero si necesitas guardar el estado actual.
-                </div>
+            <div class="modal-body" id="confirmMessage">
+                ¿Estás seguro de que deseas continuar?
             </div>
             <div class="modal-footer">
-                <button class="modal-btn secondary" onclick="closeModal('modalZip')">CERRAR</button>
+                <button class="modal-btn secondary" onclick="closeModal('modalConfirm')">CANCELAR</button>
+                <button class="modal-btn primary" id="confirmActionBtn">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vista Lote -->
+    <div class="modal-overlay" id="modalViewLote">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title" id="viewLoteTitle">VER LOTE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalViewLote')">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh;">
+                <div id="viewLoteContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" onclick="closeModal('modalViewLote')">CERRAR</button>
             </div>
         </div>
     </div>
@@ -1801,22 +1762,18 @@
         let editingProductId = null;
         let loteCounter = 1;
         let step1Completed = false;
-        let isKioskMode = false;
-        let isTableFullscreen = false;
-        let hideNumbersMode = false;
+        let historialVisible = false;
+        let loteToDelete = null;
+        let confirmCallback = null;
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
             await loadData();
             updateUI();
             renderTable();
+            renderHistorial();
             
             setupImageInput();
-            
-            document.addEventListener('fullscreenchange', handleFullscreenChange);
-            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         };
 
         function setupImageInput() {
@@ -1842,278 +1799,405 @@
             }, 10);
         }
 
-        // NUEVO: Toggle para ocultar números
-        function toggleHideNumbers() {
-            hideNumbersMode = !hideNumbersMode;
-            document.body.classList.toggle('hide-numbers', hideNumbersMode);
+        // Funciones del Historial
+        function toggleHistorial() {
+            historialVisible = !historialVisible;
+            const panel = document.getElementById('historialPanel');
+            const btn = document.getElementById('historialBtn');
             
-            const btn = document.getElementById('hideBtn');
-            const fullscreenBtn = document.getElementById('fullscreenHideBtn');
-            
-            if (hideNumbersMode) {
+            if (historialVisible) {
+                panel.classList.add('active');
                 btn.classList.add('active');
-                btn.innerHTML = '🙈';
-                btn.title = 'Mostrar números';
-                if (fullscreenBtn) {
-                    fullscreenBtn.innerHTML = '👁️ Mostrar Números';
-                }
+                renderHistorial();
             } else {
+                panel.classList.remove('active');
                 btn.classList.remove('active');
-                btn.innerHTML = '👁️';
-                btn.title = 'Ocultar números';
-                if (fullscreenBtn) {
-                    fullscreenBtn.innerHTML = '🙈 Ocultar Números';
-                }
             }
         }
 
-        // NUEVO: Vista fullscreen de tabla
-        function toggleTableFullscreen() {
-            isTableFullscreen = !isTableFullscreen;
-            const view = document.getElementById('tableFullscreenView');
-            const btn = document.getElementById('tableViewBtn');
+        function renderHistorial() {
+            const lista = document.getElementById('historialLista');
+            const totalLotes = document.getElementById('totalLotesCount');
+            const totalProductos = document.getElementById('totalProductosHistorial');
             
-            if (isTableFullscreen) {
-                // Clonar la tabla actual
-                const container = document.getElementById('fullscreenTableContainer');
-                const originalTable = document.getElementById('productsTable');
-                
-                // Limpiar contenedor
-                container.innerHTML = '';
-                
-                // Crear nueva tabla con los datos actuales
-                const tableClone = document.createElement('table');
-                tableClone.innerHTML = originalTable.innerHTML;
-                
-                // Actualizar el ID del lote
-                document.getElementById('fullscreenLoteId').textContent = currentLote.id;
-                
-                container.appendChild(tableClone);
-                
-                // Aplicar modo ocultar números si está activo
-                if (hideNumbersMode) {
-                    document.getElementById('tableFullscreenView').classList.add('hide-numbers');
-                }
-                
-                view.classList.add('active');
-                btn.classList.add('active');
-                btn.title = 'Cerrar vista de tabla';
-            } else {
-                view.classList.remove('active');
-                view.classList.remove('hide-numbers');
-                btn.classList.remove('active');
-                btn.title = 'Ver solo tabla';
-            }
-        }
-
-        // NUEVO: Exportar a ZIP
-        async function exportToZip() {
-            const zip = new JSZip();
+            totalLotes.textContent = allLotes.length;
             
-            // Crear carpeta para imágenes
-            const imgFolder = zip.folder("imagenes");
+            const totalProd = allLotes.reduce((sum, lote) => sum + lote.products.length, 0);
+            totalProductos.textContent = totalProd;
             
-            // Preparar datos sin imágenes base64 (para reducir tamaño)
-            const dataToExport = {
-                currentLote: {
-                    ...currentLote,
-                    products: currentLote.products.map(p => ({
-                        ...p,
-                        image: p.image ? `imagenes/${p.id}.jpg` : null
-                    }))
-                },
-                allLotes: allLotes.map(lote => ({
-                    ...lote,
-                    products: lote.products.map(p => ({
-                        ...p,
-                        image: p.image ? `imagenes/${p.id}.jpg` : null
-                    }))
-                })),
-                loteCounter: loteCounter,
-                exportDate: new Date().toISOString()
-            };
-            
-            // Agregar JSON de datos
-            zip.file("datos.json", JSON.stringify(dataToExport, null, 2));
-            
-            // Agregar imágenes
-            for (const lote of [currentLote, ...allLotes]) {
-                for (const product of lote.products) {
-                    if (product.image && product.image.startsWith('data:image')) {
-                        const base64Data = product.image.split(',')[1];
-                        imgFolder.file(`${product.id}.jpg`, base64Data, {base64: true});
-                    }
-                }
-            }
-            
-            // Generar ZIP
-            const content = await zip.generateAsync({type: "blob"});
-            const url = URL.createObjectURL(content);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `KLOHESV_Backup_${currentLote.id}_${new Date().toISOString().split('T')[0]}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            closeModal('modalZip');
-            alert('✅ Datos exportados correctamente');
-        }
-
-        // NUEVO: Importar desde ZIP
-        async function importFromZip(input) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            if (!confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
-                input.value = '';
+            if (allLotes.length === 0) {
+                lista.innerHTML = `
+                    <div class="empty-historial">
+                        <div class="empty-icon">📋</div>
+                        <div>NO HAY LOTES GUARDADOS</div>
+                        <div style="font-size: 12px; margin-top: 8px;">
+                            Los lotes finalizados aparecerán aquí
+                        </div>
+                    </div>
+                `;
                 return;
             }
             
-            try {
-                const zip = await JSZip.loadAsync(file);
-                
-                // Leer datos JSON
-                const jsonFile = zip.file("datos.json");
-                if (!jsonFile) {
-                    throw new Error("Archivo datos.json no encontrado en el ZIP");
-                }
-                
-                const jsonContent = await jsonFile.async("string");
-                const data = JSON.parse(jsonContent);
-                
-                // Restaurar imágenes
-                const imgFolder = zip.folder("imagenes");
-                const restoreProductImages = async (product) => {
-                    if (product.image && product.image.startsWith('imagenes/')) {
-                        const imageName = product.image.replace('imagenes/', '');
-                        const imageFile = imgFolder?.file(imageName);
-                        if (imageFile) {
-                            const base64 = await imageFile.async("base64");
-                            product.image = `data:image/jpeg;base64,${base64}`;
-                        } else {
-                            product.image = null;
-                        }
-                    }
-                    return product;
-                };
-                
-                // Restaurar currentLote
-                if (data.currentLote) {
-                    currentLote = data.currentLote;
-                    if (currentLote.products) {
-                        currentLote.products = await Promise.all(
-                            currentLote.products.map(restoreProductImages)
-                        );
-                    }
-                }
-                
-                // Restaurar allLotes
-                if (data.allLotes) {
-                    allLotes = await Promise.all(
-                        data.allLotes.map(async (lote) => ({
-                            ...lote,
-                            products: await Promise.all(
-                                lote.products.map(restoreProductImages)
-                            )
-                        }))
-                    );
-                }
-                
-                if (data.loteCounter) {
-                    loteCounter = data.loteCounter;
-                }
-                
-                step1Completed = currentLote.vendorShipping > 0;
-                
-                await saveData();
-                updateUI();
-                renderTable();
-                clearForm();
-                
-                closeModal('modalZip');
-                alert('✅ Datos importados correctamente');
-                
-            } catch (error) {
-                alert('❌ Error al importar: ' + error.message);
-                console.error(error);
-            }
+            // Ordenar por fecha (más reciente primero)
+            const lotesOrdenados = [...allLotes].sort((a, b) => {
+                return new Date(b.date) - new Date(a.date);
+            });
             
-            input.value = '';
+            let html = '';
+            lotesOrdenados.forEach((lote, index) => {
+                const totalUnidades = lote.products.reduce((sum, p) => sum + p.units, 0);
+                const totalVentas = lote.products.reduce((sum, p) => sum + p.price, 0);
+                const totalInversion = lote.products.reduce((sum, p) => sum + p.cost, 0) + 
+                                      lote.vendorShipping + lote.shipping + lote.taxes;
+                const gananciaNeta = totalVentas - totalInversion;
+                
+                html += `
+                    <div class="lote-card" onclick="selectLote('${lote.id}')">
+                        <div class="lote-card-header">
+                            <span class="lote-id">${lote.id}</span>
+                            <span class="lote-date">${lote.date}</span>
+                        </div>
+                        <div class="lote-preview">
+                            ${lote.products.length} productos • ${totalUnidades} unidades
+                        </div>
+                        <div class="lote-stats">
+                            <span>💰 $${totalInversion.toFixed(2)}</span>
+                            <span class="${gananciaNeta >= 0 ? 'profit-positive' : 'profit-negative'}">
+                                ${gananciaNeta >= 0 ? '+' : ''}$${gananciaNeta.toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="lote-actions">
+                            <button class="lote-btn" onclick="event.stopPropagation(); viewLote('${lote.id}')">
+                                👁️ VER
+                            </button>
+                            <button class="lote-btn" onclick="event.stopPropagation(); loadLote('${lote.id}')">
+                                📂 CARGAR
+                            </button>
+                            <button class="lote-btn delete" onclick="event.stopPropagation(); confirmDeleteLote('${lote.id}')">
+                                🗑️ ELIMINAR
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            lista.innerHTML = html;
         }
 
-        function openZipModal() {
-            const modal = document.getElementById('modalZip');
+        function selectLote(loteId) {
+            // Quitar selección anterior
+            document.querySelectorAll('.lote-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Seleccionar el actual
+            const cards = document.querySelectorAll('.lote-card');
+            cards.forEach(card => {
+                if (card.querySelector('.lote-id').textContent === loteId) {
+                    card.classList.add('selected');
+                }
+            });
+        }
+
+        function viewLote(loteId) {
+            const lote = allLotes.find(l => l.id === loteId);
+            if (!lote) return;
+            
+            const totalUnidades = lote.products.reduce((sum, p) => sum + p.units, 0);
+            const totalVentas = lote.products.reduce((sum, p) => sum + p.price, 0);
+            const totalCompra = lote.products.reduce((sum, p) => sum + p.cost, 0);
+            const totalInversion = totalCompra + lote.vendorShipping + lote.shipping + lote.taxes;
+            const gananciaNeta = totalVentas - totalInversion;
+            
+            let productosHtml = '';
+            lote.products.forEach((p, i) => {
+                productosHtml += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${p.name}</td>
+                        <td class="numeric">${p.units}</td>
+                        <td class="numeric">$${p.unitCost.toFixed(2)}</td>
+                        <td class="numeric">$${p.unitPrice.toFixed(2)}</td>
+                        <td class="numeric">$${(p.unitPrice - p.unitCost).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            const content = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">PRODUCTOS</div>
+                            <div style="font-size: 20px; font-weight: 900; color: #B5838D;">${lote.products.length}</div>
+                        </div>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">UNIDADES</div>
+                            <div style="font-size: 20px; font-weight: 900;">${totalUnidades}</div>
+                        </div>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">INVERSIÓN</div>
+                            <div style="font-size: 20px; font-weight: 900;">$${totalInversion.toFixed(2)}</div>
+                        </div>
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">VENTAS</div>
+                            <div style="font-size: 20px; font-weight: 900;">$${totalVentas.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f8f8f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                            <div>
+                                <div style="font-size: 11px; color: #666;">ENV. PROVEEDOR</div>
+                                <div style="font-size: 16px; font-weight: 900;">$${lote.vendorShipping.toFixed(2)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #666;">ENV. TRASLADO</div>
+                                <div style="font-size: 16px; font-weight: 900;">$${lote.shipping.toFixed(2)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #666;">IMPUESTOS</div>
+                                <div style="font-size: 16px; font-weight: 900;">$${lote.taxes.toFixed(2)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: #666;">GANANCIA NETA</div>
+                                <div style="font-size: 20px; font-weight: 900; ${gananciaNeta >= 0 ? 'color: #2e7d32;' : 'color: #c62828;'}">
+                                    ${gananciaNeta >= 0 ? '+' : ''}$${gananciaNeta.toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px;">PRODUCTOS</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f0f0f0;">
+                                <th style="padding: 8px;">#</th>
+                                <th style="padding: 8px;">PRODUCTO</th>
+                                <th style="padding: 8px;" class="numeric">UNID</th>
+                                <th style="padding: 8px;" class="numeric">COSTO UNIT</th>
+                                <th style="padding: 8px;" class="numeric">VENTA UNIT</th>
+                                <th style="padding: 8px;" class="numeric">GANANCIA UNIT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productosHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('viewLoteTitle').textContent = `VER LOTE: ${lote.id}`;
+            document.getElementById('viewLoteContent').innerHTML = content;
+            
+            const modal = document.getElementById('modalViewLote');
             modal.classList.add('active');
             modal.style.display = 'flex';
         }
 
-        function toggleKioskMode() {
-            if (!isKioskMode) {
-                const elem = document.documentElement;
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen().catch(err => {
-                        console.log('Error al activar fullscreen:', err);
-                    });
-                } else if (elem.webkitRequestFullscreen) {
-                    elem.webkitRequestFullscreen();
-                } else if (elem.mozRequestFullScreen) {
-                    elem.mozRequestFullScreen();
-                } else if (elem.msRequestFullscreen) {
-                    elem.msRequestFullscreen();
+        function loadLote(loteId) {
+            if (currentLote.products.length > 0) {
+                if (!confirm('¿CARGAR ESTE LOTE? SE PERDERÁN LOS CAMBIOS NO GUARDADOS DEL LOTE ACTUAL')) {
+                    return;
                 }
-                
-                document.body.classList.add('kiosk-mode');
-                isKioskMode = true;
-                
-                const btn = document.getElementById('kioskBtn');
-                btn.classList.add('active');
-                btn.title = "Desactivar modo pantalla completa";
-                
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(err => {
-                        console.log('Error al salir de fullscreen:', err);
-                    });
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-                
-                document.body.classList.remove('kiosk-mode');
-                isKioskMode = false;
-                
-                const btn = document.getElementById('kioskBtn');
-                btn.classList.remove('active');
-                btn.title = "Activar modo pantalla completa";
             }
-        }
-
-        function handleFullscreenChange() {
-            const fullscreenElement = document.fullscreenElement || 
-                                    document.webkitFullscreenElement || 
-                                    document.mozFullScreenElement || 
-                                    document.msFullscreenElement;
             
-            if (!fullscreenElement && isKioskMode) {
-                document.body.classList.remove('kiosk-mode');
-                isKioskMode = false;
-                const btn = document.getElementById('kioskBtn');
-                btn.classList.remove('active');
-                btn.title = "Activar modo pantalla completa";
-            } else if (fullscreenElement && !isKioskMode) {
-                document.body.classList.add('kiosk-mode');
-                isKioskMode = true;
-                const btn = document.getElementById('kioskBtn');
-                btn.classList.add('active');
-                btn.title = "Desactivar modo pantalla completa";
+            const lote = allLotes.find(l => l.id === loteId);
+            if (!lote) return;
+            
+            currentLote = JSON.parse(JSON.stringify(lote)); // Clonar
+            step1Completed = currentLote.vendorShipping > 0;
+            
+            // Actualizar contador si es necesario
+            const numMatch = currentLote.id.match(/\d+/);
+            if (numMatch) {
+                const num = parseInt(numMatch[0]);
+                if (num >= loteCounter) {
+                    loteCounter = num + 1;
+                }
+            }
+            
+            updateUI();
+            renderTable();
+            clearForm();
+            saveData();
+            
+            // Cerrar historial
+            toggleHistorial();
+        }
+
+        function confirmDeleteLote(loteId) {
+            loteToDelete = loteId;
+            document.getElementById('confirmMessage').innerHTML = 
+                `¿Estás seguro de que deseas eliminar el lote <strong>${loteId}</strong>?<br><br>Esta acción no se puede deshacer.`;
+            
+            confirmCallback = function() {
+                deleteLote(loteToDelete);
+            };
+            
+            document.getElementById('confirmActionBtn').onclick = function() {
+                if (confirmCallback) confirmCallback();
+                closeModal('modalConfirm');
+            };
+            
+            const modal = document.getElementById('modalConfirm');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        function deleteLote(loteId) {
+            allLotes = allLotes.filter(l => l.id !== loteId);
+            saveData();
+            renderHistorial();
+            
+            // Si no hay más lotes, cerrar panel si está abierto
+            if (allLotes.length === 0 && historialVisible) {
+                toggleHistorial();
             }
         }
 
+        // Funciones existentes modificadas
+        function finishLote(auto = false) {
+            if (currentLote.products.length === 0) {
+                if (!auto) alert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
+                return;
+            }
+            
+            // Verificar si ya existe un lote con este ID
+            const exists = allLotes.some(l => l.id === currentLote.id);
+            if (exists) {
+                if (!confirm(`El lote ${currentLote.id} ya existe en el historial. ¿Deseas sobrescribirlo?`)) {
+                    return;
+                }
+                // Eliminar el existente
+                allLotes = allLotes.filter(l => l.id !== currentLote.id);
+            }
+            
+            allLotes.push(JSON.parse(JSON.stringify(currentLote))); // Clonar
+            saveData();
+            renderHistorial();
+            
+            if (!auto) {
+                alert(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS`);
+                newLote();
+            }
+        }
+
+        async function saveData() {
+            await localforage.setItem('currentLote', currentLote);
+            await localforage.setItem('allLotes', allLotes);
+            await localforage.setItem('loteCounter', loteCounter);
+        }
+
+        async function loadData() {
+            const savedCurrent = await localforage.getItem('currentLote');
+            const savedAll = await localforage.getItem('allLotes');
+            const savedCounter = await localforage.getItem('loteCounter');
+            
+            if (savedCurrent) {
+                currentLote = savedCurrent;
+                step1Completed = currentLote.vendorShipping > 0;
+            }
+            
+            if (savedAll) allLotes = savedAll;
+            if (savedCounter) loteCounter = savedCounter;
+        }
+
+        async function clearAll() {
+            document.getElementById('confirmMessage').innerHTML = 
+                '¿ELIMINAR TODOS LOS DATOS?<br><br>Esto eliminará el lote actual y todo el historial.';
+            
+            confirmCallback = function() {
+                performClearAll();
+            };
+            
+            document.getElementById('confirmActionBtn').onclick = function() {
+                if (confirmCallback) confirmCallback();
+                closeModal('modalConfirm');
+            };
+            
+            const modal = document.getElementById('modalConfirm');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        async function performClearAll() {
+            currentLote = {
+                id: 'Lote-001',
+                date: new Date().toLocaleDateString(),
+                vendorShipping: 0,
+                shipping: 0,
+                taxes: 0,
+                products: []
+            };
+            allLotes = [];
+            loteCounter = 1;
+            step1Completed = false;
+            
+            document.getElementById('btnStep1').classList.remove('completed', 'active');
+            document.getElementById('btnStep2').classList.remove('completed');
+            
+            await localforage.removeItem('currentLote');
+            await localforage.removeItem('allLotes');
+            await localforage.removeItem('loteCounter');
+            
+            updateUI();
+            renderTable();
+            clearForm();
+            renderHistorial();
+        }
+
+        function newLote() {
+            if (currentLote.products.length > 0) {
+                document.getElementById('confirmMessage').innerHTML = 
+                    '¿GUARDAR EL LOTE ACTUAL Y COMENZAR UNO NUEVO?';
+                
+                confirmCallback = function() {
+                    finishLote(true);
+                    performNewLote();
+                };
+                
+                document.getElementById('confirmActionBtn').onclick = function() {
+                    if (confirmCallback) confirmCallback();
+                    closeModal('modalConfirm');
+                };
+                
+                const modal = document.getElementById('modalConfirm');
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+            } else {
+                performNewLote();
+            }
+        }
+
+        function performNewLote() {
+            loteCounter++;
+            currentLote = {
+                id: 'Lote-' + String(loteCounter).padStart(3, '0'),
+                date: new Date().toLocaleDateString(),
+                vendorShipping: 0,
+                shipping: 0,
+                taxes: 0,
+                products: []
+            };
+            step1Completed = false;
+            
+            document.getElementById('btnStep1').classList.remove('completed', 'active');
+            document.getElementById('btnStep2').classList.remove('completed');
+            document.getElementById('statusStep1').textContent = 'PENDIENTE';
+            document.getElementById('statusStep1').className = 'step-status status-pending';
+            document.getElementById('statusStep2').textContent = 'OPCIONAL';
+            document.getElementById('statusStep2').className = 'step-status status-pending';
+            
+            ['boxVendor', 'boxTraslado', 'boxImpuesto'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            
+            updateUI();
+            renderTable();
+            clearForm();
+        }
+
+        // Funciones existentes (sin cambios)
         function openStep1Modal() {
             document.getElementById('modalLoteId').value = currentLote.id;
             document.getElementById('modalLoteDate').value = currentLote.date;
@@ -2166,6 +2250,11 @@
             const modal = document.getElementById(modalId);
             modal.classList.remove('active');
             modal.style.display = '';
+            
+            if (modalId === 'modalConfirm') {
+                loteToDelete = null;
+                confirmCallback = null;
+            }
         }
 
         function saveStep1() {
@@ -2237,6 +2326,7 @@
             document.getElementById('displayShip').textContent = '$' + currentLote.shipping.toFixed(2);
             document.getElementById('displayTaxes').textContent = '$' + currentLote.taxes.toFixed(2);
             document.getElementById('countProducts').textContent = currentLote.products.length;
+            document.getElementById('currentLoteId').textContent = currentLote.id;
             
             if (currentLote.vendorShipping > 0) {
                 document.getElementById('boxVendor').classList.add('active');
@@ -2296,15 +2386,8 @@
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
-            // CORREGIDO: Cálculo correcto de ganancias
-            // Ganancia Bruta = Venta - Costo de Compra (sin gastos adicionales)
             const grossProfitPerUnit = price - cost;
-            
-            // Costo Real = Costo de Compra + Todos los gastos adicionales
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
-            
-            // Ganancia Neta = Venta - Costo Real (después de todos los gastos)
-            // La ganancia neta SIEMPRE debe ser menor o igual a la ganancia bruta
             const netProfitPerUnit = price - realCost;
             
             document.getElementById('breakdownModalCost').textContent = '$' + cost.toFixed(2);
@@ -2341,15 +2424,9 @@
                 p.shippingShare = shipPerUnit;
                 p.taxShare = taxPerUnit;
                 
-                // CORREGIDO: Cálculo correcto del costo real por unidad
                 p.realCost = p.unitCost + vendorPerUnit + shipPerUnit + taxPerUnit;
                 p.totalRealCost = p.realCost * p.units;
-                
-                // CORREGIDO: Ganancia bruta = Venta - Costo de compra (sin gastos extras)
                 p.grossProfit = (p.unitPrice - p.unitCost) * p.units;
-                
-                // CORREGIDO: Ganancia neta = Venta - Costo real (con todos los gastos)
-                // Esto asegura que la ganancia neta <= ganancia bruta
                 p.netProfit = (p.unitPrice - p.realCost) * p.units;
             });
             
@@ -2365,7 +2442,6 @@
             
             document.getElementById('displayTotalUnits').textContent = units;
             
-            // NUEVO: Mostrar precio de venta por unidad
             const priceUnitDisplay = document.getElementById('priceUnitDisplay');
             const priceUnitValue = document.getElementById('priceUnitValue');
             
@@ -2382,19 +2458,11 @@
             const taxPerUnit = currentLote.taxes / newCount;
             
             if (cost > 0 && price > 0) {
-                // CORREGIDO: Cálculo correcto de ganancias
                 const margin = ((price - cost) / cost) * 100;
-                
-                // Ganancia Bruta = (Precio Venta - Costo Compra) × Unidades
-                // No incluye gastos adicionales
                 const grossProfitPerUnit = price - cost;
                 const grossProfitTotal = grossProfitPerUnit * units;
                 
-                // Costo Real incluye todos los gastos
                 const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
-                
-                // Ganancia Neta = (Precio Venta - Costo Real) × Unidades
-                // Siempre será menor o igual a la ganancia bruta
                 const netProfitPerUnit = price - realCost;
                 const netProfitTotal = netProfitPerUnit * units;
                 
@@ -2431,16 +2499,9 @@
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
-            // CORREGIDO: Cálculo correcto de ganancias
             const margin = ((price - cost) / cost) * 100;
-            
-            // Ganancia Bruta: Venta - Costo de compra (sin gastos extras)
             const grossProfitPerUnit = price - cost;
-            
-            // Costo Real: Incluye todos los gastos
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
-            
-            // Ganancia Neta: Venta - Costo Real (siempre <= ganancia bruta)
             const netProfitPerUnit = price - realCost;
             
             const product = {
@@ -2454,14 +2515,12 @@
                 cost: cost * units,
                 price: price * units,
                 margin: margin,
-                // CORREGIDO: Ganancia bruta sin gastos adicionales
                 grossProfit: grossProfitPerUnit * units,
                 vendorShippingShare: vendorPerUnit,
                 shippingShare: shipPerUnit,
                 taxShare: taxPerUnit,
                 realCost: realCost,
                 totalRealCost: realCost * units,
-                // CORREGIDO: Ganancia neta después de todos los gastos
                 netProfit: netProfitPerUnit * units,
                 date: new Date().toISOString()
             };
@@ -2576,28 +2635,11 @@
         function updateSummary() {
             const products = currentLote.products;
             
-            // CORREGIDO: Cálculo correcto de totales
-            
-            // 1. INVERSIÓN TOTAL = Todo lo que gastaste
-            // = Costo de compra de todos los productos + Envío proveedor + Envío traslado + Impuestos
             const totalPurchaseCost = products.reduce((a, p) => a + p.cost, 0);
             const totalInvestment = totalPurchaseCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
-            
-            // 2. VENTAS PROYECTADAS = Todo lo que vas a recibir
-            // = Suma de (precio de venta × unidades)
             const totalSales = products.reduce((a, p) => a + p.price, 0);
-            
-            // 3. GANANCIA BRUTA = Ventas - Costo de compra (SIN gastos adicionales)
-            // Es lo que ganarías si no hubiera gastos de envío/impuestos
             const totalGross = products.reduce((a, p) => a + (p.unitPrice - p.unitCost) * p.units, 0);
-            
-            // 4. GANANCIA NETA = Ventas - Costo Real (CON todos los gastos)
-            // Es tu ganancia real después de todos los gastos
-            // CORREGIDO: Ahora se calcula correctamente como Ventas - Inversión Total
             const totalNet = totalSales - totalInvestment;
-            
-            // Validación: La ganancia neta NUNCA debe ser mayor que las ventas
-            // Si pasa eso, hay un error en los cálculos
             
             document.getElementById('totalInvestment').textContent = '$' + totalInvestment.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('totalSales').textContent = '$' + totalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -2606,14 +2648,6 @@
             const netEl = document.getElementById('totalNet');
             netEl.textContent = '$' + totalNet.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             netEl.className = 'summary-value ' + (totalNet >= 0 ? 'positive' : 'negative');
-            
-            // Debug: Verificar que los cálculos sean correctos
-            console.log('=== RESUMEN FINANCIERO ===');
-            console.log('Inversión Total:', totalInvestment);
-            console.log('Ventas Proyectadas:', totalSales);
-            console.log('Ganancia Bruta:', totalGross);
-            console.log('Ganancia Neta:', totalNet);
-            console.log('Validación: Neta <= Ventas?', totalNet <= totalSales);
         }
 
         function editProduct(id) {
@@ -2626,7 +2660,6 @@
             document.getElementById('productUnits').value = p.units;
             document.getElementById('displayTotalUnits').textContent = p.units;
             
-            // NUEVO: Mostrar precio de venta por unidad al editar
             document.getElementById('priceUnitDisplay').style.display = 'block';
             document.getElementById('priceUnitValue').textContent = '$' + p.unitPrice.toFixed(2);
             
@@ -2657,101 +2690,6 @@
             saveData();
         }
 
-        function newLote() {
-            if (currentLote.products.length > 0) {
-                if (!confirm('¿GUARDAR EL LOTE ACTUAL Y COMENZAR UNO NUEVO?')) return;
-                finishLote(true);
-            }
-            
-            loteCounter++;
-            currentLote = {
-                id: 'Lote-' + String(loteCounter).padStart(3, '0'),
-                date: new Date().toLocaleDateString(),
-                vendorShipping: 0,
-                shipping: 0,
-                taxes: 0,
-                products: []
-            };
-            step1Completed = false;
-            
-            document.getElementById('btnStep1').classList.remove('completed', 'active');
-            document.getElementById('btnStep2').classList.remove('completed');
-            document.getElementById('statusStep1').textContent = 'PENDIENTE';
-            document.getElementById('statusStep1').className = 'step-status status-pending';
-            document.getElementById('statusStep2').textContent = 'OPCIONAL';
-            document.getElementById('statusStep2').className = 'step-status status-pending';
-            
-            ['boxVendor', 'boxTraslado', 'boxImpuesto'].forEach(id => {
-                document.getElementById(id).classList.remove('active');
-            });
-            
-            updateUI();
-            renderTable();
-            clearForm();
-        }
-
-        function finishLote(auto = false) {
-            if (currentLote.products.length === 0) {
-                if (!auto) alert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
-                return;
-            }
-            
-            allLotes.push({...currentLote});
-            saveData();
-            
-            if (!auto) {
-                alert(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS`);
-                newLote();
-            }
-        }
-
-        async function saveData() {
-            await localforage.setItem('currentLote', currentLote);
-            await localforage.setItem('allLotes', allLotes);
-            await localforage.setItem('loteCounter', loteCounter);
-        }
-
-        async function loadData() {
-            const savedCurrent = await localforage.getItem('currentLote');
-            const savedAll = await localforage.getItem('allLotes');
-            const savedCounter = await localforage.getItem('loteCounter');
-            
-            if (savedCurrent) {
-                currentLote = savedCurrent;
-                step1Completed = currentLote.vendorShipping > 0;
-            }
-            
-            if (savedAll) allLotes = savedAll;
-            if (savedCounter) loteCounter = savedCounter;
-        }
-
-        async function clearAll() {
-            if (!confirm('¿ELIMINAR TODOS LOS DATOS?')) return;
-            
-            currentLote = {
-                id: 'Lote-001',
-                date: new Date().toLocaleDateString(),
-                vendorShipping: 0,
-                shipping: 0,
-                taxes: 0,
-                products: []
-            };
-            allLotes = [];
-            loteCounter = 1;
-            step1Completed = false;
-            
-            document.getElementById('btnStep1').classList.remove('completed', 'active');
-            document.getElementById('btnStep2').classList.remove('completed');
-            
-            await localforage.removeItem('currentLote');
-            await localforage.removeItem('allLotes');
-            await localforage.removeItem('loteCounter');
-            
-            updateUI();
-            renderTable();
-            clearForm();
-        }
-
         function showImageModal(src) {
             document.getElementById('modalImage').src = src;
             document.getElementById('imageModal').classList.add('active');
@@ -2779,7 +2717,6 @@
             
             let y = 30;
             
-            // CORREGIDO: Usar los mismos cálculos que updateSummary
             const totalPurchaseCost = currentLote.products.reduce((a, p) => a + p.cost, 0);
             const totalInvestment = totalPurchaseCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
             const totalSales = currentLote.products.reduce((a, p) => a + p.price, 0);
@@ -2835,7 +2772,7 @@
                 theme: 'plain',
                 headStyles: { 
                     fillColor: [230, 230, 230],
-                    textTextColor: 0,
+                    textColor: 0,
                     fontSize: 10,
                     fontStyle: 'bold',
                     halign: 'center'
@@ -2866,13 +2803,14 @@
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                if (isTableFullscreen) {
-                    toggleTableFullscreen();
+                if (historialVisible) {
+                    toggleHistorial();
                 } else {
                     closeModal('modalStep1');
                     closeModal('modalStep2');
                     closeModal('modalBreakdown');
-                    closeModal('modalZip');
+                    closeModal('modalConfirm');
+                    closeModal('modalViewLote');
                     closeImageModal();
                 }
             }

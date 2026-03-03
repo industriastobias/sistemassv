@@ -85,6 +85,12 @@
             color: #B5838D;
         }
 
+        .btn-sm.kiosko-btn.active {
+            background: #fff;
+            color: #B5838D;
+            border-color: #fff;
+        }
+
         .main {
             display: grid;
             grid-template-columns: 320px 1fr;
@@ -672,6 +678,48 @@
 
         .summary-value.negative {
             color: #b71c1c;
+        }
+
+        /* Clase para ocultar números */
+        .hide-numbers .summary-value,
+        .hide-numbers td.numeric,
+        .hide-numbers .cost-value,
+        .hide-numbers .breakdown-value,
+        .hide-numbers .breakdown-card-value,
+        .hide-numbers .stat-value,
+        .hide-numbers .price-unit-value,
+        .hide-numbers .units-value,
+        .hide-numbers .lote-stats span,
+        .hide-numbers .footer-numbers {
+            filter: blur(5px);
+            user-select: none;
+            position: relative;
+        }
+
+        .hide-numbers .summary-value::after,
+        .hide-numbers td.numeric::after,
+        .hide-numbers .cost-value::after,
+        .hide-numbers .breakdown-value::after,
+        .hide-numbers .breakdown-card-value::after,
+        .hide-numbers .stat-value::after,
+        .hide-numbers .price-unit-value::after,
+        .hide-numbers .units-value::after,
+        .hide-numbers .lote-stats span::after,
+        .hide-numbers .footer-numbers::after {
+            content: "••••";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            letter-spacing: 2px;
+            border-radius: 3px;
         }
 
         .table-container {
@@ -1306,8 +1354,18 @@
         <header class="header">
             <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
             <div class="header-actions">
+                <button class="btn-sm kiosko-btn" id="kioskoBtn" onclick="toggleKiosko()" title="Modo kiosco (pantalla completa)">
+                    🖥️ MODO KIOSCO
+                </button>
+                <button class="btn-sm" onclick="hideNumbers()" title="Ocultar/Mostrar números">
+                    👁️ OCULTAR NÚMEROS
+                </button>
                 <button class="btn-sm historial-btn" id="historialBtn" onclick="toggleHistorial()" title="Ver historial de lotes">
                     📋 HISTORIAL
+                </button>
+                <button class="btn-sm" onclick="exportZip()">📦 EXPORTAR ZIP</button>
+                <button class="btn-sm" onclick="importZip()" title="Importar archivo ZIP con lotes">
+                    📂 IMPORTAR ZIP
                 </button>
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
@@ -1534,10 +1592,10 @@
                         <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a; font-size: 13px;">LOTE-001</span>
                         <span class="lote-info-edit" onclick="openEditLoteNameModal()" title="Editar nombre del lote">✏️</span>
                         | PRODUCTOS: <strong id="footerCount">0</strong> | 
-                        UNIDADES: <strong id="footerUnits" style="color: #B5838D;">0</strong> |
-                        ENV. PROV: <strong id="footerVendorShip">$0.00</strong> | 
-                        ENV. TRAS: <strong id="footerShip" style="color: #999;">$0.00</strong> | 
-                        IMPUESTOS: <strong id="footerTaxes" style="color: #999;">$0.00</strong>
+                        UNIDADES: <strong id="footerUnits" style="color: #B5838D;" class="footer-numbers">0</strong> |
+                        ENV. PROV: <strong id="footerVendorShip" class="footer-numbers">$0.00</strong> | 
+                        ENV. TRAS: <strong id="footerShip" style="color: #999;" class="footer-numbers">$0.00</strong> | 
+                        IMPUESTOS: <strong id="footerTaxes" style="color: #999;" class="footer-numbers">$0.00</strong>
                     </div>
                     <button class="btn-sm primary" id="finishLoteBtn" onclick="showFinishLoteOptions()" style="padding: 8px 20px; font-size: 13px;">
                         ✓ FINALIZAR LOTE
@@ -1830,6 +1888,7 @@
         let loteToUpdate = null;
         let confirmCallback = null;
         let finishLoteAction = 'save'; // 'save' o 'update'
+        let numbersHidden = false;
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
@@ -1839,7 +1898,64 @@
             renderHistorial();
             
             setupImageInput();
+            
+            // Escuchar eventos de pantalla completa
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
         };
+
+        function handleFullscreenChange() {
+            const kioskoBtn = document.getElementById('kioskoBtn');
+            if (document.fullscreenElement || 
+                document.webkitFullscreenElement || 
+                document.mozFullScreenElement || 
+                document.msFullscreenElement) {
+                kioskoBtn.classList.add('active');
+                kioskoBtn.textContent = '🔲 SALIR KIOSCO';
+            } else {
+                kioskoBtn.classList.remove('active');
+                kioskoBtn.textContent = '🖥️ MODO KIOSCO';
+            }
+        }
+
+        function toggleKiosko() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                // Entrar en pantalla completa
+                const element = document.documentElement;
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen();
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                }
+            } else {
+                // Salir de pantalla completa
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        function hideNumbers() {
+            numbersHidden = !numbersHidden;
+            if (numbersHidden) {
+                document.body.classList.add('hide-numbers');
+            } else {
+                document.body.classList.remove('hide-numbers');
+            }
+        }
 
         function setupImageInput() {
             const input = document.getElementById('imageInput');
@@ -1862,6 +1978,171 @@
             setTimeout(() => {
                 input.click();
             }, 10);
+        }
+
+        // Funciones de Exportación/Importación ZIP
+        async function exportZip() {
+            if (allLotes.length === 0 && currentLote.products.length === 0) {
+                alert('No hay lotes para exportar');
+                return;
+            }
+
+            const zip = new JSZip();
+            
+            // Exportar todos los lotes del historial
+            const lotesParaExportar = [...allLotes];
+            
+            // Preguntar si incluir el lote actual si tiene productos
+            if (currentLote.products.length > 0 && 
+                !lotesParaExportar.some(l => l.id === currentLote.id)) {
+                if (confirm('¿Incluir el lote actual en la exportación?')) {
+                    lotesParaExportar.push(JSON.parse(JSON.stringify(currentLote)));
+                }
+            }
+
+            // Crear archivo JSON con todos los lotes
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                totalLotes: lotesParaExportar.length,
+                lotes: lotesParaExportar
+            };
+
+            // Agregar JSON al ZIP
+            zip.file('lotes.json', JSON.stringify(exportData, null, 2));
+
+            // Recopilar todas las imágenes únicas
+            const images = {};
+            lotesParaExportar.forEach(lote => {
+                lote.products.forEach(product => {
+                    if (product.image && !images[product.image]) {
+                        // Extraer la imagen como base64 y guardarla
+                        const imageData = product.image.split(',')[1] || product.image;
+                        const imageName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
+                        images[product.image] = imageName;
+                        zip.file(`images/${imageName}`, imageData, { base64: true });
+                    }
+                });
+            });
+
+            // Actualizar referencias de imágenes en los lotes
+            if (Object.keys(images).length > 0) {
+                exportData.lotes.forEach(lote => {
+                    lote.products.forEach(product => {
+                        if (product.image && images[product.image]) {
+                            product.image = `images/${images[product.image]}`;
+                        }
+                    });
+                });
+                
+                // Actualizar JSON con las nuevas referencias
+                zip.file('lotes.json', JSON.stringify(exportData, null, 2));
+            }
+
+            // Generar y descargar el ZIP
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lotes_${new Date().toISOString().split('T')[0]}.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importZip() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const zip = new JSZip();
+                try {
+                    const zipContent = await zip.loadAsync(file);
+                    
+                    // Leer el archivo JSON
+                    const jsonFile = zipContent.file('lotes.json');
+                    if (!jsonFile) {
+                        alert('El archivo ZIP no contiene un archivo lotes.json válido');
+                        return;
+                    }
+
+                    const jsonContent = await jsonFile.async('string');
+                    const importData = JSON.parse(jsonContent);
+
+                    if (!importData.lotes || !Array.isArray(importData.lotes)) {
+                        alert('El archivo JSON no tiene un formato válido');
+                        return;
+                    }
+
+                    // Cargar imágenes si existen
+                    const imagesFolder = zipContent.folder('images');
+                    if (imagesFolder) {
+                        const imageFiles = [];
+                        zipContent.forEach((relativePath, file) => {
+                            if (relativePath.startsWith('images/') && !file.dir) {
+                                imageFiles.push(file);
+                            }
+                        });
+
+                        for (const imageFile of imageFiles) {
+                            const imageData = await imageFile.async('base64');
+                            const imagePath = imageFile.name;
+                            
+                            // Actualizar referencias en los productos
+                            importData.lotes.forEach(lote => {
+                                lote.products.forEach(product => {
+                                    if (product.image === imagePath) {
+                                        product.image = `data:image/png;base64,${imageData}`;
+                                    }
+                                });
+                            });
+                        }
+                    }
+
+                    // Preguntar cómo manejar la importación
+                    if (allLotes.length > 0) {
+                        const action = confirm(
+                            `Se encontraron ${importData.lotes.length} lotes en el archivo.\n\n` +
+                            '¿Deseas reemplazar todos los lotes existentes?\n' +
+                            'Click en OK para reemplazar, Cancelar para agregar al existente.'
+                        );
+
+                        if (action) {
+                            allLotes = importData.lotes;
+                        } else {
+                            // Evitar duplicados por ID
+                            const existingIds = new Set(allLotes.map(l => l.id));
+                            const nuevosLotes = importData.lotes.filter(l => !existingIds.has(l.id));
+                            allLotes = [...allLotes, ...nuevosLotes];
+                            
+                            if (nuevosLotes.length < importData.lotes.length) {
+                                alert(`${importData.lotes.length - nuevosLotes.length} lotes se omitieron por tener IDs duplicados.`);
+                            }
+                        }
+                    } else {
+                        allLotes = importData.lotes;
+                    }
+
+                    await saveData();
+                    renderHistorial();
+                    
+                    alert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
+                    
+                    // Cerrar historial si está abierto y abrirlo para mostrar los nuevos lotes
+                    if (!historialVisible) {
+                        toggleHistorial();
+                    } else {
+                        renderHistorial();
+                    }
+                    
+                } catch (error) {
+                    console.error('Error al importar ZIP:', error);
+                    alert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
+                }
+            };
+            input.click();
         }
 
         // Funciones del Historial

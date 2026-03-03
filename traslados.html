@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización de Productos KLOHESV</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js   "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js   "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -826,6 +826,18 @@
             font-weight: 900;
         }
 
+        .lote-info-edit {
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 14px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .lote-info-edit:hover {
+            opacity: 1;
+        }
+
         .empty-state {
             height: 100%;
             display: flex;
@@ -1515,14 +1527,15 @@
 
                 <div class="panel-footer">
                     <div class="lote-info">
-                        <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a; font-size: 13px;">LOTE-001</span> | 
-                        PRODUCTOS: <strong id="footerCount">0</strong> | 
+                        <span id="currentLoteId" style="font-weight: 900; color: #1a1a1a; font-size: 13px;">LOTE-001</span>
+                        <span class="lote-info-edit" onclick="openEditLoteNameModal()" title="Editar nombre del lote">✏️</span>
+                        | PRODUCTOS: <strong id="footerCount">0</strong> | 
                         UNIDADES: <strong id="footerUnits" style="color: #B5838D;">0</strong> |
                         ENV. PROV: <strong id="footerVendorShip">$0.00</strong> | 
                         ENV. TRAS: <strong id="footerShip" style="color: #999;">$0.00</strong> | 
                         IMPUESTOS: <strong id="footerTaxes" style="color: #999;">$0.00</strong>
                     </div>
-                    <button class="btn-sm primary" onclick="finishLote()" style="padding: 8px 20px; font-size: 13px;">
+                    <button class="btn-sm primary" id="finishLoteBtn" onclick="showFinishLoteOptions()" style="padding: 8px 20px; font-size: 13px;">
                         ✓ FINALIZAR LOTE
                     </button>
                 </div>
@@ -1703,6 +1716,49 @@
         </div>
     </div>
 
+    <!-- Modal Editar Nombre del Lote -->
+    <div class="modal-overlay" id="modalEditLoteName">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">✏️ EDITAR NOMBRE DEL LOTE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalEditLoteName')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>NUEVO NOMBRE DEL LOTE</label>
+                    <input type="text" id="editLoteNameInput" placeholder="Ej: LOTE-001" value="">
+                </div>
+                <div class="info-box warning">
+                    ⚠️ Si ya existe un lote con este nombre, se te preguntará si deseas sobrescribirlo.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalEditLoteName')">CANCELAR</button>
+                <button class="modal-btn primary" onclick="saveLoteName()">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Finalizar/Actualizar Lote -->
+    <div class="modal-overlay" id="modalFinishLote">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="finishLoteTitle">📦 GUARDAR LOTE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalFinishLote')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="finishLoteMessage"></div>
+                <div style="margin-top: 15px;" id="finishLoteOptions">
+                    <!-- Las opciones se generarán dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalFinishLote')">CANCELAR</button>
+                <button class="modal-btn primary" id="finishLoteConfirmBtn" onclick="executeFinishLote()">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Confirmación -->
     <div class="modal-overlay" id="modalConfirm">
         <div class="modal-content">
@@ -1764,7 +1820,9 @@
         let step1Completed = false;
         let historialVisible = false;
         let loteToDelete = null;
+        let loteToUpdate = null;
         let confirmCallback = null;
+        let finishLoteAction = 'save'; // 'save' o 'update'
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
@@ -1996,11 +2054,27 @@
 
         function loadLote(loteId) {
             if (currentLote.products.length > 0) {
-                if (!confirm('¿CARGAR ESTE LOTE? SE PERDERÁN LOS CAMBIOS NO GUARDADOS DEL LOTE ACTUAL')) {
-                    return;
-                }
+                document.getElementById('confirmMessage').innerHTML = 
+                    `¿CARGAR EL LOTE <strong>${loteId}</strong>?<br><br>Se perderán los cambios no guardados del lote actual.`;
+                
+                confirmCallback = function() {
+                    performLoadLote(loteId);
+                };
+                
+                document.getElementById('confirmActionBtn').onclick = function() {
+                    if (confirmCallback) confirmCallback();
+                    closeModal('modalConfirm');
+                };
+                
+                const modal = document.getElementById('modalConfirm');
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+            } else {
+                performLoadLote(loteId);
             }
-            
+        }
+
+        function performLoadLote(loteId) {
             const lote = allLotes.find(l => l.id === loteId);
             if (!lote) return;
             
@@ -2022,7 +2096,9 @@
             saveData();
             
             // Cerrar historial
-            toggleHistorial();
+            if (historialVisible) {
+                toggleHistorial();
+            }
         }
 
         function confirmDeleteLote(loteId) {
@@ -2055,33 +2131,168 @@
             }
         }
 
-        // Funciones existentes modificadas
-        function finishLote(auto = false) {
-            if (currentLote.products.length === 0) {
-                if (!auto) alert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
+        // Función para editar nombre del lote
+        function openEditLoteNameModal() {
+            document.getElementById('editLoteNameInput').value = currentLote.id;
+            
+            const modal = document.getElementById('modalEditLoteName');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+            
+            setTimeout(() => {
+                document.getElementById('editLoteNameInput').focus();
+            }, 100);
+        }
+
+        function saveLoteName() {
+            const newName = document.getElementById('editLoteNameInput').value.trim();
+            
+            if (!newName) {
+                alert('DEBES INGRESAR UN NOMBRE PARA EL LOTE');
                 return;
             }
             
-            // Verificar si ya existe un lote con este ID
-            const exists = allLotes.some(l => l.id === currentLote.id);
+            // Verificar si ya existe un lote con ese nombre en el historial
+            const exists = allLotes.some(l => l.id === newName && l.id !== currentLote.id);
+            
             if (exists) {
-                if (!confirm(`El lote ${currentLote.id} ya existe en el historial. ¿Deseas sobrescribirlo?`)) {
+                if (!confirm(`Ya existe un lote con el nombre "${newName}" en el historial. ¿Deseas sobrescribirlo?`)) {
                     return;
                 }
                 // Eliminar el existente
-                allLotes = allLotes.filter(l => l.id !== currentLote.id);
+                allLotes = allLotes.filter(l => l.id !== newName);
             }
             
-            allLotes.push(JSON.parse(JSON.stringify(currentLote))); // Clonar
+            const oldName = currentLote.id;
+            currentLote.id = newName;
+            
+            // Actualizar productos con el nuevo ID del lote
+            currentLote.products.forEach(p => {
+                p.loteId = newName;
+            });
+            
+            closeModal('modalEditLoteName');
+            updateUI();
+            renderTable();
+            saveData();
+            
+            // Actualizar historial si es necesario
+            renderHistorial();
+        }
+
+        // Función para mostrar opciones de finalizar/actualizar lote
+        function showFinishLoteOptions() {
+            if (currentLote.products.length === 0) {
+                alert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
+                return;
+            }
+            
+            const exists = allLotes.some(l => l.id === currentLote.id);
+            const message = document.getElementById('finishLoteMessage');
+            const options = document.getElementById('finishLoteOptions');
+            
+            if (exists) {
+                message.innerHTML = `
+                    <div class="info-box warning">
+                        ⚠️ Ya existe un lote con el nombre <strong>${currentLote.id}</strong> en el historial.
+                    </div>
+                    <p style="margin: 15px 0;">¿Qué deseas hacer?</p>
+                `;
+                
+                options.innerHTML = `
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button class="lote-btn" style="flex: 1; padding: 12px;" onclick="setFinishAction('update')">
+                            🔄 ACTUALIZAR LOTE EXISTENTE
+                        </button>
+                        <button class="lote-btn" style="flex: 1; padding: 12px;" onclick="setFinishAction('save')">
+                            📦 GUARDAR COMO NUEVO
+                        </button>
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                        <strong>Actualizar:</strong> Reemplaza el lote existente con los cambios actuales.<br>
+                        <strong>Guardar como nuevo:</strong> Crea un nuevo lote (se incrementará el número automáticamente).
+                    </div>
+                `;
+                
+                document.getElementById('finishLoteTitle').textContent = '🔄 OPCIONES DE GUARDADO';
+                finishLoteAction = 'update';
+            } else {
+                message.innerHTML = `
+                    <p>¿Guardar el lote actual <strong>${currentLote.id}</strong> en el historial?</p>
+                `;
+                
+                options.innerHTML = `
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center;">
+                        <strong>${currentLote.products.length}</strong> productos • 
+                        <strong>${currentLote.products.reduce((sum, p) => sum + p.units, 0)}</strong> unidades
+                    </div>
+                `;
+                
+                document.getElementById('finishLoteTitle').textContent = '📦 GUARDAR LOTE';
+                finishLoteAction = 'save';
+            }
+            
+            const modal = document.getElementById('modalFinishLote');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        function setFinishAction(action) {
+            finishLoteAction = action;
+            
+            // Resaltar la opción seleccionada
+            const btns = document.querySelectorAll('#finishLoteOptions .lote-btn');
+            btns.forEach(btn => {
+                btn.style.background = '#fff';
+                btn.style.color = '#1a1a1a';
+            });
+            
+            event.target.style.background = '#B5838D';
+            event.target.style.color = '#fff';
+        }
+
+        function executeFinishLote() {
+            if (finishLoteAction === 'update') {
+                // Actualizar lote existente
+                const index = allLotes.findIndex(l => l.id === currentLote.id);
+                if (index !== -1) {
+                    allLotes[index] = JSON.parse(JSON.stringify(currentLote));
+                }
+            } else {
+                // Guardar como nuevo
+                // Verificar si ya existe y preguntar si se debe incrementar
+                let newId = currentLote.id;
+                let counter = 1;
+                
+                while (allLotes.some(l => l.id === newId)) {
+                    const baseName = currentLote.id.replace(/-\d+$/, '');
+                    newId = `${baseName}-${String(counter).padStart(3, '0')}`;
+                    counter++;
+                }
+                
+                if (newId !== currentLote.id) {
+                    if (!confirm(`El nombre "${currentLote.id}" ya está en uso. ¿Guardar como "${newId}"?`)) {
+                        closeModal('modalFinishLote');
+                        return;
+                    }
+                    currentLote.id = newId;
+                }
+                
+                allLotes.push(JSON.parse(JSON.stringify(currentLote)));
+            }
+            
             saveData();
             renderHistorial();
             
-            if (!auto) {
-                alert(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS`);
+            closeModal('modalFinishLote');
+            
+            // Preguntar si desea crear un nuevo lote
+            if (confirm(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS.\n\n¿Deseas crear un nuevo lote?`)) {
                 newLote();
             }
         }
 
+        // Funciones existentes modificadas
         async function saveData() {
             await localforage.setItem('currentLote', currentLote);
             await localforage.setItem('allLotes', allLotes);
@@ -2149,10 +2360,9 @@
         function newLote() {
             if (currentLote.products.length > 0) {
                 document.getElementById('confirmMessage').innerHTML = 
-                    '¿GUARDAR EL LOTE ACTUAL Y COMENZAR UNO NUEVO?';
+                    '¿CREAR UN NUEVO LOTE?<br><br>Se perderán los cambios no guardados del lote actual.';
                 
                 confirmCallback = function() {
-                    finishLote(true);
                     performNewLote();
                 };
                 
@@ -2811,6 +3021,8 @@
                     closeModal('modalBreakdown');
                     closeModal('modalConfirm');
                     closeModal('modalViewLote');
+                    closeModal('modalEditLoteName');
+                    closeModal('modalFinishLote');
                     closeImageModal();
                 }
             }

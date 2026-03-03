@@ -1347,6 +1347,24 @@
             color: #e65100;
             font-family: 'Courier New', monospace;
         }
+
+        /* Modal para mensajes simples */
+        .simple-modal-content {
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .simple-modal-message {
+            font-size: 16px;
+            padding: 20px 0;
+            font-weight: 700;
+        }
+
+        .simple-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -1824,19 +1842,39 @@
         </div>
     </div>
 
-    <!-- Modal Confirmación -->
-    <div class="modal-overlay" id="modalConfirm">
-        <div class="modal-content">
+    <!-- Modal Confirmación Simple (reemplaza confirm) -->
+    <div class="modal-overlay" id="modalSimpleConfirm">
+        <div class="modal-content simple-modal-content">
             <div class="modal-header">
                 <div class="modal-title">⚠️ CONFIRMAR ACCIÓN</div>
-                <button class="modal-close-btn" onclick="closeModal('modalConfirm')">&times;</button>
+                <button class="modal-close-btn" onclick="closeModal('modalSimpleConfirm')">&times;</button>
             </div>
-            <div class="modal-body" id="confirmMessage">
-                ¿Estás seguro de que deseas continuar?
+            <div class="modal-body">
+                <div class="simple-modal-message" id="simpleConfirmMessage">
+                    ¿Estás seguro de que deseas continuar?
+                </div>
+                <div class="simple-modal-buttons">
+                    <button class="modal-btn secondary" onclick="closeModal('modalSimpleConfirm')">CANCELAR</button>
+                    <button class="modal-btn primary" id="simpleConfirmActionBtn">CONFIRMAR</button>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="modal-btn secondary" onclick="closeModal('modalConfirm')">CANCELAR</button>
-                <button class="modal-btn primary" id="confirmActionBtn">CONFIRMAR</button>
+        </div>
+    </div>
+
+    <!-- Modal Alerta Simple (reemplaza alert) -->
+    <div class="modal-overlay" id="modalSimpleAlert">
+        <div class="modal-content simple-modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📢 MENSAJE</div>
+                <button class="modal-close-btn" onclick="closeModal('modalSimpleAlert')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="simple-modal-message" id="simpleAlertMessage">
+                    Mensaje
+                </div>
+                <div class="simple-modal-buttons">
+                    <button class="modal-btn primary" onclick="closeModal('modalSimpleAlert')">ACEPTAR</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1889,6 +1927,7 @@
         let confirmCallback = null;
         let finishLoteAction = 'save'; // 'save' o 'update'
         let numbersHidden = false;
+        let isKioskoMode = false;
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
@@ -1914,9 +1953,11 @@
                 document.msFullscreenElement) {
                 kioskoBtn.classList.add('active');
                 kioskoBtn.textContent = '🔲 SALIR KIOSCO';
+                isKioskoMode = true;
             } else {
                 kioskoBtn.classList.remove('active');
                 kioskoBtn.textContent = '🖥️ MODO KIOSCO';
+                isKioskoMode = false;
             }
         }
 
@@ -1957,6 +1998,70 @@
             }
         }
 
+        // Funciones para modales simples (reemplazan alert y confirm)
+        function showAlert(message) {
+            return new Promise((resolve) => {
+                document.getElementById('simpleAlertMessage').textContent = message;
+                const modal = document.getElementById('modalSimpleAlert');
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                
+                // Configurar cierre temporal
+                const closeHandler = function() {
+                    modal.classList.remove('active');
+                    modal.style.display = '';
+                    document.getElementById('simpleAlertMessage').textContent = '';
+                    resolve();
+                };
+                
+                // Remover event listeners anteriores
+                const closeBtn = modal.querySelector('.modal-close-btn');
+                const acceptBtn = modal.querySelector('.modal-btn.primary');
+                
+                const newCloseBtn = closeBtn.cloneNode(true);
+                const newAcceptBtn = acceptBtn.cloneNode(true);
+                closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+                acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+                
+                newCloseBtn.onclick = closeHandler;
+                newAcceptBtn.onclick = closeHandler;
+            });
+        }
+
+        function showConfirm(message) {
+            return new Promise((resolve) => {
+                document.getElementById('simpleConfirmMessage').textContent = message;
+                const modal = document.getElementById('modalSimpleConfirm');
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                
+                // Configurar botones
+                const closeHandler = function(result) {
+                    modal.classList.remove('active');
+                    modal.style.display = '';
+                    document.getElementById('simpleConfirmMessage').textContent = '';
+                    resolve(result);
+                };
+                
+                // Remover event listeners anteriores
+                const closeBtn = modal.querySelector('.modal-close-btn');
+                const cancelBtn = modal.querySelector('.modal-btn.secondary');
+                const confirmBtn = document.getElementById('simpleConfirmActionBtn');
+                
+                const newCloseBtn = closeBtn.cloneNode(true);
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                const newConfirmBtn = confirmBtn.cloneNode(true);
+                
+                closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                
+                newCloseBtn.onclick = () => closeHandler(false);
+                newCancelBtn.onclick = () => closeHandler(false);
+                newConfirmBtn.onclick = () => closeHandler(true);
+            });
+        }
+
         function setupImageInput() {
             const input = document.getElementById('imageInput');
             input.addEventListener('change', function(e) {
@@ -1973,17 +2078,20 @@
         }
 
         function triggerFileInput() {
-            const input = document.getElementById('imageInput');
-            input.value = '';
-            setTimeout(() => {
-                input.click();
-            }, 10);
+            // Usar requestAnimationFrame para mantener el foco en pantalla completa
+            requestAnimationFrame(() => {
+                const input = document.getElementById('imageInput');
+                input.value = '';
+                setTimeout(() => {
+                    input.click();
+                }, 10);
+            });
         }
 
         // Funciones de Exportación/Importación ZIP
         async function exportZip() {
             if (allLotes.length === 0 && currentLote.products.length === 0) {
-                alert('No hay lotes para exportar');
+                await showAlert('No hay lotes para exportar');
                 return;
             }
 
@@ -1995,7 +2103,8 @@
             // Preguntar si incluir el lote actual si tiene productos
             if (currentLote.products.length > 0 && 
                 !lotesParaExportar.some(l => l.id === currentLote.id)) {
-                if (confirm('¿Incluir el lote actual en la exportación?')) {
+                const incluir = await showConfirm('¿Incluir el lote actual en la exportación?');
+                if (incluir) {
                     lotesParaExportar.push(JSON.parse(JSON.stringify(currentLote)));
                 }
             }
@@ -2064,7 +2173,7 @@
                     // Leer el archivo JSON
                     const jsonFile = zipContent.file('lotes.json');
                     if (!jsonFile) {
-                        alert('El archivo ZIP no contiene un archivo lotes.json válido');
+                        await showAlert('El archivo ZIP no contiene un archivo lotes.json válido');
                         return;
                     }
 
@@ -2072,7 +2181,7 @@
                     const importData = JSON.parse(jsonContent);
 
                     if (!importData.lotes || !Array.isArray(importData.lotes)) {
-                        alert('El archivo JSON no tiene un formato válido');
+                        await showAlert('El archivo JSON no tiene un formato válido');
                         return;
                     }
 
@@ -2103,7 +2212,7 @@
 
                     // Preguntar cómo manejar la importación
                     if (allLotes.length > 0) {
-                        const action = confirm(
+                        const action = await showConfirm(
                             `Se encontraron ${importData.lotes.length} lotes en el archivo.\n\n` +
                             '¿Deseas reemplazar todos los lotes existentes?\n' +
                             'Click en OK para reemplazar, Cancelar para agregar al existente.'
@@ -2118,7 +2227,7 @@
                             allLotes = [...allLotes, ...nuevosLotes];
                             
                             if (nuevosLotes.length < importData.lotes.length) {
-                                alert(`${importData.lotes.length - nuevosLotes.length} lotes se omitieron por tener IDs duplicados.`);
+                                await showAlert(`${importData.lotes.length - nuevosLotes.length} lotes se omitieron por tener IDs duplicados.`);
                             }
                         }
                     } else {
@@ -2128,7 +2237,7 @@
                     await saveData();
                     renderHistorial();
                     
-                    alert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
+                    await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
                     
                     // Cerrar historial si está abierto y abrirlo para mostrar los nuevos lotes
                     if (!historialVisible) {
@@ -2139,7 +2248,7 @@
                     
                 } catch (error) {
                     console.error('Error al importar ZIP:', error);
-                    alert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
+                    await showAlert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
                 }
             };
             input.click();
@@ -2342,21 +2451,12 @@
 
         function loadLote(loteId) {
             if (currentLote.products.length > 0) {
-                document.getElementById('confirmMessage').innerHTML = 
-                    `¿CARGAR EL LOTE <strong>${loteId}</strong>?<br><br>Se perderán los cambios no guardados del lote actual.`;
-                
-                confirmCallback = function() {
-                    performLoadLote(loteId);
-                };
-                
-                document.getElementById('confirmActionBtn').onclick = function() {
-                    if (confirmCallback) confirmCallback();
-                    closeModal('modalConfirm');
-                };
-                
-                const modal = document.getElementById('modalConfirm');
-                modal.classList.add('active');
-                modal.style.display = 'flex';
+                showConfirm(`¿CARGAR EL LOTE <strong>${loteId}</strong>?<br><br>Se perderán los cambios no guardados del lote actual.`)
+                    .then(confirmed => {
+                        if (confirmed) {
+                            performLoadLote(loteId);
+                        }
+                    });
             } else {
                 performLoadLote(loteId);
             }
@@ -2391,21 +2491,12 @@
 
         function confirmDeleteLote(loteId) {
             loteToDelete = loteId;
-            document.getElementById('confirmMessage').innerHTML = 
-                `¿Estás seguro de que deseas eliminar el lote <strong>${loteId}</strong>?<br><br>Esta acción no se puede deshacer.`;
-            
-            confirmCallback = function() {
-                deleteLote(loteToDelete);
-            };
-            
-            document.getElementById('confirmActionBtn').onclick = function() {
-                if (confirmCallback) confirmCallback();
-                closeModal('modalConfirm');
-            };
-            
-            const modal = document.getElementById('modalConfirm');
-            modal.classList.add('active');
-            modal.style.display = 'flex';
+            showConfirm(`¿Estás seguro de que deseas eliminar el lote <strong>${loteId}</strong>?<br><br>Esta acción no se puede deshacer.`)
+                .then(confirmed => {
+                    if (confirmed) {
+                        deleteLote(loteToDelete);
+                    }
+                });
         }
 
         function deleteLote(loteId) {
@@ -2445,14 +2536,14 @@
             const newName = input.value.trim();
             
             if (!newName) {
-                alert('❌ DEBES INGRESAR UN NOMBRE PARA EL LOTE');
+                showAlert('❌ DEBES INGRESAR UN NOMBRE PARA EL LOTE');
                 return;
             }
             
             // Validar que el nombre no tenga caracteres especiales problemáticos
             const nameRegex = /^[a-zA-Z0-9\-_]+$/;
             if (!nameRegex.test(newName)) {
-                alert('❌ EL NOMBRE SOLO PUEDE CONTENER LETRAS, NÚMEROS, GUIONES Y GUIONES BAJOS');
+                showAlert('❌ EL NOMBRE SOLO PUEDE CONTENER LETRAS, NÚMEROS, GUIONES Y GUIONES BAJOS');
                 return;
             }
             
@@ -2466,13 +2557,21 @@
             const exists = allLotes.some(l => l.id === newName && l.id !== currentLote.id);
             
             if (exists) {
-                if (!confirm(`⚠️ Ya existe un lote con el nombre "${newName}" en el historial.\n\n¿Deseas sobrescribirlo?`)) {
-                    return;
-                }
-                // Eliminar el existente
-                allLotes = allLotes.filter(l => l.id !== newName);
+                showConfirm(`⚠️ Ya existe un lote con el nombre "${newName}" en el historial.\n\n¿Deseas sobrescribirlo?`)
+                    .then(confirmed => {
+                        if (confirmed) {
+                            // Eliminar el existente
+                            allLotes = allLotes.filter(l => l.id !== newName);
+                            proceedWithNameChange(newName);
+                        }
+                    });
+                return;
             }
             
+            proceedWithNameChange(newName);
+        }
+
+        function proceedWithNameChange(newName) {
             // Guardar el nombre anterior para referencia
             const oldName = currentLote.id;
             
@@ -2500,13 +2599,13 @@
             }
             
             // Mostrar mensaje de éxito
-            alert(`✅ Nombre del lote cambiado de "${oldName}" a "${newName}"`);
+            showAlert(`✅ Nombre del lote cambiado de "${oldName}" a "${newName}"`);
         }
 
         // Función para mostrar opciones de finalizar/actualizar lote
         function showFinishLoteOptions() {
             if (currentLote.products.length === 0) {
-                alert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
+                showAlert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
                 return;
             }
             
@@ -2574,7 +2673,7 @@
             event.target.style.color = '#fff';
         }
 
-        function executeFinishLote() {
+        async function executeFinishLote() {
             if (finishLoteAction === 'update') {
                 // Actualizar lote existente
                 const index = allLotes.findIndex(l => l.id === currentLote.id);
@@ -2594,7 +2693,8 @@
                 }
                 
                 if (newId !== currentLote.id) {
-                    if (!confirm(`El nombre "${currentLote.id}" ya está en uso. ¿Guardar como "${newId}"?`)) {
+                    const confirmed = await showConfirm(`El nombre "${currentLote.id}" ya está en uso. ¿Guardar como "${newId}"?`);
+                    if (!confirmed) {
                         closeModal('modalFinishLote');
                         return;
                     }
@@ -2610,7 +2710,8 @@
             closeModal('modalFinishLote');
             
             // Preguntar si desea crear un nuevo lote
-            if (confirm(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS.\n\n¿Deseas crear un nuevo lote?`)) {
+            const crearNuevo = await showConfirm(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS.\n\n¿Deseas crear un nuevo lote?`);
+            if (crearNuevo) {
                 newLote();
             }
         }
@@ -2637,21 +2738,10 @@
         }
 
         async function clearAll() {
-            document.getElementById('confirmMessage').innerHTML = 
-                '¿ELIMINAR TODOS LOS DATOS?<br><br>Esto eliminará el lote actual y todo el historial.';
-            
-            confirmCallback = function() {
+            const confirmed = await showConfirm('¿ELIMINAR TODOS LOS DATOS?<br><br>Esto eliminará el lote actual y todo el historial.');
+            if (confirmed) {
                 performClearAll();
-            };
-            
-            document.getElementById('confirmActionBtn').onclick = function() {
-                if (confirmCallback) confirmCallback();
-                closeModal('modalConfirm');
-            };
-            
-            const modal = document.getElementById('modalConfirm');
-            modal.classList.add('active');
-            modal.style.display = 'flex';
+            }
         }
 
         async function performClearAll() {
@@ -2682,21 +2772,12 @@
 
         function newLote() {
             if (currentLote.products.length > 0) {
-                document.getElementById('confirmMessage').innerHTML = 
-                    '¿CREAR UN NUEVO LOTE?<br><br>Se perderán los cambios no guardados del lote actual.';
-                
-                confirmCallback = function() {
-                    performNewLote();
-                };
-                
-                document.getElementById('confirmActionBtn').onclick = function() {
-                    if (confirmCallback) confirmCallback();
-                    closeModal('modalConfirm');
-                };
-                
-                const modal = document.getElementById('modalConfirm');
-                modal.classList.add('active');
-                modal.style.display = 'flex';
+                showConfirm('¿CREAR UN NUEVO LOTE?<br><br>Se perderán los cambios no guardados del lote actual.')
+                    .then(confirmed => {
+                        if (confirmed) {
+                            performNewLote();
+                        }
+                    });
             } else {
                 performNewLote();
             }
@@ -2794,7 +2875,7 @@
             const vendorShip = parseFloat(document.getElementById('modalVendorShipping').value) || 0;
             
             if (vendorShip <= 0) {
-                alert('DEBES INGRESAR EL ENVÍO DEL PROVEEDOR');
+                showAlert('DEBES INGRESAR EL ENVÍO DEL PROVEEDOR');
                 return;
             }
             
@@ -2910,7 +2991,7 @@
             const units = parseInt(document.getElementById('productUnits').value) || 1;
             
             if (cost <= 0 || price <= 0) {
-                alert('Primero ingresa el costo de compra y precio de venta');
+                showAlert('Primero ingresa el costo de compra y precio de venta');
                 return;
             }
             
@@ -3012,7 +3093,7 @@
 
         function saveProduct() {
             if (!step1Completed && currentLote.vendorShipping <= 0) {
-                alert('PRIMERO DEBES CONFIGURAR EL PASO 1 (ENVÍO DEL PROVEEDOR)');
+                showAlert('PRIMERO DEBES CONFIGURAR EL PASO 1 (ENVÍO DEL PROVEEDOR)');
                 openStep1Modal();
                 return;
             }
@@ -3023,7 +3104,7 @@
             const units = parseInt(document.getElementById('productUnits').value) || 1;
             
             if (!name || cost <= 0 || price <= 0) {
-                alert('COMPLETA: NOMBRE, COSTO DE COMPRA Y PRECIO DE VENTA');
+                showAlert('COMPLETA: NOMBRE, COSTO DE COMPRA Y PRECIO DE VENTA');
                 return;
             }
             
@@ -3215,8 +3296,9 @@
             document.getElementById('cancelBtn').classList.add('hidden');
         }
 
-        function deleteProduct(id) {
-            if (!confirm('¿ELIMINAR ESTE PRODUCTO?')) return;
+        async function deleteProduct(id) {
+            const confirmed = await showConfirm('¿ELIMINAR ESTE PRODUCTO?');
+            if (!confirmed) return;
             currentLote.products = currentLote.products.filter(p => p.id !== id);
             if (currentLote.products.length === 0) step1Completed = false;
             recalculateAllProducts();
@@ -3342,10 +3424,11 @@
                     closeModal('modalStep1');
                     closeModal('modalStep2');
                     closeModal('modalBreakdown');
-                    closeModal('modalConfirm');
                     closeModal('modalViewLote');
                     closeModal('modalEditLoteName');
                     closeModal('modalFinishLote');
+                    closeModal('modalSimpleConfirm');
+                    closeModal('modalSimpleAlert');
                     closeImageModal();
                 }
             }

@@ -832,10 +832,14 @@
             font-size: 14px;
             opacity: 0.6;
             transition: opacity 0.2s;
+            display: inline-block;
+            padding: 2px 5px;
         }
 
         .lote-info-edit:hover {
             opacity: 1;
+            background: rgba(181, 131, 141, 0.1);
+            border-radius: 4px;
         }
 
         .empty-state {
@@ -1726,15 +1730,18 @@
             <div class="modal-body">
                 <div class="form-row">
                     <label>NUEVO NOMBRE DEL LOTE</label>
-                    <input type="text" id="editLoteNameInput" placeholder="Ej: LOTE-001" value="">
+                    <input type="text" id="editLoteNameInput" placeholder="Ej: LOTE-001" value="" autocomplete="off">
                 </div>
-                <div class="info-box warning">
+                <div class="info-box" style="margin-top: 10px;">
+                    <strong>📝 Formato recomendado:</strong> LOTE-001, LOTE-002, etc.
+                </div>
+                <div class="info-box warning" style="margin-top: 10px;">
                     ⚠️ Si ya existe un lote con este nombre, se te preguntará si deseas sobrescribirlo.
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn secondary" onclick="closeModal('modalEditLoteName')">CANCELAR</button>
-                <button class="modal-btn primary" onclick="saveLoteName()">GUARDAR</button>
+                <button class="modal-btn primary" onclick="saveLoteName()">GUARDAR CAMBIOS</button>
             </div>
         </div>
     </div>
@@ -2133,51 +2140,86 @@
 
         // Función para editar nombre del lote
         function openEditLoteNameModal() {
-            document.getElementById('editLoteNameInput').value = currentLote.id;
+            const input = document.getElementById('editLoteNameInput');
+            if (input) {
+                input.value = currentLote.id;
+            }
             
             const modal = document.getElementById('modalEditLoteName');
-            modal.classList.add('active');
-            modal.style.display = 'flex';
-            
-            setTimeout(() => {
-                document.getElementById('editLoteNameInput').focus();
-            }, 100);
+            if (modal) {
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 200);
+            }
         }
 
         function saveLoteName() {
-            const newName = document.getElementById('editLoteNameInput').value.trim();
+            const input = document.getElementById('editLoteNameInput');
+            if (!input) return;
+            
+            const newName = input.value.trim();
             
             if (!newName) {
-                alert('DEBES INGRESAR UN NOMBRE PARA EL LOTE');
+                alert('❌ DEBES INGRESAR UN NOMBRE PARA EL LOTE');
                 return;
             }
             
-            // Verificar si ya existe un lote con ese nombre en el historial
+            // Validar que el nombre no tenga caracteres especiales problemáticos
+            const nameRegex = /^[a-zA-Z0-9\-_]+$/;
+            if (!nameRegex.test(newName)) {
+                alert('❌ EL NOMBRE SOLO PUEDE CONTENER LETRAS, NÚMEROS, GUIONES Y GUIONES BAJOS');
+                return;
+            }
+            
+            // Verificar si el nombre es diferente al actual
+            if (newName === currentLote.id) {
+                closeModal('modalEditLoteName');
+                return;
+            }
+            
+            // Verificar si ya existe un lote con ese nombre en el historial (excluyendo el actual)
             const exists = allLotes.some(l => l.id === newName && l.id !== currentLote.id);
             
             if (exists) {
-                if (!confirm(`Ya existe un lote con el nombre "${newName}" en el historial. ¿Deseas sobrescribirlo?`)) {
+                if (!confirm(`⚠️ Ya existe un lote con el nombre "${newName}" en el historial.\n\n¿Deseas sobrescribirlo?`)) {
                     return;
                 }
                 // Eliminar el existente
                 allLotes = allLotes.filter(l => l.id !== newName);
             }
             
+            // Guardar el nombre anterior para referencia
             const oldName = currentLote.id;
+            
+            // Actualizar el nombre del lote actual
             currentLote.id = newName;
             
-            // Actualizar productos con el nuevo ID del lote
+            // Actualizar todos los productos con el nuevo ID del lote
             currentLote.products.forEach(p => {
                 p.loteId = newName;
             });
             
+            // Cerrar el modal
             closeModal('modalEditLoteName');
+            
+            // Actualizar toda la interfaz
             updateUI();
             renderTable();
+            
+            // Guardar los cambios
             saveData();
             
-            // Actualizar historial si es necesario
-            renderHistorial();
+            // Actualizar el historial si está visible
+            if (historialVisible) {
+                renderHistorial();
+            }
+            
+            // Mostrar mensaje de éxito
+            alert(`✅ Nombre del lote cambiado de "${oldName}" a "${newName}"`);
         }
 
         // Función para mostrar opciones de finalizar/actualizar lote

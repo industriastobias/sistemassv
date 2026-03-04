@@ -31,6 +31,9 @@
     .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
     .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
     .card.negative p{color:#e53935}
+    .card.inversion-total{background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff}
+    .card.inversion-total h3{color:#e0e0e0}
+    .card.inversion-total p{color:#fff;font-size:1.6rem}
     canvas{display:block;margin:2rem auto;max-width:350px}
     form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
     input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
@@ -73,7 +76,8 @@
       <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
       <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
       <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
-      <div class="card"><h3>Total Gastos Operativos</h3><p id="totalGastos">$0.00</p></div>
+      <div class="card"><h3>Gastos Operativos</h3><p id="totalGastos">$0.00</p></div>
+      <div class="card inversion-total"><h3>INVERSIÓN TOTAL</h3><p id="inversionTotal">$0.00</p></div>
       <div class="card" id="balanceCard"><h3>Balance Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
@@ -265,28 +269,30 @@ const chart = new Chart(ctx, {
 });
 
 function actualizarDashboard() {
-  // ✅ CORRECCIÓN: Asegurar que todos los montos sean números válidos
+  // Asegurar que todos los montos sean números válidos
   const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
   const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   
-  // ✅ CORRECCIÓN: Fórmulas contables correctas
-  const ingresoNeto = ti - gdi;           // Margen bruto (lo que queda después de costos directos)
-  const totalGastos = tg + gdi;           // Total de gastos (para referencia)
-  const balance = ti - gdi - tg;          // ✅ BALANCE CORRECTO: Ingresos - Gastos Directos - Gastos Operativos
+  // Cálculos contables
+  const ingresoNeto = ti - gdi;           // Margen bruto
+  const inversionTotal = tg + gdi;        // ✅ INVERSIÓN TOTAL: Gastos Operativos + Gastos desde Ingresos
+  const balance = ti - inversionTotal;    // Balance final
 
   // Actualizar DOM
   document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
   document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
   document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2); // Mostrar solo gastos operativos aquí
+  document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2);
   
-  // ✅ CORRECCIÓN: Mostrar balance negativo claramente
+  // ✅ NUEVO: Inversión Total
+  document.getElementById('inversionTotal').textContent = '$' + inversionTotal.toFixed(2);
+  
+  // Balance con color según resultado
   const balanceEl = document.getElementById('balance');
   const balanceCard = document.getElementById('balanceCard');
   balanceEl.textContent = (balance < 0 ? '-$' : '$') + Math.abs(balance).toFixed(2);
   
-  // Cambiar color según sea positivo o negativo
   if (balance < 0) {
     balanceCard.classList.add('negative');
     balanceEl.style.color = '#e53935';
@@ -295,21 +301,19 @@ function actualizarDashboard() {
     balanceEl.style.color = '#43a047';
   }
 
-  // ✅ CORRECCIÓN: Gráfico con datos reales (sin ocultar negativos)
-  // Si hay pérdida, mostramos 0 en balance pero cambiamos el color del gráfico
+  // Gráfico actualizado
   chart.data.datasets[0].data = [
-    Math.max(0, ingresoNeto),  // Ingreso Neto (nunca negativo)
-    Math.max(0, tg),           // Gastos Operativos
-    Math.max(0, gdi),          // Gastos Directos
-    Math.max(0, balance)       // Balance (0 si es negativo)
+    Math.max(0, ingresoNeto),
+    Math.max(0, tg),
+    Math.max(0, gdi),
+    Math.max(0, balance)
   ];
   
-  // Colores dinámicos según resultado
   chart.data.datasets[0].backgroundColor = [
-    '#1a73e8',                                    // Azul: Ingreso Neto
-    '#e53935',                                    // Rojo: Gastos Operativos
-    '#ff9800',                                    // Naranja: Gastos Directos
-    balance < 0 ? '#e53935' : '#43a047'          // Rojo si pérdida, Verde si ganancia
+    '#1a73e8',
+    '#e53935',
+    '#ff9800',
+    balance < 0 ? '#e53935' : '#43a047'
   ];
   
   chart.update();
@@ -318,8 +322,6 @@ function actualizarDashboard() {
 /* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  
-  // ✅ CORRECCIÓN: Evitar duplicados usando un identificador único
   const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta));
   
   ventas.forEach(v => {
@@ -330,7 +332,7 @@ function cargarVentasComoIngresos() {
         fecha: v.date || new Date().toISOString().split('T')[0],
         descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
         categoria: 'Venta',
-        monto: parseFloat(v.total),  // ✅ CORRECCIÓN: Guardar como número, no string
+        monto: parseFloat(v.total),
         metodo_pago: 'Efectivo',
         responsable: 'Sistema',
         observaciones: `Cantidad vendida: ${v.quantity}`
@@ -373,7 +375,6 @@ forms.forEach(f => {
   form.addEventListener('submit', e => {
     e.preventDefault();
     
-    // ✅ CORRECCIÓN: Validar monto positivo
     if (f.fields.includes('monto')) {
       const montoInput = form.querySelector('[name="monto"]');
       if (!validarMonto(montoInput.value)) {
@@ -386,7 +387,6 @@ forms.forEach(f => {
     const item = {};
     f.fields.forEach(k => {
       item[k] = form[k].value;
-      // Convertir monto a número
       if (k === 'monto') item[k] = parseFloat(form[k].value);
     });
     
@@ -403,7 +403,6 @@ const formGDI = document.getElementById('formGastosDesdeIngresos');
 formGDI.addEventListener('submit', e => {
   e.preventDefault();
   
-  // ✅ CORRECCIÓN: Validar monto
   if (!validarMonto(formGDI.monto.value)) {
     alert('El monto debe ser mayor a cero');
     formGDI.monto.focus();
@@ -414,7 +413,7 @@ formGDI.addEventListener('submit', e => {
     fecha: formGDI.fecha.value,
     descripcion: formGDI.descripcion.value,
     categoria: formGDI.categoria.value,
-    monto: parseFloat(formGDI.monto.value),  // ✅ Guardar como número
+    monto: parseFloat(formGDI.monto.value),
     responsable: formGDI.responsable.value,
     observaciones: formGDI.observaciones.value
   };
@@ -429,7 +428,7 @@ renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripc
 document.addEventListener('click', e => {
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear eliminación en ingresos (provenientes de ventas)
+    if (key === 'ingresos') return;
     if (confirm('¿Eliminar este registro?')) {
       if (key === 'gastosDesdeIngresos') {
         gastosDesdeIngresos.splice(index, 1);
@@ -446,7 +445,7 @@ document.addEventListener('click', e => {
   }
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear edición en ingresos
+    if (key === 'ingresos') return;
     if (key === 'gastosDesdeIngresos') {
       const item = gastosDesdeIngresos[index];
       formGDI.fecha.value = item.fecha;
@@ -474,7 +473,6 @@ document.addEventListener('click', e => {
 /* ---------- EXCEL ---------- */
 function exportExcel(key, filename) {
   let source = key === 'gastosDesdeIngresos' ? gastosDesdeIngresos : data[key];
-  // ✅ CORRECCIÓN: Asegurar que los montos se exporten como números
   const dataExport = source.map(item => ({
     ...item,
     monto: parseFloat(item.monto) || 0
@@ -499,7 +497,6 @@ function importExcel(file, key, fields) {
       
       fields.forEach(f => {
         item[f] = r[f] || '';
-        // ✅ CORRECCIÓN: Validar y convertir montos
         if (f === 'monto') {
           item[f] = parseFloat(r[f]) || 0;
           if (item[f] <= 0) valido = false;

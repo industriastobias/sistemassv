@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
       --color-bg:#f4f6f8;
@@ -30,6 +30,8 @@
     .card:hover{transform:translateY(-3px)}
     .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
     .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
+    .card.negative p{color:#e53935}
+    .card.positive p{color:#43a047}
     canvas{display:block;margin:2rem auto;max-width:350px}
     form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
     input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
@@ -71,7 +73,7 @@
       <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
       <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
       <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
-      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
+      <div class="card" id="balanceCard"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
   </section>
@@ -97,7 +99,7 @@
       <input name="proveedor" placeholder="Proveedor">
       <input name="categoria" placeholder="Categoría">
       <input name="descripcion" placeholder="Descripción">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
       <input name="metodo_pago" placeholder="Método de pago">
       <input name="responsable" placeholder="Responsable">
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
@@ -125,7 +127,7 @@
       <input name="fecha" type="date" required>
       <input name="descripcion" placeholder="Descripción" required>
       <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
       <input name="responsable" placeholder="Responsable">
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
@@ -179,7 +181,7 @@
       <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
       <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
       <input name="concepto" placeholder="Concepto">
-      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
       <input name="fecha_vencimiento" type="date">
       <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
@@ -235,24 +237,83 @@ function saveData() {
 const ctx = document.getElementById('chartResumen').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'doughnut',
-  data: { labels: ['Ingreso Neto', 'Gastos', 'Saldo Neto'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#1a73e8', '#e53935', '#43a047'], hoverOffset: 10 }] },
-  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  data: { 
+    labels: ['Ingreso Neto', 'Total Gastos', 'Saldo Neto'], 
+    datasets: [{ 
+      data: [0, 0, 0], 
+      backgroundColor: ['#1a73e8', '#e53935', '#43a047'], 
+      hoverOffset: 10 
+    }] 
+  },
+  options: { 
+    responsive: true, 
+    plugins: { 
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.label || '';
+            if (label) {
+              label += ': ';
+            }
+            label += '$' + context.parsed.toFixed(2);
+            return label;
+          }
+        }
+      }
+    } 
+  }
 });
 
+/* ---------- FUNCIÓN CORREGIDA: ACTUALIZAR DASHBOARD ---------- */
 function actualizarDashboard() {
-  const ti = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
-  const tg = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
-  const gdi = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
-  const ingresoNeto = ti - gdi;
-  const balance = ingresoNeto - (tg + gdi);
+  // 1. Calcular totales base
+  const totalIngresos = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
+  const totalGastosOperativos = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  const totalGastosDesdeIngresos = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  
+  // 2. Calcular métricas CORREGIDAS (sin doble resta)
+  const ingresoNeto = totalIngresos - totalGastosDesdeIngresos; // Lo que queda después de gastos directos
+  const totalGastos = totalGastosOperativos + totalGastosDesdeIngresos; // Todos los gastos
+  const balanceFinal = totalIngresos - totalGastos; // CORRECCIÓN: Ingresos - Todos los gastos (solo una resta)
+  
+  // 3. Actualizar DOM con formato de moneda
+  const formatMoney = (num) => '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  
+  document.getElementById('totalIngresos').textContent = formatMoney(totalIngresos);
+  document.getElementById('totalGastosDesdeIngresos').textContent = formatMoney(totalGastosDesdeIngresos);
+  document.getElementById('ingresoNeto').textContent = formatMoney(ingresoNeto);
+  document.getElementById('totalGastos').textContent = formatMoney(totalGastos);
+  
+  // Color condicional para el balance
+  const balanceElement = document.getElementById('balance');
+  const balanceCard = document.getElementById('balanceCard');
+  balanceElement.textContent = formatMoney(balanceFinal);
+  
+  if (balanceFinal >= 0) {
+    balanceCard.classList.remove('negative');
+    balanceCard.classList.add('positive');
+    balanceElement.style.color = '#43a047';
+  } else {
+    balanceCard.classList.remove('positive');
+    balanceCard.classList.add('negative');
+    balanceElement.style.color = '#e53935';
+  }
 
-  document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
-  document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
-  document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent = '$' + (tg + gdi).toFixed(2);
-  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
-
-  chart.data.datasets[0].data = [ingresoNeto, tg + gdi, Math.abs(balance)];
+  // 4. Actualizar gráfico (valores positivos para visualización)
+  chart.data.datasets[0].data = [
+    Math.max(0, ingresoNeto),           // Ingreso Neto (no negativo para gráfico)
+    Math.max(0, totalGastos),           // Total Gastos
+    Math.max(0, balanceFinal)           // Saldo (solo positivo si hay ganancia)
+  ];
+  
+  // Cambiar color del balance en el gráfico según sea positivo o negativo
+  if (balanceFinal < 0) {
+    chart.data.datasets[0].backgroundColor[2] = '#e53935'; // Rojo si es negativo
+  } else {
+    chart.data.datasets[0].backgroundColor[2] = '#43a047'; // Verde si es positivo
+  }
+  
   chart.update();
 }
 
@@ -297,7 +358,14 @@ forms.forEach(f => {
   form.addEventListener('submit', e => {
     e.preventDefault();
     const item = {};
-    f.fields.forEach(k => item[k] = form[k].value);
+    f.fields.forEach(k => {
+      item[k] = form[k].value;
+      // Validar que monto no sea negativo
+      if (k === 'monto' && parseFloat(item[k]) < 0) {
+        alert('El monto no puede ser negativo');
+        throw new Error('Monto negativo no permitido');
+      }
+    });
     data[f.key].push(item);
     saveData();
     renderTable(f.table, data[f.key], f.fields, f.key);
@@ -310,11 +378,16 @@ forms.forEach(f => {
 const formGDI = document.getElementById('formGastosDesdeIngresos');
 formGDI.addEventListener('submit', e => {
   e.preventDefault();
+  const monto = parseFloat(formGDI.monto.value);
+  if (monto < 0) {
+    alert('El monto no puede ser negativo');
+    return;
+  }
   const item = {
     fecha: formGDI.fecha.value,
     descripcion: formGDI.descripcion.value,
     categoria: formGDI.categoria.value,
-    monto: parseFloat(formGDI.monto.value),
+    monto: monto,
     responsable: formGDI.responsable.value,
     observaciones: formGDI.observaciones.value
   };
@@ -387,7 +460,13 @@ function importExcel(file, key, fields) {
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
     rows.forEach(r => {
       const item = {};
-      fields.forEach(f => item[f] = r[f] || '');
+      fields.forEach(f => {
+        item[f] = r[f] || '';
+        // Validar montos no negativos en importación
+        if (f === 'monto' && parseFloat(item[f]) < 0) {
+          item[f] = Math.abs(item[f]); // Convertir a positivo
+        }
+      });
       if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
       else data[key].push(item);
     });

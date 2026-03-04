@@ -11,6 +11,9 @@
       --color-bg:#f4f6f8;
       --color-primary:#1a73e8;
       --color-secondary:#0d47a1;
+      --color-success:#43a047;
+      --color-danger:#e53935;
+      --color-warning:#fb8c00;
       --color-text:#2c3e50;
       --color-card:#ffffff;
       --radius:12px;
@@ -30,8 +33,12 @@
     .card:hover{transform:translateY(-3px)}
     .card h3{font-size:1rem;color:#888;margin-bottom:.5rem}
     .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
-    .card.negative p{color:#e53935}
-    .card.positive p{color:#43a047}
+    .card-caja{background:linear-gradient(135deg, #43a047, #2e7d32);color:white}
+    .card-caja h3{color:rgba(255,255,255,0.9)}
+    .card-caja p{color:white;font-size:1.8rem}
+    .card-warning{background:linear-gradient(135deg, #fb8c00, #f57c00);color:white}
+    .card-warning h3{color:rgba(255,255,255,0.9)}
+    .card-warning p{color:white}
     canvas{display:block;margin:2rem auto;max-width:350px}
     form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
     input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
@@ -46,21 +53,26 @@
     .acciones .editar{color:#1a73e8}
     .acciones .eliminar{color:#e53935}
     footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
-    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
+    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap}
     .excel-bar button{background:#388e3c}
     .excel-bar button:hover{background:#2e7d32}
-    .info-box{background:#e3f2fd;border-left:4px solid #2196f3;padding:1rem;margin:1rem 0;border-radius:4px;font-size:0.9rem}
+    .btn-agregar{background:#43a047;margin-bottom:1rem}
+    .btn-agregar:hover{background:#2e7d32}
+    .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:.75rem;font-weight:600}
+    .badge-success{background:#e8f5e8;color:#2e7d32}
+    .badge-warning{background:#fff3e0;color:#f57c00}
+    .alert{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:1rem;border-radius:var(--radius);margin-bottom:1rem}
   </style>
 </head>
 <body>
 
-<header>📊 FINANZAS</header>
+<header>📊 FINANZAS - FAMILY COMPANY</header>
 
 <nav>
   <div class="tab active" data-tab="dashboard">Dashboard</div>
   <div class="tab" data-tab="ingresos">Ingresos</div>
-  <div class="tab" data-tab="gastos">Gastos Operativos</div>
-  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
+  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="gastosDesdeIngresos">💵 Gastos desde Ingresos</div>
   <div class="tab" data-tab="proveedores">Proveedores</div>
   <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
 </nav>
@@ -69,22 +81,55 @@
   <!-- DASHBOARD -->
   <section id="dashboard" class="active">
     <h2>Resumen General</h2>
-    <div class="info-box">
-      💡 <strong>Fórmulas:</strong> Ingreso Neto = Ingresos - Gastos desde Ingresos | Balance Final = Ingreso Neto - Gastos Operativos
-    </div>
     <div class="dashboard">
       <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
       <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
       <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
-      <div class="card"><h3>Gastos Operativos</h3><p id="totalGastosOperativos">$0.00</p></div>
-      <div class="card" id="balanceCard"><h3>Balance Final</h3><p id="balance">$0.00</p></div>
+      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
+      <div class="card"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
     </div>
+    
+    <!-- NUEVA TARJETA DE CAJA -->
+    <div class="dashboard" style="margin-top: -0.5rem;">
+      <div class="card card-caja">
+        <h3>💰 EFECTIVO EN CAJA</h3>
+        <p id="efectivoCaja">$0.00</p>
+        <small style="color:rgba(255,255,255,0.8)">Disponible para gastos del día</small>
+      </div>
+      <div class="card card-warning">
+        <h3>📊 GASTOS PENDIENTES</h3>
+        <p id="gastosPendientes">$0.00</p>
+        <small style="color:rgba(255,255,255,0.8)">Cuentas por pagar</small>
+      </div>
+    </div>
+    
     <canvas id="chartResumen"></canvas>
+    
+    <div class="alert" id="alertaCaja" style="display:none;">
+      ⚠️ ¡Alerta! El efectivo en caja es bajo o negativo. Revisa tus gastos.
+    </div>
   </section>
 
   <!-- INGRESOS -->
   <section id="ingresos">
     <h2>Ingresos</h2>
+    <button class="btn-agregar" id="btnAgregarIngreso">+ Agregar Ingreso Manual</button>
+    <form id="formIngreso" style="display:none; margin-bottom:1rem;">
+      <input name="fecha" type="date" required>
+      <input name="descripcion" placeholder="Descripción" required>
+      <input name="categoria" placeholder="Categoría" value="Venta">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="metodo_pago" placeholder="Método de pago" value="Efectivo">
+      <input name="responsable" placeholder="Responsable">
+      <textarea name="observaciones" placeholder="Observaciones"></textarea>
+      <button type="submit">Guardar Ingreso</button>
+      <button type="button" id="cancelarIngreso" style="background:#999">Cancelar</button>
+    </form>
+    <div class="excel-bar">
+      <button id="exportIngresos">Exportar Excel</button>
+      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
+    </div>
     <table id="tablaIngresos">
       <thead>
         <tr>
@@ -95,16 +140,16 @@
     </table>
   </section>
 
-  <!-- GASTOS OPERATIVOS -->
+  <!-- GASTOS (Gastos Fijos/Bancarios) -->
   <section id="gastos">
-    <h2>Gastos Operativos</h2>
+    <h2>Gastos (Bancarios/Fijos)</h2>
     <form id="formGasto">
       <input name="fecha" type="date" required>
       <input name="proveedor" placeholder="Proveedor">
-      <input name="categoria" placeholder="Categoría">
-      <input name="descripcion" placeholder="Descripción">
-      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
+      <input name="categoria" placeholder="Categoría" value="Gasto fijo">
+      <input name="descripcion" placeholder="Descripción" required>
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
+      <input name="metodo_pago" placeholder="Método de pago" value="Transferencia">
       <input name="responsable" placeholder="Responsable">
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
       <button type="submit">Guardar</button>
@@ -124,20 +169,21 @@
     </table>
   </section>
 
-  <!-- GASTOS DESDE INGRESOS -->
+  <!-- GASTOS DESDE INGRESOS (Gastos de Caja) -->
   <section id="gastosDesdeIngresos">
-    <h2>Gastos desde Ingresos</h2>
-    <div class="info-box">
-      💡 Gastos pagados directamente con el dinero de las ventas (ej: compra de mercancía, materiales, etc.)
+    <h2>💵 Gastos desde Ingresos (Gastos de Caja)</h2>
+    <div class="card" style="margin-bottom:1rem; text-align:left">
+      <p><strong>💰 Efectivo en Caja disponible:</strong> <span id="cajaDisponibleForm">$0.00</span></p>
+      <small>Estos gastos se descuentan directamente del efectivo disponible</small>
     </div>
     <form id="formGastosDesdeIngresos">
       <input name="fecha" type="date" required>
       <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
+      <input name="categoria" placeholder="Categoría" value="Compra mercancía">
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required id="montoGastoIngreso">
       <input name="responsable" placeholder="Responsable">
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar</button>
+      <button type="submit" id="btnGuardarGastoIngreso">Guardar</button>
     </form>
     <div class="excel-bar">
       <button id="exportGastosDesdeIngresos">Exportar Excel</button>
@@ -188,7 +234,7 @@
       <select name="tipo"><option>Por cobrar</option><option>Por pagar</option></select>
       <input name="cliente_proveedor" placeholder="Cliente / Proveedor">
       <input name="concepto" placeholder="Concepto">
-      <input name="monto" type="number" step="0.01" min="0" placeholder="Monto" required>
+      <input name="monto" type="number" step="0.01" placeholder="Monto" required>
       <input name="fecha_vencimiento" type="date">
       <select name="estado"><option>Pendiente</option><option>Pagado</option></select>
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
@@ -214,7 +260,9 @@
 
 <script>
 /* ---------- NAVEGACIÓN ---------- */
-const tabs = document.querySelectorAll('.tab'), sections = document.querySelectorAll('section');
+const tabs = document.querySelectorAll('.tab');
+const sections = document.querySelectorAll('section');
+
 tabs.forEach(btn => {
   btn.addEventListener('click', () => {
     tabs.forEach(b => b.classList.remove('active'));
@@ -222,20 +270,23 @@ tabs.forEach(btn => {
     const id = btn.dataset.tab;
     sections.forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    if (id === 'gastosDesdeIngresos') actualizarEfectivoForm();
   });
 });
 
 /* ---------- DATOS ---------- */
 const data = {
-  ingresos: [],
+  ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
   gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
   proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
   cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
 };
-const gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
+let gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
 
 function saveData() {
-  for (const k in data) localStorage.setItem(k, JSON.stringify(data[k]));
+  for (const k in data) {
+    localStorage.setItem(k, JSON.stringify(data[k]));
+  }
   localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
   actualizarDashboard();
 }
@@ -245,111 +296,172 @@ const ctx = document.getElementById('chartResumen').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'doughnut',
   data: { 
-    labels: ['Ingreso Neto', 'Gastos Operativos', 'Balance Final'], 
+    labels: ['Efectivo en Caja', 'Gastos Bancarios', 'Por Pagar'], 
     datasets: [{ 
       data: [0, 0, 0], 
-      backgroundColor: ['#1a73e8', '#ff9800', '#43a047'], 
+      backgroundColor: ['#43a047', '#1a73e8', '#fb8c00'], 
       hoverOffset: 10 
     }] 
   },
   options: { 
     responsive: true, 
     plugins: { 
-      legend: { position: 'bottom' },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            let label = context.label || '';
-            if (label) label += ': ';
-            label += '$' + context.parsed.toFixed(2);
-            return label;
-          }
-        }
-      }
+      legend: { position: 'bottom' } 
     } 
   }
 });
 
-/* ---------- FUNCIÓN CORREGIDA: ACTUALIZAR DASHBOARD ---------- */
 function actualizarDashboard() {
-  // 1. Sumar totales base
-  const totalIngresos = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
-  const totalGastosOperativos = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
-  const totalGastosDesdeIngresos = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  // Calcular totales
+  const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
+  const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+  const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   
-  // 2. Calcular métricas CORRECTAS (sin doble resta)
-  // Ingreso Neto: Lo que queda después de pagar gastos desde ingresos
-  const ingresoNeto = totalIngresos - totalGastosDesdeIngresos;
+  // Calcular cuentas por pagar pendientes
+  const porPagar = data.cuentas
+    .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
+    .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
   
-  // Balance Final: Ingreso Neto menos gastos operativos
-  // Equivalente a: totalIngresos - totalGastosDesdeIngresos - totalGastosOperativos
-  const balanceFinal = ingresoNeto - totalGastosOperativos;
+  // NUEVO: Efectivo en Caja = Ingresos - Gastos desde Ingresos
+  const efectivoCaja = ti - gdi;
   
-  // 3. Formatear moneda
-  const formatMoney = (num) => '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // FÓRMULAS CORREGIDAS
+  const ingresoNeto = ti - gdi;
+  const gastosTotales = tg + gdi;
+  const balance = ti - gastosTotales;
+
+  // Actualizar HTML
+  document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
+  document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
+  document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
+  document.getElementById('totalGastos').textContent = '$' + gastosTotales.toFixed(2);
+  document.getElementById('balance').textContent = '$' + balance.toFixed(2);
   
-  // 4. Actualizar DOM
-  document.getElementById('totalIngresos').textContent = formatMoney(totalIngresos);
-  document.getElementById('totalGastosDesdeIngresos').textContent = formatMoney(totalGastosDesdeIngresos);
-  document.getElementById('ingresoNeto').textContent = formatMoney(ingresoNeto);
-  document.getElementById('totalGastosOperativos').textContent = formatMoney(totalGastosOperativos);
+  // NUEVO: Actualizar tarjetas de caja
+  document.getElementById('efectivoCaja').textContent = '$' + efectivoCaja.toFixed(2);
+  document.getElementById('gastosPendientes').textContent = '$' + porPagar.toFixed(2);
   
-  // Balance con color condicional
-  const balanceElement = document.getElementById('balance');
-  const balanceCard = document.getElementById('balanceCard');
-  balanceElement.textContent = formatMoney(balanceFinal);
-  
-  if (balanceFinal >= 0) {
-    balanceCard.classList.remove('negative');
-    balanceCard.classList.add('positive');
+  // Alerta si caja está baja
+  const alertaCaja = document.getElementById('alertaCaja');
+  if (efectivoCaja < 100000) { // Ajusta este valor según tu necesidad
+    alertaCaja.style.display = 'block';
   } else {
-    balanceCard.classList.remove('positive');
-    balanceCard.classList.add('negative');
+    alertaCaja.style.display = 'none';
   }
 
-  // 5. Actualizar gráfico
+  // Actualizar gráfica
   chart.data.datasets[0].data = [
-    Math.max(0, ingresoNeto),
-    Math.max(0, totalGastosOperativos),
-    Math.max(0, balanceFinal)
+    Math.max(0, efectivoCaja), 
+    tg, 
+    porPagar
   ];
-  
-  // Color del balance en gráfico
-  chart.data.datasets[0].backgroundColor[2] = balanceFinal >= 0 ? '#43a047' : '#e53935';
-  
   chart.update();
+  
+  // Actualizar efectivo en el formulario si es visible
+  actualizarEfectivoForm();
+}
+
+function actualizarEfectivoForm() {
+  const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
+  const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+  const efectivoCaja = ti - gdi;
+  const cajaSpan = document.getElementById('cajaDisponibleForm');
+  if (cajaSpan) cajaSpan.textContent = '$' + efectivoCaja.toFixed(2);
+}
+
+/* ---------- VALIDAR GASTO DESDE INGRESOS ---------- */
+function puedePagarConCaja(monto) {
+  const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
+  const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+  const efectivoCaja = ti - gdi;
+  return efectivoCaja >= monto;
 }
 
 /* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  data.ingresos = ventas.map(v => ({
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
-    categoria: 'Venta',
-    monto: parseFloat(v.total).toFixed(2),
-    metodo_pago: 'Efectivo',
-    responsable: 'Sistema',
-    observaciones: `Cantidad vendida: ${v.quantity}`
-  }));
-  saveData();
-  renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  
+  const nuevasVentas = ventas.filter(venta => {
+    return !data.ingresos.some(ingreso => 
+      ingreso.descripcion && ingreso.descripcion.includes(venta.code)
+    );
+  });
+  
+  nuevasVentas.forEach(v => {
+    data.ingresos.push({
+      fecha: new Date().toISOString().split('T')[0],
+      descripcion: `Venta: ${v.name || 'Producto'} (Cód: ${v.code || 'N/A'})`,
+      categoria: 'Venta',
+      monto: parseFloat(v.total || 0),
+      metodo_pago: 'Efectivo',
+      responsable: 'Sistema',
+      observaciones: `Cantidad: ${v.quantity || 1}`
+    });
+  });
+  
+  if (nuevasVentas.length > 0) {
+    saveData();
+    renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  }
 }
 
 /* ---------- RENDER TABLA ---------- */
 function renderTable(id, arr, keys, keyName) {
   const tbody = document.querySelector(`#${id} tbody`);
-  tbody.innerHTML = arr.map((it, i) => `
+  if (!tbody) return;
+  
+  tbody.innerHTML = arr.map((it, i) => {
+    const esAutomatico = keyName === 'ingresos' && it.responsable === 'Sistema';
+    
+    return `
     <tr>
-      ${keys.map(k => `<td>${it[k] || ''}</td>`).join('')}
-      <td class="acciones">${keyName === 'ingresos' ? 'Solo lectura' : `
-        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>`}
+      ${keys.map(k => `<td>${it[k] !== undefined ? it[k] : ''}</td>`).join('')}
+      <td class="acciones">
+        ${esAutomatico ? '🧾 Auto' : `
+          <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
+          <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
+        `}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
-/* ---------- FORMULARIOS ---------- */
+/* ---------- FORMULARIO INGRESOS ---------- */
+const btnAgregarIngreso = document.getElementById('btnAgregarIngreso');
+const formIngreso = document.getElementById('formIngreso');
+const cancelarIngreso = document.getElementById('cancelarIngreso');
+
+btnAgregarIngreso.addEventListener('click', () => {
+  formIngreso.style.display = 'grid';
+  btnAgregarIngreso.style.display = 'none';
+});
+
+cancelarIngreso.addEventListener('click', () => {
+  formIngreso.style.display = 'none';
+  btnAgregarIngreso.style.display = 'inline-block';
+  formIngreso.reset();
+});
+
+formIngreso.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const item = {
+    fecha: formIngreso.fecha.value,
+    descripcion: formIngreso.descripcion.value,
+    categoria: formIngreso.categoria.value,
+    monto: parseFloat(formIngreso.monto.value),
+    metodo_pago: formIngreso.metodo_pago.value,
+    responsable: formIngreso.responsable.value || 'Manual',
+    observaciones: formIngreso.observaciones.value
+  };
+  data.ingresos.push(item);
+  saveData();
+  renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  formIngreso.reset();
+  formIngreso.style.display = 'none';
+  btnAgregarIngreso.style.display = 'inline-block';
+});
+
+/* ---------- FORMULARIOS (Gastos, Proveedores, Cuentas) ---------- */
 const forms = [
   { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones'] },
   { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones'] },
@@ -362,12 +474,9 @@ forms.forEach(f => {
     e.preventDefault();
     const item = {};
     f.fields.forEach(k => {
-      item[k] = form[k].value;
-      if (k === 'monto' && parseFloat(item[k]) < 0) {
-        alert('El monto no puede ser negativo');
-        return;
-      }
+      item[k] = form[k] ? form[k].value : '';
     });
+    if (item.monto) item.monto = parseFloat(item.monto);
     data[f.key].push(item);
     saveData();
     renderTable(f.table, data[f.key], f.fields, f.key);
@@ -376,15 +485,20 @@ forms.forEach(f => {
   renderTable(f.table, data[f.key], f.fields, f.key);
 });
 
-/* ---------- GASTOS DESDE INGRESOS ---------- */
+/* ---------- GASTOS DESDE INGRESOS (CON VALIDACIÓN) ---------- */
 const formGDI = document.getElementById('formGastosDesdeIngresos');
+const btnGuardarGDI = document.getElementById('btnGuardarGastoIngreso');
+
 formGDI.addEventListener('submit', e => {
   e.preventDefault();
   const monto = parseFloat(formGDI.monto.value);
-  if (monto < 0) {
-    alert('El monto no puede ser negativo');
+  
+  // Validar que haya efectivo suficiente
+  if (!puedePagarConCaja(monto)) {
+    alert('❌ No hay suficiente efectivo en caja para este gasto');
     return;
   }
+  
   const item = {
     fecha: formGDI.fecha.value,
     descripcion: formGDI.descripcion.value,
@@ -397,14 +511,21 @@ formGDI.addEventListener('submit', e => {
   saveData();
   renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones'], 'gastosDesdeIngresos');
   formGDI.reset();
+  actualizarEfectivoForm();
 });
 renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones'], 'gastosDesdeIngresos');
 
 /* ---------- EDITAR / ELIMINAR ---------- */
 document.addEventListener('click', e => {
+  // ELIMINAR
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return;
+    
+    if (key === 'ingresos' && data.ingresos[index]?.responsable === 'Sistema') {
+      alert('No puedes eliminar ingresos generados automáticamente');
+      return;
+    }
+    
     if (confirm('¿Eliminar este registro?')) {
       if (key === 'gastosDesdeIngresos') {
         gastosDesdeIngresos.splice(index, 1);
@@ -414,33 +535,61 @@ document.addEventListener('click', e => {
         data[key].splice(index, 1);
         saveData();
         const f = forms.find(x => x.key === key);
-        renderTable(f.table, data[key], f.fields, key);
+        if (f) renderTable(f.table, data[key], f.fields, key);
+        if (key === 'ingresos') {
+          renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+        }
       }
       actualizarDashboard();
     }
   }
+  
+  // EDITAR
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return;
+    
+    if (key === 'ingresos' && data.ingresos[index]?.responsable === 'Sistema') {
+      alert('No puedes editar ingresos generados automáticamente');
+      return;
+    }
+    
     if (key === 'gastosDesdeIngresos') {
       const item = gastosDesdeIngresos[index];
-      formGDI.fecha.value = item.fecha;
-      formGDI.descripcion.value = item.descripcion;
-      formGDI.categoria.value = item.categoria;
-      formGDI.monto.value = item.monto;
-      formGDI.responsable.value = item.responsable;
-      formGDI.observaciones.value = item.observaciones;
+      formGDI.fecha.value = item.fecha || '';
+      formGDI.descripcion.value = item.descripcion || '';
+      formGDI.categoria.value = item.categoria || '';
+      formGDI.monto.value = item.monto || '';
+      formGDI.responsable.value = item.responsable || '';
+      formGDI.observaciones.value = item.observaciones || '';
       gastosDesdeIngresos.splice(index, 1);
       saveData();
       renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones'], 'gastosDesdeIngresos');
     } else {
       const f = forms.find(x => x.key === key);
-      const form = document.getElementById(f.id);
-      const item = data[key][index];
-      f.fields.forEach(k => form[k].value = item[k] || '');
-      data[key].splice(index, 1);
-      saveData();
-      renderTable(f.table, data[key], f.fields, key);
+      if (f) {
+        const form = document.getElementById(f.id);
+        const item = data[key][index];
+        f.fields.forEach(k => {
+          if (form[k]) form[k].value = item[k] || '';
+        });
+        data[key].splice(index, 1);
+        saveData();
+        renderTable(f.table, data[key], f.fields, key);
+      } else if (key === 'ingresos') {
+        const item = data.ingresos[index];
+        formIngreso.fecha.value = item.fecha || '';
+        formIngreso.descripcion.value = item.descripcion || '';
+        formIngreso.categoria.value = item.categoria || '';
+        formIngreso.monto.value = item.monto || '';
+        formIngreso.metodo_pago.value = item.metodo_pago || '';
+        formIngreso.responsable.value = item.responsable || '';
+        formIngreso.observaciones.value = item.observaciones || '';
+        data.ingresos.splice(index, 1);
+        saveData();
+        renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+        formIngreso.style.display = 'grid';
+        btnAgregarIngreso.style.display = 'none';
+      }
     }
     actualizarDashboard();
   }
@@ -454,52 +603,91 @@ function exportExcel(key, filename) {
   XLSX.utils.book_append_sheet(wb, ws, key);
   XLSX.writeFile(wb, filename);
 }
+
 function importExcel(file, key, fields) {
   const reader = new FileReader();
   reader.onload = function (e) {
     const wb = XLSX.read(e.target.result, { type: 'binary' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    
     rows.forEach(r => {
       const item = {};
       fields.forEach(f => {
-        item[f] = r[f] || '';
-        if (f === 'monto' && parseFloat(item[f]) < 0) item[f] = Math.abs(item[f]);
+        item[f] = r[f] !== undefined ? r[f] : '';
       });
-      if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
-      else data[key].push(item);
+      if (item.monto) item.monto = parseFloat(item.monto) || 0;
+      
+      if (key === 'gastosDesdeIngresos') {
+        gastosDesdeIngresos.push(item);
+      } else {
+        data[key].push(item);
+      }
     });
+    
     saveData();
+    
     if (key === 'gastosDesdeIngresos') {
       renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, fields, key);
+    } else if (key === 'ingresos') {
+      renderTable('tablaIngresos', data.ingresos, fields, key);
     } else {
       const f = forms.find(x => x.key === key);
-      renderTable(f.table, data[key], fields, key);
+      if (f) renderTable(f.table, data[key], fields, key);
     }
+    actualizarDashboard();
   };
   reader.readAsBinaryString(file);
 }
 
-/* botones exportar */
-document.getElementById('exportGastos').onclick = () => exportExcel('gastos', 'gastos.xlsx');
-document.getElementById('exportGastosDesdeIngresos').onclick = () => exportExcel('gastosDesdeIngresos', 'gastos_desde_ingresos.xlsx');
-document.getElementById('exportProveedores').onclick = () => exportExcel('proveedores', 'proveedores.xlsx');
-document.getElementById('exportCuentas').onclick = () => exportExcel('cuentas', 'cuentas.xlsx');
+// Botones exportación
+document.getElementById('exportIngresos')?.addEventListener('click', () => exportExcel('ingresos', 'ingresos.xlsx'));
+document.getElementById('exportGastos')?.addEventListener('click', () => exportExcel('gastos', 'gastos.xlsx'));
+document.getElementById('exportGastosDesdeIngresos')?.addEventListener('click', () => exportExcel('gastosDesdeIngresos', 'gastos_caja.xlsx'));
+document.getElementById('exportProveedores')?.addEventListener('click', () => exportExcel('proveedores', 'proveedores.xlsx'));
+document.getElementById('exportCuentas')?.addEventListener('click', () => exportExcel('cuentas', 'cuentas.xlsx'));
 
-/* inputs importar */
-document.getElementById('importGastos').onchange = function (e) { importExcel(e.target.files[0], 'gastos', ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones']); this.value = ''; }
-document.getElementById('importGastosDesdeIngresos').onchange = function (e) { importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones']); this.value = ''; }
-document.getElementById('importProveedores').onchange = function (e) { importExcel(e.target.files[0], 'proveedores', ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones']); this.value = ''; }
-document.getElementById('importCuentas').onchange = function (e) { importExcel(e.target.files[0], 'cuentas', ['tipo', 'cliente_proveedor', 'concepto', 'monto', 'fecha_vencimiento', 'estado', 'observaciones']); this.value = ''; }
+// Importación
+document.getElementById('importIngresos')?.addEventListener('change', function(e) { 
+  importExcel(e.target.files[0], 'ingresos', ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones']); 
+  this.value = ''; 
+});
+
+document.getElementById('importGastos')?.addEventListener('change', function(e) { 
+  importExcel(e.target.files[0], 'gastos', ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones']); 
+  this.value = ''; 
+});
+
+document.getElementById('importGastosDesdeIngresos')?.addEventListener('change', function(e) { 
+  importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones']); 
+  this.value = ''; 
+});
+
+document.getElementById('importProveedores')?.addEventListener('change', function(e) { 
+  importExcel(e.target.files[0], 'proveedores', ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones']); 
+  this.value = ''; 
+});
+
+document.getElementById('importCuentas')?.addEventListener('change', function(e) { 
+  importExcel(e.target.files[0], 'cuentas', ['tipo', 'cliente_proveedor', 'concepto', 'monto', 'fecha_vencimiento', 'estado', 'observaciones']); 
+  this.value = ''; 
+});
 
 /* ---------- INICIALIZAR ---------- */
 cargarVentasComoIngresos();
+renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
 actualizarDashboard();
 
-// Escuchar cambios en tiempo real
-window.addEventListener('storage', () => {
-  cargarVentasComoIngresos();
-  actualizarDashboard();
+window.addEventListener('storage', (e) => {
+  if (e.key === 'soldInventory') {
+    cargarVentasComoIngresos();
+  } else if (e.key && data.hasOwnProperty(e.key)) {
+    data[e.key] = JSON.parse(e.newValue || '[]');
+    actualizarDashboard();
+  } else if (e.key === 'gastosDesdeIngresos') {
+    gastosDesdeIngresos = JSON.parse(e.newValue || '[]');
+    actualizarDashboard();
+  }
 });
 </script>
 </body>

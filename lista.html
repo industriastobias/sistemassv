@@ -49,6 +49,7 @@
     .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
     .excel-bar button{background:#388e3c}
     .excel-bar button:hover{background:#2e7d32}
+    .info-box{background:#e3f2fd;border-left:4px solid #2196f3;padding:1rem;margin:1rem 0;border-radius:4px;font-size:0.9rem}
   </style>
 </head>
 <body>
@@ -58,7 +59,7 @@
 <nav>
   <div class="tab active" data-tab="dashboard">Dashboard</div>
   <div class="tab" data-tab="ingresos">Ingresos</div>
-  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="gastos">Gastos Operativos</div>
   <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
   <div class="tab" data-tab="proveedores">Proveedores</div>
   <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
@@ -68,12 +69,15 @@
   <!-- DASHBOARD -->
   <section id="dashboard" class="active">
     <h2>Resumen General</h2>
+    <div class="info-box">
+      💡 <strong>Fórmulas:</strong> Ingreso Neto = Ingresos - Gastos desde Ingresos | Balance Final = Ingreso Neto - Gastos Operativos
+    </div>
     <div class="dashboard">
       <div class="card"><h3>Total Ingresos</h3><p id="totalIngresos">$0.00</p></div>
       <div class="card"><h3>Gastos desde Ingresos</h3><p id="totalGastosDesdeIngresos">$0.00</p></div>
       <div class="card"><h3>Ingreso Neto</h3><p id="ingresoNeto">$0.00</p></div>
-      <div class="card"><h3>Total Gastos</h3><p id="totalGastos">$0.00</p></div>
-      <div class="card" id="balanceCard"><h3>Saldo Neto Final</h3><p id="balance">$0.00</p></div>
+      <div class="card"><h3>Gastos Operativos</h3><p id="totalGastosOperativos">$0.00</p></div>
+      <div class="card" id="balanceCard"><h3>Balance Final</h3><p id="balance">$0.00</p></div>
     </div>
     <canvas id="chartResumen"></canvas>
   </section>
@@ -91,9 +95,9 @@
     </table>
   </section>
 
-  <!-- GASTOS -->
+  <!-- GASTOS OPERATIVOS -->
   <section id="gastos">
-    <h2>Gastos</h2>
+    <h2>Gastos Operativos</h2>
     <form id="formGasto">
       <input name="fecha" type="date" required>
       <input name="proveedor" placeholder="Proveedor">
@@ -123,6 +127,9 @@
   <!-- GASTOS DESDE INGRESOS -->
   <section id="gastosDesdeIngresos">
     <h2>Gastos desde Ingresos</h2>
+    <div class="info-box">
+      💡 Gastos pagados directamente con el dinero de las ventas (ej: compra de mercancía, materiales, etc.)
+    </div>
     <form id="formGastosDesdeIngresos">
       <input name="fecha" type="date" required>
       <input name="descripcion" placeholder="Descripción" required>
@@ -238,10 +245,10 @@ const ctx = document.getElementById('chartResumen').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'doughnut',
   data: { 
-    labels: ['Ingreso Neto', 'Total Gastos', 'Saldo Neto'], 
+    labels: ['Ingreso Neto', 'Gastos Operativos', 'Balance Final'], 
     datasets: [{ 
       data: [0, 0, 0], 
-      backgroundColor: ['#1a73e8', '#e53935', '#43a047'], 
+      backgroundColor: ['#1a73e8', '#ff9800', '#43a047'], 
       hoverOffset: 10 
     }] 
   },
@@ -253,9 +260,7 @@ const chart = new Chart(ctx, {
         callbacks: {
           label: function(context) {
             let label = context.label || '';
-            if (label) {
-              label += ': ';
-            }
+            if (label) label += ': ';
             label += '$' + context.parsed.toFixed(2);
             return label;
           }
@@ -267,25 +272,29 @@ const chart = new Chart(ctx, {
 
 /* ---------- FUNCIÓN CORREGIDA: ACTUALIZAR DASHBOARD ---------- */
 function actualizarDashboard() {
-  // 1. Calcular totales base
+  // 1. Sumar totales base
   const totalIngresos = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
   const totalGastosOperativos = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
   const totalGastosDesdeIngresos = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
   
-  // 2. Calcular métricas CORREGIDAS (sin doble resta)
-  const ingresoNeto = totalIngresos - totalGastosDesdeIngresos; // Lo que queda después de gastos directos
-  const totalGastos = totalGastosOperativos + totalGastosDesdeIngresos; // Todos los gastos
-  const balanceFinal = totalIngresos - totalGastos; // CORRECCIÓN: Ingresos - Todos los gastos (solo una resta)
+  // 2. Calcular métricas CORRECTAS (sin doble resta)
+  // Ingreso Neto: Lo que queda después de pagar gastos desde ingresos
+  const ingresoNeto = totalIngresos - totalGastosDesdeIngresos;
   
-  // 3. Actualizar DOM con formato de moneda
+  // Balance Final: Ingreso Neto menos gastos operativos
+  // Equivalente a: totalIngresos - totalGastosDesdeIngresos - totalGastosOperativos
+  const balanceFinal = ingresoNeto - totalGastosOperativos;
+  
+  // 3. Formatear moneda
   const formatMoney = (num) => '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   
+  // 4. Actualizar DOM
   document.getElementById('totalIngresos').textContent = formatMoney(totalIngresos);
   document.getElementById('totalGastosDesdeIngresos').textContent = formatMoney(totalGastosDesdeIngresos);
   document.getElementById('ingresoNeto').textContent = formatMoney(ingresoNeto);
-  document.getElementById('totalGastos').textContent = formatMoney(totalGastos);
+  document.getElementById('totalGastosOperativos').textContent = formatMoney(totalGastosOperativos);
   
-  // Color condicional para el balance
+  // Balance con color condicional
   const balanceElement = document.getElementById('balance');
   const balanceCard = document.getElementById('balanceCard');
   balanceElement.textContent = formatMoney(balanceFinal);
@@ -293,26 +302,20 @@ function actualizarDashboard() {
   if (balanceFinal >= 0) {
     balanceCard.classList.remove('negative');
     balanceCard.classList.add('positive');
-    balanceElement.style.color = '#43a047';
   } else {
     balanceCard.classList.remove('positive');
     balanceCard.classList.add('negative');
-    balanceElement.style.color = '#e53935';
   }
 
-  // 4. Actualizar gráfico (valores positivos para visualización)
+  // 5. Actualizar gráfico
   chart.data.datasets[0].data = [
-    Math.max(0, ingresoNeto),           // Ingreso Neto (no negativo para gráfico)
-    Math.max(0, totalGastos),           // Total Gastos
-    Math.max(0, balanceFinal)           // Saldo (solo positivo si hay ganancia)
+    Math.max(0, ingresoNeto),
+    Math.max(0, totalGastosOperativos),
+    Math.max(0, balanceFinal)
   ];
   
-  // Cambiar color del balance en el gráfico según sea positivo o negativo
-  if (balanceFinal < 0) {
-    chart.data.datasets[0].backgroundColor[2] = '#e53935'; // Rojo si es negativo
-  } else {
-    chart.data.datasets[0].backgroundColor[2] = '#43a047'; // Verde si es positivo
-  }
+  // Color del balance en gráfico
+  chart.data.datasets[0].backgroundColor[2] = balanceFinal >= 0 ? '#43a047' : '#e53935';
   
   chart.update();
 }
@@ -360,10 +363,9 @@ forms.forEach(f => {
     const item = {};
     f.fields.forEach(k => {
       item[k] = form[k].value;
-      // Validar que monto no sea negativo
       if (k === 'monto' && parseFloat(item[k]) < 0) {
         alert('El monto no puede ser negativo');
-        throw new Error('Monto negativo no permitido');
+        return;
       }
     });
     data[f.key].push(item);
@@ -402,7 +404,7 @@ renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripc
 document.addEventListener('click', e => {
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear eliminación en ingresos
+    if (key === 'ingresos') return;
     if (confirm('¿Eliminar este registro?')) {
       if (key === 'gastosDesdeIngresos') {
         gastosDesdeIngresos.splice(index, 1);
@@ -419,7 +421,7 @@ document.addEventListener('click', e => {
   }
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear edición en ingresos
+    if (key === 'ingresos') return;
     if (key === 'gastosDesdeIngresos') {
       const item = gastosDesdeIngresos[index];
       formGDI.fecha.value = item.fecha;
@@ -462,10 +464,7 @@ function importExcel(file, key, fields) {
       const item = {};
       fields.forEach(f => {
         item[f] = r[f] || '';
-        // Validar montos no negativos en importación
-        if (f === 'monto' && parseFloat(item[f]) < 0) {
-          item[f] = Math.abs(item[f]); // Convertir a positivo
-        }
+        if (f === 'monto' && parseFloat(item[f]) < 0) item[f] = Math.abs(item[f]);
       });
       if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
       else data[key].push(item);

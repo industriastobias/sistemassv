@@ -312,52 +312,32 @@ const chart = new Chart(ctx, {
 });
 
 function actualizarDashboard() {
-  // Calcular totales
   const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
   const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
-  
-  // Calcular cuentas por pagar pendientes
   const porPagar = data.cuentas
     .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
     .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
   
-  // NUEVO: Efectivo en Caja = Ingresos - Gastos desde Ingresos
   const efectivoCaja = ti - gdi;
-  
-  // FÓRMULAS CORREGIDAS
   const ingresoNeto = ti - gdi;
   const gastosTotales = tg + gdi;
   const balance = ti - gastosTotales;
 
-  // Actualizar HTML
   document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
   document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
   document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
   document.getElementById('totalGastos').textContent = '$' + gastosTotales.toFixed(2);
   document.getElementById('balance').textContent = '$' + balance.toFixed(2);
-  
-  // NUEVO: Actualizar tarjetas de caja
   document.getElementById('efectivoCaja').textContent = '$' + efectivoCaja.toFixed(2);
   document.getElementById('gastosPendientes').textContent = '$' + porPagar.toFixed(2);
   
-  // Alerta si caja está baja
   const alertaCaja = document.getElementById('alertaCaja');
-  if (efectivoCaja < 100000) { // Ajusta este valor según tu necesidad
-    alertaCaja.style.display = 'block';
-  } else {
-    alertaCaja.style.display = 'none';
-  }
+  alertaCaja.style.display = efectivoCaja < 100000 ? 'block' : 'none';
 
-  // Actualizar gráfica
-  chart.data.datasets[0].data = [
-    Math.max(0, efectivoCaja), 
-    tg, 
-    porPagar
-  ];
+  chart.data.datasets[0].data = [Math.max(0, efectivoCaja), tg, porPagar];
   chart.update();
   
-  // Actualizar efectivo en el formulario si es visible
   actualizarEfectivoForm();
 }
 
@@ -369,33 +349,42 @@ function actualizarEfectivoForm() {
   if (cajaSpan) cajaSpan.textContent = '$' + efectivoCaja.toFixed(2);
 }
 
-/* ---------- VALIDAR GASTO DESDE INGRESOS ---------- */
 function puedePagarConCaja(monto) {
   const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
   const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
-  const efectivoCaja = ti - gdi;
-  return efectivoCaja >= monto;
+  return (ti - gdi) >= monto;
 }
 
-/* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
+/* ========== MEJORAS PARA IMPORTAR VENTAS ========== */
+
+// Función mejorada para importar ventas (evita duplicados con ID único)
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
   
-  const nuevasVentas = ventas.filter(venta => {
-    return !data.ingresos.some(ingreso => 
-      ingreso.descripcion && ingreso.descripcion.includes(venta.code)
-    );
+  // Crear un Set con los IDs de ventas ya importados (usando código + fecha)
+  const idsImportados = new Set(
+    data.ingresos
+      .filter(i => i.origenVentaId)
+      .map(i => i.origenVentaId)
+  );
+  
+  const nuevasVentas = ventas.filter(v => {
+    if (!v.code || !v.date) return false; // Ignorar si no tiene datos suficientes
+    const id = `${v.code}_${v.date}`;
+    return !idsImportados.has(id);
   });
   
   nuevasVentas.forEach(v => {
+    const id = `${v.code}_${v.date}`;
     data.ingresos.push({
       fecha: new Date().toISOString().split('T')[0],
-      descripcion: `Venta: ${v.name || 'Producto'} (Cód: ${v.code || 'N/A'})`,
+      descripcion: `Venta: ${v.name || 'Producto'} (Cód: ${v.code})`,
       categoria: 'Venta',
       monto: parseFloat(v.total || 0),
       metodo_pago: 'Efectivo',
       responsable: 'Sistema',
-      observaciones: `Cantidad: ${v.quantity || 1}`
+      observaciones: `Cantidad: ${v.quantity || 1}`,
+      origenVentaId: id  // Guardamos el ID para futuras importaciones
     });
   });
   
@@ -405,29 +394,21 @@ function cargarVentasComoIngresos() {
   }
 }
 
-/* ---------- RENDER TABLA ---------- */
-function renderTable(id, arr, keys, keyName) {
-  const tbody = document.querySelector(`#${id} tbody`);
-  if (!tbody) return;
-  
-  tbody.innerHTML = arr.map((it, i) => {
-    const esAutomatico = keyName === 'ingresos' && it.responsable === 'Sistema';
-    
-    return `
-    <tr>
-      ${keys.map(k => `<td>${it[k] !== undefined ? it[k] : ''}</td>`).join('')}
-      <td class="acciones">
-        ${esAutomatico ? '🧾 Auto' : `
-          <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-          <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
-        `}
-      </td>
-    </tr>`;
-  }).join('');
-}
+// Botón manual para importar ventas (se añade debajo del botón "Agregar Ingreso Manual")
+const btnAgregarIngreso = document.getElementById('btnAgregarIngreso');
+const btnImportarVentas = document.createElement('button');
+btnImportarVentas.id = 'btnImportarVentas';
+btnImportarVentas.className = 'btn-agregar';
+btnImportarVentas.style.background = '#1a73e8';
+btnImportarVentas.textContent = '🔄 Importar ventas ahora';
+btnAgregarIngreso.parentNode.insertBefore(btnImportarVentas, btnAgregarIngreso.nextSibling);
+
+btnImportarVentas.addEventListener('click', () => {
+  cargarVentasComoIngresos();
+  alert('Ventas importadas correctamente');
+});
 
 /* ---------- FORMULARIO INGRESOS ---------- */
-const btnAgregarIngreso = document.getElementById('btnAgregarIngreso');
 const formIngreso = document.getElementById('formIngreso');
 const cancelarIngreso = document.getElementById('cancelarIngreso');
 
@@ -461,6 +442,27 @@ formIngreso.addEventListener('submit', (e) => {
   btnAgregarIngreso.style.display = 'inline-block';
 });
 
+/* ---------- RENDER TABLA ---------- */
+function renderTable(id, arr, keys, keyName) {
+  const tbody = document.querySelector(`#${id} tbody`);
+  if (!tbody) return;
+  
+  tbody.innerHTML = arr.map((it, i) => {
+    const esAutomatico = keyName === 'ingresos' && it.responsable === 'Sistema';
+    
+    return `
+    <tr>
+      ${keys.map(k => `<td>${it[k] !== undefined ? it[k] : ''}</td>`).join('')}
+      <td class="acciones">
+        ${esAutomatico ? '🧾 Auto' : `
+          <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
+          <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
+        `}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 /* ---------- FORMULARIOS (Gastos, Proveedores, Cuentas) ---------- */
 const forms = [
   { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones'] },
@@ -485,15 +487,12 @@ forms.forEach(f => {
   renderTable(f.table, data[f.key], f.fields, f.key);
 });
 
-/* ---------- GASTOS DESDE INGRESOS (CON VALIDACIÓN) ---------- */
+/* ---------- GASTOS DESDE INGRESOS ---------- */
 const formGDI = document.getElementById('formGastosDesdeIngresos');
-const btnGuardarGDI = document.getElementById('btnGuardarGastoIngreso');
-
 formGDI.addEventListener('submit', e => {
   e.preventDefault();
   const monto = parseFloat(formGDI.monto.value);
   
-  // Validar que haya efectivo suficiente
   if (!puedePagarConCaja(monto)) {
     alert('❌ No hay suficiente efectivo en caja para este gasto');
     return;
@@ -517,7 +516,6 @@ renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripc
 
 /* ---------- EDITAR / ELIMINAR ---------- */
 document.addEventListener('click', e => {
-  // ELIMINAR
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
     
@@ -544,7 +542,6 @@ document.addEventListener('click', e => {
     }
   }
   
-  // EDITAR
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
     
@@ -673,11 +670,24 @@ document.getElementById('importCuentas')?.addEventListener('change', function(e)
   this.value = ''; 
 });
 
-/* ---------- INICIALIZAR ---------- */
+/* ---------- INICIALIZACIÓN Y EVENTOS ---------- */
 cargarVentasComoIngresos();
 renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
 actualizarDashboard();
 
+// Actualizar al volver a la pestaña (focus)
+window.addEventListener('focus', () => {
+  cargarVentasComoIngresos();
+});
+
+// También al cambiar la visibilidad de la pestaña
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    cargarVentasComoIngresos();
+  }
+});
+
+// Escuchar cambios en localStorage (cuando hay otra pestaña abierta)
 window.addEventListener('storage', (e) => {
   if (e.key === 'soldInventory') {
     cargarVentasComoIngresos();

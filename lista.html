@@ -34,6 +34,9 @@
     .card.inversion-total{background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff}
     .card.inversion-total h3{color:#e0e0e0}
     .card.inversion-total p{color:#fff;font-size:1.6rem}
+    .card.deudas{background:linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);color:#fff}
+    .card.deudas h3{color:#ffe0e0}
+    .card.deudas p{color:#fff;font-size:1.6rem}
     .icono{font-size:1.5rem}
     canvas{display:block;margin:2rem auto;max-width:350px}
     form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
@@ -93,6 +96,10 @@
       <div class="card inversion-total">
         <h3><span class="icono">🎯</span> INVERSIÓN TOTAL</h3>
         <p id="inversionTotal">$0.00</p>
+      </div>
+      <div class="card deudas">
+        <h3><span class="icono">💳</span> DEUDAS POR PAGAR</h3>
+        <p id="totalDeudas">$0.00</p>
       </div>
       <div class="card" id="balanceCard">
         <h3><span class="icono">💵</span> Balance Final</h3>
@@ -292,6 +299,11 @@ function actualizarDashboard() {
   const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   
+  // ✅ NUEVO: Calcular total de deudas (cuentas pendientes por pagar)
+  const totalDeudas = data.cuentas
+    .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
+    .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
+  
   const ingresoNeto = ti - gdi;
   const inversionTotal = tg + gdi;
   const balance = ti - inversionTotal;
@@ -301,6 +313,9 @@ function actualizarDashboard() {
   document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
   document.getElementById('totalGastos').textContent = '$' + tg.toFixed(2);
   document.getElementById('inversionTotal').textContent = '$' + inversionTotal.toFixed(2);
+  
+  // ✅ NUEVO: Mostrar total de deudas
+  document.getElementById('totalDeudas').textContent = '$' + totalDeudas.toFixed(2);
   
   const balanceEl = document.getElementById('balance');
   const balanceCard = document.getElementById('balanceCard');

@@ -312,18 +312,33 @@ const chart = new Chart(ctx, {
 });
 
 function actualizarDashboard() {
+  // Calcular totales asegurando que sean números
   const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
   const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+  
   const porPagar = data.cuentas
     .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
     .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
   
   const efectivoCaja = ti - gdi;
-  const ingresoNeto = ti - gdi;
+  const ingresoNeto = ti - gdi;  // Ingresos menos gastos de caja
   const gastosTotales = tg + gdi;
-  const balance = ti - gastosTotales;
+  const balance = ti - gastosTotales;  // Ingresos menos todos los gastos
 
+  // Mostrar en consola para depuración
+  console.log('--- CÁLCULOS ACTUALES ---');
+  console.log('Total Ingresos (ti):', ti);
+  console.log('Gastos desde Ingresos (gdi):', gdi);
+  console.log('Gastos Fijos (tg):', tg);
+  console.log('Efectivo en Caja (ti - gdi):', efectivoCaja);
+  console.log('Ingreso Neto (ti - gdi):', ingresoNeto);
+  console.log('Total Gastos (tg + gdi):', gastosTotales);
+  console.log('Saldo Neto Final (ti - gastosTotales):', balance);
+  console.log('Gastos Pendientes:', porPagar);
+  console.log('------------------------');
+
+  // Actualizar HTML
   document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
   document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
   document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
@@ -355,13 +370,10 @@ function puedePagarConCaja(monto) {
   return (ti - gdi) >= monto;
 }
 
-/* ========== MEJORAS PARA IMPORTAR VENTAS ========== */
-
-// Función mejorada para importar ventas (evita duplicados con ID único)
+/* ========== IMPORTAR VENTAS ========== */
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
   
-  // Crear un Set con los IDs de ventas ya importados (usando código + fecha)
   const idsImportados = new Set(
     data.ingresos
       .filter(i => i.origenVentaId)
@@ -369,7 +381,7 @@ function cargarVentasComoIngresos() {
   );
   
   const nuevasVentas = ventas.filter(v => {
-    if (!v.code || !v.date) return false; // Ignorar si no tiene datos suficientes
+    if (!v.code || !v.date) return false;
     const id = `${v.code}_${v.date}`;
     return !idsImportados.has(id);
   });
@@ -384,7 +396,7 @@ function cargarVentasComoIngresos() {
       metodo_pago: 'Efectivo',
       responsable: 'Sistema',
       observaciones: `Cantidad: ${v.quantity || 1}`,
-      origenVentaId: id  // Guardamos el ID para futuras importaciones
+      origenVentaId: id
     });
   });
   
@@ -394,7 +406,7 @@ function cargarVentasComoIngresos() {
   }
 }
 
-// Botón manual para importar ventas (se añade debajo del botón "Agregar Ingreso Manual")
+// Botón manual para importar ventas
 const btnAgregarIngreso = document.getElementById('btnAgregarIngreso');
 const btnImportarVentas = document.createElement('button');
 btnImportarVentas.id = 'btnImportarVentas';
@@ -675,19 +687,16 @@ cargarVentasComoIngresos();
 renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
 actualizarDashboard();
 
-// Actualizar al volver a la pestaña (focus)
 window.addEventListener('focus', () => {
   cargarVentasComoIngresos();
 });
 
-// También al cambiar la visibilidad de la pestaña
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     cargarVentasComoIngresos();
   }
 });
 
-// Escuchar cambios en localStorage (cuando hay otra pestaña abierta)
 window.addEventListener('storage', (e) => {
   if (e.key === 'soldInventory') {
     cargarVentasComoIngresos();

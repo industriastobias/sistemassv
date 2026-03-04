@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CONTABILIDAD A FAMILY COMPANY</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root{
       --color-bg:#f4f6f8;
@@ -44,9 +44,11 @@
     .acciones .editar{color:#1a73e8}
     .acciones .eliminar{color:#e53935}
     footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
-    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
+    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap}
     .excel-bar button{background:#388e3c}
     .excel-bar button:hover{background:#2e7d32}
+    .btn-agregar{background:#43a047;margin-bottom:1rem}
+    .btn-agregar:hover{background:#2e7d32}
   </style>
 </head>
 <body>
@@ -79,6 +81,7 @@
   <!-- INGRESOS -->
   <section id="ingresos">
     <h2>Ingresos</h2>
+    <button class="btn-agregar" id="btnImportarVentas" style="background:#1a73e8;">🔄 Importar ventas ahora</button>
     <table id="tablaIngresos">
       <thead>
         <tr>
@@ -218,12 +221,12 @@ tabs.forEach(btn => {
 
 /* ---------- DATOS ---------- */
 const data = {
-  ingresos: [],
+  ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
   gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
   proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
   cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
 };
-const gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
+let gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
 
 function saveData() {
   for (const k in data) localStorage.setItem(k, JSON.stringify(data[k]));
@@ -235,42 +238,81 @@ function saveData() {
 const ctx = document.getElementById('chartResumen').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'doughnut',
-  data: { labels: ['Ingreso Neto', 'Gastos', 'Saldo Neto'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#1a73e8', '#e53935', '#43a047'], hoverOffset: 10 }] },
-  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  data: { 
+    labels: ['Ingreso Neto', 'Gastos Fijos', 'Gastos desde Ingresos'], 
+    datasets: [{ 
+      data: [0, 0, 0], 
+      backgroundColor: ['#1a73e8', '#e53935', '#f39c12'], 
+      hoverOffset: 10 
+    }] 
+  },
+  options: { 
+    responsive: true, 
+    plugins: { 
+      legend: { position: 'bottom' } 
+    } 
+  }
 });
 
 function actualizarDashboard() {
-  const ti = data.ingresos.reduce((a, i) => a + parseFloat(i.monto || 0), 0);
-  const tg = data.gastos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
-  const gdi = gastosDesdeIngresos.reduce((a, g) => a + parseFloat(g.monto || 0), 0);
+  const ti = data.ingresos.reduce((a, i) => a + (parseFloat(i.monto) || 0), 0);
+  const tg = data.gastos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
+  const gdi = gastosDesdeIngresos.reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   const ingresoNeto = ti - gdi;
-  const balance = ingresoNeto - (tg + gdi);
+  const totalGastos = tg + gdi;
+  const balance = ti - totalGastos; // CORREGIDO
 
   document.getElementById('totalIngresos').textContent = '$' + ti.toFixed(2);
   document.getElementById('totalGastosDesdeIngresos').textContent = '$' + gdi.toFixed(2);
   document.getElementById('ingresoNeto').textContent = '$' + ingresoNeto.toFixed(2);
-  document.getElementById('totalGastos').textContent = '$' + (tg + gdi).toFixed(2);
+  document.getElementById('totalGastos').textContent = '$' + totalGastos.toFixed(2);
   document.getElementById('balance').textContent = '$' + balance.toFixed(2);
 
-  chart.data.datasets[0].data = [ingresoNeto, tg + gdi, Math.abs(balance)];
+  chart.data.datasets[0].data = [ingresoNeto, tg, gdi];
   chart.update();
 }
 
-/* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
+/* ---------- IMPORTAR VENTAS (EVITA DUPLICADOS) ---------- */
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  data.ingresos = ventas.map(v => ({
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
-    categoria: 'Venta',
-    monto: parseFloat(v.total).toFixed(2),
-    metodo_pago: 'Efectivo',
-    responsable: 'Sistema',
-    observaciones: `Cantidad vendida: ${v.quantity}`
-  }));
-  saveData();
-  renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  
+  // IDs únicos de ventas ya importados
+  const idsImportados = new Set(
+    data.ingresos
+      .filter(i => i.origenVentaId)
+      .map(i => i.origenVentaId)
+  );
+
+  const nuevasVentas = ventas.filter(v => {
+    if (!v.code || !v.date) return false;
+    const id = `${v.code}_${v.date}`;
+    return !idsImportados.has(id);
+  });
+
+  nuevasVentas.forEach(v => {
+    data.ingresos.push({
+      fecha: new Date().toISOString().split('T')[0],
+      descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
+      categoria: 'Venta',
+      monto: parseFloat(v.total || 0),
+      metodo_pago: 'Efectivo',
+      responsable: 'Sistema',
+      observaciones: `Cantidad: ${v.quantity || 1}`,
+      origenVentaId: `${v.code}_${v.date}`
+    });
+  });
+
+  if (nuevasVentas.length > 0) {
+    saveData();
+    renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  }
 }
+
+/* ---------- BOTÓN MANUAL ---------- */
+document.getElementById('btnImportarVentas').addEventListener('click', () => {
+  cargarVentasComoIngresos();
+  alert('Ventas importadas correctamente');
+});
 
 /* ---------- RENDER TABLA ---------- */
 function renderTable(id, arr, keys, keyName) {
@@ -278,9 +320,11 @@ function renderTable(id, arr, keys, keyName) {
   tbody.innerHTML = arr.map((it, i) => `
     <tr>
       ${keys.map(k => `<td>${it[k] || ''}</td>`).join('')}
-      <td class="acciones">${keyName === 'ingresos' ? 'Solo lectura' : `
-        <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
-        <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>`}
+      <td class="acciones">
+        ${keyName === 'ingresos' && it.responsable === 'Sistema' ? '🧾 Auto' : `
+          <button class="editar" data-key="${keyName}" data-index="${i}">✏️</button>
+          <button class="eliminar" data-key="${keyName}" data-index="${i}">🗑️</button>
+        `}
       </td>
     </tr>`).join('');
 }
@@ -329,7 +373,10 @@ renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripc
 document.addEventListener('click', e => {
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear eliminación en ingresos
+    if (key === 'ingresos' && data.ingresos[index]?.responsable === 'Sistema') {
+      alert('No puedes eliminar ingresos generados automáticamente');
+      return;
+    }
     if (confirm('¿Eliminar este registro?')) {
       if (key === 'gastosDesdeIngresos') {
         gastosDesdeIngresos.splice(index, 1);
@@ -346,7 +393,10 @@ document.addEventListener('click', e => {
   }
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos') return; // ❌ Bloquear edición en ingresos
+    if (key === 'ingresos' && data.ingresos[index]?.responsable === 'Sistema') {
+      alert('No puedes editar ingresos generados automáticamente');
+      return;
+    }
     if (key === 'gastosDesdeIngresos') {
       const item = gastosDesdeIngresos[index];
       formGDI.fecha.value = item.fecha;
@@ -402,25 +452,55 @@ function importExcel(file, key, fields) {
   reader.readAsBinaryString(file);
 }
 
-/* botones exportar */
+/* Botones exportar */
 document.getElementById('exportGastos').onclick = () => exportExcel('gastos', 'gastos.xlsx');
 document.getElementById('exportGastosDesdeIngresos').onclick = () => exportExcel('gastosDesdeIngresos', 'gastos_desde_ingresos.xlsx');
 document.getElementById('exportProveedores').onclick = () => exportExcel('proveedores', 'proveedores.xlsx');
 document.getElementById('exportCuentas').onclick = () => exportExcel('cuentas', 'cuentas.xlsx');
 
-/* inputs importar */
-document.getElementById('importGastos').onchange = function (e) { importExcel(e.target.files[0], 'gastos', ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones']); this.value = ''; }
-document.getElementById('importGastosDesdeIngresos').onchange = function (e) { importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones']); this.value = ''; }
-document.getElementById('importProveedores').onchange = function (e) { importExcel(e.target.files[0], 'proveedores', ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones']); this.value = ''; }
-document.getElementById('importCuentas').onchange = function (e) { importExcel(e.target.files[0], 'cuentas', ['tipo', 'cliente_proveedor', 'concepto', 'monto', 'fecha_vencimiento', 'estado', 'observaciones']); this.value = ''; }
+/* Inputs importar */
+document.getElementById('importGastos').onchange = function (e) { 
+  importExcel(e.target.files[0], 'gastos', ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones']); 
+  this.value = ''; 
+}
+document.getElementById('importGastosDesdeIngresos').onchange = function (e) { 
+  importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones']); 
+  this.value = ''; 
+}
+document.getElementById('importProveedores').onchange = function (e) { 
+  importExcel(e.target.files[0], 'proveedores', ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones']); 
+  this.value = ''; 
+}
+document.getElementById('importCuentas').onchange = function (e) { 
+  importExcel(e.target.files[0], 'cuentas', ['tipo', 'cliente_proveedor', 'concepto', 'monto', 'fecha_vencimiento', 'estado', 'observaciones']); 
+  this.value = ''; 
+}
 
 /* ---------- INICIALIZAR ---------- */
 cargarVentasComoIngresos();
+renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
 actualizarDashboard();
 
 // Escuchar cambios en tiempo real
 window.addEventListener('storage', () => {
-  cargarVentasComoIngresos();
+  // Recargar datos desde localStorage
+  data.ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+  data.gastos = JSON.parse(localStorage.getItem('gastos') || '[]');
+  data.proveedores = JSON.parse(localStorage.getItem('proveedores') || '[]');
+  data.cuentas = JSON.parse(localStorage.getItem('cuentas') || '[]');
+  gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
+  renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
+  actualizarDashboard();
+});
+
+// Al enfocar la ventana
+window.addEventListener('focus', () => {
+  data.ingresos = JSON.parse(localStorage.getItem('ingresos') || '[]');
+  data.gastos = JSON.parse(localStorage.getItem('gastos') || '[]');
+  data.proveedores = JSON.parse(localStorage.getItem('proveedores') || '[]');
+  data.cuentas = JSON.parse(localStorage.getItem('cuentas') || '[]');
+  gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
+  renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
   actualizarDashboard();
 });
 </script>

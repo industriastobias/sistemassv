@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ventas Realizadas – Blanco Hueso</title>
+  <title>💰 VENTAS – Blanco Hueso</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -508,7 +508,7 @@
       border-bottom: none;
     }
 
-    /* Selector de rango de meses */
+    /* Selector de rango de meses - CORREGIDO */
     .month-range-selector {
       background: #f8f9fa;
       padding: 15px;
@@ -535,18 +535,21 @@
     .month-checkbox {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 5px;
-      padding: 8px;
+      padding: 10px 5px;
       background: #fff;
       border-radius: 6px;
       border: 2px solid #e0e0e0;
       cursor: pointer;
       transition: all 0.2s;
       font-size: 0.8rem;
+      user-select: none;
     }
 
     .month-checkbox:hover {
       border-color: var(--accent);
+      background: #f0f0f0;
     }
 
     .month-checkbox.selected {
@@ -555,7 +558,7 @@
       border-color: var(--accent);
     }
 
-    .month-checkbox input {
+    .month-checkbox input[type="checkbox"] {
       display: none;
     }
 
@@ -673,7 +676,7 @@
 
 <div class="container">
   <header class="header">
-    <h1>Ventas Realizadas</h1>
+    <h1>💰 VENTAS</h1>
   </header>
 
   <div class="controls">
@@ -1149,23 +1152,35 @@
       anioSelect.appendChild(option);
     }
     
-    // Crear grid de meses
+    // Crear grid de meses - CORREGIDO
     monthGrid.innerHTML = '';
     nombresMeses.forEach((mes, index) => {
       const label = document.createElement('label');
       label.className = 'month-checkbox';
       label.dataset.mes = index;
-      label.innerHTML = `
-        <input type="checkbox" value="${index}" onchange="toggleMes(${index})">
-        <span>${mes}</span>
-      `;
-      label.onclick = function(e) {
-        if (e.target.tagName !== 'INPUT') {
-          const checkbox = this.querySelector('input');
-          checkbox.checked = !checkbox.checked;
-          toggleMes(index);
-        }
-      };
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = index;
+      checkbox.style.display = 'none';
+      checkbox.addEventListener('change', function() {
+        toggleMes(index);
+      });
+      
+      const span = document.createElement('span');
+      span.textContent = mes;
+      
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      
+      // Click en el label alterna el checkbox
+      label.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        checkbox.checked = !checkbox.checked;
+        toggleMes(index);
+      });
+      
       monthGrid.appendChild(label);
     });
     
@@ -1173,13 +1188,17 @@
   }
 
   function toggleMes(mes) {
-    const checkbox = document.querySelector(`.month-checkbox[data-mes="${mes}"]`);
+    const checkbox = document.querySelector(`.month-checkbox[data-mes="${mes}"] input[type="checkbox"]`);
+    const label = document.querySelector(`.month-checkbox[data-mes="${mes}"]`);
+    
     if (mesesSeleccionados.has(mes)) {
       mesesSeleccionados.delete(mes);
-      checkbox.classList.remove('selected');
+      label.classList.remove('selected');
+      checkbox.checked = false;
     } else {
       mesesSeleccionados.add(mes);
-      checkbox.classList.add('selected');
+      label.classList.add('selected');
+      checkbox.checked = true;
     }
     actualizarCierreCaja();
   }

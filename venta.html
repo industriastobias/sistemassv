@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ventas Realizadas – Blanco Hueso</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400 ;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     :root {
       --bg: #f5f5f5;
       --card: #ffffff;
@@ -305,7 +305,7 @@
       box-shadow: var(--shadow);
       padding: 20px;
       width: 90vw;
-      max-width: 600px;
+      max-width: 700px;
       max-height: 90vh;
       overflow-y: auto;
     }
@@ -414,7 +414,7 @@
       font-size: 0.8rem;
     }
 
-    /* ---------- ESTILOS CIERRE DE CAJA ---------- */
+    /* ---------- ESTILOS CIERRE DE CAJA MEJORADOS ---------- */
     .cierre-header {
       text-align: center;
       margin-bottom: 20px;
@@ -508,19 +508,83 @@
       border-bottom: none;
     }
 
-    .month-selector {
+    /* Selector de rango de meses */
+    .month-range-selector {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+    }
+
+    .month-range-header {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .month-range-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .month-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px;
+      background: #fff;
+      border-radius: 6px;
+      border: 2px solid #e0e0e0;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.8rem;
+    }
+
+    .month-checkbox:hover {
+      border-color: var(--accent);
+    }
+
+    .month-checkbox.selected {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .month-checkbox input {
+      display: none;
+    }
+
+    .year-selector {
       display: flex;
       gap: 10px;
       align-items: center;
-      margin-bottom: 20px;
       justify-content: center;
+      margin-bottom: 15px;
     }
 
-    .month-selector select {
+    .year-selector select {
       padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: var(--radius);
       font-size: 0.9rem;
+      min-width: 100px;
+    }
+
+    .selected-periods {
+      background: #e8f4f8;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 0.85rem;
+    }
+
+    .selected-periods strong {
+      color: var(--accent);
     }
 
     .btn-cierre {
@@ -534,6 +598,7 @@
       width: 100%;
       margin-top: 20px;
       font-size: 1rem;
+      transition: opacity 0.2s;
     }
 
     .btn-cierre:hover {
@@ -545,17 +610,38 @@
       cursor: not-allowed;
     }
 
+    .btn-cierre.danger {
+      background: var(--danger);
+    }
+
+    .warning-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 0.85rem;
+    }
+
+    .warning-box strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
     @media (max-width: 1200px) {
       .cards-grid { grid-template-columns: repeat(5, 1fr); }
     }
 
     @media (max-width: 900px) {
       .cards-grid { grid-template-columns: repeat(4, 1fr); }
+      .month-range-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
     @media (max-width: 600px) {
       .cards-grid { grid-template-columns: repeat(2, 1fr); }
       .cierre-stats { grid-template-columns: 1fr; }
+      .month-range-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media print {
@@ -634,67 +720,69 @@
   </div>
 </div>
 
-<!-- Modal Cierre de Caja -->
+<!-- Modal Cierre de Caja Mejorado -->
 <div id="cierreModal" onclick="if(event.target===this) cerrarCierreCaja()">
   <div class="cierre-card" onclick="event.stopPropagation()">
     <button class="close-btn" onclick="cerrarCierreCaja()" style="float:right;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--danger);">×</button>
     
     <div class="cierre-header">
       <div class="cierre-title">🔒 Cierre de Caja</div>
-      <div class="cierre-subtitle">Resumen mensual de ventas</div>
+      <div class="cierre-subtitle">Consolidación de ventas por período</div>
     </div>
 
-    <div class="month-selector">
-      <label><strong>Mes:</strong></label>
-      <select id="mesSelect" onchange="actualizarCierreCaja()">
-        <option value="0">Enero</option>
-        <option value="1">Febrero</option>
-        <option value="2">Marzo</option>
-        <option value="3">Abril</option>
-        <option value="4">Mayo</option>
-        <option value="5">Junio</option>
-        <option value="6">Julio</option>
-        <option value="7">Agosto</option>
-        <option value="8">Septiembre</option>
-        <option value="9">Octubre</option>
-        <option value="10">Noviembre</option>
-        <option value="11">Diciembre</option>
-      </select>
-      
+    <div class="warning-box">
+      <strong>⚠️ Atención:</strong>
+      Al realizar el cierre de caja, todas las ventas del período seleccionado serán eliminadas y reemplazadas por una única venta consolidada con el monto total.
+    </div>
+
+    <!-- Selector de Año -->
+    <div class="year-selector">
       <label><strong>Año:</strong></label>
       <select id="anioSelect" onchange="actualizarCierreCaja()">
         <!-- Se llena dinámicamente -->
       </select>
     </div>
 
+    <!-- Selector de Meses (Múltiples) -->
+    <div class="month-range-selector">
+      <div class="month-range-header">
+        <i class="fa fa-calendar"></i> Selecciona los meses a cerrar (puedes elegir varios):
+      </div>
+      <div class="month-range-grid" id="monthGrid">
+        <!-- Se llena dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Período seleccionado -->
+    <div class="selected-periods" id="selectedPeriods">
+      <strong>Período seleccionado:</strong> Ninguno
+    </div>
+
+    <!-- Estadísticas -->
     <div class="cierre-stats">
       <div class="stat-box">
         <div class="stat-label">Total Ventas</div>
         <div class="stat-value" id="cierreTotalVentas">$0.00</div>
-        <div class="stat-comparison" id="compVentas">-</div>
       </div>
       
       <div class="stat-box success">
         <div class="stat-label">Unidades Vendidas</div>
         <div class="stat-value" id="cierreTotalUnidades">0</div>
-        <div class="stat-comparison" id="compUnidades">-</div>
       </div>
       
       <div class="stat-box warning">
         <div class="stat-label">Transacciones</div>
         <div class="stat-value" id="cierreTransacciones">0</div>
-        <div class="stat-comparison" id="compTransacciones">-</div>
       </div>
       
       <div class="stat-box danger">
         <div class="stat-label">Ticket Promedio</div>
         <div class="stat-value" id="cierreTicketPromedio">$0.00</div>
-        <div class="stat-comparison" id="compTicket">-</div>
       </div>
     </div>
 
     <h3 style="margin-top: 20px; margin-bottom: 10px; color: var(--accent);">📋 Detalle por Producto</h3>
-    <div style="max-height: 300px; overflow-y: auto;">
+    <div style="max-height: 250px; overflow-y: auto;">
       <table class="cierre-table">
         <thead>
           <tr>
@@ -708,7 +796,7 @@
         </tbody>
         <tfoot>
           <tr class="cierre-total-row">
-            <td>TOTAL MES</td>
+            <td>TOTAL CONSOLIDADO</td>
             <td id="cierreTablaTotalCant">0</td>
             <td id="cierreTablaTotalMonto">$0.00</td>
           </tr>
@@ -717,7 +805,11 @@
     </div>
 
     <button class="btn-cierre" onclick="imprimirCierreCaja()">
-      🖨️ Imprimir Cierre de Caja
+      🖨️ Imprimir Resumen
+    </button>
+    
+    <button class="btn-cierre danger" onclick="ejecutarCierreCaja()" id="btnEjecutarCierre">
+      🔒 EJECUTAR CIERRE DE CAJA (CONSOLIDAR)
     </button>
   </div>
 </div>
@@ -756,6 +848,8 @@
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
   let currentPage = 1;
   let rowsPerPage = 30;
+  let mesesSeleccionados = new Set();
+  let ventasActuales = [];
 
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
@@ -1034,15 +1128,19 @@
   }
   function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
 
-  // ========== CIERRE DE CAJA (CORREGIDO) ==========
+  // ========== CIERRE DE CAJA MEJORADO ==========
+  const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
   function inicializarSelectorFechas() {
-    const mesSelect = document.getElementById('mesSelect');
     const anioSelect = document.getElementById('anioSelect');
+    const monthGrid = document.getElementById('monthGrid');
     
-    const hoy = new Date();
-    mesSelect.value = hoy.getMonth();
+    // Limpiar selección previa
+    mesesSeleccionados.clear();
     
-    const anioActual = hoy.getFullYear();
+    // Llenar años
+    anioSelect.innerHTML = '';
+    const anioActual = new Date().getFullYear();
     for (let anio = 2024; anio <= anioActual + 1; anio++) {
       const option = document.createElement('option');
       option.value = anio;
@@ -1050,6 +1148,61 @@
       if (anio === anioActual) option.selected = true;
       anioSelect.appendChild(option);
     }
+    
+    // Crear grid de meses
+    monthGrid.innerHTML = '';
+    nombresMeses.forEach((mes, index) => {
+      const label = document.createElement('label');
+      label.className = 'month-checkbox';
+      label.dataset.mes = index;
+      label.innerHTML = `
+        <input type="checkbox" value="${index}" onchange="toggleMes(${index})">
+        <span>${mes}</span>
+      `;
+      label.onclick = function(e) {
+        if (e.target.tagName !== 'INPUT') {
+          const checkbox = this.querySelector('input');
+          checkbox.checked = !checkbox.checked;
+          toggleMes(index);
+        }
+      };
+      monthGrid.appendChild(label);
+    });
+    
+    actualizarTextoPeriodo();
+  }
+
+  function toggleMes(mes) {
+    const checkbox = document.querySelector(`.month-checkbox[data-mes="${mes}"]`);
+    if (mesesSeleccionados.has(mes)) {
+      mesesSeleccionados.delete(mes);
+      checkbox.classList.remove('selected');
+    } else {
+      mesesSeleccionados.add(mes);
+      checkbox.classList.add('selected');
+    }
+    actualizarCierreCaja();
+  }
+
+  function actualizarTextoPeriodo() {
+    const anio = document.getElementById('anioSelect').value;
+    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
+    
+    let texto = '';
+    if (mesesArray.length === 0) {
+      texto = 'Ninguno';
+    } else if (mesesArray.length === 1) {
+      texto = `${nombresMeses[mesesArray[0]]} ${anio}`;
+    } else {
+      const nombres = mesesArray.map(m => nombresMeses[m]);
+      texto = `${nombres.join(', ')} ${anio}`;
+    }
+    
+    document.getElementById('selectedPeriods').innerHTML = `<strong>Período seleccionado:</strong> ${texto}`;
+    
+    // Habilitar/deshabilitar botón de cierre
+    const btn = document.getElementById('btnEjecutarCierre');
+    btn.disabled = mesesArray.length === 0 || ventasActuales.length === 0;
   }
 
   function abrirCierreCaja() {
@@ -1062,13 +1215,12 @@
     document.getElementById('cierreModal').style.display = 'none';
   }
 
-  // FUNCIÓN CORREGIDA: usa date o soldAt
-  function obtenerVentasPorMes(anio, mes) {
+  function obtenerVentasPorPeriodo(anio, meses) {
     return soldInventory.filter(item => {
       const fechaStr = item.date || item.soldAt;
       if (!fechaStr) return false;
       const fechaVenta = new Date(fechaStr);
-      return fechaVenta.getFullYear() === anio && fechaVenta.getMonth() === mes;
+      return fechaVenta.getFullYear() === anio && meses.includes(fechaVenta.getMonth());
     });
   }
 
@@ -1100,52 +1252,23 @@
     };
   }
 
-  function calcularComparacion(actual, anterior) {
-    if (anterior === 0) return { porcentaje: 0, clase: 'positive', texto: 'N/A' };
-    const diff = ((actual - anterior) / anterior) * 100;
-    return {
-      porcentaje: Math.abs(diff).toFixed(1),
-      clase: diff >= 0 ? 'positive' : 'negative',
-      texto: diff >= 0 ? `↑ ${Math.abs(diff).toFixed(1)}%` : `↓ ${Math.abs(diff).toFixed(1)}%`
-    };
-  }
-
   function actualizarCierreCaja() {
-    const mes = parseInt(document.getElementById('mesSelect').value);
     const anio = parseInt(document.getElementById('anioSelect').value);
+    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
     
-    const ventasMes = obtenerVentasPorMes(anio, mes);
-    const stats = calcularEstadisticas(ventasMes);
-    
-    let mesAnterior = mes - 1;
-    let anioAnterior = anio;
-    if (mesAnterior < 0) {
-      mesAnterior = 11;
-      anioAnterior--;
-    }
-    const ventasMesAnterior = obtenerVentasPorMes(anioAnterior, mesAnterior);
-    const statsAnterior = calcularEstadisticas(ventasMesAnterior);
+    ventasActuales = obtenerVentasPorPeriodo(anio, mesesArray);
+    const stats = calcularEstadisticas(ventasActuales);
     
     document.getElementById('cierreTotalVentas').textContent = `$${stats.totalVentas.toFixed(2)}`;
     document.getElementById('cierreTotalUnidades').textContent = stats.totalUnidades;
     document.getElementById('cierreTransacciones').textContent = stats.transacciones;
     document.getElementById('cierreTicketPromedio').textContent = `$${stats.ticketPromedio.toFixed(2)}`;
     
-    const compVentas = calcularComparacion(stats.totalVentas, statsAnterior.totalVentas);
-    const compUnidades = calcularComparacion(stats.totalUnidades, statsAnterior.totalUnidades);
-    const compTrans = calcularComparacion(stats.transacciones, statsAnterior.transacciones);
-    const compTicket = calcularComparacion(stats.ticketPromedio, statsAnterior.ticketPromedio);
-    
-    document.getElementById('compVentas').innerHTML = `<span class="${compVentas.clase}">${compVentas.texto} vs mes ant.</span>`;
-    document.getElementById('compUnidades').innerHTML = `<span class="${compUnidades.clase}">${compUnidades.texto} vs mes ant.</span>`;
-    document.getElementById('compTransacciones').innerHTML = `<span class="${compTrans.clase}">${compTrans.texto} vs mes ant.</span>`;
-    document.getElementById('compTicket').innerHTML = `<span class="${compTicket.clase}">${compTicket.texto} vs mes ant.</span>`;
-    
     const tbody = document.getElementById('cierreTablaProductos');
     tbody.innerHTML = '';
     
     if (stats.productos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">No hay ventas este mes</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">No hay ventas en el período seleccionado</td></tr>';
     } else {
       stats.productos.forEach(prod => {
         const tr = document.createElement('tr');
@@ -1160,15 +1283,89 @@
     
     document.getElementById('cierreTablaTotalCant').textContent = stats.totalUnidades;
     document.getElementById('cierreTablaTotalMonto').textContent = `$${stats.totalVentas.toFixed(2)}`;
+    
+    actualizarTextoPeriodo();
+  }
+
+  function ejecutarCierreCaja() {
+    const anio = parseInt(document.getElementById('anioSelect').value);
+    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
+    
+    if (mesesArray.length === 0) {
+      alert('Por favor selecciona al menos un mes');
+      return;
+    }
+    
+    if (ventasActuales.length === 0) {
+      alert('No hay ventas en el período seleccionado para cerrar');
+      return;
+    }
+    
+    const stats = calcularEstadisticas(ventasActuales);
+    const nombresMesesSeleccionados = mesesArray.map(m => nombresMeses[m]).join(', ');
+    
+    const confirmacion = confirm(
+      `⚠️ ¿ESTÁS SEGURO DE EJECUTAR EL CIERRE DE CAJA?\n\n` +
+      `Período: ${nombresMesesSeleccionados} ${anio}\n` +
+      `Total Ventas: $${stats.totalVentas.toFixed(2)}\n` +
+      `Unidades: ${stats.totalUnidades}\n` +
+      `Transacciones: ${stats.transacciones}\n\n` +
+      `Esto eliminará ${ventasActuales.length} ventas individuales y creará UNA venta consolidada.\n\n` +
+      `¿Deseas continuar?`
+    );
+    
+    if (!confirmacion) return;
+    
+    // Crear la venta consolidada
+    const ventaConsolidada = {
+      idVenta: 'CIERRE_' + Date.now(),
+      name: `CIERRE DE CAJA - ${nombresMesesSeleccionados} ${anio}`,
+      price: stats.totalVentas,
+      quantity: stats.totalUnidades,
+      total: stats.totalVentas,
+      soldAt: new Date().toISOString(),
+      date: new Date().toISOString(),
+      isCierreCaja: true,
+      detalleCierre: {
+        meses: mesesArray,
+        anio: anio,
+        nombresMeses: nombresMesesSeleccionados,
+        transaccionesOriginales: stats.transacciones,
+        ticketPromedio: stats.ticketPromedio,
+        productosDetalle: stats.productos
+      }
+    };
+    
+    // Eliminar las ventas originales del período
+    const idsAEliminar = new Set(ventasActuales.map(v => v.idVenta));
+    soldInventory = soldInventory.filter(item => !idsAEliminar.has(item.idVenta));
+    
+    // Agregar la venta consolidada
+    soldInventory.push(ventaConsolidada);
+    
+    // Guardar en localStorage
+    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+    
+    // Mostrar mensaje de éxito
+    alert(
+      `✅ CIERRE DE CAJA EXITOSO\n\n` +
+      `Se ha creado una venta consolidada por $${stats.totalVentas.toFixed(2)}\n` +
+      `Se eliminaron ${ventasActuales.length} ventas individuales\n\n` +
+      `La venta consolidada aparecerá en tu lista de ventas como:\n` +
+      `"${ventaConsolidada.name}"`
+    );
+    
+    // Cerrar modal y recargar
+    cerrarCierreCaja();
+    loadSoldInventory();
   }
 
   function imprimirCierreCaja() {
-    const mes = parseInt(document.getElementById('mesSelect').value);
     const anio = parseInt(document.getElementById('anioSelect').value);
-    const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
+    const nombresMesesSeleccionados = mesesArray.map(m => nombresMeses[m]).join(', ');
     
-    const ventasMes = obtenerVentasPorMes(anio, mes);
-    const stats = calcularEstadisticas(ventasMes);
+    const stats = calcularEstadisticas(ventasActuales);
     
     let productosHTML = '';
     stats.productos.forEach(prod => {
@@ -1185,7 +1382,7 @@
     ventana.document.write(`
       <html>
         <head>
-          <title>Cierre de Caja - ${nombresMeses[mes]} ${anio}</title>
+          <title>Cierre de Caja - ${nombresMesesSeleccionados} ${anio}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
             .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
@@ -1198,14 +1395,15 @@
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th { background: #333; color: white; padding: 10px; text-align: left; }
             .total-row { background: #333; color: white; font-weight: bold; }
+            .warning { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 20px 0; font-size: 12px; }
             @media print { body { padding: 0; } }
           </style>
         </head>
         <body>
           <div class="header">
             <h1>KLOHESV</h1>
-            <p>Cierre de Caja Mensual</p>
-            <p><strong>${nombresMeses[mes]} ${anio}</strong></p>
+            <p>Cierre de Caja</p>
+            <p><strong>${nombresMesesSeleccionados} ${anio}</strong></p>
             <p>San Salvador, El Salvador</p>
           </div>
           
@@ -1249,6 +1447,11 @@
             </tfoot>
           </table>
           
+          <div class="warning">
+            <strong>Documento de Cierre:</strong> Este resumen corresponde al cierre de caja del período indicado. 
+            Las ventas individuales han sido consolidadas.
+          </div>
+          
           <div style="margin-top: 30px; text-align: center; color: #999; font-size: 12px;">
             <p>Generado el ${new Date().toLocaleDateString('es-SV')}</p>
             <p>industriastobias@gmail.com | @Klohesv</p>
@@ -1266,19 +1469,17 @@
   window.addEventListener('storage', (e) => {
     if (e.key === 'soldInventory') {
       soldInventory = JSON.parse(e.newValue || '[]');
-      cargarVentas(); // normalizar
+      cargarVentas();
       loadSoldInventory();
     }
   });
 
-  // Al enfocar la ventana (viene de otra pestaña)
   window.addEventListener('focus', () => {
     soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
     cargarVentas();
     loadSoldInventory();
   });
 
-  // Inicializar
   loadSoldInventory();
 </script>
 </body>

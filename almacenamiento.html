@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js  "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css   "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js   "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js   "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -1956,6 +1956,7 @@
       }
     }
     
+    // ========== FUNCIÓN PROCESAR VENTA CORREGIDA ==========
     function processSale() { 
       const soldQty = parseInt(document.getElementById('soldQuantity').value), 
             soldPrice = parseFloat(document.getElementById('soldPrice').value), 
@@ -1972,7 +1973,7 @@
       const baseSaleData = { 
         name: item.name, 
         code: item.code, 
-        barcode: item.barcode, // AÑADIDO explícitamente
+        barcode: item.barcode,
         price: soldPrice, 
         quantity: soldQty, 
         total: soldPrice * soldQty, 
@@ -1995,28 +1996,23 @@
         if (commissionType === 'percentage') {
           commissionAmount = (productTotal * commissionValue) / 100;
         } else {
-          commissionAmount = commissionValue;
+          commissionAmount = commissionValue; // Monto fijo
         }
         
         let totalToCollect;
-        let effectivePrice = soldPrice;
-        let effectiveTotal = productTotal;
-        
         if (currentWhoPays === 'client') {
           totalToCollect = productTotal + shipping + commissionAmount + insurance;
         } else {
+          // Pagamos nosotros: el cliente paga producto + envío + seguro
           totalToCollect = productTotal + shipping + insurance;
-          // Si pagamos nosotros, el precio efectivo es menor (para reflejar ganancia real)
-          effectivePrice = soldPrice - (commissionAmount / soldQty);
-          effectiveTotal = effectivePrice * soldQty;
         }
         
-        // Guardar en pendientes con info COD completa
+        // Guardar en pendientes SIN modificar el precio del producto
         let pendingInventory = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
         pendingInventory.push({
           ...baseSaleData,
-          price: effectivePrice, // Precio ajustado si pagamos comisión
-          total: effectiveTotal,
+          price: soldPrice,           // Precio original (sin descontar comisión)
+          total: productTotal,        // Total del producto (precio × cantidad)
           isCOD: true,
           codShipping: shipping,
           codCommissionType: commissionType,
@@ -2336,7 +2332,7 @@
         soldInventory.push({ 
           name: x.name, 
           code: inventory[x.realIdx].code, 
-          barcode: inventory[x.realIdx].barcode,  // ← AÑADIDO
+          barcode: inventory[x.realIdx].barcode,
           price: x.price, 
           quantity: x.qty, 
           total: x.qty * x.price, 

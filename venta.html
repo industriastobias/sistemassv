@@ -757,6 +757,7 @@
   let currentPage = 1;
   let rowsPerPage = 30;
 
+  // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
   function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
 
@@ -778,6 +779,21 @@
     document.getElementById('btnDown').style.opacity = show ? '1' : '0';
   });
 
+  // ========== CARGA Y FILTRADO ==========
+  function cargarVentas() {
+    // Normalizar: si algún item tiene date pero no soldAt, copiamos date a soldAt para compatibilidad
+    soldInventory.forEach(item => {
+      if (item.date && !item.soldAt) {
+        item.soldAt = item.date;
+      }
+      if (!item.idVenta) {
+        item.idVenta = Date.now() + Math.random();
+      }
+    });
+    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+  }
+  cargarVentas();
+
   let searchTimeout;
   document.getElementById('unifiedSearch').addEventListener('input', () => {
     clearTimeout(searchTimeout);
@@ -793,6 +809,125 @@
     if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
   }
 
+  async function loadSoldInventory() {
+    showSpinner();
+
+    const search = document.getElementById('unifiedSearch').value.toLowerCase();
+    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
+
+    soldInventory.sort((a, b) => {
+      const dateA = new Date(a.soldAt || a.date || 0);
+      const dateB = new Date(b.soldAt || b.date || 0);
+      return dateB - dateA;
+    });
+
+    let filtered = soldInventory.filter(item =>
+      item.name.toLowerCase().includes(search) ||
+      (item.barcode && item.barcode.toLowerCase().includes(search))
+    );
+
+    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
+    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
+
+    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
+
+    document.getElementById('totalQtyModal').textContent = totalUnits;
+    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('fabQty').textContent = totalUnits;
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(start, start + rowsPerPage);
+
+    const container = document.getElementById('soldInventoryList');
+    container.innerHTML = '';
+
+    if (paginated.length === 0) {
+      document.getElementById('noResults').style.display = 'block';
+    } else {
+      document.getElementById('noResults').style.display = 'none';
+    }
+
+    for (const item of paginated) {
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const img = document.createElement('img');
+      img.alt = `${item.name}`;
+
+      const blob = await localforage.getItem(`img_${item.code}`);
+      if (blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onclick = () => abrirImgModal(img.src);
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+      }
+
+      const barcodeText = document.createElement('div');
+      barcodeText.className = 'barcode-text';
+      barcodeText.textContent = item.barcode ? `📄 ${item.barcode}` : '';
+
+      if (isToday(item.soldAt || item.date)) {
+        const badge = document.createElement('div');
+        badge.className = 'new-badge';
+        badge.textContent = 'Nuevo';
+        card.appendChild(badge);
+      }
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${item.name}</div>
+        </div>
+        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
+        <div>Cantidad: ${Number(item.quantity)}</div>
+        <div class="card-footer">
+          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
+          <button class="card-delete" onclick="confirmDelete('${item.idVenta}')">✖</button>
+        </div>
+        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:6px;right:6px;width:14px;height:14px;">
+      `;
+
+      card.insertBefore(img, card.firstChild);
+      if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      container.appendChild(card);
+    }
+
+    hideSpinner();
+  }
+
+  window.confirmDelete = function (idVenta) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);width:240px;text-align:center;">
+          <p>¿Eliminar este producto?</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
+            <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
+            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${idVenta}')">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrapper);
+  };
+
+  window.deleteSoldItem = function (idVenta) {
+    const index = soldInventory.findIndex(item => item.idVenta == idVenta);
+    if (index !== -1) {
+      soldInventory.splice(index, 1);
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+      document.querySelector('div[style*="position:fixed"]').remove();
+      loadSoldInventory();
+    }
+  };
+
+  function isToday(dateStr) {
+    const d = new Date(dateStr);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }
+
+  // ========== FACTURACIÓN ==========
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
     if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
@@ -899,17 +1034,14 @@
   }
   function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
 
-  // ========== CIERRE DE CAJA ==========
-  
+  // ========== CIERRE DE CAJA (CORREGIDO) ==========
   function inicializarSelectorFechas() {
     const mesSelect = document.getElementById('mesSelect');
     const anioSelect = document.getElementById('anioSelect');
     
-    // Mes actual seleccionado por defecto
     const hoy = new Date();
     mesSelect.value = hoy.getMonth();
     
-    // Llenar años (desde 2024 hasta año actual + 1)
     const anioActual = hoy.getFullYear();
     for (let anio = 2024; anio <= anioActual + 1; anio++) {
       const option = document.createElement('option');
@@ -930,9 +1062,12 @@
     document.getElementById('cierreModal').style.display = 'none';
   }
 
+  // FUNCIÓN CORREGIDA: usa date o soldAt
   function obtenerVentasPorMes(anio, mes) {
     return soldInventory.filter(item => {
-      const fechaVenta = new Date(item.soldAt);
+      const fechaStr = item.date || item.soldAt;
+      if (!fechaStr) return false;
+      const fechaVenta = new Date(fechaStr);
       return fechaVenta.getFullYear() === anio && fechaVenta.getMonth() === mes;
     });
   }
@@ -943,7 +1078,6 @@
     const transacciones = ventas.length;
     const ticketPromedio = transacciones > 0 ? totalVentas / transacciones : 0;
     
-    // Agrupar por producto
     const productosAgrupados = {};
     ventas.forEach(item => {
       if (!productosAgrupados[item.name]) {
@@ -980,11 +1114,9 @@
     const mes = parseInt(document.getElementById('mesSelect').value);
     const anio = parseInt(document.getElementById('anioSelect').value);
     
-    // Obtener ventas del mes seleccionado
     const ventasMes = obtenerVentasPorMes(anio, mes);
     const stats = calcularEstadisticas(ventasMes);
     
-    // Calcular mes anterior para comparación
     let mesAnterior = mes - 1;
     let anioAnterior = anio;
     if (mesAnterior < 0) {
@@ -994,13 +1126,11 @@
     const ventasMesAnterior = obtenerVentasPorMes(anioAnterior, mesAnterior);
     const statsAnterior = calcularEstadisticas(ventasMesAnterior);
     
-    // Actualizar estadísticas principales
     document.getElementById('cierreTotalVentas').textContent = `$${stats.totalVentas.toFixed(2)}`;
     document.getElementById('cierreTotalUnidades').textContent = stats.totalUnidades;
     document.getElementById('cierreTransacciones').textContent = stats.transacciones;
     document.getElementById('cierreTicketPromedio').textContent = `$${stats.ticketPromedio.toFixed(2)}`;
     
-    // Comparaciones
     const compVentas = calcularComparacion(stats.totalVentas, statsAnterior.totalVentas);
     const compUnidades = calcularComparacion(stats.totalUnidades, statsAnterior.totalUnidades);
     const compTrans = calcularComparacion(stats.transacciones, statsAnterior.transacciones);
@@ -1011,7 +1141,6 @@
     document.getElementById('compTransacciones').innerHTML = `<span class="${compTrans.clase}">${compTrans.texto} vs mes ant.</span>`;
     document.getElementById('compTicket').innerHTML = `<span class="${compTicket.clase}">${compTicket.texto} vs mes ant.</span>`;
     
-    // Actualizar tabla de productos
     const tbody = document.getElementById('cierreTablaProductos');
     tbody.innerHTML = '';
     
@@ -1029,7 +1158,6 @@
       });
     }
     
-    // Totales de tabla
     document.getElementById('cierreTablaTotalCant').textContent = stats.totalUnidades;
     document.getElementById('cierreTablaTotalMonto').textContent = `$${stats.totalVentas.toFixed(2)}`;
   }
@@ -1134,135 +1262,23 @@
     ventana.print();
   }
 
-  // ========== FIN CIERRE DE CAJA ==========
-
-  async function loadSoldInventory() {
-    showSpinner();
-
-    // ✅ Asignar ID único si no tiene
-    soldInventory.forEach(item => {
-      if (!item.idVenta) {
-        item.idVenta = Date.now() + Math.random();
-      }
-    });
-    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-
-    const search = document.getElementById('unifiedSearch').value.toLowerCase();
-    rowsPerPage = parseInt(document.getElementById('rowsPerPage').value);
-
-    soldInventory.sort((a, b) => {
-      const dateA = new Date(a.soldAt || 0);
-      const dateB = new Date(b.soldAt || 0);
-      return dateB - dateA;
-    });
-
-    let filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(search) ||
-      (item.barcode && item.barcode.toLowerCase().includes(search))
-    );
-
-    const totalUnits = filtered.reduce((sum, item) => sum + Number(item.quantity), 0);
-    const totalUSD = filtered.reduce((sum, item) => sum + Number(item.total), 0);
-
-    localStorage.setItem('totalVendido', totalUSD.toFixed(2));
-
-    document.getElementById('totalQtyModal').textContent = totalUnits;
-    document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
-    document.getElementById('fabQty').textContent = totalUnits;
-
-    const start = (currentPage - 1) * rowsPerPage;
-    const paginated = filtered.slice(start, start + rowsPerPage);
-
-    const container = document.getElementById('soldInventoryList');
-    container.innerHTML = '';
-
-    if (paginated.length === 0) {
-      document.getElementById('noResults').style.display = 'block';
-    } else {
-      document.getElementById('noResults').style.display = 'none';
-    }
-
-    for (const item of paginated) {
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      const img = document.createElement('img');
-      img.alt = `${item.name}`;
-
-      const blob = await localforage.getItem(`img_${item.code}`);
-      if (blob) {
-        img.src = URL.createObjectURL(blob);
-        img.onclick = () => abrirImgModal(img.src);
-      } else {
-        img.src = '';
-        img.style.display = 'none';
-      }
-
-      const barcodeText = document.createElement('div');
-      barcodeText.className = 'barcode-text';
-      barcodeText.textContent = item.barcode ? `📄 ${item.barcode}` : '';
-
-      if (isToday(item.soldAt)) {
-        const badge = document.createElement('div');
-        badge.className = 'new-badge';
-        badge.textContent = 'Nuevo';
-        card.appendChild(badge);
-      }
-
-      card.innerHTML = `
-        <div class="card-header">
-          <div class="card-title">${item.name}</div>
-        </div>
-        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
-        <div>Cantidad: ${Number(item.quantity)}</div>
-        <div class="card-footer">
-          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
-          <button class="card-delete" onclick="confirmDelete('${item.idVenta}')">✖</button>
-        </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:6px;right:6px;width:14px;height:14px;">
-      `;
-
-      card.insertBefore(img, card.firstChild);
-      if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
-      container.appendChild(card);
-    }
-
-    hideSpinner();
-  }
-
-  window.confirmDelete = function (idVenta) {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `
-      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
-        <div style="background:#fff;padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);width:240px;text-align:center;">
-          <p>¿Eliminar este producto?</p>
-          <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
-            <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
-            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${idVenta}')">Eliminar</button>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(wrapper);
-  };
-
-  window.deleteSoldItem = function (idVenta) {
-    const index = soldInventory.findIndex(item => item.idVenta == idVenta);
-    if (index !== -1) {
-      // ✅ NO restaura stock en inventario - solo elimina del historial
-      soldInventory.splice(index, 1);
-      localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-      document.querySelector('div[style*="position:fixed"]').remove();
+  // ========== ACTUALIZACIÓN EN TIEMPO REAL ==========
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'soldInventory') {
+      soldInventory = JSON.parse(e.newValue || '[]');
+      cargarVentas(); // normalizar
       loadSoldInventory();
     }
-  };
+  });
 
-  function isToday(dateStr) {
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
-  }
+  // Al enfocar la ventana (viene de otra pestaña)
+  window.addEventListener('focus', () => {
+    soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    cargarVentas();
+    loadSoldInventory();
+  });
 
+  // Inicializar
   loadSoldInventory();
 </script>
 </body>

@@ -11,436 +11,193 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" as="style" crossorigin>
   <title>Dashboard – TOBIAS PALACIOS</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
     :root {
-      --color-bg: #fefefe;
+      --color-bg: #ffffff;
       --color-panel: #ffffff;
       --color-accent: #DBB8BC;
       --color-text: #1F2937;
-      --color-muted: #6B7280;
+      --color-muted: #9CA3AF;
       --color-danger: #EF4444;
-      --color-border: #E5E7EB;
-      --radius: 8px;
-      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --color-border: #DBB8BC;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+      --radius: 10px;
+      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    .nav-link, .logout-btn, .user-avatar { will-change: transform; transform: translateZ(0); backface-visibility: hidden; perspective: 1000px; }
+    body { font-family: var(--font-family); background: var(--color-bg); color: var(--color-text); display: flex; min-height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .sidebar { width: 260px; background: var(--color-panel); padding: 1.5rem 1rem; border-right: 1px solid var(--color-border); height: 100vh; display: flex; flex-direction: column; }
+    .nav { display: flex; flex-direction: column; gap: .6rem; flex-grow: 1; overflow-y: auto; list-style: none; overflow-anchor: none; }
+    .nav-link { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; border-radius: var(--radius); text-decoration: none; color: var(--color-text); font-size: 1rem; font-weight: 500; transition: background var(--transition-fast), color var(--transition-fast); white-space: nowrap; border: 2px solid transparent; background: transparent; cursor: pointer; width: 100%; position: relative; touch-action: manipulation; -webkit-user-select: none; user-select: none; transform: translateZ(0); }
+    .nav-link:hover { background: rgba(219, 184, 188, 0.15); }
+    .nav-link.active { background: var(--color-accent); color: #fff; }
+    .nav-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; transition: outline-offset var(--transition-fast); }
+    .nav-link .material-icons { font-size: 22px; flex-shrink: 0; transform: translateZ(0); }
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem clamp(1rem, 4vw, 2.5rem); }
+    .welcome { font-size: clamp(1.8rem, 5cqw, 2.4rem); font-weight: 800; color: var(--color-accent); margin-bottom: .3rem; transform: translateZ(0); }
+    .subtitle { font-size: clamp(1rem, 2.5cqw, 1.1rem); color: var(--color-muted); transform: translateZ(0); }
+    .right-panel { position: absolute; right: 1.5rem; top: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: calc(100% - 2rem); min-height: 120px; }
+    .user-section { text-align: center; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+    .user-avatar { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent); background: var(--color-panel); transition: transform var(--transition-smooth); touch-action: manipulation; user-select: none; }
+    .user-avatar:hover { transform: scale(1.05); }
+    .logout-btn { background: var(--color-danger); color: #fff; border: none; border-radius: var(--radius); padding: .8rem 1.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast); display: inline-flex; align-items: center; gap: .5rem; box-shadow: var(--shadow-sm); min-width: fit-content; transform: translateZ(0); touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+    .logout-btn:active { transform: scale(0.95) translateZ(0); transition-duration: 0.05s; }
+    .logout-btn:hover { box-shadow: var(--shadow-md); }
+    .logout-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .nav::-webkit-scrollbar { width: 6px; }
+    .nav::-webkit-scrollbar-track { background: transparent; }
+    .nav::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: var(--font-family);
-      background: var(--color-bg);
-      color: var(--color-text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Header superior */
-    .top-bar {
-      background: var(--color-panel);
-      border-bottom: 1px solid var(--color-border);
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .brand-icon {
-      width: 36px;
-      height: 36px;
-      background: var(--color-accent);
-      border-radius: var(--radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-
-    .brand-text {
-      font-weight: 700;
-      font-size: 1.25rem;
-      letter-spacing: -0.5px;
-    }
-
-    .user-menu {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid var(--color-accent);
-    }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--color-border);
-      padding: 0.5rem 1rem;
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 0.875rem;
-      color: var(--color-muted);
-      transition: all 0.2s;
-    }
-
-    .logout-btn:hover {
-      border-color: var(--color-danger);
-      color: var(--color-danger);
-    }
-
-    /* Layout principal */
-    .main-container {
-      display: flex;
-      flex: 1;
-    }
-
-    /* Sidebar vertical compacto */
-    .sidebar {
-      width: 240px;
-      background: var(--color-panel);
-      border-right: 1px solid var(--color-border);
-      padding: 1.5rem 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nav-section {
-      padding: 0 1rem;
-      margin-bottom: 2rem;
-    }
-
-    .nav-title {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--color-muted);
-      margin-bottom: 0.75rem;
-      padding-left: 0.75rem;
-      font-weight: 600;
-    }
-
-    .nav-link {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.625rem 0.75rem;
-      border-radius: var(--radius);
-      text-decoration: none;
-      color: var(--color-text);
-      font-size: 0.9375rem;
-      margin-bottom: 0.25rem;
-      transition: all 0.15s;
-      border: none;
-      background: none;
-      width: 100%;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .nav-link:hover {
-      background: rgba(219, 184, 188, 0.1);
-    }
-
-    .nav-link.active {
-      background: var(--color-accent);
-      color: white;
-    }
-
-    .nav-link .material-icons {
-      font-size: 20px;
-      opacity: 0.8;
-    }
-
-    /* Contenido central */
-    main {
-      flex: 1;
-      padding: 3rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
-
-    .hero {
-      max-width: 600px;
-    }
-
-    .hero h1 {
-      font-size: 3rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
-      letter-spacing: -1px;
-      color: var(--color-text);
-    }
-
-    .hero p {
-      color: var(--color-muted);
-      font-size: 1.125rem;
-      margin-bottom: 3rem;
-    }
-
-    .modules-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      width: 100%;
-      max-width: 800px;
-    }
-
-    .module-card {
-      background: var(--color-panel);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      text-decoration: none;
-      color: inherit;
-      transition: all 0.2s;
-      text-align: left;
-    }
-
-    .module-card:hover {
-      border-color: var(--color-accent);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      transform: translateY(-2px);
-    }
-
-    .module-card .icon {
-      color: var(--color-accent);
-      margin-bottom: 0.75rem;
-    }
-
-    .module-card h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
-
-    .module-card span {
-      font-size: 0.875rem;
-      color: var(--color-muted);
-    }
-
-    /* Botón kiosko */
     #kioskBtn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 0.75rem 1.25rem;
-      font-size: 0.875rem;
+      bottom: 10px;
+      right: 10px;
+      z-index: 9999;
+      padding: 6px 10px;
+      font-size: 12px;
       border: none;
-      border-radius: var(--radius);
-      background: var(--color-text);
+      border-radius: 4px;
+      background: #00796b;
       color: #fff;
       cursor: pointer;
-      opacity: 0.8;
-      transition: opacity 0.2s;
     }
 
-    #kioskBtn:hover {
-      opacity: 1;
-    }
-
-    /* Modal */
+    /* ----------  MODAL FORMATEO  ---------- */
     #formatModal {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,.45);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 10000;
     }
-
     #formatModal[open] { display: flex; }
-
     .modal-box {
       background: var(--color-panel);
       border-radius: var(--radius);
       padding: 2rem;
+      max-width: 420px;
       width: 90%;
-      max-width: 400px;
-      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-md);
     }
-
-    .modal-box h2 {
-      font-size: 1.25rem;
-      margin-bottom: 1rem;
-    }
-
+    .modal-box h2 { margin-bottom: 1rem; font-size: 1.25rem; }
     .modal-list {
       list-style: none;
-      margin: 1rem 0;
-      max-height: 300px;
-      overflow-y: auto;
+      margin-bottom: 1.5rem;
     }
-
     .modal-list li {
-      padding: 0.5rem;
-      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem 0;
     }
-
     .modal-actions {
       display: flex;
-      gap: 0.75rem;
+      gap: .75rem;
       justify-content: flex-end;
-      margin-top: 1.5rem;
     }
-
-    .btn {
-      padding: 0.625rem 1.25rem;
+    .modal-actions button {
+      padding: .6rem 1.2rem;
       border: none;
       border-radius: var(--radius);
       cursor: pointer;
-      font-size: 0.875rem;
       font-weight: 500;
     }
-
-    .btn-danger { background: var(--color-danger); color: white; }
-    .btn-secondary { background: var(--color-border); color: var(--color-text); }
+    .btn-danger { background: var(--color-danger); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: var(--color-text); }
 
     @media (max-width: 1024px) {
-      .modules-grid { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     }
 
     @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .modules-grid { grid-template-columns: 1fr; }
-      main { padding: 2rem 1.5rem; }
-      .hero h1 { font-size: 2rem; }
+      body { flex-direction: column; overflow: auto; }
+      .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--color-border); padding: 1rem; position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, 0.85); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); will-change: transform; transform: translateZ(0); }
+      .nav { flex-direction: row; gap: .4rem; flex-wrap: nowrap; }
+      .nav-link { flex: 0 0 auto; padding: .7rem .9rem; font-size: .9rem; }
+      .right-panel { position: static; flex-direction: row; justify-content: space-between; width: 100%; padding: 1rem; height: auto; border-top: 1px solid var(--color-border); }
+      .logout-btn { margin-bottom: 0; padding: .7rem 1.2rem; }
+      .user-avatar { width: 65px; height: 65px; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
   </style>
 </head>
 <body>
 
-<header class="top-bar">
-  <div class="brand">
-    <div class="brand-icon">
-      <span class="material-icons">dashboard</span>
-    </div>
-    <span class="brand-text">TOBIAS PALACIOS</span>
+<aside class="sidebar" aria-label="Navegación principal">
+  <nav class="nav" id="main-nav" role="navigation">
+    <a class="nav-link" href="compra.html" data-page="compra"><span class="material-icons" aria-hidden="true">shopping_cart</span><span>Compra</span></a>
+    <a class="nav-link" href="almacenamiento.html" data-page="almacenamiento"><span class="material-icons" aria-hidden="true">warehouse</span><span>Almacenamiento</span></a>
+    <a class="nav-link" href="lista.html" data-page="lista"><span class="material-icons" aria-hidden="true">account_balance</span><span>Finanzas</span></a>
+    <a class="nav-link" href="inventario.html" data-page="inventario"><span class="material-icons" aria-hidden="true">inventory_2</span><span>Inventario</span></a>
+    <a class="nav-link" href="gastos.html" data-page="gastos"><span class="material-icons" aria-hidden="true">store</span><span>Catálogo</span></a>
+    <a class="nav-link" href="clientes.html" data-page="clientes"><span class="material-icons" aria-hidden="true">groups</span><span>Clientes</span></a>
+    <a class="nav-link" href="descuentos.html" data-page="descuentos"><span class="material-icons" aria-hidden="true">local_offer</span><span>Descuentos</span></a>
+    <a class="nav-link" href="facturas.html" data-page="facturas"><span class="material-icons" aria-hidden="true">receipt_long</span><span>Facturas</span></a>
+    <a class="nav-link" href="traslados.html" data-page="traslados"><span class="material-icons" aria-hidden="true">local_shipping</span><span>Cotización</span></a>
+    <a class="nav-link" href="venta.html" data-page="venta"><span class="material-icons" aria-hidden="true">point_of_sale</span><span>Venta</span></a>
+    <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons" aria-hidden="true">verified</span><span>Verificación</span></a>
+
+    <button id="exportBtn" class="nav-link" style="margin-top: auto;"><span class="material-icons" aria-hidden="true">archive</span><span>Exportar ZIP</span></button>
+    <button id="importBtn" class="nav-link"><span class="material-icons" aria-hidden="true">unarchive</span><span>Importar ZIP</span></button>
+    <button id="formatBtn" class="nav-link"><span class="material-icons" aria-hidden="true">delete_sweep</span><span>Formatear / Limpiar</span></button>
+    <input type="file" id="importFile" accept=".zip" style="display:none;" />
+  </nav>
+</aside>
+
+<div class="right-panel" role="complementary" aria-label="Panel de usuario">
+  <div class="user-section">
+    <img id="userPhoto" class="user-avatar" src="user2005.jpg" alt="Avatar del usuario ERNESTO TOBIAS" loading="lazy" width="85" height="85">
+    <div id="userName" class="user-name">ERNESTO TOBIAS</div>
   </div>
-  <div class="user-menu">
-    <img id="userPhoto" class="user-avatar" src="user2005.jpg" alt="Usuario" loading="lazy">
-    <button id="logoutBtn" class="logout-btn">Salir</button>
-  </div>
-</header>
-
-<div class="main-container">
-  <aside class="sidebar">
-    <div class="nav-section">
-      <div class="nav-title">Operaciones</div>
-      <a class="nav-link" href="venta.html"><span class="material-icons">point_of_sale</span>Venta</a>
-      <a class="nav-link" href="compra.html"><span class="material-icons">shopping_cart</span>Compra</a>
-      <a class="nav-link" href="traslados.html"><span class="material-icons">local_shipping</span>Cotización</a>
-      <a class="nav-link" href="clientes.html"><span class="material-icons">groups</span>Clientes</a>
-    </div>
-    
-    <div class="nav-section">
-      <div class="nav-title">Gestión</div>
-      <a class="nav-link" href="inventario.html"><span class="material-icons">inventory_2</span>Inventario</a>
-      <a class="nav-link" href="almacenamiento.html"><span class="material-icons">warehouse</span>Almacenamiento</a>
-      <a class="nav-link" href="gastos.html"><span class="material-icons">store</span>Catálogo</a>
-      <a class="nav-link" href="descuentos.html"><span class="material-icons">local_offer</span>Descuentos</a>
-    </div>
-    
-    <div class="nav-section">
-      <div class="nav-title">Administración</div>
-      <a class="nav-link" href="lista.html"><span class="material-icons">account_balance</span>Finanzas</a>
-      <a class="nav-link" href="facturas.html"><span class="material-icons">receipt_long</span>Facturas</a>
-      <a class="nav-link" href="Verificasion.html"><span class="material-icons">verified</span>Verificación</a>
-    </div>
-
-    <div class="nav-section" style="margin-top: auto;">
-      <div class="nav-title">Sistema</div>
-      <button id="exportBtn" class="nav-link"><span class="material-icons">archive</span>Exportar datos</button>
-      <button id="importBtn" class="nav-link"><span class="material-icons">unarchive</span>Importar datos</button>
-      <button id="formatBtn" class="nav-link"><span class="material-icons">delete_sweep</span>Limpiar datos</button>
-      <input type="file" id="importFile" accept=".zip" style="display:none;">
-    </div>
-  </aside>
-
-  <main>
-    <div class="hero">
-      <h1>Panel de Control</h1>
-      <p>Sistema integral de gestión empresarial</p>
-      
-      <div class="modules-grid">
-        <a href="venta.html" class="module-card">
-          <div class="icon"><span class="material-icons">point_of_sale</span></div>
-          <h3>Punto de Venta</h3>
-          <span>Procesar ventas</span>
-        </a>
-        
-        <a href="compra.html" class="module-card">
-          <div class="icon"><span class="material-icons">shopping_cart</span></div>
-          <h3>Compras</h3>
-          <span>Registrar compras</span>
-        </a>
-        
-        <a href="traslados.html" class="module-card">
-          <div class="icon"><span class="material-icons">local_shipping</span></div>
-          <h3>Cotización</h3>
-          <span>Gestionar traslados</span>
-        </a>
-        
-        <a href="inventario.html" class="module-card">
-          <div class="icon"><span class="material-icons">inventory_2</span></div>
-          <h3>Inventario</h3>
-          <span>Control de stock</span>
-        </a>
-        
-        <a href="clientes.html" class="module-card">
-          <div class="icon"><span class="material-icons">groups</span></div>
-          <h3>Clientes</h3>
-          <span>Base de clientes</span>
-        </a>
-        
-        <a href="lista.html" class="module-card">
-          <div class="icon"><span class="material-icons">account_balance</span></div>
-          <h3>Finanzas</h3>
-          <span>Reportes y balances</span>
-        </a>
-      </div>
-    </div>
-  </main>
+  <button id="logoutBtn" class="logout-btn" aria-label="Cerrar sesión"><span class="material-icons" aria-hidden="true">logout</span><span>Exit</span></button>
 </div>
 
+<main role="main">
+  <h1 class="welcome">TOBIAS PALACIOS</h1>
+  <p class="subtitle">A FAMILY COMPANY</p>
+</main>
+
+<!-- Botón modo kiosko -->
 <button id="kioskBtn">Modo kiosko</button>
 
+<!-- MODAL FORMATEO -->
 <dialog id="formatModal">
   <div class="modal-box">
-    <h2>Limpiar datos</h2>
-    <p style="color: var(--color-muted); font-size: 0.875rem; margin-bottom: 1rem;">Selecciona los elementos a eliminar:</p>
-    <button id="toggleAllBtn" class="btn btn-secondary" style="margin-bottom: 1rem; width: 100%;">Seleccionar todo</button>
+    <h2>Selecciona qué deseas eliminar</h2>
+    <div style="margin-bottom:.75rem;text-align:right;">
+      <button id="toggleAllBtn" class="btn-secondary" style="padding:.4rem .8rem;font-size:.9rem;">Seleccionar todo</button>
+    </div>
     <ul id="formatList" class="modal-list"></ul>
     <div class="modal-actions">
-      <button id="cancelFormat" class="btn btn-secondary">Cancelar</button>
-      <button id="confirmFormat" class="btn btn-danger">Eliminar</button>
+      <button id="cancelFormat" class="btn-secondary">Cancelar</button>
+      <button id="confirmFormat" class="btn-danger">Limpiar seleccionados</button>
     </div>
   </div>
 </dialog>
 
 <script>
   const CONFIG = { DB_NAME: 'menuDB', STORE_SESSION: 'userSession', DEFAULT_AVATAR: 'user2005.jpg', DEFAULT_USER: 'Usuario', REDIRECT_PAGE: 'index.html' };
+  const Logger = { warn: (...args) => console.warn('[Dashboard]', ...args) };
 
   class StorageManager {
     static #instance = null;
@@ -457,36 +214,13 @@
   };
 
   const UIManager = {
-    async init() { 
-      const [photo, name] = [sessionStorage.getItem('foto'), sessionStorage.getItem('nombre')]; 
-      if (photo && name) this.update(photo, name); 
-      else { 
-        const session = await StorageManager.getInstance().getLastSession(); 
-        if (session?.foto && session?.nombre) { 
-          sessionStorage.setItem('foto', session.foto); 
-          sessionStorage.setItem('nombre', session.nombre); 
-          this.update(session.foto, session.nombre); 
-        } else this.update(CONFIG.DEFAULT_AVATAR, CONFIG.DEFAULT_USER); 
-      } 
-    },
-    update(foto, nombre) { 
-      const imgEl = document.getElementById('userPhoto'); 
-      if (imgEl) { imgEl.src = foto; imgEl.onerror = () => imgEl.src = CONFIG.DEFAULT_AVATAR; }
-    }
+    async init() { const [photo, name] = [sessionStorage.getItem('foto'), sessionStorage.getItem('nombre')]; if (photo && name) this.update(photo, name); else { const session = await StorageManager.getInstance().getLastSession(); if (session?.foto && session?.nombre) { sessionStorage.setItem('foto', session.foto); sessionStorage.setItem('nombre', session.nombre); this.update(session.foto, session.nombre); } else this.update(CONFIG.DEFAULT_AVATAR, CONFIG.DEFAULT_USER); } },
+    update(foto, nombre) { const imgEl = document.getElementById('userPhoto'); const nameEl = document.getElementById('userName'); if (imgEl) { imgEl.src = foto; imgEl.onerror = () => imgEl.src = CONFIG.DEFAULT_AVATAR; } if (nameEl) nameEl.textContent = nombre || CONFIG.DEFAULT_USER; }
   };
 
-  const NavManager = { 
-    init() { 
-      const current = location.pathname.split('/').pop(); 
-      document.querySelectorAll('.nav-link').forEach(link => { 
-        if (link.getAttribute('href') === current) { 
-          link.classList.add('active'); 
-          link.setAttribute('aria-current', 'page'); 
-        } 
-      }); 
-    } 
-  };
+  const NavManager = { init() { const current = location.pathname.split('/').pop(); document.querySelectorAll('.nav-link').forEach(link => { if (link.getAttribute('href') === current) { link.classList.add('active'); link.setAttribute('aria-current', 'page'); } }); } };
 
+  /* ----------  EXPORTAR / IMPORTAR ZIP  ---------- */
   async function exportLocalForageBlobs(zipFolder) {
     const keys = await localforage.keys();
     for (const key of keys) {
@@ -520,12 +254,14 @@
 
   async function exportZIP() {
     const zip = new JSZip();
+
     for (let key in localStorage) {
       if (key.startsWith('compra_')) continue;
       try {
         zip.file(`localStorage/${key}`, localStorage.getItem(key));
       } catch {}
     }
+
     const dbs = await window.indexedDB.databases?.() || [];
     for (const dbInfo of dbs) {
       const db = await new Promise((res, rej) => {
@@ -541,7 +277,9 @@
         zip.file(`indexedDB/${dbInfo.name}/${storeName}.json`, JSON.stringify(all));
       }
     }
+
     await exportLocalForageBlobs(zip.folder('localforage'));
+
     const blob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -580,12 +318,15 @@
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', e => { const file = e.target.files[0]; if (file) importZIP(file); });
 
+  /* ----------  MODO KIOSKO  ---------- */
   (() => {
     const btn = document.getElementById('kioskBtn');
     const KIOSK_KEY = 'kioskActivo';
+
     function estaEnFullscreen() {
       return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
     }
+
     function toggleFullscreen() {
       if (!estaEnFullscreen()) {
         const el = document.documentElement;
@@ -594,32 +335,38 @@
         (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
       }
     }
+
     function actualizaUI() {
       const activo = estaEnFullscreen();
       btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
       localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
     }
+
     btn.addEventListener('click', () => {
       toggleFullscreen();
       actualizaUI();
     });
+
     ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange']
       .forEach(ev => document.addEventListener(ev, actualizaUI));
+
     if (localStorage.getItem(KIOSK_KEY) === '1') {
       toggleFullscreen();
       actualizaUI();
     }
   })();
 
+  /* ----------  FORMATEO SELECTIVO  ---------- */
   (() => {
-    const modal = document.getElementById('formatModal');
-    const listEl = document.getElementById('formatList');
-    const cancelBtn = document.getElementById('cancelFormat');
-    const confirmBtn = document.getElementById('confirmFormat');
-    const toggleBtn = document.getElementById('toggleAllBtn');
-    let options = [];
-    let allChecked = false;
-    
+    const modal   = document.getElementById('formatModal');
+    const listEl  = document.getElementById('formatList');
+    const cancelBtn   = document.getElementById('cancelFormat');
+    const confirmBtn  = document.getElementById('confirmFormat');
+    const toggleBtn   = document.getElementById('toggleAllBtn');
+
+    let options = [];          // array con {type,name}
+    let allChecked = false;    // estado actual
+
     async function collectOptions() {
       const opts = [];
       const dbs = await window.indexedDB.databases?.() || [];
@@ -632,45 +379,43 @@
       }
       return opts;
     }
-    
+
     function renderList() {
       listEl.innerHTML = '';
       options.forEach((opt, idx) => {
-        const li = document.createElement('li');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.id = `opt-${idx}`;
-        cb.checked = allChecked;
-        cb.style.marginRight = '0.5rem';
+        const li  = document.createElement('li');
+        const cb  = document.createElement('input');
+        cb.type   = 'checkbox';
+        cb.id     = `opt-${idx}`;
+        cb.checked= allChecked;
         const lbl = document.createElement('label');
         lbl.htmlFor = cb.id;
         lbl.textContent = `${opt.type.toUpperCase()}: ${opt.name}`;
-        lbl.style.fontSize = '0.875rem';
         li.append(cb, lbl);
         listEl.appendChild(li);
       });
       toggleBtn.textContent = allChecked ? 'Deseleccionar todo' : 'Seleccionar todo';
     }
-    
+
     document.getElementById('formatBtn').addEventListener('click', async () => {
-      options = await collectOptions();
-      allChecked = false;
+      options     = await collectOptions();
+      allChecked  = false;
       renderList();
       modal.setAttribute('open', '');
     });
-    
+
     toggleBtn.addEventListener('click', () => {
       allChecked = !allChecked;
       renderList();
     });
-    
+
     cancelBtn.addEventListener('click', () => modal.removeAttribute('open'));
-    
+
     confirmBtn.addEventListener('click', async () => {
       const checks = [...listEl.querySelectorAll('input[type=checkbox]:checked')];
       if(!checks.length) return alert('Marca al menos un elemento.');
       if(!confirm(`¿Eliminar ${checks.length} elemento(s)?`)) return;
-      
+
       for(const ch of checks){
         const opt = options[parseInt(ch.id.replace('opt-',''))];
         try{
@@ -696,18 +441,11 @@
 
   (function () {
     'use strict';
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { passive: true }); 
-    else init();
-    
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { passive: true }); else init();
     async function init() {
       if (!AuthManager.check()) return;
-      UIManager.init().catch(console.warn);
-      NavManager.init();
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) logoutBtn.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        AuthManager.logout(); 
-      }, { passive: false });
+      UIManager.init().catch(Logger.warn); NavManager.init();
+      const logoutBtn = document.getElementById('logoutBtn'); if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); AuthManager.logout(); }, { passive: false });
     }
   })();
 </script>

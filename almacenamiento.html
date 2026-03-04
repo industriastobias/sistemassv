@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js  "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js  "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -1972,14 +1972,14 @@
       const baseSaleData = { 
         name: item.name, 
         code: item.code, 
+        barcode: item.barcode, // AÑADIDO explícitamente
         price: soldPrice, 
         quantity: soldQty, 
         total: soldPrice * soldQty, 
         seller: 'Sistema', 
         date: new Date().toISOString(),
         originalPrice: item.price,
-        discount: item.discount,
-        barcode: item.barcode
+        discount: item.discount
       };
       
       if (isCOD) {
@@ -2329,7 +2329,29 @@
     function removeFromCash(index) { const x = cashItems[index]; const input = document.getElementById(x.rowId); if (input) input.value = 0; cashItems.splice(index, 1); updateCashList(); }
     function cancelCashSale() { if (!confirm('¿Cancelar toda la venta?')) return; cashItems = []; inventory.forEach((it, realIdx) => { const input = document.getElementById(`cashqty-${realIdx}`); if (input) input.value = 0; }); updateCashList(); }
     function calcCashChangeFull() { const total = parseFloat(document.getElementById('cashTotal').textContent), pay = parseFloat(document.getElementById('cashPayment').value) || 0; if (pay < total) { alert('Pago insuficiente'); return; } const change = pay - total; const big = document.getElementById('cashChangeBig'); big.textContent = 'Vuelto: $' + change.toFixed(2); big.style.display = 'inline-block'; document.getElementById('cashConfirmBtn').style.display = 'inline-block'; }
-    function confirmCashSaleFull() { let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]'); cashItems.forEach(x => { inventory[x.realIdx].quantity -= x.qty; soldInventory.push({ name: x.name, code: inventory[x.realIdx].code, price: x.price, quantity: x.qty, total: x.qty * x.price, seller: 'CajaRegistradora', date: new Date().toISOString() }); }); localStorage.setItem('inventory', JSON.stringify(inventory)); localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); beepOK(); document.getElementById('cashFloatList').style.display = 'none'; alert('Venta realizada ✅'); closeCashRegister(); filterInventory(); }
+    function confirmCashSaleFull() { 
+      let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
+      cashItems.forEach(x => { 
+        inventory[x.realIdx].quantity -= x.qty; 
+        soldInventory.push({ 
+          name: x.name, 
+          code: inventory[x.realIdx].code, 
+          barcode: inventory[x.realIdx].barcode,  // ← AÑADIDO
+          price: x.price, 
+          quantity: x.qty, 
+          total: x.qty * x.price, 
+          seller: 'CajaRegistradora', 
+          date: new Date().toISOString() 
+        }); 
+      }); 
+      localStorage.setItem('inventory', JSON.stringify(inventory)); 
+      localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); 
+      beepOK(); 
+      document.getElementById('cashFloatList').style.display = 'none'; 
+      alert('Venta realizada ✅'); 
+      closeCashRegister(); 
+      filterInventory(); 
+    }
     function openCashRegister() { 
       xOffset = 0; 
       yOffset = 0; 
@@ -2350,7 +2372,7 @@
     }
 
     /* DEMO */
-    (function () { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (sales.length) return; const demo = { name: 'Collar demo', code: '123456', price: 2990, quantity: 1, total: 2990, seller: 'Demo', date: new Date(Date.now() - 86400000 * 2).toISOString() }; localStorage.setItem('soldInventory', JSON.stringify([demo])); })();
+    (function () { const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); if (sales.length) return; const demo = { name: 'Collar demo', code: '123456', barcode: '123456', price: 2990, quantity: 1, total: 2990, seller: 'Demo', date: new Date(Date.now() - 86400000 * 2).toISOString() }; localStorage.setItem('soldInventory', JSON.stringify([demo])); })();
   </script>
 </body>
 </html>

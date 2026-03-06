@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -1693,9 +1693,10 @@
           
           // Precio con descuento
           const finalPrice = (p.price * (1 - (p.discount || 0) / 100)).toFixed(0);
-          doc.text(`$${finalPrice}`, x + w / 2, y + 6, { align: 'center' });
+          doc.setFontSize(10);
+          doc.text(`$${finalPrice}`, x + w / 2, y + 7, { align: 'center' });
           
-          // Generar código de barras con número visible
+          // Generar código de barras SIN TEXTO (lo pondremos nosotros manualmente)
           const canvas = document.createElement('canvas'); 
           const scale = 300 / 25.4; 
           canvas.width = w * scale; 
@@ -1703,16 +1704,19 @@
           
           JsBarcode(canvas, p.barcode, { 
             format: 'CODE128', 
-            width: 1.5, 
+            width: 2, 
             height: h * scale * 0.35,
-            fontSize: 8 * scale / 4, // Tamaño de fuente proporcional
-            displayValue: true, // MOSTRAR EL NÚMERO
-            font: 'monospace',
-            textMargin: 2
+            fontSize: 0, // Sin texto en el barcode
+            displayValue: false // NO mostrar valor en el barcode
           });
           
           const imgData = canvas.toDataURL('image/png'); 
-          doc.addImage(imgData, 'PNG', x, y + 7, w, h * 0.5);
+          doc.addImage(imgData, 'PNG', x, y + 8, w, h * 0.4);
+          
+          // Dibujar el número del código de barras MANUALMENTE debajo
+          doc.setFontSize(9);
+          doc.setFont('courier', 'normal');
+          doc.text(p.barcode, x + w / 2, y + h - 2, { align: 'center' });
           
           col++; 
           if (col === 4) { 
@@ -2570,7 +2574,7 @@
     }
 
     // ==========================================
-    // HISTORIAL DE VENTAS
+    // HISTORIAL DE VENTAS CORREGIDO
     // ==========================================
     
     function loadSalesHistory() { 
@@ -2633,8 +2637,8 @@
           s.total || 0,
           s.date || ''
         ]); 
-        let csv = '\\uFEFF' + headers.join(',') + '\\n'; 
-        rows.forEach(r => csv += r.join(',') + '\\n'); 
+        let csv = '\uFEFF' + headers.join(',') + '\n'; 
+        rows.forEach(r => csv += r.join(',') + '\n'); 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); 
         const url = URL.createObjectURL(blob); 
         const a = document.createElement('a'); 
@@ -2725,7 +2729,7 @@
     }
 
     // ==========================================
-    // FILTRADO Y RENDERIZADO DE INVENTARIO
+    // FILTRADO Y RENDERIZADO DE INVENTARIO CORREGIDO
     // ==========================================
     
     const debouncedFilterInventory = debounce(filterInventory, 300);
@@ -2820,10 +2824,17 @@
             imgSrc = urlManager.create(imgBlob);
           }
           
+          // Generar código de barras dinámicamente como Data URL
           let barcodeSrc = '';
-          const barcodeBlob = await safeGetItem(`barcodeimg_${item.barcode}`);
-          if (barcodeBlob) {
-            barcodeSrc = urlManager.create(barcodeBlob);
+          if (item.barcode) {
+            const barcodeCanvas = document.createElement('canvas');
+            JsBarcode(barcodeCanvas, item.barcode, { 
+              format: 'CODE128', 
+              width: 2, 
+              height: 40, 
+              displayValue: false 
+            });
+            barcodeSrc = barcodeCanvas.toDataURL();
           }
           
           const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
@@ -2865,10 +2876,17 @@
             imgSrc = urlManager.create(imgBlob);
           }
           
+          // Generar código de barras dinámicamente como Data URL
           let barcodeSrc = '';
-          const barcodeBlob = await safeGetItem(`barcodeimg_${item.barcode}`);
-          if (barcodeBlob) {
-            barcodeSrc = urlManager.create(barcodeBlob);
+          if (item.barcode) {
+            const barcodeCanvas = document.createElement('canvas');
+            JsBarcode(barcodeCanvas, item.barcode, { 
+              format: 'CODE128', 
+              width: 2, 
+              height: 50, 
+              displayValue: false 
+            });
+            barcodeSrc = barcodeCanvas.toDataURL();
           }
           
           const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
@@ -2948,7 +2966,7 @@
     }
 
     // ==========================================
-    // MODAL DE HISTORIAL DE VENTAS DETALLADO
+    // MODAL DE HISTORIAL DE VENTAS DETALLADO CORREGIDO
     // ==========================================
     
     function openSalesHistoryModal() { 

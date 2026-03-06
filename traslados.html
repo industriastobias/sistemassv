@@ -2780,17 +2780,16 @@
             modal.style.display = 'flex';
         }
 
-        function loadLote(loteId) {
+        async function loadLote(loteId) {
             if (currentLote.products.length > 0) {
-                showConfirm(`¿CARGAR EL LOTE <strong>${loteId}</strong>?<br><br>Se perderán los cambios no guardados del lote actual.`)
-                    .then(confirmed => {
-                        if (confirmed) {
-                            performLoadLote(loteId);
-                        }
-                    });
-            } else {
-                performLoadLote(loteId);
+                const confirmed = await showConfirm(`¿CARGAR EL LOTE ${loteId}?\n\nSe perderán los cambios no guardados del lote actual.`);
+                if (!confirmed) {
+                    return; // Si el usuario cancela, salir de la función
+                }
             }
+            
+            // Si llegamos aquí, o no hay productos en el lote actual, o el usuario confirmó
+            performLoadLote(loteId);
         }
 
         function performLoadLote(loteId) {
@@ -2820,11 +2819,14 @@
             if (historialVisible) {
                 toggleHistorial();
             }
+            
+            // Mostrar mensaje de éxito
+            showAlert(`✅ Lote ${loteId} cargado correctamente.`);
         }
 
         function confirmDeleteLote(loteId) {
             loteToDelete = loteId;
-            showConfirm(`¿Estás seguro de que deseas eliminar el lote <strong>${loteId}</strong>?<br><br>Esta acción no se puede deshacer.`)
+            showConfirm(`¿Estás seguro de que deseas eliminar el lote ${loteId}?\n\nEsta acción no se puede deshacer.`)
                 .then(confirmed => {
                     if (confirmed) {
                         deleteLote(loteToDelete);
@@ -3116,7 +3118,7 @@
         }
 
         async function clearAll() {
-            const confirmed = await showConfirm('¿ELIMINAR TODOS LOS DATOS?<br><br>Esto eliminará el lote actual y todo el historial.');
+            const confirmed = await showConfirm('¿ELIMINAR TODOS LOS DATOS?\n\nEsto eliminará el lote actual y todo el historial.');
             if (confirmed) {
                 performClearAll();
             }
@@ -3151,7 +3153,7 @@
 
         function newLote() {
             if (currentLote.products.length > 0) {
-                showConfirm('¿CREAR UN NUEVO LOTE?<br><br>Se perderán los cambios no guardados del lote actual.')
+                showConfirm('¿CREAR UN NUEVO LOTE?\n\nSe perderán los cambios no guardados del lote actual.')
                     .then(confirmed => {
                         if (confirmed) {
                             performNewLote();
@@ -3334,7 +3336,7 @@
             }
             if (currentLote.taxes > 0) {
                 document.getElementById('boxImpuesto').classList.add('active');
-                document.document.getElementById('footerTaxes').style.color = '#1a1a1a';
+                document.getElementById('footerTaxes').style.color = '#1a1a1a';
                 document.getElementById('footerTaxes').textContent = '$' + currentLote.taxes.toFixed(2);
             }
         }

@@ -1365,6 +1365,48 @@
             gap: 10px;
             justify-content: center;
         }
+
+        /* Estilos para modal de exportar/importar */
+        .export-import-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .export-import-card {
+            background: #f8f8f8;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-import-card:hover {
+            border-color: #B5838D;
+            background: #f8f0f2;
+            transform: translateY(-2px);
+        }
+
+        .export-import-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .export-import-title {
+            font-size: 14px;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+
+        .export-import-desc {
+            font-size: 11px;
+            color: #666;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -1381,9 +1423,8 @@
                 <button class="btn-sm historial-btn" id="historialBtn" onclick="toggleHistorial()" title="Ver historial de lotes">
                     📋 HISTORIAL
                 </button>
-                <button class="btn-sm" onclick="exportZip()">📦 EXPORTAR ZIP</button>
-                <button class="btn-sm" onclick="importZip()" title="Importar archivo ZIP con lotes">
-                    📂 IMPORTAR ZIP
+                <button class="btn-sm" onclick="openExportImportModal()" title="Exportar o Importar datos">
+                    🔄 EXPORTAR/IMPORTAR
                 </button>
                 <button class="btn-sm" onclick="newLote()">➕ NUEVO LOTE</button>
                 <button class="btn-sm primary" onclick="exportPDF()">📄 EXPORTAR PDF</button>
@@ -1619,6 +1660,38 @@
                         ✓ FINALIZAR LOTE
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Exportar/Importar -->
+    <div class="modal-overlay" id="modalExportImport">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">🔄 EXPORTAR / IMPORTAR</div>
+                <button class="modal-close-btn" onclick="closeModal('modalExportImport')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box">
+                    Gestiona tus lotes exportándolos para respaldo o importándolos desde otro dispositivo.
+                </div>
+                
+                <div class="export-import-options">
+                    <div class="export-import-card" onclick="exportZip()">
+                        <div class="export-import-icon">📦</div>
+                        <div class="export-import-title">EXPORTAR ZIP</div>
+                        <div class="export-import-desc">Guarda todos tus lotes en un archivo ZIP</div>
+                    </div>
+                    
+                    <div class="export-import-card" onclick="importZip()">
+                        <div class="export-import-icon">📂</div>
+                        <div class="export-import-title">IMPORTAR ZIP</div>
+                        <div class="export-import-desc">Carga lotes desde un archivo ZIP</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalExportImport')">CERRAR</button>
             </div>
         </div>
     </div>
@@ -1913,7 +1986,8 @@
             vendorShipping: 0,
             shipping: 0,
             taxes: 0,
-            products: []
+            products: [],
+            isFinished: false  // NUEVO: Flag para saber si el lote fue finalizado
         };
 
         let allLotes = [];
@@ -1923,7 +1997,6 @@
         let step1Completed = false;
         let historialVisible = false;
         let loteToDelete = null;
-        let loteToUpdate = null;
         let confirmCallback = null;
         let finishLoteAction = 'save'; // 'save' o 'update'
         let numbersHidden = false;
@@ -2088,8 +2161,17 @@
             });
         }
 
+        // NUEVO: Modal de Exportar/Importar
+        function openExportImportModal() {
+            const modal = document.getElementById('modalExportImport');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
         // Funciones de Exportación/Importación ZIP
         async function exportZip() {
+            closeModal('modalExportImport');
+            
             if (allLotes.length === 0 && currentLote.products.length === 0) {
                 await showAlert('No hay lotes para exportar');
                 return;
@@ -2159,6 +2241,8 @@
         }
 
         function importZip() {
+            closeModal('modalExportImport');
+            
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.zip';
@@ -2467,6 +2551,8 @@
             if (!lote) return;
             
             currentLote = JSON.parse(JSON.stringify(lote)); // Clonar
+            currentLote.isFinished = false; // IMPORTANTE: Marcar como no finalizado al cargar
+            
             step1Completed = currentLote.vendorShipping > 0;
             
             // Actualizar contador si es necesario
@@ -2704,16 +2790,44 @@
                 allLotes.push(JSON.parse(JSON.stringify(currentLote)));
             }
             
-            saveData();
+            // IMPORTANTE: Marcar el lote actual como finalizado y limpiarlo
+            currentLote.isFinished = true;
+            await saveData();
+            
+            // Crear un nuevo lote automáticamente para evitar que se vuelva a cargar el finalizado
+            loteCounter++;
+            currentLote = {
+                id: 'Lote-' + String(loteCounter).padStart(3, '0'),
+                date: new Date().toLocaleDateString(),
+                vendorShipping: 0,
+                shipping: 0,
+                taxes: 0,
+                products: [],
+                isFinished: false
+            };
+            step1Completed = false;
+            
+            // Actualizar UI
+            document.getElementById('btnStep1').classList.remove('completed', 'active');
+            document.getElementById('btnStep2').classList.remove('completed');
+            document.getElementById('statusStep1').textContent = 'PENDIENTE';
+            document.getElementById('statusStep1').className = 'step-status status-pending';
+            document.getElementById('statusStep2').textContent = 'OPCIONAL';
+            document.getElementById('statusStep2').className = 'step-status status-pending';
+            
+            ['boxVendor', 'boxTraslado', 'boxImpuesto'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+            });
+            
             renderHistorial();
+            updateUI();
+            renderTable();
+            clearForm();
+            await saveData();
             
             closeModal('modalFinishLote');
             
-            // Preguntar si desea crear un nuevo lote
-            const crearNuevo = await showConfirm(`LOTE ${currentLote.id} GUARDADO CON ${currentLote.products.length} PRODUCTOS.\n\n¿Deseas crear un nuevo lote?`);
-            if (crearNuevo) {
-                newLote();
-            }
+            await showAlert(`✅ Lote guardado exitosamente. Se ha creado un nuevo lote: ${currentLote.id}`);
         }
 
         // Funciones existentes modificadas
@@ -2731,6 +2845,23 @@
             if (savedCurrent) {
                 currentLote = savedCurrent;
                 step1Completed = currentLote.vendorShipping > 0;
+                
+                // IMPORTANTE: Si el lote cargado está marcado como finalizado, crear uno nuevo
+                if (currentLote.isFinished) {
+                    if (savedCounter) loteCounter = savedCounter;
+                    loteCounter++;
+                    currentLote = {
+                        id: 'Lote-' + String(loteCounter).padStart(3, '0'),
+                        date: new Date().toLocaleDateString(),
+                        vendorShipping: 0,
+                        shipping: 0,
+                        taxes: 0,
+                        products: [],
+                        isFinished: false
+                    };
+                    step1Completed = false;
+                    await saveData(); // Guardar el nuevo lote vacío
+                }
             }
             
             if (savedAll) allLotes = savedAll;
@@ -2751,7 +2882,8 @@
                 vendorShipping: 0,
                 shipping: 0,
                 taxes: 0,
-                products: []
+                products: [],
+                isFinished: false
             };
             allLotes = [];
             loteCounter = 1;
@@ -2791,7 +2923,8 @@
                 vendorShipping: 0,
                 shipping: 0,
                 taxes: 0,
-                products: []
+                products: [],
+                isFinished: false
             };
             step1Completed = false;
             
@@ -2809,6 +2942,7 @@
             updateUI();
             renderTable();
             clearForm();
+            saveData();
         }
 
         // Funciones existentes (sin cambios)
@@ -3429,6 +3563,7 @@
                     closeModal('modalFinishLote');
                     closeModal('modalSimpleConfirm');
                     closeModal('modalSimpleAlert');
+                    closeModal('modalExportImport');
                     closeImageModal();
                 }
             }

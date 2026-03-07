@@ -1281,6 +1281,130 @@
             gap: 10px;
         }
 
+        /* Modal de Backup/Restore */
+        .backup-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 998;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .backup-modal.active {
+            display: flex;
+        }
+
+        .backup-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .backup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--color-marca);
+        }
+
+        .backup-header h2 {
+            color: var(--color-texto);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .backup-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: var(--color-fondo);
+            border-radius: var(--radius-md);
+            border: 2px dashed var(--color-marca-oscuro);
+        }
+
+        .backup-section h3 {
+            margin-bottom: 10px;
+            color: var(--color-texto);
+            font-size: 1.1rem;
+        }
+
+        .backup-section p {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: white;
+            border: 2px dashed var(--color-marca-oscuro);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition-base);
+            text-align: center;
+        }
+
+        .file-input-label:hover {
+            border-color: var(--color-texto);
+            background: rgba(232, 213, 208, 0.2);
+        }
+
+        .file-input-label.has-file {
+            border-color: var(--color-exito);
+            background: rgba(72, 187, 120, 0.1);
+        }
+
+        .backup-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(66, 153, 225, 0.1);
+            border-radius: var(--radius-md);
+            border-left: 4px solid var(--color-info);
+        }
+
+        .backup-info h4 {
+            color: var(--color-info);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .backup-info ul {
+            margin-left: 20px;
+            color: #4a5568;
+            font-size: 0.85rem;
+        }
+
+        .backup-info li {
+            margin-bottom: 4px;
+        }
+
         /* ============================================
            NOTIFICACIONES (TOASTS)
            ============================================ */
@@ -1612,9 +1736,8 @@
                 <div class="input-row">
                     <div class="form-group">
                         <label class="required">📱 Teléfono</label>
-                        <input type="tel" id="telefono" required placeholder="809-555-1234" 
-                               pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" title="Formato: 809-555-1234">
-                        <div class="input-hint">Formato: 809-555-1234</div>
+                        <input type="text" id="telefono" required placeholder="Cualquier formato">
+                        <div class="input-hint">Puede usar cualquier formato: 809-555-1234, (809) 555-1234, etc.</div>
                     </div>
                     <div class="form-group">
                         <label class="required">📅 Fecha</label>
@@ -1703,8 +1826,9 @@
                 </div>
                 
                 <div class="top-actions">
-                    <button class="btn-icon" onclick="exportarDatos()" data-tooltip="Exportar a CSV" title="Exportar a CSV">
-                        📊
+                    <!-- Botón único para Backup/Restore -->
+                    <button class="btn-icon" onclick="abrirBackupModal()" data-tooltip="Backup y Restore" title="Backup y Restore">
+                        💾
                     </button>
                     <button class="btn-icon" onclick="toggleKiosco()" data-tooltip="Modo Kiosco" title="Modo Kiosco">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1834,7 +1958,7 @@
                 
                 <div class="form-group">
                     <label class="required">Teléfono</label>
-                    <input type="tel" id="editTelefono" required pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}">
+                    <input type="text" id="editTelefono" required>
                 </div>
                 
                 <div class="form-group">
@@ -1889,8 +2013,62 @@
         </div>
     </div>
 
+    <!-- Modal de Backup/Restore (ZIP) -->
+    <div class="backup-modal" id="backupModal">
+        <div class="backup-content">
+            <div class="backup-header">
+                <h2>💾 Backup y Restore</h2>
+                <button class="modal-close" onclick="cerrarBackupModal()" style="position: static; color: #333;" aria-label="Cerrar">×</button>
+            </div>
+
+            <!-- Sección Exportar -->
+            <div class="backup-section">
+                <h3>📤 Exportar Datos</h3>
+                <p>Descarga todas tus reservas en un archivo ZIP que incluye los datos en JSON y las imágenes.</p>
+                <button class="btn btn-primary" onclick="exportarZIP()">
+                    <span class="spinner"></span>
+                    <span class="btn-text">📦 Descargar Backup ZIP</span>
+                </button>
+            </div>
+
+            <!-- Sección Importar -->
+            <div class="backup-section">
+                <h3>📥 Importar Datos</h3>
+                <p>Restaura tus reservas desde un archivo ZIP previamente exportado.</p>
+                
+                <div class="file-input-wrapper">
+                    <input type="file" id="zipFileInput" accept=".zip" onchange="handleZipSelect(this)">
+                    <label for="zipFileInput" class="file-input-label" id="zipFileLabel">
+                        <span>📁 Seleccionar archivo ZIP</span>
+                    </label>
+                </div>
+                
+                <div id="importActions" style="margin-top: 15px; display: none;">
+                    <button class="btn btn-success" onclick="importarZIP()">
+                        <span class="spinner"></span>
+                        <span class="btn-text">🔄 Restaurar Backup</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="backup-info">
+                <h4>ℹ️ Información importante:</h4>
+                <ul>
+                    <li>El backup incluye todas las reservas y sus imágenes</li>
+                    <li>Al restaurar, se pueden <strong>mezclar</strong> o <strong>reemplazar</strong> los datos existentes</li>
+                    <li>Se recomienda hacer backup periódicamente</li>
+                    <li>El formato ZIP es compatible solo con esta aplicación</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Librería JSZip para manejo de ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script>
         // ============================================
@@ -1912,8 +2090,9 @@
             DELETE_CONFIRM: '¿Eliminar esta reserva permanentemente?',
             ERROR_GENERIC: 'Ha ocurrido un error. Intente nuevamente.',
             ERROR_IMAGE_SIZE: 'La imagen no debe superar los 5MB',
-            ERROR_PHONE: 'Formato de teléfono inválido',
-            ERROR_DATE: 'La fecha no puede ser anterior a hoy'
+            BACKUP_SUCCESS: 'Backup creado y descargado correctamente',
+            RESTORE_SUCCESS: 'Datos restaurados correctamente',
+            RESTORE_CONFIRM: '¿Desea reemplazar todos los datos existentes o mezclar con los nuevos?'
         };
 
         // ============================================
@@ -1928,6 +2107,7 @@
         let searchTerm = '';
         let editingId = null;
         let confirmCallback = null;
+        let selectedZipFile = null;
 
         // ============================================
         // INICIALIZACIÓN
@@ -1936,7 +2116,6 @@
             try {
                 await initDB();
                 setupEventListeners();
-                setFechaMinima();
                 limpiarFormulario();
                 await cargarReservas();
             } catch (error) {
@@ -2049,9 +2228,6 @@
                     cerrarTodosLosModales();
                 }
             });
-            
-            // Validación de fecha mínima
-            document.getElementById('fecha').addEventListener('change', validarFecha);
         }
 
         function setupDragAndDrop() {
@@ -2216,23 +2392,6 @@
             document.getElementById('editRestante').textContent = formatMoney(restante);
         }
 
-        function setFechaMinima() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('fecha').setAttribute('min', today);
-        }
-
-        function validarFecha() {
-            const fechaInput = document.getElementById('fecha');
-            const fecha = new Date(fechaInput.value);
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            
-            if (fecha < hoy) {
-                showToast(MESSAGES.ERROR_DATE, 'warning');
-                fechaInput.value = '';
-            }
-        }
-
         // ============================================
         // CRUD OPERACIONES
         // ============================================
@@ -2254,7 +2413,7 @@
                 
                 const reserva = {
                     nombre: sanitizeInput(document.getElementById('nombre').value),
-                    telefono: document.getElementById('telefono').value,
+                    telefono: document.getElementById('telefono').value, // Sin validación de formato
                     fecha: document.getElementById('fecha').value,
                     producto: sanitizeInput(document.getElementById('producto').value),
                     categorias: parseCategorias(document.getElementById('categorias').value),
@@ -2693,7 +2852,7 @@
             
             document.getElementById('confirmIcon').textContent = '🗑️';
             document.getElementById('confirmTitle').textContent = '¿Eliminar reserva?';
-            document.getElementById('confirmText').textContent = 'Esta acción eliminará permanentemente la reserva #${id}. No se puede deshacer.';
+            document.getElementById('confirmText').textContent = `Esta acción eliminará permanentemente la reserva #${id}. No se puede deshacer.`;
             document.getElementById('confirmBtn').className = 'btn btn-danger';
             document.getElementById('confirmBtn').onclick = ejecutarConfirmacion;
             
@@ -2760,6 +2919,240 @@
             cerrarModal();
             cerrarEditModal();
             cerrarConfirmModal();
+            cerrarBackupModal();
+        }
+
+        // ============================================
+        // MODAL BACKUP/RESTORE (ZIP)
+        // ============================================
+        function abrirBackupModal() {
+            document.getElementById('backupModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function cerrarBackupModal() {
+            document.getElementById('backupModal').classList.remove('active');
+            document.body.style.overflow = '';
+            // Limpiar selección de archivo
+            selectedZipFile = null;
+            document.getElementById('zipFileInput').value = '';
+            document.getElementById('zipFileLabel').classList.remove('has-file');
+            document.getElementById('zipFileLabel').innerHTML = '<span>📁 Seleccionar archivo ZIP</span>';
+            document.getElementById('importActions').style.display = 'none';
+        }
+
+        function handleZipSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                selectedZipFile = file;
+                const label = document.getElementById('zipFileLabel');
+                label.classList.add('has-file');
+                label.innerHTML = `<span>✅ ${file.name}</span>`;
+                document.getElementById('importActions').style.display = 'block';
+            }
+        }
+
+        // Exportar datos a ZIP
+        async function exportarZIP() {
+            const btn = event.target.closest('button');
+            setLoading(btn, true);
+
+            try {
+                const reservas = await getAllReservas();
+                
+                if (reservas.length === 0) {
+                    showToast('No hay datos para exportar', 'warning');
+                    return;
+                }
+
+                const zip = new JSZip();
+                const folder = zip.folder("reservas_backup");
+
+                // Separar datos e imágenes
+                const datosSinImagenes = reservas.map(r => {
+                    const { imagen, ...datos } = r;
+                    return datos;
+                });
+
+                // Agregar JSON con datos
+                folder.file("datos.json", JSON.stringify(datosSinImagenes, null, 2));
+
+                // Agregar imágenes en carpeta separada
+                const imagenesFolder = folder.folder("imagenes");
+                let imagenCount = 0;
+
+                for (let i = 0; i < reservas.length; i++) {
+                    const r = reservas[i];
+                    if (r.imagen && r.imagen.startsWith('data:image')) {
+                        // Convertir base64 a blob
+                        const base64Data = r.imagen.split(',')[1];
+                        const mimeType = r.imagen.match(/data:([^;]+);/)[1];
+                        const extension = mimeType.split('/')[1];
+                        
+                        imagenesFolder.file(`reserva_${r.id}.${extension}`, base64Data, { base64: true });
+                        imagenCount++;
+                    }
+                }
+
+                // Generar ZIP
+                const content = await zip.generateAsync({ type: "blob" });
+                
+                // Descargar
+                const fecha = new Date().toISOString().split('T')[0];
+                saveAs(content, `backup_reservas_${fecha}.zip`);
+
+                showToast(`${MESSAGES.BACKUP_SUCCESS} (${reservas.length} reservas, ${imagenCount} imágenes)`, 'success');
+
+            } catch (error) {
+                console.error('Error exportando:', error);
+                showToast('Error al crear el backup', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        // Importar datos desde ZIP
+        async function importarZIP() {
+            if (!selectedZipFile) {
+                showToast('Seleccione un archivo ZIP primero', 'warning');
+                return;
+            }
+
+            const btn = event.target.closest('button');
+            setLoading(btn, true);
+
+            try {
+                const zip = await JSZip.loadAsync(selectedZipFile);
+                
+                // Leer datos.json
+                const datosFile = zip.file("reservas_backup/datos.json");
+                if (!datosFile) {
+                    throw new Error('El archivo ZIP no contiene datos válidos');
+                }
+
+                const datosJson = await datosFile.async("string");
+                const reservasImportadas = JSON.parse(datosJson);
+
+                // Preguntar si reemplazar o mezclar
+                const modo = await mostrarDialogoImportacion();
+                
+                if (modo === 'cancelar') {
+                    setLoading(btn, false);
+                    return;
+                }
+
+                let importadas = 0;
+                let errores = 0;
+
+                // Procesar cada reserva
+                for (const r of reservasImportadas) {
+                    try {
+                        // Buscar imagen asociada
+                        const imagenFile = zip.file(`reservas_backup/imagenes/reserva_${r.id}.jpg`) ||
+                                          zip.file(`reservas_backup/imagenes/reserva_${r.id}.jpeg`) ||
+                                          zip.file(`reservas_backup/imagenes/reserva_${r.id}.png`);
+
+                        if (imagenFile) {
+                            const imagenBlob = await imagenFile.async("blob");
+                            r.imagen = await blobToBase64(imagenBlob);
+                        }
+
+                        // Quitar ID para que se cree como nueva (si es mezclar)
+                        if (modo === 'mezclar') {
+                            delete r.id;
+                            r.fechaRegistro = new Date().toISOString();
+                            await addReserva(r);
+                        } else {
+                            // Reemplazar: primero limpiar todo (ya se hizo arriba)
+                            await addReserva(r);
+                        }
+                        
+                        importadas++;
+
+                    } catch (err) {
+                        console.error('Error importando reserva:', err);
+                        errores++;
+                    }
+                }
+
+                if (errores > 0) {
+                    showToast(`Importación completada con ${importadas} éxitos y ${errores} errores`, 'warning');
+                } else {
+                    showToast(`${MESSAGES.RESTORE_SUCCESS} (${importadas} reservas importadas)`, 'success');
+                }
+
+                cerrarBackupModal();
+                await cargarReservas();
+
+            } catch (error) {
+                console.error('Error importando:', error);
+                showToast('Error al restaurar el backup: ' + error.message, 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        // Función auxiliar para mostrar diálogo de importación
+        function mostrarDialogoImportacion() {
+            return new Promise((resolve) => {
+                // Crear modal temporal para la opción
+                const modal = document.createElement('div');
+                modal.className = 'confirm-modal active';
+                modal.style.zIndex = '1002';
+                modal.innerHTML = `
+                    <div class="confirm-content" style="max-width: 450px;">
+                        <div class="confirm-icon">📥</div>
+                        <div class="confirm-title">¿Cómo desea importar?</div>
+                        <div class="confirm-text" style="text-align: left;">
+                            <p><strong>Mezclar:</strong> Agrega las reservas del backup a las existentes (recomendado)</p>
+                            <p><strong>Reemplazar:</strong> Elimina todas las reservas actuales y pone las del backup</p>
+                        </div>
+                        <div class="confirm-actions" style="flex-direction: column;">
+                            <button class="btn btn-primary" id="btnMezclar" style="width: 100%;">🔀 Mezclar con existentes</button>
+                            <button class="btn btn-danger" id="btnReemplazar" style="width: 100%;">🔄 Reemplazar todo</button>
+                            <button class="btn btn-secondary" id="btnCancelarImport" style="width: 100%;">Cancelar</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+
+                document.getElementById('btnMezclar').onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve('mezclar');
+                };
+                
+                document.getElementById('btnReemplazar').onclick = async () => {
+                    // Limpiar base de datos actual
+                    try {
+                        const all = await getAllReservas();
+                        for (const r of all) {
+                            await deleteReserva(r.id);
+                        }
+                        document.body.removeChild(modal);
+                        resolve('reemplazar');
+                    } catch (e) {
+                        showToast('Error al limpiar datos existentes', 'error');
+                        document.body.removeChild(modal);
+                        resolve('cancelar');
+                    }
+                };
+                
+                document.getElementById('btnCancelarImport').onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve('cancelar');
+                };
+            });
+        }
+
+        // Helper: Blob a Base64
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
         }
 
         // ============================================
@@ -2969,51 +3362,6 @@
         }
 
         // ============================================
-        // EXPORTAR DATOS
-        // ============================================
-        async function exportarDatos() {
-            try {
-                const reservas = await getAllReservas();
-                
-                if (reservas.length === 0) {
-                    showToast('No hay datos para exportar', 'warning');
-                    return;
-                }
-                
-                // Crear CSV
-                const headers = ['ID', 'Nombre', 'Teléfono', 'Fecha', 'Producto', 'Categorías', 'Precio Total', 'Monto Pagado', 'Monto Restante', 'Estado', 'Notas', 'Fecha Registro'];
-                const rows = reservas.map(r => [
-                    r.id,
-                    `"${r.nombre}"`,
-                    r.telefono,
-                    r.fecha,
-                    `"${r.producto}"`,
-                    `"${(r.categorias || []).join('; ')}"`,
-                    r.precioTotal.toFixed(2),
-                    r.montoPagado.toFixed(2),
-                    r.montoRestante.toFixed(2),
-                    r.estado,
-                    `"${r.notas || ''}"`,
-                    r.fechaRegistro
-                ]);
-                
-                const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-                
-                // Descargar
-                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `reservas_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
-                
-                showToast('Datos exportados correctamente', 'success');
-            } catch (error) {
-                console.error('Error exportando:', error);
-                showToast('Error al exportar datos', 'error');
-            }
-        }
-
-        // ============================================
         // UI HELPERS
         // ============================================
         function toggleSidebar() {
@@ -3052,7 +3400,9 @@
             
             document.getElementById('btnGuardar').querySelector('.btn-text').textContent = '💾 Guardar Reserva';
             
-            setFechaMinima();
+            // Establecer fecha de hoy por defecto
+            document.getElementById('fecha').valueAsDate = new Date();
+            
             calcularRestante();
         }
 

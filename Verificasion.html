@@ -1,219 +1,771 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Verificación - Klohe</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <style>
-    :root {
-      --bg: #fafafa;
-      --card: #ffffff;
-      --text: #222222;
-      --line: #e5e5e5;
-      --verde: #28a745;
-      --rojo: #dc3545;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 0 1rem 2rem 1rem;
-    }
-    .header-fixed {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      background: var(--line);
-      color: var(--text);
-      padding: 1rem 0;
-      margin-bottom: 2rem;
-      border-bottom: 1px solid var(--line);
-      text-align: center;
-      font-weight: 500;
-    }
-    .contador-pill {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 2000;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: .5rem .8rem;
-      font-size: .8rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,.08);
-      display: flex;
-      gap: .6rem;
-    }
-    .contador-pill .verde { color: var(--verde); font-weight: 600; }
-    .contador-pill .rojo  { color: var(--rojo);  font-weight: 600; }
-    .catalogo {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1.5rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    @media (max-width: 1200px) { .catalogo { grid-template-columns: repeat(4, 1fr); } }
-    @media (max-width: 900px)  { .catalogo { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 600px)  { .catalogo { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 400px)  { .catalogo { grid-template-columns: 1fr; } }
-    .producto {
-      background: var(--card);
-      border: 3px solid var(--rojo);
-      border-radius: 8px;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      opacity: 0;
-      transform: translateY(20px);
-      animation: fadeIn 0.5s forwards;
-      transition: border-color .25s;
-    }
-    .producto.confirmado { border-color: var(--verde); }
-    @keyframes fadeIn {
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .producto img {
-      width: 100%;
-      aspect-ratio: 1/1;
-      object-fit: cover;
-      border-radius: 4px;
-    }
-    .producto h3 {
-      margin: .8rem 0 .3rem;
-      font-size: 1rem;
-      color: var(--text);
-    }
-    .producto p {
-      margin: .2rem 0;
-      font-size: .8rem;
-      color: var(--text);
-    }
-    .btn-confirmar {
-      margin-top: .6rem;
-      padding: .4rem .8rem;
-      font-size: .75rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      background: var(--rojo);
-      color: #fff;
-      transition: background .25s;
-    }
-    .btn-confirmar:hover { opacity: .9; }
-    .confirmado .btn-confirmar { background: var(--verde); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificación de Reservas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #1F2937;
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .form-section {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1F2937;
+            font-size: 0.95rem;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1F2937;
+        }
+
+        .monto-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .result-box {
+            background: #1F2937;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .result-box h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .monto-restante {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .btn {
+            background: #1F2937;
+            color: white;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #374151;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            margin-left: 10px;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+            border: 2px solid #1F2937;
+        }
+
+        .table-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #1F2937;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .img-thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #1F2937;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .img-thumbnail:hover {
+            transform: scale(1.1);
+        }
+
+        .estado-pagado {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .estado-pendiente {
+            color: #f59e0b;
+            font-weight: bold;
+        }
+
+        .estado-completado {
+            color: #1F2937;
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            margin: 0;
+            width: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #6b7280;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 12px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #1F2937;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .monto-group {
+                grid-template-columns: 1fr;
+            }
+            .actions {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>🛍️ Sistema de Verificación de Reservas</h1>
+            <p>Gestión de clientes y pagos</p>
+        </header>
 
-  <header class="header-fixed">
-    <h1>VERIFICACIÓN DE CATÁLOGO KLOHE</h1>
-  </header>
+        <div class="stats" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-number" id="totalReservas">0</div>
+                <div>Total Reservas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalRecaudado">$0</div>
+                <div>Total Recaudado</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPendiente">$0</div>
+                <div>Total Pendiente</div>
+            </div>
+        </div>
 
-  <div class="contador-pill">
-    <span>✔️ <span id="cConfirmados" class="verde">0</span></span>
-    <span>❌ <span id="cNoConfirmados" class="rojo">0</span></span>
-  </div>
+        <div class="form-section">
+            <h2 style="color: #1F2937; margin-bottom: 20px;">📝 Nueva Reserva</h2>
+            <form id="reservaForm">
+                <input type="hidden" id="reservaId">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nombre">Nombre del Cliente *</label>
+                        <input type="text" id="nombre" required placeholder="Ingrese nombre completo">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="telefono">Número de Teléfono *</label>
+                        <input type="tel" id="telefono" required placeholder="Ej: 809-555-1234">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fecha">Fecha de Reserva *</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                </div>
 
-  <div class="catalogo" id="catalogo"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="producto">Nombre del Producto *</label>
+                        <input type="text" id="producto" required placeholder="Descripción del producto">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="imagenProducto">Imagen del Producto</label>
+                        <input type="file" id="imagenProducto" accept="image/*">
+                        <img id="previewImagen" class="preview-image" alt="Vista previa">
+                    </div>
+                </div>
 
-  <script>
-    const catalogo = document.getElementById('catalogo');
-    const claveConfirmados = 'confirmados';
+                <div class="monto-group">
+                    <div class="form-group">
+                        <label for="precioTotal">Precio Total del Producto ($) *</label>
+                        <input type="number" id="precioTotal" required min="0" step="0.01" placeholder="18.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="montoPagado">Monto Pagado ($) *</label>
+                        <input type="number" id="montoPagado" required min="0" step="0.01" placeholder="8.00">
+                    </div>
+                </div>
 
-    function getConfirmados() {
-      try { return JSON.parse(localStorage.getItem(claveConfirmados)) || []; }
-      catch { return []; }
-    }
-    function guardarConfirmados(arr) {
-      localStorage.setItem(claveConfirmados, JSON.stringify(arr));
-    }
-    function actualizarContadores() {
-      const total = catalogo.querySelectorAll('.producto').length;
-      const confirmados = getConfirmados().length;
-      document.getElementById('cConfirmados').textContent   = confirmados;
-      document.getElementById('cNoConfirmados').textContent = total - confirmados;
-    }
+                <div class="result-box">
+                    <h3>Monto Restante a Pagar</h3>
+                    <div class="monto-restante" id="montoRestante">$0.00</div>
+                    <p id="estadoPago" style="margin-top: 10px;">Complete los montos para calcular</p>
+                </div>
 
-    const ordenCategorias = [
-      'Carteras','Collares','Aritos','Pulseras','Anillos',
-      'Accesorios para el cabello','Lentes de sol','Chokers',
-      'Relojes','Billeteras','Case teléfonos','Case audífonos','General','Otros'
-    ];
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn" id="btnGuardar">💾 Guardar Reserva</button>
+                    <button type="button" class="btn btn-secondary" id="btnLimpiar" onclick="limpiarFormulario()">🔄 Limpiar</button>
+                </div>
+            </form>
+        </div>
 
-    async function renderProducto(prod, esConfirmado, delay) {
-      const div = document.createElement('div');
-      div.className = 'producto';
-      div.style.animationDelay = `${delay * 0.05}s`;
-      div.classList.add(esConfirmado ? 'confirmado' : 'no-confirmado');
+        <div class="table-section">
+            <h2 style="color: #1F2937; margin-bottom: 20px;">📋 Reservas Registradas</h2>
+            
+            <div class="search-box">
+                <input type="text" id="buscar" placeholder="🔍 Buscar por nombre, teléfono o producto..." onkeyup="buscarReservas()">
+            </div>
 
-      const blob = await localforage.getItem(`img_${prod.code}`);
-      const imgSrc = blob ? URL.createObjectURL(blob) : '';
+            <div id="tablaContainer">
+                <div class="empty-state">
+                    <h3>No hay reservas registradas</h3>
+                    <p>Comience agregando una nueva reserva usando el formulario de arriba</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      div.innerHTML = `
-        <img src="${imgSrc}" alt="${prod.name}">
-        <h3>${prod.name}</h3>
-        <p><strong>Precio:</strong> $${Number(prod.price).toFixed(2)}</p>
-        <p><strong>Categoría:</strong> ${prod.category}</p>
-        <p><strong>Código de barras:</strong> ${prod.barcode}</p>
-        <button class="btn-confirmar">${esConfirmado ? 'CONFIRMADO' : 'CONFIRMAR'}</button>
-      `;
+    <div id="imageModal" class="modal" onclick="cerrarModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
 
-      div.querySelector('.btn-confirmar').addEventListener('click', () => {
-        const arr = getConfirmados();
-        const idx = arr.indexOf(prod.code);
-        if (idx === -1) arr.push(prod.code); else arr.splice(idx, 1);
-        guardarConfirmados(arr);
-        renderCatalogo();
-      });
+    <script>
+        // Base de datos IndexedDB
+        const DB_NAME = 'ReservasDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'reservas';
+        
+        let db;
+        let dbReady = false;
 
-      catalogo.appendChild(div);
-    }
-
-    async function renderCatalogo() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
-      const confirmados = getConfirmados();
-      catalogo.innerHTML = '';
-
-      const porCategoria = {};
-      for (const p of lista) {
-        const cat = p.category || 'Otros';
-        if (!porCategoria[cat]) porCategoria[cat] = [];
-        porCategoria[cat].push(p);
-      }
-
-      let delay = 0;
-
-      // NO confirmados primero
-      for (const categoria of ordenCategorias) {
-        const productos = porCategoria[categoria] || [];
-        for (const prod of productos) {
-          if (!confirmados.includes(prod.code)) {
-            await renderProducto(prod, false, delay++);
-          }
+        // Inicializar IndexedDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    dbReady = true;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    if (!database.objectStoreNames.contains(STORE_NAME)) {
+                        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('nombre', 'nombre', { unique: false });
+                        store.createIndex('telefono', 'telefono', { unique: false });
+                        store.createIndex('fecha', 'fecha', { unique: false });
+                    }
+                };
+            });
         }
-      }
-      // Confirmados después
-      for (const categoria of ordenCategorias) {
-        const productos = porCategoria[categoria] || [];
-        for (const prod of productos) {
-          if (confirmados.includes(prod.code)) {
-            await renderProducto(prod, true, delay++);
-          }
+
+        // Calcular monto restante automáticamente
+        function calcularRestante() {
+            const precioTotal = parseFloat(document.getElementById('precioTotal').value) || 0;
+            const montoPagado = parseFloat(document.getElementById('montoPagado').value) || 0;
+            const restante = Math.max(0, precioTotal - montoPagado);
+            
+            const montoRestanteEl = document.getElementById('montoRestante');
+            const estadoPagoEl = document.getElementById('estadoPago');
+            
+            montoRestanteEl.textContent = `$${restante.toFixed(2)}`;
+            
+            if (precioTotal === 0) {
+                estadoPagoEl.textContent = 'Ingrese el precio total del producto';
+                estadoPagoEl.className = '';
+            } else if (restante === 0) {
+                estadoPagoEl.textContent = '✅ Pago Completado';
+                estadoPagoEl.className = 'estado-completado';
+                montoRestanteEl.style.color = '#10b981';
+            } else {
+                estadoPagoEl.textContent = `⏳ Pendiente: $${restante.toFixed(2)}`;
+                estadoPagoEl.className = 'estado-pendiente';
+                montoRestanteEl.style.color = '#f59e0b';
+            }
         }
-      }
 
-      actualizarContadores();
-    }
+        // Vista previa de imagen
+        document.getElementById('imagenProducto').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('previewImagen');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
 
-    renderCatalogo();
-    window.addEventListener('storage', e => {
-      if (e.key === 'inventory' || e.key === claveConfirmados) renderCatalogo();
-    });
-  </script>
+        // Event listeners para cálculo automático
+        document.getElementById('precioTotal').addEventListener('input', calcularRestante);
+        document.getElementById('montoPagado').addEventListener('input', calcularRestante);
+
+        // Guardar reserva
+        document.getElementById('reservaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!dbReady) {
+                alert('La base de datos no está lista. Espere un momento...');
+                return;
+            }
+
+            const reservaId = document.getElementById('reservaId').value;
+            const precioTotal = parseFloat(document.getElementById('precioTotal').value);
+            const montoPagado = parseFloat(document.getElementById('montoPagado').value);
+            
+            if (montoPagado > precioTotal) {
+                alert('El monto pagado no puede ser mayor al precio total');
+                return;
+            }
+
+            const reserva = {
+                nombre: document.getElementById('nombre').value,
+                telefono: document.getElementById('telefono').value,
+                fecha: document.getElementById('fecha').value,
+                producto: document.getElementById('producto').value,
+                precioTotal: precioTotal,
+                montoPagado: montoPagado,
+                montoRestante: precioTotal - montoPagado,
+                fechaRegistro: new Date().toISOString()
+            };
+
+            // Manejar imagen
+            const imagenInput = document.getElementById('imagenProducto');
+            if (imagenInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    reserva.imagen = e.target.result;
+                    await guardarEnDB(reserva, reservaId);
+                };
+                reader.readAsDataURL(imagenInput.files[0]);
+            } else if (reservaId) {
+                // Mantener imagen existente si estamos editando
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(parseInt(reservaId));
+                
+                request.onsuccess = function() {
+                    const existing = request.result;
+                    if (existing && existing.imagen) {
+                        reserva.imagen = existing.imagen;
+                    }
+                    guardarEnDB(reserva, reservaId);
+                };
+            } else {
+                await guardarEnDB(reserva, reservaId);
+            }
+        });
+
+        async function guardarEnDB(reserva, id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                
+                let request;
+                if (id) {
+                    reserva.id = parseInt(id);
+                    request = store.put(reserva);
+                } else {
+                    request = store.add(reserva);
+                }
+                
+                request.onsuccess = () => {
+                    alert(id ? 'Reserva actualizada exitosamente' : 'Reserva guardada exitosamente');
+                    limpiarFormulario();
+                    cargarReservas();
+                    actualizarEstadisticas();
+                    resolve();
+                };
+                
+                request.onerror = () => {
+                    alert('Error al guardar la reserva');
+                    reject(request.error);
+                };
+            });
+        }
+
+        // Cargar reservas
+        async function cargarReservas() {
+            if (!dbReady) return;
+            
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            
+            request.onsuccess = function() {
+                const reservas = request.result;
+                mostrarReservas(reservas);
+            };
+        }
+
+        function mostrarReservas(reservas) {
+            const container = document.getElementById('tablaContainer');
+            
+            if (reservas.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No hay reservas registradas</h3>
+                        <p>Comience agregando una nueva reserva usando el formulario de arriba</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Teléfono</th>
+                            <th>Fecha</th>
+                            <th>Producto</th>
+                            <th>Imagen</th>
+                            <th>Precio Total</th>
+                            <th>Pagado</th>
+                            <th>Restante</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            reservas.forEach(r => {
+                const estado = r.montoRestante === 0 ? 'Completado' : 'Pendiente';
+                const estadoClass = r.montoRestante === 0 ? 'estado-completado' : 'estado-pendiente';
+                const imagenHtml = r.imagen 
+                    ? `<img src="${r.imagen}" class="img-thumbnail" onclick="verImagen('${r.imagen}')">` 
+                    : '<span style="color: #9ca3af;">Sin imagen</span>';
+                
+                html += `
+                    <tr>
+                        <td>#${r.id}</td>
+                        <td><strong>${escapeHtml(r.nombre)}</strong></td>
+                        <td>${escapeHtml(r.telefono)}</td>
+                        <td>${formatearFecha(r.fecha)}</td>
+                        <td>${escapeHtml(r.producto)}</td>
+                        <td>${imagenHtml}</td>
+                        <td>$${r.precioTotal.toFixed(2)}</td>
+                        <td class="estado-pagado">$${r.montoPagado.toFixed(2)}</td>
+                        <td class="${estadoClass}">$${r.montoRestante.toFixed(2)}</td>
+                        <td class="${estadoClass}">${estado}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-small" onclick="editarReserva(${r.id})">✏️ Editar</button>
+                                <button class="btn btn-small btn-danger" onclick="eliminarReserva(${r.id})">🗑️ Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Editar reserva
+        async function editarReserva(id) {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(id);
+            
+            request.onsuccess = function() {
+                const r = request.result;
+                if (!r) return;
+                
+                document.getElementById('reservaId').value = r.id;
+                document.getElementById('nombre').value = r.nombre;
+                document.getElementById('telefono').value = r.telefono;
+                document.getElementById('fecha').value = r.fecha;
+                document.getElementById('producto').value = r.producto;
+                document.getElementById('precioTotal').value = r.precioTotal;
+                document.getElementById('montoPagado').value = r.montoPagado;
+                
+                if (r.imagen) {
+                    document.getElementById('previewImagen').src = r.imagen;
+                    document.getElementById('previewImagen').style.display = 'block';
+                }
+                
+                calcularRestante();
+                document.getElementById('btnGuardar').textContent = '💾 Actualizar Reserva';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+        }
+
+        // Eliminar reserva
+        async function eliminarReserva(id) {
+            if (!confirm('¿Está seguro de eliminar esta reserva?')) return;
+            
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+            
+            request.onsuccess = () => {
+                alert('Reserva eliminada exitosamente');
+                cargarReservas();
+                actualizarEstadisticas();
+            };
+        }
+
+        // Limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('reservaForm').reset();
+            document.getElementById('reservaId').value = '';
+            document.getElementById('previewImagen').style.display = 'none';
+            document.getElementById('btnGuardar').textContent = '💾 Guardar Reserva';
+            calcularRestante();
+        }
+
+        // Buscar reservas
+        function buscarReservas() {
+            const termino = document.getElementById('buscar').value.toLowerCase();
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            
+            request.onsuccess = function() {
+                const reservas = request.result.filter(r => 
+                    r.nombre.toLowerCase().includes(termino) ||
+                    r.telefono.toLowerCase().includes(termino) ||
+                    r.producto.toLowerCase().includes(termino)
+                );
+                mostrarReservas(reservas);
+            };
+        }
+
+        // Actualizar estadísticas
+        async function actualizarEstadisticas() {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            
+            request.onsuccess = function() {
+                const reservas = request.result;
+                const totalReservas = reservas.length;
+                const totalRecaudado = reservas.reduce((sum, r) => sum + r.montoPagado, 0);
+                const totalPendiente = reservas.reduce((sum, r) => sum + r.montoRestante, 0);
+                
+                document.getElementById('totalReservas').textContent = totalReservas;
+                document.getElementById('totalRecaudado').textContent = `$${totalRecaudado.toFixed(2)}`;
+                document.getElementById('totalPendiente').textContent = `$${totalPendiente.toFixed(2)}`;
+            };
+        }
+
+        // Ver imagen en modal
+        function verImagen(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+
+        function cerrarModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // Utilidades
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatearFecha(fechaStr) {
+            const fecha = new Date(fechaStr);
+            return fecha.toLocaleDateString('es-ES');
+        }
+
+        // Inicialización
+        window.onload = async function() {
+            try {
+                await initDB();
+                cargarReservas();
+                actualizarEstadisticas();
+                
+                // Establecer fecha actual por defecto
+                document.getElementById('fecha').valueAsDate = new Date();
+            } catch (error) {
+                console.error('Error al inicializar:', error);
+                alert('Error al inicializar la base de datos');
+            }
+        };
+    </script>
 </body>
 </html>

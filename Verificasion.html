@@ -561,6 +561,18 @@
             color: white;
         }
 
+        /* Botón de privacidad activo */
+        .btn-icon.privacy-active {
+            background: var(--color-peligro);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(245, 101, 101, 0); }
+        }
+
         /* Badge de notificación */
         .badge-count {
             position: absolute;
@@ -654,6 +666,13 @@
             color: var(--color-texto);
             line-height: 1;
             font-variant-numeric: tabular-nums;
+            transition: var(--transition-base);
+        }
+
+        /* Estilo cuando los números están ocultos */
+        .stat-number.hidden-value {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
         }
 
         .stat-label {
@@ -854,6 +873,13 @@
 
         .cell-restante.completado {
             color: var(--color-exito);
+        }
+
+        /* Estilo para valores ocultos en tabla */
+        .hidden-value {
+            color: #a0aec0;
+            font-style: italic;
+            letter-spacing: 3px;
         }
 
         .cell-fecha {
@@ -1826,6 +1852,10 @@
                 </div>
                 
                 <div class="top-actions">
+                    <!-- Botón de Privacidad (Ocultar/Mostrar números) -->
+                    <button class="btn-icon" id="btnPrivacidad" onclick="togglePrivacidad()" data-tooltip="Modo Privacidad" title="Ocultar/Mostrar números">
+                        👁️
+                    </button>
                     <!-- Botón único para Backup/Restore -->
                     <button class="btn-icon" onclick="abrirBackupModal()" data-tooltip="Backup y Restore" title="Backup y Restore">
                         💾
@@ -1876,6 +1906,14 @@
                     <div class="stat-content">
                         <div class="stat-number" id="totalPendiente">$0.00</div>
                         <div class="stat-label">Por Cobrar</div>
+                    </div>
+                </div>
+                <!-- NUEVA TARJETA: TOTAL GENERAL -->
+                <div class="stat-card" onclick="mostrarTotalGeneral()" id="stat-totalgeneral" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="stat-icon" style="background: rgba(255,255,255,0.3);">💎</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalGeneral">$0.00</div>
+                        <div class="stat-label">Total General</div>
                     </div>
                 </div>
             </div>
@@ -2108,6 +2146,7 @@
         let editingId = null;
         let confirmCallback = null;
         let selectedZipFile = null;
+        let privacyMode = false; // NUEVO: Estado del modo privacidad
 
         // ============================================
         // INICIALIZACIÓN
@@ -2686,6 +2725,12 @@
                 
                 const tagsHtml = r.categorias ? r.categorias.map(c => `<span class="tag">${escapeHtml(c)}</span>`).join('') : '';
                 
+                // Aplicar clase hidden-value si está en modo privacidad
+                const hiddenClass = privacyMode ? 'hidden-value' : '';
+                const precioTotalDisplay = privacyMode ? '****' : formatMoney(r.precioTotal);
+                const montoPagadoDisplay = privacyMode ? '****' : formatMoney(r.montoPagado);
+                const montoRestanteDisplay = privacyMode ? '****' : formatMoney(r.montoRestante);
+                
                 html += `
                     <tr data-id="${r.id}">
                         <td class="cell-id">#${r.id}</td>
@@ -2703,9 +2748,9 @@
                             ${r.notas ? `<small style="color: #718096; display: block; margin-top: 2px;">${escapeHtml(r.notas.substring(0, 50))}${r.notas.length > 50 ? '...' : ''}</small>` : ''}
                         </td>
                         <td>${imgHtml}</td>
-                        <td class="cell-monto text-right">${formatMoney(r.precioTotal)}</td>
-                        <td class="text-right" style="color: var(--color-exito); font-weight: 600;">${formatMoney(r.montoPagado)}</td>
-                        <td class="cell-restante ${completado ? 'completado' : ''} text-right">${formatMoney(r.montoRestante)}</td>
+                        <td class="cell-monto text-right ${hiddenClass}">${precioTotalDisplay}</td>
+                        <td class="text-right ${hiddenClass}" style="color: var(--color-exito); font-weight: 600;">${montoPagadoDisplay}</td>
+                        <td class="cell-restante ${completado ? 'completado' : ''} text-right ${hiddenClass}">${montoRestanteDisplay}</td>
                         <td><span class="badge ${completado ? 'badge-completado' : 'badge-pendiente'}">${completado ? 'Completado' : 'Pendiente'}</span></td>
                         <td>
                             <div class="actions">
@@ -3231,14 +3276,27 @@
             const recaudado = reservas.reduce((sum, r) => sum + (r.montoPagado || 0), 0);
             const porCobrar = reservas.reduce((sum, r) => sum + (r.montoRestante || 0), 0);
             
-            // Animar números
-            animateNumber('totalReservas', total);
-            animateNumber('totalCompletados', completados);
-            animateNumber('totalPendientes', pendientes);
+            // NUEVO: Total General (Recaudado + Por Cobrar)
+            const totalGeneral = recaudado + porCobrar;
             
-            // Formatear dinero con 2 decimales siempre
-            document.getElementById('totalRecaudado').textContent = formatMoney(recaudado);
-            document.getElementById('totalPendiente').textContent = formatMoney(porCobrar);
+            // Animar números (solo si no está en modo privacidad)
+            if (!privacyMode) {
+                animateNumber('totalReservas', total);
+                animateNumber('totalCompletados', completados);
+                animateNumber('totalPendientes', pendientes);
+                
+                document.getElementById('totalRecaudado').textContent = formatMoney(recaudado);
+                document.getElementById('totalPendiente').textContent = formatMoney(porCobrar);
+                document.getElementById('totalGeneral').textContent = formatMoney(totalGeneral);
+            } else {
+                // En modo privacidad, mostrar asteriscos
+                document.getElementById('totalReservas').textContent = '****';
+                document.getElementById('totalCompletados').textContent = '****';
+                document.getElementById('totalPendientes').textContent = '****';
+                document.getElementById('totalRecaudado').textContent = '****';
+                document.getElementById('totalPendiente').textContent = '****';
+                document.getElementById('totalGeneral').textContent = '****';
+            }
         }
 
         function animateNumber(elementId, target) {
@@ -3264,9 +3322,37 @@
         }
 
         // ============================================
+        // MODO PRIVACIDAD (OCULTAR NÚMEROS)
+        // ============================================
+        function togglePrivacidad() {
+            privacyMode = !privacyMode;
+            const btn = document.getElementById('btnPrivacidad');
+            
+            if (privacyMode) {
+                btn.classList.add('privacy-active');
+                btn.innerHTML = '🙈';
+                btn.setAttribute('title', 'Mostrar números');
+                btn.setAttribute('data-tooltip', 'Mostrar números');
+                showToast('Modo privacidad activado - Los montos están ocultos', 'info');
+            } else {
+                btn.classList.remove('privacy-active');
+                btn.innerHTML = '👁️';
+                btn.setAttribute('title', 'Ocultar números');
+                btn.setAttribute('data-tooltip', 'Ocultar números');
+                showToast('Modo privacidad desactivado - Los montos son visibles', 'success');
+            }
+            
+            // Recargar para aplicar cambios
+            cargarReservas();
+        }
+
+        // ============================================
         // UTILIDADES
         // ============================================
         function formatMoney(amount) {
+            // Si está en modo privacidad, retornar asteriscos
+            if (privacyMode) return '****';
+            
             // Asegurar que siempre muestre 2 decimales
             const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
             return '$' + num.toLocaleString('es-DO', {
@@ -3418,6 +3504,110 @@
                 e.returnValue = '';
             }
         });
+
+        // Funciones para mostrar modales de información
+        function mostrarRecaudacion() {
+            getAllReservas().then(reservas => {
+                const recaudado = reservas.reduce((sum, r) => sum + (r.montoPagado || 0), 0);
+                
+                if (privacyMode) {
+                    showToast('Modo privacidad activado - No se pueden ver los detalles', 'warning');
+                    return;
+                }
+                
+                const modal = document.createElement('div');
+                modal.className = 'confirm-modal active';
+                modal.style.zIndex = '1003';
+                modal.innerHTML = `
+                    <div class="confirm-content" style="max-width: 400px;">
+                        <div class="confirm-icon" style="font-size: 3rem;">💵</div>
+                        <div class="confirm-title">Total Recaudado</div>
+                        <div class="confirm-text" style="font-size: 1.5rem; font-weight: bold; color: var(--color-exito);">
+                            ${formatMoney(recaudado)}
+                        </div>
+                        <button class="btn btn-primary" onclick="this.closest('.confirm-modal').remove()" style="width: 100%; margin-top: 15px;">Cerrar</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            });
+        }
+
+        function mostrarPorCobrar() {
+            getAllReservas().then(reservas => {
+                const porCobrar = reservas.reduce((sum, r) => sum + (r.montoRestante || 0), 0);
+                
+                if (privacyMode) {
+                    showToast('Modo privacidad activado - No se pueden ver los detalles', 'warning');
+                    return;
+                }
+                
+                const modal = document.createElement('div');
+                modal.className = 'confirm-modal active';
+                modal.style.zIndex = '1003';
+                modal.innerHTML = `
+                    <div class="confirm-content" style="max-width: 400px;">
+                        <div class="confirm-icon" style="font-size: 3rem;">💰</div>
+                        <div class="confirm-title">Total Por Cobrar</div>
+                        <div class="confirm-text" style="font-size: 1.5rem; font-weight: bold; color: var(--color-pendiente);">
+                            ${formatMoney(porCobrar)}
+                        </div>
+                        <button class="btn btn-primary" onclick="this.closest('.confirm-modal').remove()" style="width: 100%; margin-top: 15px;">Cerrar</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            });
+        }
+
+        function mostrarTotalGeneral() {
+            getAllReservas().then(reservas => {
+                const recaudado = reservas.reduce((sum, r) => sum + (r.montoPagado || 0), 0);
+                const porCobrar = reservas.reduce((sum, r) => sum + (r.montoRestante || 0), 0);
+                const total = recaudado + porCobrar;
+                
+                if (privacyMode) {
+                    showToast('Modo privacidad activado - No se pueden ver los detalles', 'warning');
+                    return;
+                }
+                
+                const modal = document.createElement('div');
+                modal.className = 'confirm-modal active';
+                modal.style.zIndex = '1003';
+                modal.innerHTML = `
+                    <div class="confirm-content" style="max-width: 400px;">
+                        <div class="confirm-icon" style="font-size: 3rem;">💎</div>
+                        <div class="confirm-title">Resumen Total General</div>
+                        <div class="confirm-text" style="text-align: left; margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: rgba(72, 187, 120, 0.1); border-radius: 8px;">
+                                <span>✅ Total Recaudado:</span>
+                                <strong style="color: var(--color-exito);">${formatMoney(recaudado)}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: rgba(237, 137, 54, 0.1); border-radius: 8px;">
+                                <span>⏳ Total Pendiente:</span>
+                                <strong style="color: var(--color-pendiente);">${formatMoney(porCobrar)}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-size: 1.1rem;">
+                                <span>💎 TOTAL GENERAL:</span>
+                                <strong>${formatMoney(total)}</strong>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="this.closest('.confirm-modal').remove()" style="width: 100%;">Cerrar</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            });
+        }
     </script>
 </body>
 </html>

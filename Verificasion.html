@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación de Reservas</title>
+    <title>Sistema de Reservas - Verificación</title>
     <style>
         * {
             margin: 0;
@@ -11,392 +11,832 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
-            color: #000000;
-            line-height: 1.6;
-            padding: 20px;
+        :root {
+            --color-marca: #E8D5D0;
+            --color-marca-oscuro: #d4b8b0;
+            --color-texto: #2d3748;
+            --color-fondo: #faf8f7;
+            --color-blanco: #ffffff;
+            --color-exito: #48bb78;
+            --color-pendiente: #ed8936;
+            --color-peligro: #f56565;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--color-fondo);
+            color: var(--color-texto);
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 30px;
-            background: #1F2937;
-            color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .form-section {
-            background: #f9fafb;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border: 2px solid #e5e7eb;
-        }
-
-        .form-grid {
+        /* Layout Principal Full Screen */
+        .app-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+            width: 100vw;
         }
 
-        .form-group {
+        /* Sidebar */
+        .sidebar {
+            background: var(--color-marca);
+            padding: 30px;
             display: flex;
             flex-direction: column;
+            gap: 25px;
+            overflow-y: auto;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            color: var(--color-texto);
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Formulario Compacto */
+        .form-group {
+            margin-bottom: 15px;
         }
 
         label {
+            display: block;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #1F2937;
-            font-size: 0.95rem;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: var(--color-texto);
         }
 
         input, select {
+            width: 100%;
             padding: 12px;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: rgba(255,255,255,0.9);
+            transition: all 0.3s;
         }
 
         input:focus, select:focus {
             outline: none;
-            border-color: #1F2937;
+            border-color: var(--color-texto);
+            background: var(--color-blanco);
         }
 
-        .monto-group {
+        .input-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 10px;
         }
 
-        .result-box {
-            background: #1F2937;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
+        .image-upload {
+            position: relative;
+            height: 120px;
+            border: 3px dashed rgba(45, 55, 72, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            background: rgba(255,255,255,0.5);
+            transition: all 0.3s;
+        }
+
+        .image-upload:hover {
+            border-color: var(--color-texto);
+            background: rgba(255,255,255,0.8);
+        }
+
+        .image-upload.has-image {
+            border-style: solid;
+            border-color: var(--color-exito);
+        }
+
+        .image-upload input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .upload-placeholder {
             text-align: center;
-            margin-top: 20px;
+            color: var(--color-texto);
+            opacity: 0.6;
+            pointer-events: none;
         }
 
-        .result-box h3 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+        .upload-placeholder svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 5px;
+        }
+
+        .preview-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .preview-img.active {
+            display: block;
+        }
+
+        /* Calculadora de Montos */
+        .calculadora {
+            background: rgba(255,255,255,0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .monto-display {
+            text-align: center;
+            margin-top: 10px;
         }
 
         .monto-restante {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
-            color: #10b981;
+            color: var(--color-pendiente);
+            transition: color 0.3s;
+        }
+
+        .monto-restante.completado {
+            color: var(--color-exito);
+        }
+
+        .estado-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 5px;
+            background: var(--color-pendiente);
+            color: white;
+        }
+
+        .estado-badge.completado {
+            background: var(--color-exito);
         }
 
         .btn {
-            background: #1F2937;
-            color: white;
-            padding: 14px 32px;
+            width: 100%;
+            padding: 14px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 20px;
-            width: 100%;
-        }
-
-        .btn:hover {
-            background: #374151;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
-        }
-
-        .btn-secondary {
-            background: #6b7280;
-            margin-left: 10px;
-        }
-
-        .btn-danger {
-            background: #dc2626;
-        }
-
-        .btn-danger:hover {
-            background: #b91c1c;
-        }
-
-        .preview-image {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            margin-top: 10px;
-            display: none;
-            border: 2px solid #1F2937;
-        }
-
-        .table-section {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            border: 2px solid #e5e7eb;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th {
-            background: #1F2937;
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        tr:hover {
-            background: #f9fafb;
-        }
-
-        .img-thumbnail {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 2px solid #1F2937;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .img-thumbnail:hover {
-            transform: scale(1.1);
-        }
-
-        .estado-pagado {
-            color: #10b981;
-            font-weight: bold;
-        }
-
-        .estado-pendiente {
-            color: #f59e0b;
-            font-weight: bold;
-        }
-
-        .estado-completado {
-            color: #1F2937;
-            font-weight: bold;
-        }
-
-        .actions {
             display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 8px;
         }
 
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.85rem;
-            margin: 0;
-            width: auto;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px;
-            color: #6b7280;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 12px;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 40px;
+        .btn-primary {
+            background: var(--color-texto);
             color: white;
-            font-size: 40px;
-            cursor: pointer;
         }
 
-        .stats {
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.8);
+            color: var(--color-texto);
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+        }
+
+        /* Área Principal */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .top-bar {
+            background: var(--color-blanco);
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        .search-box {
+            position: relative;
+            width: 400px;
+        }
+
+        .search-box input {
+            padding-left: 40px;
+            background: var(--color-fondo);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.5;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            background: var(--color-fondo);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .btn-icon:hover {
+            background: var(--color-marca);
+        }
+
+        /* Stats Cards */
+        .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 30px;
+            padding: 20px 30px;
+            background: var(--color-blanco);
         }
 
         .stat-card {
-            background: #1F2937;
-            color: white;
+            background: linear-gradient(135deg, var(--color-marca) 0%, var(--color-marca-oscuro) 100%);
             padding: 20px;
             border-radius: 12px;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
         .stat-number {
             font-size: 2rem;
             font-weight: bold;
+            color: var(--color-texto);
             margin-bottom: 5px;
         }
 
-        .search-box {
-            margin-bottom: 20px;
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            color: var(--color-texto);
         }
 
-        .search-box input {
+        /* Tabla Container */
+        .table-container {
+            flex: 1;
+            overflow: auto;
+            padding: 0 30px 30px;
+            background: var(--color-blanco);
+        }
+
+        table {
             width: 100%;
-            max-width: 400px;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            background: var(--color-fondo);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-texto);
+            border-bottom: 2px solid var(--color-marca);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(232, 213, 208, 0.2);
+        }
+
+        /* Celdas específicas */
+        .cell-cliente {
+            font-weight: 600;
+            color: var(--color-texto);
+        }
+
+        .cell-telefono {
+            font-family: monospace;
+            color: #666;
+        }
+
+        .cell-monto {
+            font-weight: 600;
+        }
+
+        .cell-restante {
+            font-weight: bold;
+            color: var(--color-pendiente);
+        }
+
+        .cell-restante.completado {
+            color: var(--color-exito);
+        }
+
+        /* Imagen en tabla */
+        .img-cell {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: zoom-in;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .img-cell:hover {
+            border-color: var(--color-marca);
+            transform: scale(1.05);
+        }
+
+        .no-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a0aec0;
+            font-size: 0.7rem;
+        }
+
+        /* Badges de estado */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-pendiente {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .badge-completado {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        /* Acciones en tabla */
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-edit {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .btn-delete {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .btn-action:hover {
+            transform: scale(1.1);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px;
+            color: #a0aec0;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Modal de Imagen */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .modal-close:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-info {
+            position: absolute;
+            bottom: -50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        /* Modal de Edición */
+        .edit-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edit-modal.active {
+            display: flex;
+        }
+
+        .edit-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--color-marca);
+        }
+
+        .edit-modal-header h2 {
+            color: var(--color-texto);
+        }
+
+        /* Modo Kiosco */
+        .kiosco-btn {
+            background: var(--color-texto);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        :fullscreen .app-container {
+            grid-template-columns: 400px 1fr;
+        }
+
+        :fullscreen .sidebar {
+            padding: 40px;
+        }
+
+        :fullscreen .stats-container {
+            padding: 30px 40px;
+        }
+
+        :fullscreen .table-container {
+            padding: 0 40px 40px;
+        }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-marca-oscuro);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-marca);
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        tr {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 320px 1fr;
             }
-            .monto-group {
+        }
+
+        @media (max-width: 968px) {
+            .app-container {
                 grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
             }
-            .actions {
-                flex-direction: column;
+            
+            .sidebar {
+                max-height: 50vh;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🛍️ Sistema de Verificación de Reservas</h1>
-            <p>Gestión de clientes y pagos</p>
-        </header>
+    <div class="app-container">
+        <!-- Sidebar con Formulario -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>🛍️ Reservas</h1>
+                <p>Sistema de Verificación</p>
+            </div>
 
-        <div class="stats" id="statsContainer">
-            <div class="stat-card">
-                <div class="stat-number" id="totalReservas">0</div>
-                <div>Total Reservas</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalRecaudado">$0</div>
-                <div>Total Recaudado</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalPendiente">$0</div>
-                <div>Total Pendiente</div>
-            </div>
-        </div>
-
-        <div class="form-section">
-            <h2 style="color: #1F2937; margin-bottom: 20px;">📝 Nueva Reserva</h2>
             <form id="reservaForm">
                 <input type="hidden" id="reservaId">
                 
-                <div class="form-grid">
+                <div class="form-group">
+                    <label>👤 Nombre del Cliente</label>
+                    <input type="text" id="nombre" required placeholder="Nombre completo">
+                </div>
+
+                <div class="input-row">
                     <div class="form-group">
-                        <label for="nombre">Nombre del Cliente *</label>
-                        <input type="text" id="nombre" required placeholder="Ingrese nombre completo">
+                        <label>📱 Teléfono</label>
+                        <input type="tel" id="telefono" required placeholder="809-555-1234">
                     </div>
-                    
                     <div class="form-group">
-                        <label for="telefono">Número de Teléfono *</label>
-                        <input type="tel" id="telefono" required placeholder="Ej: 809-555-1234">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="fecha">Fecha de Reserva *</label>
+                        <label>📅 Fecha</label>
                         <input type="date" id="fecha" required>
                     </div>
                 </div>
 
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="producto">Nombre del Producto *</label>
-                        <input type="text" id="producto" required placeholder="Descripción del producto">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="imagenProducto">Imagen del Producto</label>
+                <div class="form-group">
+                    <label>📦 Producto</label>
+                    <input type="text" id="producto" required placeholder="Descripción del producto">
+                </div>
+
+                <div class="form-group">
+                    <label>🖼️ Imagen del Producto</label>
+                    <div class="image-upload" id="dropZone">
                         <input type="file" id="imagenProducto" accept="image/*">
-                        <img id="previewImagen" class="preview-image" alt="Vista previa">
+                        <div class="upload-placeholder">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <div>Click o arrastra imagen</div>
+                        </div>
+                        <img id="previewImagen" class="preview-img">
                     </div>
                 </div>
 
-                <div class="monto-group">
+                <div class="input-row">
                     <div class="form-group">
-                        <label for="precioTotal">Precio Total del Producto ($) *</label>
-                        <input type="number" id="precioTotal" required min="0" step="0.01" placeholder="18.00">
+                        <label>💰 Precio Total</label>
+                        <input type="number" id="precioTotal" required min="0" step="0.01" placeholder="0.00">
                     </div>
-                    
                     <div class="form-group">
-                        <label for="montoPagado">Monto Pagado ($) *</label>
-                        <input type="number" id="montoPagado" required min="0" step="0.01" placeholder="8.00">
+                        <label>💵 Monto Pagado</label>
+                        <input type="number" id="montoPagado" required min="0" step="0.01" placeholder="0.00">
                     </div>
                 </div>
 
-                <div class="result-box">
-                    <h3>Monto Restante a Pagar</h3>
-                    <div class="monto-restante" id="montoRestante">$0.00</div>
-                    <p id="estadoPago" style="margin-top: 10px;">Complete los montos para calcular</p>
+                <div class="calculadora">
+                    <label style="text-align: center; display: block; margin-bottom: 5px;">📊 Cálculo Automático</label>
+                    <div class="monto-display">
+                        <div class="monto-restante" id="montoRestante">$0.00</div>
+                        <span class="estado-badge" id="estadoBadge">Pendiente</span>
+                    </div>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn" id="btnGuardar">💾 Guardar Reserva</button>
-                    <button type="button" class="btn btn-secondary" id="btnLimpiar" onclick="limpiarFormulario()">🔄 Limpiar</button>
-                </div>
+                <button type="submit" class="btn btn-primary" id="btnGuardar">
+                    <span>💾</span> Guardar Reserva
+                </button>
+                
+                <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">
+                    <span>🔄</span> Limpiar
+                </button>
             </form>
-        </div>
+        </aside>
 
-        <div class="table-section">
-            <h2 style="color: #1F2937; margin-bottom: 20px;">📋 Reservas Registradas</h2>
-            
-            <div class="search-box">
-                <input type="text" id="buscar" placeholder="🔍 Buscar por nombre, teléfono o producto..." onkeyup="buscarReservas()">
-            </div>
-
-            <div id="tablaContainer">
-                <div class="empty-state">
-                    <h3>No hay reservas registradas</h3>
-                    <p>Comience agregando una nueva reserva usando el formulario de arriba</p>
+        <!-- Área Principal -->
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="search-box">
+                    <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input type="text" id="buscar" placeholder="Buscar por nombre, teléfono o producto..." onkeyup="buscarReservas()">
+                </div>
+                
+                <div class="top-actions">
+                    <button class="kiosco-btn" onclick="toggleKiosco()" title="Modo Kiosco">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        Modo Kiosco
+                    </button>
                 </div>
             </div>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalReservas">0</div>
+                    <div class="stat-label">Total Reservas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRecaudado">$0</div>
+                    <div class="stat-label">Total Recaudado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPendiente">$0</div>
+                    <div class="stat-label">Por Cobrar</div>
+                </div>
+            </div>
+
+            <div class="table-container" id="tablaContainer">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <h3>No hay reservas registradas</h3>
+                    <p>Comience agregando una nueva reserva desde el panel izquierdo</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Imagen -->
+    <div class="modal-overlay" id="imageModal" onclick="cerrarModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="cerrarModal()">×</button>
+            <img class="modal-img" id="modalImage" src="" alt="Producto">
+            <div class="modal-info" id="modalInfo"></div>
         </div>
     </div>
 
-    <div id="imageModal" class="modal" onclick="cerrarModal()">
-        <span class="close-modal">&times;</span>
-        <img class="modal-content" id="modalImage">
+    <!-- Modal de Edición Rápida -->
+    <div class="edit-modal" id="editModal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2>✏️ Editar Reserva</h2>
+                <button class="modal-close" onclick="cerrarEditModal()" style="position: static; color: #333;">×</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="editNombre" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="editTelefono" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Producto</label>
+                    <input type="text" id="editProducto" required>
+                </div>
+                
+                <div class="input-row">
+                    <div class="form-group">
+                        <label>Precio Total</label>
+                        <input type="number" id="editPrecio" required min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Monto Pagado</label>
+                        <input type="number" id="editPagado" required min="0" step="0.01">
+                    </div>
+                </div>
+
+                <div style="background: var(--color-marca); padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold;" id="editRestante">$0.00</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Restante</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -426,73 +866,89 @@
                         const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
                         store.createIndex('nombre', 'nombre', { unique: false });
                         store.createIndex('telefono', 'telefono', { unique: false });
-                        store.createIndex('fecha', 'fecha', { unique: false });
                     }
                 };
             });
         }
 
-        // Calcular monto restante automáticamente
+        // Calcular restante
         function calcularRestante() {
-            const precioTotal = parseFloat(document.getElementById('precioTotal').value) || 0;
-            const montoPagado = parseFloat(document.getElementById('montoPagado').value) || 0;
-            const restante = Math.max(0, precioTotal - montoPagado);
+            const precio = parseFloat(document.getElementById('precioTotal').value) || 0;
+            const pagado = parseFloat(document.getElementById('montoPagado').value) || 0;
+            const restante = Math.max(0, precio - pagado);
             
-            const montoRestanteEl = document.getElementById('montoRestante');
-            const estadoPagoEl = document.getElementById('estadoPago');
+            const el = document.getElementById('montoRestante');
+            const badge = document.getElementById('estadoBadge');
             
-            montoRestanteEl.textContent = `$${restante.toFixed(2)}`;
+            el.textContent = `$${restante.toFixed(2)}`;
             
-            if (precioTotal === 0) {
-                estadoPagoEl.textContent = 'Ingrese el precio total del producto';
-                estadoPagoEl.className = '';
-            } else if (restante === 0) {
-                estadoPagoEl.textContent = '✅ Pago Completado';
-                estadoPagoEl.className = 'estado-completado';
-                montoRestanteEl.style.color = '#10b981';
+            if (restante === 0 && precio > 0) {
+                el.classList.add('completado');
+                badge.classList.add('completado');
+                badge.textContent = 'Completado';
             } else {
-                estadoPagoEl.textContent = `⏳ Pendiente: $${restante.toFixed(2)}`;
-                estadoPagoEl.className = 'estado-pendiente';
-                montoRestanteEl.style.color = '#f59e0b';
+                el.classList.remove('completado');
+                badge.classList.remove('completado');
+                badge.textContent = 'Pendiente';
             }
         }
 
-        // Vista previa de imagen
-        document.getElementById('imagenProducto').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('previewImagen');
-            
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        });
-
-        // Event listeners para cálculo automático
+        // Event listeners para cálculo
         document.getElementById('precioTotal').addEventListener('input', calcularRestante);
         document.getElementById('montoPagado').addEventListener('input', calcularRestante);
 
+        // Drag and drop para imagen
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('imagenProducto');
+        const preview = document.getElementById('previewImagen');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--color-texto)';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = 'rgba(45, 55, 72, 0.3)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'rgba(45, 55, 72, 0.3)';
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                mostrarPreview(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                mostrarPreview(e.target.files[0]);
+            }
+        });
+
+        function mostrarPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.classList.add('active');
+                dropZone.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+        }
+
         // Guardar reserva
-        document.getElementById('reservaForm').addEventListener('submit', async function(e) {
+        document.getElementById('reservaForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!dbReady) {
-                alert('La base de datos no está lista. Espere un momento...');
-                return;
-            }
+            if (!dbReady) return;
 
-            const reservaId = document.getElementById('reservaId').value;
-            const precioTotal = parseFloat(document.getElementById('precioTotal').value);
-            const montoPagado = parseFloat(document.getElementById('montoPagado').value);
-            
-            if (montoPagado > precioTotal) {
-                alert('El monto pagado no puede ser mayor al precio total');
+            const id = document.getElementById('reservaId').value;
+            const precio = parseFloat(document.getElementById('precioTotal').value);
+            const pagado = parseFloat(document.getElementById('montoPagado').value);
+
+            if (pagado > precio) {
+                alert('El monto pagado no puede ser mayor al precio');
                 return;
             }
 
@@ -501,89 +957,75 @@
                 telefono: document.getElementById('telefono').value,
                 fecha: document.getElementById('fecha').value,
                 producto: document.getElementById('producto').value,
-                precioTotal: precioTotal,
-                montoPagado: montoPagado,
-                montoRestante: precioTotal - montoPagado,
+                precioTotal: precio,
+                montoPagado: pagado,
+                montoRestante: precio - pagado,
                 fechaRegistro: new Date().toISOString()
             };
 
             // Manejar imagen
-            const imagenInput = document.getElementById('imagenProducto');
-            if (imagenInput.files[0]) {
+            if (fileInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = async function(e) {
+                reader.onload = async (e) => {
                     reserva.imagen = e.target.result;
-                    await guardarEnDB(reserva, reservaId);
+                    await guardarReserva(reserva, id);
                 };
-                reader.readAsDataURL(imagenInput.files[0]);
-            } else if (reservaId) {
-                // Mantener imagen existente si estamos editando
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.get(parseInt(reservaId));
-                
-                request.onsuccess = function() {
-                    const existing = request.result;
-                    if (existing && existing.imagen) {
-                        reserva.imagen = existing.imagen;
-                    }
-                    guardarEnDB(reserva, reservaId);
+                reader.readAsDataURL(fileInput.files[0]);
+            } else if (id) {
+                // Mantener imagen existente
+                const tx = db.transaction([STORE_NAME], 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.get(parseInt(id));
+                req.onsuccess = () => {
+                    if (req.result?.imagen) reserva.imagen = req.result.imagen;
+                    guardarReserva(reserva, id);
                 };
             } else {
-                await guardarEnDB(reserva, reservaId);
+                await guardarReserva(reserva, id);
             }
         });
 
-        async function guardarEnDB(reserva, id) {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                
-                let request;
-                if (id) {
-                    reserva.id = parseInt(id);
-                    request = store.put(reserva);
-                } else {
-                    request = store.add(reserva);
-                }
-                
-                request.onsuccess = () => {
-                    alert(id ? 'Reserva actualizada exitosamente' : 'Reserva guardada exitosamente');
-                    limpiarFormulario();
-                    cargarReservas();
-                    actualizarEstadisticas();
-                    resolve();
-                };
-                
-                request.onerror = () => {
-                    alert('Error al guardar la reserva');
-                    reject(request.error);
-                };
-            });
+        async function guardarReserva(reserva, id) {
+            const tx = db.transaction([STORE_NAME], 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            
+            if (id) {
+                reserva.id = parseInt(id);
+                await store.put(reserva);
+            } else {
+                await store.add(reserva);
+            }
+            
+            limpiarFormulario();
+            cargarReservas();
+            actualizarStats();
+            
+            // Notificación visual
+            mostrarNotificacion(id ? 'Reserva actualizada' : 'Reserva guardada');
         }
 
         // Cargar reservas
         async function cargarReservas() {
             if (!dbReady) return;
             
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.getAll();
             
-            request.onsuccess = function() {
-                const reservas = request.result;
-                mostrarReservas(reservas);
-            };
+            req.onsuccess = () => mostrarTabla(req.result);
         }
 
-        function mostrarReservas(reservas) {
+        function mostrarTabla(reservas) {
             const container = document.getElementById('tablaContainer');
             
             if (reservas.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
                         <h3>No hay reservas registradas</h3>
-                        <p>Comience agregando una nueva reserva usando el formulario de arriba</p>
+                        <p>Comience agregando una nueva reserva desde el panel izquierdo</p>
                     </div>
                 `;
                 return;
@@ -599,7 +1041,7 @@
                             <th>Fecha</th>
                             <th>Producto</th>
                             <th>Imagen</th>
-                            <th>Precio Total</th>
+                            <th>Total</th>
                             <th>Pagado</th>
                             <th>Restante</th>
                             <th>Estado</th>
@@ -610,28 +1052,35 @@
             `;
 
             reservas.forEach(r => {
-                const estado = r.montoRestante === 0 ? 'Completado' : 'Pendiente';
-                const estadoClass = r.montoRestante === 0 ? 'estado-completado' : 'estado-pendiente';
-                const imagenHtml = r.imagen 
-                    ? `<img src="${r.imagen}" class="img-thumbnail" onclick="verImagen('${r.imagen}')">` 
-                    : '<span style="color: #9ca3af;">Sin imagen</span>';
+                const completado = r.montoRestante === 0;
+                const imgHtml = r.imagen 
+                    ? `<img src="${r.imagen}" class="img-cell" onclick="abrirModal('${r.imagen}', '${escapeHtml(r.producto)}')" title="Click para ampliar">`
+                    : `<div class="no-image">Sin img</div>`;
                 
                 html += `
                     <tr>
                         <td>#${r.id}</td>
-                        <td><strong>${escapeHtml(r.nombre)}</strong></td>
-                        <td>${escapeHtml(r.telefono)}</td>
+                        <td class="cell-cliente">${escapeHtml(r.nombre)}</td>
+                        <td class="cell-telefono">${escapeHtml(r.telefono)}</td>
                         <td>${formatearFecha(r.fecha)}</td>
                         <td>${escapeHtml(r.producto)}</td>
-                        <td>${imagenHtml}</td>
-                        <td>$${r.precioTotal.toFixed(2)}</td>
-                        <td class="estado-pagado">$${r.montoPagado.toFixed(2)}</td>
-                        <td class="${estadoClass}">$${r.montoRestante.toFixed(2)}</td>
-                        <td class="${estadoClass}">${estado}</td>
+                        <td>${imgHtml}</td>
+                        <td class="cell-monto">$${r.precioTotal.toFixed(2)}</td>
+                        <td style="color: var(--color-exito); font-weight: 600;">$${r.montoPagado.toFixed(2)}</td>
+                        <td class="cell-restante ${completado ? 'completado' : ''}">$${r.montoRestante.toFixed(2)}</td>
+                        <td><span class="badge ${completado ? 'badge-completado' : 'badge-pendiente'}">${completado ? 'Completado' : 'Pendiente'}</span></td>
                         <td>
                             <div class="actions">
-                                <button class="btn btn-small" onclick="editarReserva(${r.id})">✏️ Editar</button>
-                                <button class="btn btn-small btn-danger" onclick="eliminarReserva(${r.id})">🗑️ Eliminar</button>
+                                <button class="btn-action btn-edit" onclick="abrirEditModal(${r.id})" title="Editar">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                                <button class="btn-action btn-delete" onclick="eliminarReserva(${r.id})" title="Eliminar">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -642,16 +1091,109 @@
             container.innerHTML = html;
         }
 
-        // Editar reserva
-        async function editarReserva(id) {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.get(id);
+        // Modal de Imagen
+        function abrirModal(src, producto) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('modalInfo').textContent = producto;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // Modal de Edición
+        function abrirEditModal(id) {
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(id);
             
-            request.onsuccess = function() {
-                const r = request.result;
+            req.onsuccess = () => {
+                const r = req.result;
                 if (!r) return;
                 
+                document.getElementById('editId').value = r.id;
+                document.getElementById('editNombre').value = r.nombre;
+                document.getElementById('editTelefono').value = r.telefono;
+                document.getElementById('editProducto').value = r.producto;
+                document.getElementById('editPrecio').value = r.precioTotal;
+                document.getElementById('editPagado').value = r.montoPagado;
+                
+                calcularEditRestante();
+                document.getElementById('editModal').classList.add('active');
+            };
+        }
+
+        function cerrarEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        // Cálculo en modal de edición
+        document.getElementById('editPrecio').addEventListener('input', calcularEditRestante);
+        document.getElementById('editPagado').addEventListener('input', calcularEditRestante);
+
+        function calcularEditRestante() {
+            const precio = parseFloat(document.getElementById('editPrecio').value) || 0;
+            const pagado = parseFloat(document.getElementById('editPagado').value) || 0;
+            const restante = Math.max(0, precio - pagado);
+            document.getElementById('editRestante').textContent = `$${restante.toFixed(2)}`;
+        }
+
+        // Guardar edición
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('editId').value);
+            const precio = parseFloat(document.getElementById('editPrecio').value);
+            const pagado = parseFloat(document.getElementById('editPagado').value);
+            
+            if (pagado > precio) {
+                alert('El monto pagado no puede ser mayor al precio');
+                return;
+            }
+
+            const tx = db.transaction([STORE_NAME], 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(id);
+            
+            req.onsuccess = () => {
+                const r = req.result;
+                r.nombre = document.getElementById('editNombre').value;
+                r.telefono = document.getElementById('editTelefono').value;
+                r.producto = document.getElementById('editProducto').value;
+                r.precioTotal = precio;
+                r.montoPagado = pagado;
+                r.montoRestante = precio - pagado;
+                
+                store.put(r);
+                cerrarEditModal();
+                cargarReservas();
+                actualizarStats();
+                mostrarNotificacion('Reserva actualizada');
+            };
+        });
+
+        // Eliminar
+        async function eliminarReserva(id) {
+            if (!confirm('¿Eliminar esta reserva permanentemente?')) return;
+            
+            const tx = db.transaction([STORE_NAME], 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            await store.delete(id);
+            
+            cargarReservas();
+            actualizarStats();
+            mostrarNotificacion('Reserva eliminada');
+        }
+
+        // Cargar al sidebar para editar principal
+        function cargarEnFormulario(id) {
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(id);
+            
+            req.onsuccess = () => {
+                const r = req.result;
                 document.getElementById('reservaId').value = r.id;
                 document.getElementById('nombre').value = r.nombre;
                 document.getElementById('telefono').value = r.telefono;
@@ -662,82 +1204,95 @@
                 
                 if (r.imagen) {
                     document.getElementById('previewImagen').src = r.imagen;
-                    document.getElementById('previewImagen').style.display = 'block';
+                    document.getElementById('previewImagen').classList.add('active');
+                    document.getElementById('dropZone').classList.add('has-image');
                 }
                 
                 calcularRestante();
-                document.getElementById('btnGuardar').textContent = '💾 Actualizar Reserva';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.getElementById('btnGuardar').innerHTML = '<span>💾</span> Actualizar Reserva';
             };
         }
 
-        // Eliminar reserva
-        async function eliminarReserva(id) {
-            if (!confirm('¿Está seguro de eliminar esta reserva?')) return;
-            
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.delete(id);
-            
-            request.onsuccess = () => {
-                alert('Reserva eliminada exitosamente');
-                cargarReservas();
-                actualizarEstadisticas();
-            };
-        }
-
-        // Limpiar formulario
+        // Limpiar
         function limpiarFormulario() {
             document.getElementById('reservaForm').reset();
             document.getElementById('reservaId').value = '';
-            document.getElementById('previewImagen').style.display = 'none';
-            document.getElementById('btnGuardar').textContent = '💾 Guardar Reserva';
+            document.getElementById('previewImagen').classList.remove('active');
+            document.getElementById('dropZone').classList.remove('has-image');
+            document.getElementById('btnGuardar').innerHTML = '<span>💾</span> Guardar Reserva';
+            document.getElementById('fecha').valueAsDate = new Date();
             calcularRestante();
         }
 
-        // Buscar reservas
+        // Búsqueda
         function buscarReservas() {
             const termino = document.getElementById('buscar').value.toLowerCase();
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.getAll();
             
-            request.onsuccess = function() {
-                const reservas = request.result.filter(r => 
+            req.onsuccess = () => {
+                const filtradas = req.result.filter(r => 
                     r.nombre.toLowerCase().includes(termino) ||
                     r.telefono.toLowerCase().includes(termino) ||
                     r.producto.toLowerCase().includes(termino)
                 );
-                mostrarReservas(reservas);
+                mostrarTabla(filtradas);
             };
         }
 
-        // Actualizar estadísticas
-        async function actualizarEstadisticas() {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
+        // Estadísticas
+        async function actualizarStats() {
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.getAll();
             
-            request.onsuccess = function() {
-                const reservas = request.result;
-                const totalReservas = reservas.length;
-                const totalRecaudado = reservas.reduce((sum, r) => sum + r.montoPagado, 0);
-                const totalPendiente = reservas.reduce((sum, r) => sum + r.montoRestante, 0);
+            req.onsuccess = () => {
+                const reservas = req.result;
+                const total = reservas.length;
+                const recaudado = reservas.reduce((s, r) => s + r.montoPagado, 0);
+                const pendiente = reservas.reduce((s, r) => s + r.montoRestante, 0);
                 
-                document.getElementById('totalReservas').textContent = totalReservas;
-                document.getElementById('totalRecaudado').textContent = `$${totalRecaudado.toFixed(2)}`;
-                document.getElementById('totalPendiente').textContent = `$${totalPendiente.toFixed(2)}`;
+                document.getElementById('totalReservas').textContent = total;
+                document.getElementById('totalRecaudado').textContent = `$${recaudado.toFixed(0)}`;
+                document.getElementById('totalPendiente').textContent = `$${pendiente.toFixed(0)}`;
             };
         }
 
-        // Ver imagen en modal
-        function verImagen(src) {
-            document.getElementById('modalImage').src = src;
-            document.getElementById('imageModal').style.display = 'flex';
+        // Modo Kiosco
+        function toggleKiosco() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error al entrar en pantalla completa: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
         }
 
-        function cerrarModal() {
-            document.getElementById('imageModal').style.display = 'none';
+        // Notificación
+        function mostrarNotificacion(mensaje) {
+            const notif = document.createElement('div');
+            notif.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--color-exito);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                z-index: 9999;
+                font-weight: 600;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notif.textContent = mensaje;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
         }
 
         // Utilidades
@@ -748,24 +1303,29 @@
         }
 
         function formatearFecha(fechaStr) {
-            const fecha = new Date(fechaStr);
-            return fecha.toLocaleDateString('es-ES');
+            return new Date(fechaStr).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
         }
 
         // Inicialización
-        window.onload = async function() {
-            try {
-                await initDB();
-                cargarReservas();
-                actualizarEstadisticas();
-                
-                // Establecer fecha actual por defecto
-                document.getElementById('fecha').valueAsDate = new Date();
-            } catch (error) {
-                console.error('Error al inicializar:', error);
-                alert('Error al inicializar la base de datos');
-            }
+        window.onload = async () => {
+            await initDB();
+            document.getElementById('fecha').valueAsDate = new Date();
+            calcularRestante();
+            cargarReservas();
+            actualizarStats();
         };
+
+        // Cerrar modales con ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cerrarModal();
+                cerrarEditModal();
+            }
+        });
     </script>
 </body>
 </html>

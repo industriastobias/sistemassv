@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Reservas - Verificación</title>
+    <title>Sistema de Reservas Pro - Verificación</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* ============================================
+           VARIABLES CSS Y CONFIGURACIÓN BASE
+           ============================================ */
         :root {
             --color-marca: #E8D5D0;
             --color-marca-oscuro: #d4b8b0;
@@ -20,80 +17,166 @@
             --color-exito: #48bb78;
             --color-pendiente: #ed8936;
             --color-peligro: #f56565;
+            --color-info: #4299e1;
+            --color-advertencia: #ecc94b;
+            --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+        }
+
+        /* Modo Oscuro */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-marca: #4a5568;
+                --color-marca-oscuro: #2d3748;
+                --color-texto: #e2e8f0;
+                --color-fondo: #1a202c;
+                --color-blanco: #2d3748;
+            }
+        }
+
+        /* Reducir Motion */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ============================================
+           RESET Y BASE
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         html, body {
             height: 100%;
             width: 100%;
             overflow: hidden;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: var(--font-main);
             background: var(--color-fondo);
             color: var(--color-texto);
+            line-height: 1.6;
         }
 
-        /* Layout Principal Full Screen */
+        /* ============================================
+           LAYOUT PRINCIPAL
+           ============================================ */
         .app-container {
             display: grid;
-            grid-template-columns: 350px 1fr;
+            grid-template-columns: 380px 1fr;
             height: 100vh;
             width: 100vw;
+            position: relative;
         }
 
-        /* Sidebar */
+        /* ============================================
+           SIDEBAR / DRAWER
+           ============================================ */
         .sidebar {
             background: var(--color-marca);
-            padding: 30px;
+            padding: 25px;
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
             overflow-y: auto;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+            transition: var(--transition-base);
+            z-index: 100;
         }
 
-        .logo {
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 2px solid rgba(255,255,255,0.5);
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.4);
         }
 
         .logo h1 {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             color: var(--color-texto);
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .logo p {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             opacity: 0.8;
+            font-weight: 500;
         }
 
-        /* Formulario Compacto */
+        .close-sidebar {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-texto);
+            padding: 5px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-base);
+        }
+
+        .close-sidebar:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        /* ============================================
+           FORMULARIOS
+           ============================================ */
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         label {
             display: block;
             font-weight: 600;
-            margin-bottom: 6px;
-            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
             color: var(--color-texto);
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        input, select {
+        .required::after {
+            content: '*';
+            color: var(--color-peligro);
+            margin-left: 3px;
+        }
+
+        input, select, textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px 12px;
             border: 2px solid transparent;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            background: rgba(255,255,255,0.9);
-            transition: all 0.3s;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.95);
+            transition: var(--transition-base);
+            font-family: inherit;
         }
 
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: var(--color-texto);
             background: var(--color-blanco);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        input:invalid:not(:placeholder-shown) {
+            border-color: var(--color-peligro);
         }
 
         .input-row {
@@ -102,23 +185,40 @@
             gap: 10px;
         }
 
+        .input-hint {
+            font-size: 0.75rem;
+            color: #718096;
+            margin-top: 3px;
+            font-style: italic;
+        }
+
+        /* ============================================
+           UPLOAD DE IMÁGENES
+           ============================================ */
         .image-upload {
             position: relative;
-            height: 120px;
+            height: 140px;
             border: 3px dashed rgba(45, 55, 72, 0.3);
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             overflow: hidden;
-            background: rgba(255,255,255,0.5);
-            transition: all 0.3s;
+            background: rgba(255,255,255,0.6);
+            transition: var(--transition-base);
         }
 
         .image-upload:hover {
             border-color: var(--color-texto);
-            background: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.9);
+            transform: translateY(-2px);
+        }
+
+        .image-upload.drag-over {
+            border-color: var(--color-exito);
+            background: rgba(72, 187, 120, 0.1);
+            transform: scale(1.02);
         }
 
         .image-upload.has-image {
@@ -137,14 +237,20 @@
         .upload-placeholder {
             text-align: center;
             color: var(--color-texto);
-            opacity: 0.6;
+            opacity: 0.7;
             pointer-events: none;
+            transition: var(--transition-base);
         }
 
         .upload-placeholder svg {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 5px;
+            width: 36px;
+            height: 36px;
+            margin-bottom: 8px;
+            transition: transform 0.3s;
+        }
+
+        .image-upload:hover .upload-placeholder svg {
+            transform: translateY(-5px);
         }
 
         .preview-img {
@@ -160,12 +266,54 @@
             display: block;
         }
 
-        /* Calculadora de Montos */
+        .image-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: none;
+            gap: 5px;
+            z-index: 3;
+        }
+
+        .image-upload.has-image:hover .image-actions {
+            display: flex;
+        }
+
+        .btn-img-action {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.95);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: var(--transition-base);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-img-action:hover {
+            transform: scale(1.1);
+            background: var(--color-blanco);
+        }
+
+        .btn-img-action.delete:hover {
+            background: var(--color-peligro);
+            color: white;
+        }
+
+        /* ============================================
+           CALCULADORA
+           ============================================ */
         .calculadora {
-            background: rgba(255,255,255,0.6);
+            background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%);
             padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
+            border-radius: var(--radius-md);
+            margin: 15px 0;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
         }
 
         .monto-display {
@@ -174,93 +322,185 @@
         }
 
         .monto-restante {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: bold;
             color: var(--color-pendiente);
             transition: color 0.3s;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
         }
 
         .monto-restante.completado {
             color: var(--color-exito);
+            text-shadow: 0 0 20px rgba(72, 187, 120, 0.3);
         }
 
         .estado-badge {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 5px 14px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-top: 5px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 8px;
             background: var(--color-pendiente);
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: var(--transition-base);
         }
 
         .estado-badge.completado {
             background: var(--color-exito);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
         }
 
+        /* ============================================
+           BOTONES
+           ============================================ */
         .btn {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             border: none;
-            border-radius: 10px;
-            font-size: 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: var(--transition-base);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .btn-primary {
             background: var(--color-texto);
             color: white;
+            box-shadow: 0 4px 6px rgba(45, 55, 72, 0.2);
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(45, 55, 72, 0.3);
+            box-shadow: 0 6px 12px rgba(45, 55, 72, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
             background: rgba(255,255,255,0.8);
             color: var(--color-texto);
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .btn-secondary:hover {
             background: white;
+            transform: translateY(-1px);
         }
 
-        /* Área Principal */
+        .btn-success {
+            background: var(--color-exito);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--color-peligro);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid var(--color-texto);
+            color: var(--color-texto);
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+        }
+
+        /* Spinner de carga */
+        .btn .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .btn.loading .spinner {
+            display: block;
+        }
+
+        .btn.loading .btn-text {
+            opacity: 0.7;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ============================================
+           ÁREA PRINCIPAL
+           ============================================ */
         .main-content {
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            background: var(--color-fondo);
         }
 
-        /* Header */
+        /* ============================================
+           TOP BAR
+           ============================================ */
         .top-bar {
             background: var(--color-blanco);
-            padding: 15px 30px;
+            padding: 12px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            box-shadow: var(--shadow-sm);
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-texto);
+            padding: 5px;
+            border-radius: var(--radius-sm);
         }
 
         .search-box {
             position: relative;
-            width: 400px;
+            flex: 1;
+            max-width: 450px;
+            min-width: 200px;
         }
 
         .search-box input {
             padding-left: 40px;
             background: var(--color-fondo);
+            border: 2px solid transparent;
+        }
+
+        .search-box input:focus {
+            border-color: var(--color-marca-oscuro);
         }
 
         .search-icon {
@@ -269,59 +509,138 @@
             top: 50%;
             transform: translateY(-50%);
             opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 4px;
+            border-radius: 50%;
+        }
+
+        .search-box input:not(:placeholder-shown) + .search-clear,
+        .search-box input:focus ~ .search-clear {
+            opacity: 0.6;
         }
 
         .top-actions {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .btn-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-md);
             border: none;
             background: var(--color-fondo);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s;
+            transition: var(--transition-base);
+            position: relative;
         }
 
         .btn-icon:hover {
             background: var(--color-marca);
+            transform: translateY(-2px);
         }
 
-        /* Stats Cards Compactos */
+        .btn-icon.active {
+            background: var(--color-texto);
+            color: white;
+        }
+
+        /* Badge de notificación */
+        .badge-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--color-peligro);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           STATS CARDS
+           ============================================ */
         .stats-container {
             display: flex;
             gap: 15px;
-            padding: 15px 30px;
+            padding: 15px 25px;
             background: var(--color-blanco);
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
 
         .stat-card {
             background: linear-gradient(135deg, var(--color-marca) 0%, var(--color-marca-oscuro) 100%);
-            padding: 12px 20px;
-            border-radius: 10px;
+            padding: 15px 20px;
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             gap: 12px;
-            min-width: 160px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            min-width: 170px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition-base);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .stat-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card.active {
+            box-shadow: 0 0 0 3px var(--color-texto);
         }
 
         .stat-icon {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             background: rgba(255,255,255,0.4);
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
+            backdrop-filter: blur(4px);
         }
 
         .stat-content {
@@ -330,33 +649,92 @@
         }
 
         .stat-number {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: bold;
             color: var(--color-texto);
             line-height: 1;
+            font-variant-numeric: tabular-nums;
         }
 
         .stat-label {
-            font-size: 0.75rem;
-            opacity: 0.7;
+            font-size: 0.7rem;
+            opacity: 0.8;
             color: var(--color-texto);
-            margin-top: 2px;
+            margin-top: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
-        /* Tabla Container */
-        .table-container {
+        /* ============================================
+           FILTROS Y HERRAMIENTAS
+           ============================================ */
+        .toolbar {
+            padding: 10px 25px;
+            background: var(--color-blanco);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-select {
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .date-range {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .date-range input {
+            width: 130px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+
+        /* ============================================
+           TABLA CONTAINER
+           ============================================ */
+        .table-wrapper {
             flex: 1;
             overflow: auto;
-            padding: 0 30px 30px;
+            padding: 0 25px 25px;
             background: var(--color-blanco);
+            position: relative;
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
+            font-size: 0.9rem;
         }
 
         thead {
@@ -367,204 +745,435 @@
 
         th {
             background: var(--color-fondo);
-            padding: 12px 15px;
+            padding: 14px 12px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--color-texto);
             border-bottom: 2px solid var(--color-marca);
             white-space: nowrap;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            transition: var(--transition-base);
+        }
+
+        th:hover {
+            background: #f0e6e3;
+        }
+
+        th.sortable::after {
+            content: '↕';
+            margin-left: 5px;
+            opacity: 0.3;
+            font-size: 0.9rem;
+        }
+
+        th.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+            color: var(--color-exito);
+        }
+
+        th.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+            color: var(--color-exito);
         }
 
         td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 12px;
+            border-bottom: 1px solid #edf2f7;
             vertical-align: middle;
-            font-size: 0.95rem;
+        }
+
+        tr {
+            transition: background 0.2s;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         tr:hover td {
-            background: rgba(232, 213, 208, 0.2);
+            background: rgba(232, 213, 208, 0.25);
+        }
+
+        tr.selected td {
+            background: rgba(232, 213, 208, 0.5);
         }
 
         /* Celdas específicas */
+        .cell-id {
+            font-weight: 700;
+            color: var(--color-info);
+            font-size: 0.85rem;
+        }
+
         .cell-cliente {
             font-weight: 600;
+            color: var(--color-texto);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cliente-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--color-marca);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
             color: var(--color-texto);
         }
 
         .cell-telefono {
-            font-family: monospace;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .cell-monto {
+            font-family: 'Courier New', monospace;
+            color: #4a5568;
+            font-size: 0.85rem;
             font-weight: 600;
         }
 
+        .cell-monto {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
         .cell-restante {
-            font-weight: bold;
+            font-weight: 800;
             color: var(--color-pendiente);
+            font-variant-numeric: tabular-nums;
         }
 
         .cell-restante.completado {
             color: var(--color-exito);
         }
 
+        .cell-fecha {
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
         /* Imagen en tabla */
+        .img-cell-container {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+
         .img-cell {
             width: 50px;
             height: 50px;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             object-fit: cover;
             cursor: zoom-in;
             border: 2px solid transparent;
-            transition: all 0.3s;
+            transition: var(--transition-base);
+            background: #f7fafc;
         }
 
         .img-cell:hover {
-            border-color: var(--color-marca);
-            transform: scale(1.1);
+            border-color: var(--color-marca-oscuro);
+            transform: scale(1.15);
+            box-shadow: var(--shadow-md);
+            z-index: 10;
+            position: relative;
         }
 
         .no-image {
             width: 50px;
             height: 50px;
-            border-radius: 6px;
-            background: #e2e8f0;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #a0aec0;
-            font-size: 0.65rem;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
 
         /* Badges de estado */
         .badge {
-            padding: 4px 10px;
+            padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.7rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .badge-pendiente {
-            background: #feebc8;
+            background: #fff5e6;
             color: #c05621;
+            border: 1px solid #fbd38d;
         }
 
         .badge-completado {
-            background: #c6f6d5;
+            background: #f0fff4;
             color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Tags/Categorías */
+        .tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            background: var(--color-marca);
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
 
         /* Acciones en tabla */
         .actions {
             display: flex;
             gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        tr:hover .actions {
+            opacity: 1;
         }
 
         .btn-action {
-            padding: 6px;
+            width: 32px;
+            height: 32px;
             border: none;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        .btn-action:hover {
+            transform: scale(1.1);
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-edit {
+            color: var(--color-info);
+        }
+
+        .btn-edit:hover {
+            background: #ebf8ff;
+        }
+
+        .btn-delete {
+            color: var(--color-peligro);
+        }
+
+        .btn-delete:hover {
+            background: #fff5f5;
+        }
+
+        .btn-duplicate {
+            color: var(--color-advertencia);
+        }
+
+        .btn-duplicate:hover {
+            background: #fffff0;
+        }
+
+        /* Checkbox de selección */
+        .checkbox-wrapper {
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .btn-edit {
-            background: #bee3f8;
-            color: #2c5282;
+        .custom-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #cbd5e0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .btn-delete {
-            background: #fed7d7;
-            color: #c53030;
+        .custom-checkbox:hover {
+            border-color: var(--color-texto);
         }
 
-        .btn-action:hover {
-            transform: scale(1.1);
+        .custom-checkbox.checked {
+            background: var(--color-texto);
+            border-color: var(--color-texto);
+            color: white;
         }
 
         /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 80px;
+            padding: 60px 20px;
             color: #a0aec0;
         }
 
         .empty-state svg {
-            width: 80px;
-            height: 80px;
+            width: 100px;
+            height: 100px;
             margin-bottom: 20px;
-            opacity: 0.3;
+            opacity: 0.4;
         }
 
-        /* Modal de Imagen */
+        .empty-state h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        /* Paginación */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--color-blanco);
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .pagination-info {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .page-btn {
+            padding: 6px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition-base);
+            font-size: 0.85rem;
+            min-width: 36px;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: var(--color-fondo);
+            border-color: var(--color-texto);
+        }
+
+        .page-btn.active {
+            background: var(--color-texto);
+            color: white;
+            border-color: var(--color-texto);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ============================================
+           MODALES
+           ============================================ */
         .modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.85);
             z-index: 1000;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .modal-overlay.active {
             display: flex;
+            opacity: 1;
         }
 
         .modal-content {
             position: relative;
             max-width: 90vw;
             max-height: 90vh;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
         }
 
         .modal-img {
             max-width: 100%;
-            max-height: 90vh;
-            border-radius: 8px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            max-height: 85vh;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
 
         .modal-close {
             position: absolute;
-            top: -40px;
+            top: -50px;
             right: 0;
             color: white;
-            font-size: 2rem;
+            font-size: 2.5rem;
             cursor: pointer;
-            background: none;
+            background: rgba(255,255,255,0.1);
             border: none;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.3s;
+            border-radius: 50%;
+            transition: var(--transition-base);
+            backdrop-filter: blur(4px);
         }
 
         .modal-close:hover {
-            transform: rotate(90deg);
+            background: rgba(255,255,255,0.2);
+            transform: rotate(90deg) scale(1.1);
         }
 
         .modal-info {
             position: absolute;
-            bottom: -50px;
+            bottom: -60px;
             left: 0;
             right: 0;
             text-align: center;
             color: white;
             font-size: 1.1rem;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         /* Modal de Edición */
@@ -572,154 +1181,455 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 999;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .edit-modal.active {
             display: flex;
+            opacity: 1;
         }
 
         .edit-modal-content {
             background: white;
             padding: 30px;
-            border-radius: 16px;
+            border-radius: var(--radius-lg);
             width: 90%;
-            max-width: 500px;
+            max-width: 550px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .edit-modal.active .edit-modal-content {
+            transform: translateY(0);
         }
 
         .edit-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid var(--color-marca);
         }
 
         .edit-modal-header h2 {
             color: var(--color-texto);
-        }
-
-        /* Modo Kiosco */
-        .kiosco-btn {
-            background: var(--color-texto);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 10px;
+        }
+
+        /* Modal de Confirmación */
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .confirm-modal.active {
+            display: flex;
+        }
+
+        .confirm-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            max-width: 400px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .confirm-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .confirm-title {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--color-texto);
+        }
+
+        .confirm-text {
+            color: #718096;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* ============================================
+           NOTIFICACIONES (TOASTS)
+           ============================================ */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 4px solid var(--color-exito);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast.error {
+            border-left-color: var(--color-peligro);
+        }
+
+        .toast.warning {
+            border-left-color: var(--color-advertencia);
+        }
+
+        .toast.info {
+            border-left-color: var(--color-info);
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+            color: var(--color-texto);
+        }
+
+        .toast-message {
             font-size: 0.9rem;
+            color: #718096;
         }
 
-        :fullscreen .app-container {
-            grid-template-columns: 400px 1fr;
+        .toast-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            padding: 4px;
         }
 
-        :fullscreen .sidebar {
-            padding: 40px;
+        .toast-close:hover {
+            opacity: 1;
         }
 
-        :fullscreen .stats-container {
-            padding: 20px 40px;
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: currentColor;
+            opacity: 0.2;
+            animation: progress 3s linear forwards;
         }
 
-        :fullscreen .table-container {
-            padding: 0 40px 40px;
+        @keyframes progress {
+            from { width: 100%; }
+            to { width: 0%; }
         }
 
-        /* Scrollbar personalizado */
+        /* ============================================
+           DRAWER MÓVIL
+           ============================================ */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            backdrop-filter: blur(2px);
+        }
+
+        .drawer-overlay.active {
+            display: block;
+        }
+
+        /* ============================================
+           SCROLLBAR PERSONALIZADO
+           ============================================ */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
         }
 
         ::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 5px;
         }
 
         ::-webkit-scrollbar-thumb {
             background: var(--color-marca-oscuro);
-            border-radius: 4px;
+            border-radius: 5px;
+            border: 2px solid #f1f1f1;
         }
 
         ::-webkit-scrollbar-thumb:hover {
             background: var(--color-marca);
         }
 
-        /* Animaciones */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* ============================================
+           UTILIDADES
+           ============================================ */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .font-mono { font-family: 'Courier New', monospace; }
+        .text-success { color: var(--color-exito); }
+        .text-danger { color: var(--color-peligro); }
+        .text-warning { color: var(--color-advertencia); }
+        .text-info { color: var(--color-info); }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
         }
 
-        tr {
-            animation: fadeIn 0.3s ease-out;
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            background: var(--color-texto);
+            color: white;
+            padding: 5px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
         }
 
-        /* Responsive */
+        [data-tooltip]:hover::after {
+            opacity: 1;
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
         @media (max-width: 1200px) {
             .app-container {
-                grid-template-columns: 320px 1fr;
+                grid-template-columns: 340px 1fr;
             }
         }
 
         @media (max-width: 968px) {
             .app-container {
                 grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
             }
             
             .sidebar {
-                max-height: 50vh;
+                position: fixed;
+                left: -100%;
+                top: 0;
+                height: 100vh;
+                width: 85%;
+                max-width: 400px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .close-sidebar {
+                display: block;
+            }
+            
+            .menu-toggle {
+                display: block;
             }
             
             .stats-container {
-                flex-wrap: wrap;
+                overflow-x: auto;
+                padding: 12px 15px;
+            }
+            
+            .stat-card {
+                min-width: 150px;
+            }
+            
+            .top-bar {
+                padding: 12px 15px;
+            }
+            
+            .table-wrapper {
+                padding: 0 15px 15px;
+            }
+            
+            .toolbar {
+                padding: 10px 15px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+            
+            .actions {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                order: 3;
+                width: 100%;
+                max-width: none;
+            }
+            
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .top-actions {
+                justify-content: flex-end;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+                overflow-x: auto;
+            }
+            
+            .pagination {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+
+        /* ============================================
+           PRINT STYLES
+           ============================================ */
+        @media print {
+            .sidebar, .top-bar, .toolbar, .actions, .pagination {
+                display: none !important;
+            }
+            
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                height: auto;
+                overflow: visible;
+            }
+            
+            .table-wrapper {
+                overflow: visible;
+            }
+            
+            tr {
+                page-break-inside: avoid;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Overlay para drawer móvil -->
+    <div class="drawer-overlay" onclick="toggleSidebar()"></div>
+
     <div class="app-container">
-        <!-- Sidebar con Formulario -->
-        <aside class="sidebar">
-            <div class="logo">
-                <h1>🛍️ Reservas</h1>
-                <p>Sistema de Verificación</p>
+        <!-- ============================================
+             SIDEBAR CON FORMULARIO
+             ============================================ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <h1>🛍️ Reservas</h1>
+                    <p>Sistema de Verificación Pro</p>
+                </div>
+                <button class="close-sidebar" onclick="toggleSidebar()" aria-label="Cerrar menú">×</button>
             </div>
 
             <form id="reservaForm">
                 <input type="hidden" id="reservaId">
                 
                 <div class="form-group">
-                    <label>👤 Nombre del Cliente</label>
-                    <input type="text" id="nombre" required placeholder="Nombre completo">
+                    <label class="required">👤 Nombre del Cliente</label>
+                    <input type="text" id="nombre" required placeholder="Nombre completo" maxlength="100">
                 </div>
 
                 <div class="input-row">
                     <div class="form-group">
-                        <label>📱 Teléfono</label>
-                        <input type="tel" id="telefono" required placeholder="809-555-1234">
+                        <label class="required">📱 Teléfono</label>
+                        <input type="tel" id="telefono" required placeholder="809-555-1234" 
+                               pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" title="Formato: 809-555-1234">
+                        <div class="input-hint">Formato: 809-555-1234</div>
                     </div>
                     <div class="form-group">
-                        <label>📅 Fecha</label>
+                        <label class="required">📅 Fecha</label>
                         <input type="date" id="fecha" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>📦 Producto</label>
-                    <input type="text" id="producto" required placeholder="Descripción del producto">
+                    <label class="required">📦 Producto</label>
+                    <input type="text" id="producto" required placeholder="Descripción del producto" maxlength="200">
+                </div>
+
+                <div class="form-group">
+                    <label>🏷️ Categorías</label>
+                    <input type="text" id="categorias" placeholder="Ej: Electrónica, Ropa (separadas por coma)">
                 </div>
 
                 <div class="form-group">
@@ -727,28 +1637,38 @@
                     <div class="image-upload" id="dropZone">
                         <input type="file" id="imagenProducto" accept="image/*">
                         <div class="upload-placeholder">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="40" height="40">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                             <div>Click o arrastra imagen</div>
+                            <small style="opacity: 0.7; display: block; margin-top: 4px;">Máx. 5MB</small>
                         </div>
-                        <img id="previewImagen" class="preview-img">
+                        <img id="previewImagen" class="preview-img" alt="Preview">
+                        <div class="image-actions">
+                            <button type="button" class="btn-img-action" onclick="verImagenCompleta(event)" title="Ver completa">👁</button>
+                            <button type="button" class="btn-img-action delete" onclick="eliminarImagen(event)" title="Eliminar">×</button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="input-row">
                     <div class="form-group">
-                        <label>💰 Precio Total</label>
-                        <input type="number" id="precioTotal" required min="0" step="0.01" placeholder="0.00">
+                        <label class="required">💰 Precio Total</label>
+                        <input type="number" id="precioTotal" required min="0.01" step="0.01" placeholder="0.00">
                     </div>
                     <div class="form-group">
-                        <label>💵 Monto Pagado</label>
+                        <label class="required">💵 Monto Pagado</label>
                         <input type="number" id="montoPagado" required min="0" step="0.01" placeholder="0.00">
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>📝 Notas</label>
+                    <textarea id="notas" rows="2" placeholder="Observaciones adicionales..." maxlength="500"></textarea>
+                </div>
+
                 <div class="calculadora">
-                    <label style="text-align: center; display: block; margin-bottom: 5px;">📊 Cálculo Automático</label>
+                    <label style="text-align: center; display: block; margin-bottom: 8px; font-size: 0.9rem;">📊 Cálculo Automático</label>
                     <div class="monto-display">
                         <div class="monto-restante" id="montoRestante">$0.00</div>
                         <span class="estado-badge" id="estadoBadge">Pendiente</span>
@@ -756,61 +1676,113 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary" id="btnGuardar">
-                    <span>💾</span> Guardar Reserva
+                    <span class="spinner"></span>
+                    <span class="btn-text">💾 Guardar Reserva</span>
                 </button>
                 
                 <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">
-                    <span>🔄</span> Limpiar
+                    🔄 Limpiar Formulario
                 </button>
             </form>
         </aside>
 
-        <!-- Área Principal -->
+        <!-- ============================================
+             ÁREA PRINCIPAL
+             ============================================ -->
         <main class="main-content">
+            <!-- Top Bar -->
             <div class="top-bar">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
+                
                 <div class="search-box">
                     <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
-                    <input type="text" id="buscar" placeholder="Buscar por nombre, teléfono o producto..." onkeyup="buscarReservas()">
+                    <input type="text" id="buscar" placeholder="Buscar por nombre, teléfono o producto..." autocomplete="off">
+                    <button class="search-clear" onclick="limpiarBusqueda()" title="Limpiar búsqueda">×</button>
                 </div>
                 
                 <div class="top-actions">
-                    <button class="kiosco-btn" onclick="toggleKiosco()" title="Modo Kiosco">
+                    <button class="btn-icon" onclick="exportarDatos()" data-tooltip="Exportar a CSV" title="Exportar a CSV">
+                        📊
+                    </button>
+                    <button class="btn-icon" onclick="toggleKiosco()" data-tooltip="Modo Kiosco" title="Modo Kiosco">
                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                         </svg>
-                        Modo Kiosco
+                    </button>
+                    <button class="btn-icon" onclick="mostrarAyuda()" data-tooltip="Ayuda" title="Ayuda">
+                        ❓
                     </button>
                 </div>
             </div>
 
-            <!-- Stats Compactos -->
+            <!-- Stats -->
             <div class="stats-container">
-                <div class="stat-card">
+                <div class="stat-card" onclick="filtrarPorEstado('todos')" id="stat-todos">
                     <div class="stat-icon">📋</div>
                     <div class="stat-content">
                         <div class="stat-number" id="totalReservas">0</div>
-                        <div class="stat-label">Reservas</div>
+                        <div class="stat-label">Total Reservas</div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">💵</div>
+                <div class="stat-card" onclick="filtrarPorEstado('completado')" id="stat-completado">
+                    <div class="stat-icon">✅</div>
                     <div class="stat-content">
-                        <div class="stat-number" id="totalRecaudado">$0</div>
-                        <div class="stat-label">Recaudado</div>
+                        <div class="stat-number" id="totalCompletados">0</div>
+                        <div class="stat-label">Completados</div>
                     </div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" onclick="filtrarPorEstado('pendiente')" id="stat-pendiente">
                     <div class="stat-icon">⏳</div>
                     <div class="stat-content">
-                        <div class="stat-number" id="totalPendiente">$0</div>
+                        <div class="stat-number" id="totalPendientes">0</div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="mostrarRecaudacion()" id="stat-recaudado">
+                    <div class="stat-icon">💵</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalRecaudado">$0.00</div>
+                        <div class="stat-label">Total Recaudado</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="mostrarPorCobrar()" id="stat-porcobrar">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalPendiente">$0.00</div>
                         <div class="stat-label">Por Cobrar</div>
                     </div>
                 </div>
             </div>
 
-            <div class="table-container" id="tablaContainer">
+            <!-- Toolbar de filtros -->
+            <div class="toolbar">
+                <div class="filter-group">
+                    <select class="filter-select" id="filtroEstado" onchange="aplicarFiltros()">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="completado">Completado</option>
+                    </select>
+                    <select class="filter-select" id="filtroCategoria" onchange="aplicarFiltros()">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                <div class="filter-group date-range">
+                    <label style="margin: 0; font-size: 0.85rem;">Desde:</label>
+                    <input type="date" id="fechaDesde" onchange="aplicarFiltros()">
+                    <label style="margin: 0; font-size: 0.85rem;">Hasta:</label>
+                    <input type="date" id="fechaHasta" onchange="aplicarFiltros()">
+                </div>
+                <div class="filter-group" style="margin-left: auto;">
+                    <button class="btn btn-sm btn-ghost" onclick="limpiarFiltros()">
+                        🗑️ Limpiar filtros
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="table-wrapper" id="tablaContainer">
                 <div class="empty-state">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -819,97 +1791,402 @@
                     <p>Comience agregando una nueva reserva desde el panel izquierdo</p>
                 </div>
             </div>
+
+            <!-- Paginación -->
+            <div class="pagination" id="paginationContainer" style="display: none;">
+                <div class="pagination-info">
+                    Mostrando <span id="paginaInicio">0</span> - <span id="paginaFin">0</span> de <span id="paginaTotal">0</span> reservas
+                </div>
+                <div class="pagination-controls" id="paginationControls">
+                    <!-- Se genera dinámicamente -->
+                </div>
+            </div>
         </main>
     </div>
 
+    <!-- ============================================
+         MODALES
+         ============================================ -->
+    
     <!-- Modal de Imagen -->
     <div class="modal-overlay" id="imageModal" onclick="cerrarModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="cerrarModal()">×</button>
+            <button class="modal-close" onclick="cerrarModal()" aria-label="Cerrar">×</button>
             <img class="modal-img" id="modalImage" src="" alt="Producto">
             <div class="modal-info" id="modalInfo"></div>
         </div>
     </div>
 
-    <!-- Modal de Edición Rápida -->
+    <!-- Modal de Edición -->
     <div class="edit-modal" id="editModal">
         <div class="edit-modal-content">
             <div class="edit-modal-header">
                 <h2>✏️ Editar Reserva</h2>
-                <button class="modal-close" onclick="cerrarEditModal()" style="position: static; color: #333;">×</button>
+                <button class="modal-close" onclick="cerrarEditModal()" style="position: static; color: #333;" aria-label="Cerrar">×</button>
             </div>
             <form id="editForm">
                 <input type="hidden" id="editId">
                 
                 <div class="form-group">
-                    <label>Nombre</label>
+                    <label class="required">Nombre</label>
                     <input type="text" id="editNombre" required>
                 </div>
                 
                 <div class="form-group">
-                    <label>Teléfono</label>
-                    <input type="tel" id="editTelefono" required>
+                    <label class="required">Teléfono</label>
+                    <input type="tel" id="editTelefono" required pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}">
                 </div>
                 
                 <div class="form-group">
-                    <label>Producto</label>
+                    <label class="required">Producto</label>
                     <input type="text" id="editProducto" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Categorías</label>
+                    <input type="text" id="editCategorias">
                 </div>
                 
                 <div class="input-row">
                     <div class="form-group">
-                        <label>Precio Total</label>
-                        <input type="number" id="editPrecio" required min="0" step="0.01">
+                        <label class="required">Precio Total</label>
+                        <input type="number" id="editPrecio" required min="0.01" step="0.01">
                     </div>
                     <div class="form-group">
-                        <label>Monto Pagado</label>
+                        <label class="required">Monto Pagado</label>
                         <input type="number" id="editPagado" required min="0" step="0.01">
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Notas</label>
+                    <textarea id="editNotas" rows="2"></textarea>
+                </div>
+
                 <div style="background: var(--color-marca); padding: 15px; border-radius: 8px; margin: 15px 0; text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: bold;" id="editRestante">$0.00</div>
+                    <div style="font-size: 1.6rem; font-weight: bold;" id="editRestante">$0.00</div>
                     <div style="font-size: 0.9rem; opacity: 0.8;">Restante</div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+                <button type="submit" class="btn btn-primary">
+                    <span class="spinner"></span>
+                    <span class="btn-text">💾 Guardar Cambios</span>
+                </button>
             </form>
         </div>
     </div>
 
-    <script>
-        // Base de datos IndexedDB
-        const DB_NAME = 'ReservasDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'reservas';
-        
-        let db;
-        let dbReady = false;
+    <!-- Modal de Confirmación -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-content">
+            <div class="confirm-icon" id="confirmIcon">⚠️</div>
+            <div class="confirm-title" id="confirmTitle">¿Estás seguro?</div>
+            <div class="confirm-text" id="confirmText">Esta acción no se puede deshacer.</div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="cerrarConfirmModal()" style="flex: 1;">Cancelar</button>
+                <button class="btn btn-danger" id="confirmBtn" style="flex: 1;">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
-        // Inicializar IndexedDB
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ============================================
+        // CONFIGURACIÓN Y CONSTANTES
+        // ============================================
+        const CONFIG = {
+            DB_NAME: 'ReservasDB_v2',
+            DB_VERSION: 2,
+            STORE_NAME: 'reservas',
+            MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
+            ITEMS_PER_PAGE: 10,
+            DEBOUNCE_DELAY: 300
+        };
+
+        const MESSAGES = {
+            SAVE_SUCCESS: 'Reserva guardada correctamente',
+            UPDATE_SUCCESS: 'Reserva actualizada correctamente',
+            DELETE_SUCCESS: 'Reserva eliminada correctamente',
+            DELETE_CONFIRM: '¿Eliminar esta reserva permanentemente?',
+            ERROR_GENERIC: 'Ha ocurrido un error. Intente nuevamente.',
+            ERROR_IMAGE_SIZE: 'La imagen no debe superar los 5MB',
+            ERROR_PHONE: 'Formato de teléfono inválido',
+            ERROR_DATE: 'La fecha no puede ser anterior a hoy'
+        };
+
+        // ============================================
+        // ESTADO GLOBAL
+        // ============================================
+        let db = null;
+        let dbReady = false;
+        let currentPage = 1;
+        let currentFilter = 'todos';
+        let sortColumn = 'id';
+        let sortDirection = 'desc';
+        let searchTerm = '';
+        let editingId = null;
+        let confirmCallback = null;
+
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initDB();
+                setupEventListeners();
+                setFechaMinima();
+                limpiarFormulario();
+                await cargarReservas();
+            } catch (error) {
+                console.error('Error de inicialización:', error);
+                showToast('Error al inicializar la aplicación', 'error');
+            }
+        });
+
+        // ============================================
+        // BASE DE DATOS (IndexedDB)
+        // ============================================
         function initDB() {
             return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
                 
-                request.onerror = () => reject(request.error);
+                request.onerror = () => {
+                    console.error('Error abriendo DB:', request.error);
+                    reject(request.error);
+                };
+                
                 request.onsuccess = () => {
                     db = request.result;
                     dbReady = true;
+                    console.log('Base de datos lista');
                     resolve(db);
                 };
                 
                 request.onupgradeneeded = (event) => {
                     const database = event.target.result;
-                    if (!database.objectStoreNames.contains(STORE_NAME)) {
-                        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    
+                    if (!database.objectStoreNames.contains(CONFIG.STORE_NAME)) {
+                        const store = database.createObjectStore(CONFIG.STORE_NAME, { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        
+                        // Índices para búsquedas y filtros
                         store.createIndex('nombre', 'nombre', { unique: false });
                         store.createIndex('telefono', 'telefono', { unique: false });
+                        store.createIndex('fecha', 'fecha', { unique: false });
+                        store.createIndex('estado', 'estado', { unique: false });
+                        store.createIndex('categorias', 'categorias', { unique: false, multiEntry: true });
+                        store.createIndex('fechaRegistro', 'fechaRegistro', { unique: false });
+                    } else {
+                        // Migración de datos si es necesario
+                        const store = event.target.transaction.objectStore(CONFIG.STORE_NAME);
+                        if (!store.indexNames.contains('categorias')) {
+                            store.createIndex('categorias', 'categorias', { unique: false, multiEntry: true });
+                        }
                     }
                 };
             });
         }
 
-        // Calcular restante
+        // Wrapper seguro para operaciones de DB
+        async function withDB(mode, callback) {
+            if (!dbReady) {
+                throw new Error('Base de datos no inicializada');
+            }
+            
+            return new Promise((resolve, reject) => {
+                try {
+                    const transaction = db.transaction([CONFIG.STORE_NAME], mode);
+                    const store = transaction.objectStore(CONFIG.STORE_NAME);
+                    
+                    transaction.onerror = () => reject(transaction.error);
+                    transaction.oncomplete = () => resolve();
+                    
+                    callback(store, resolve, reject);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        function setupEventListeners() {
+            // Formulario principal
+            document.getElementById('reservaForm').addEventListener('submit', handleSubmit);
+            
+            // Cálculos automáticos
+            document.getElementById('precioTotal').addEventListener('input', calcularRestante);
+            document.getElementById('montoPagado').addEventListener('input', calcularRestante);
+            
+            // Drag and drop
+            setupDragAndDrop();
+            
+            // Búsqueda con debounce
+            const searchInput = document.getElementById('buscar');
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    searchTerm = e.target.value.toLowerCase().trim();
+                    currentPage = 1;
+                    cargarReservas();
+                }, CONFIG.DEBOUNCE_DELAY);
+            });
+            
+            // Formulario de edición
+            document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+            document.getElementById('editPrecio').addEventListener('input', calcularEditRestante);
+            document.getElementById('editPagado').addEventListener('input', calcularEditRestante);
+            
+            // Tecla ESC para cerrar modales
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    cerrarTodosLosModales();
+                }
+            });
+            
+            // Validación de fecha mínima
+            document.getElementById('fecha').addEventListener('change', validarFecha);
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('drag-over');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('drag-over');
+                });
+            });
+            
+            dropZone.addEventListener('drop', handleDrop);
+            document.getElementById('imagenProducto').addEventListener('change', handleFileSelect);
+        }
+
+        // ============================================
+        // MANEJO DE IMÁGENES
+        // ============================================
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length) handleFile(files[0]);
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        }
+
+        async function handleFile(file) {
+            // Validar tamaño
+            if (file.size > CONFIG.MAX_IMAGE_SIZE) {
+                showToast(MESSAGES.ERROR_IMAGE_SIZE, 'error');
+                return;
+            }
+            
+            // Validar tipo
+            if (!file.type.startsWith('image/')) {
+                showToast('El archivo debe ser una imagen', 'error');
+                return;
+            }
+            
+            // Comprimir imagen antes de guardar
+            try {
+                const compressed = await compressImage(file);
+                mostrarPreview(compressed);
+            } catch (error) {
+                console.error('Error comprimiendo imagen:', error);
+                showToast('Error al procesar la imagen', 'error');
+            }
+        }
+
+        function compressImage(file, maxWidth = 1200, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const compressed = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressed);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function mostrarPreview(dataUrl) {
+            const preview = document.getElementById('previewImagen');
+            const dropZone = document.getElementById('dropZone');
+            
+            preview.src = dataUrl;
+            preview.classList.add('active');
+            dropZone.classList.add('has-image');
+            
+            // Guardar en dataset para acceso fácil
+            dropZone.dataset.image = dataUrl;
+        }
+
+        function eliminarImagen(e) {
+            e.stopPropagation();
+            const dropZone = document.getElementById('dropZone');
+            const preview = document.getElementById('previewImagen');
+            const input = document.getElementById('imagenProducto');
+            
+            preview.src = '';
+            preview.classList.remove('active');
+            dropZone.classList.remove('has-image');
+            delete dropZone.dataset.image;
+            input.value = '';
+        }
+
+        function verImagenCompleta(e) {
+            e.stopPropagation();
+            const dropZone = document.getElementById('dropZone');
+            const imagen = dropZone.dataset.image || document.getElementById('previewImagen').src;
+            if (imagen) {
+                abrirModal(imagen, 'Vista previa del producto');
+            }
+        }
+
+        // ============================================
+        // CÁLCULOS Y VALIDACIÓN
+        // ============================================
         function calcularRestante() {
             const precio = parseFloat(document.getElementById('precioTotal').value) || 0;
             const pagado = parseFloat(document.getElementById('montoPagado').value) || 0;
@@ -918,142 +2195,294 @@
             const el = document.getElementById('montoRestante');
             const badge = document.getElementById('estadoBadge');
             
-            el.textContent = `$${restante.toFixed(2)}`;
+            // Formato con 2 decimales siempre
+            el.textContent = formatMoney(restante);
             
             if (restante === 0 && precio > 0) {
                 el.classList.add('completado');
                 badge.classList.add('completado');
-                badge.textContent = 'Completado';
+                badge.textContent = 'Completado ✅';
             } else {
                 el.classList.remove('completado');
                 badge.classList.remove('completado');
-                badge.textContent = 'Pendiente';
+                badge.textContent = 'Pendiente ⏳';
             }
         }
 
-        // Event listeners para cálculo
-        document.getElementById('precioTotal').addEventListener('input', calcularRestante);
-        document.getElementById('montoPagado').addEventListener('input', calcularRestante);
-
-        // Drag and drop para imagen
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('imagenProducto');
-        const preview = document.getElementById('previewImagen');
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = 'var(--color-texto)';
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.style.borderColor = 'rgba(45, 55, 72, 0.3)';
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = 'rgba(45, 55, 72, 0.3)';
-            const files = e.dataTransfer.files;
-            if (files.length) {
-                fileInput.files = files;
-                mostrarPreview(files[0]);
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                mostrarPreview(e.target.files[0]);
-            }
-        });
-
-        function mostrarPreview(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.src = e.target.result;
-                preview.classList.add('active');
-                dropZone.classList.add('has-image');
-            };
-            reader.readAsDataURL(file);
+        function calcularEditRestante() {
+            const precio = parseFloat(document.getElementById('editPrecio').value) || 0;
+            const pagado = parseFloat(document.getElementById('editPagado').value) || 0;
+            const restante = Math.max(0, precio - pagado);
+            document.getElementById('editRestante').textContent = formatMoney(restante);
         }
 
-        // Guardar reserva
-        document.getElementById('reservaForm').addEventListener('submit', async (e) => {
+        function setFechaMinima() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha').setAttribute('min', today);
+        }
+
+        function validarFecha() {
+            const fechaInput = document.getElementById('fecha');
+            const fecha = new Date(fechaInput.value);
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            
+            if (fecha < hoy) {
+                showToast(MESSAGES.ERROR_DATE, 'warning');
+                fechaInput.value = '';
+            }
+        }
+
+        // ============================================
+        // CRUD OPERACIONES
+        // ============================================
+        async function handleSubmit(e) {
             e.preventDefault();
             
-            if (!dbReady) return;
-
-            const id = document.getElementById('reservaId').value;
-            const precio = parseFloat(document.getElementById('precioTotal').value);
-            const pagado = parseFloat(document.getElementById('montoPagado').value);
-
-            if (pagado > precio) {
-                alert('El monto pagado no puede ser mayor al precio');
-                return;
-            }
-
-            const reserva = {
-                nombre: document.getElementById('nombre').value,
-                telefono: document.getElementById('telefono').value,
-                fecha: document.getElementById('fecha').value,
-                producto: document.getElementById('producto').value,
-                precioTotal: precio,
-                montoPagado: pagado,
-                montoRestante: precio - pagado,
-                fechaRegistro: new Date().toISOString()
-            };
-
-            // Manejar imagen
-            if (fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    reserva.imagen = e.target.result;
-                    await guardarReserva(reserva, id);
+            const btn = document.getElementById('btnGuardar');
+            setLoading(btn, true);
+            
+            try {
+                const id = document.getElementById('reservaId').value;
+                const precio = parseFloat(document.getElementById('precioTotal').value);
+                const pagado = parseFloat(document.getElementById('montoPagado').value);
+                
+                if (pagado > precio) {
+                    showToast('El monto pagado no puede ser mayor al precio', 'error');
+                    return;
+                }
+                
+                const reserva = {
+                    nombre: sanitizeInput(document.getElementById('nombre').value),
+                    telefono: document.getElementById('telefono').value,
+                    fecha: document.getElementById('fecha').value,
+                    producto: sanitizeInput(document.getElementById('producto').value),
+                    categorias: parseCategorias(document.getElementById('categorias').value),
+                    precioTotal: precio,
+                    montoPagado: pagado,
+                    montoRestante: Math.round((precio - pagado) * 100) / 100,
+                    estado: (precio - pagado) <= 0 ? 'completado' : 'pendiente',
+                    notas: sanitizeInput(document.getElementById('notas').value),
+                    fechaRegistro: new Date().toISOString(),
+                    ultimaModificacion: new Date().toISOString()
                 };
-                reader.readAsDataURL(fileInput.files[0]);
-            } else if (id) {
-                // Mantener imagen existente
-                const tx = db.transaction([STORE_NAME], 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const req = store.get(parseInt(id));
-                req.onsuccess = () => {
-                    if (req.result?.imagen) reserva.imagen = req.result.imagen;
-                    guardarReserva(reserva, id);
-                };
-            } else {
-                await guardarReserva(reserva, id);
+                
+                // Manejar imagen
+                const dropZone = document.getElementById('dropZone');
+                if (dropZone.dataset.image) {
+                    reserva.imagen = dropZone.dataset.image;
+                } else if (id) {
+                    // Mantener imagen existente
+                    const existente = await getReservaById(parseInt(id));
+                    if (existente?.imagen) reserva.imagen = existente.imagen;
+                }
+                
+                if (id) {
+                    reserva.id = parseInt(id);
+                    await updateReserva(reserva);
+                    showToast(MESSAGES.UPDATE_SUCCESS, 'success');
+                } else {
+                    await addReserva(reserva);
+                    showToast(MESSAGES.SAVE_SUCCESS, 'success');
+                }
+                
+                limpiarFormulario();
+                await cargarReservas();
+                
+            } catch (error) {
+                console.error('Error guardando:', error);
+                showToast(MESSAGES.ERROR_GENERIC, 'error');
+            } finally {
+                setLoading(btn, false);
             }
-        });
-
-        async function guardarReserva(reserva, id) {
-            const tx = db.transaction([STORE_NAME], 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            
-            if (id) {
-                reserva.id = parseInt(id);
-                await store.put(reserva);
-            } else {
-                await store.add(reserva);
-            }
-            
-            limpiarFormulario();
-            cargarReservas();
-            actualizarStats();
-            
-            // Notificación visual
-            mostrarNotificacion(id ? 'Reserva actualizada' : 'Reserva guardada');
         }
 
-        // Cargar reservas
+        async function handleEditSubmit(e) {
+            e.preventDefault();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            setLoading(btn, true);
+            
+            try {
+                const id = parseInt(document.getElementById('editId').value);
+                const precio = parseFloat(document.getElementById('editPrecio').value);
+                const pagado = parseFloat(document.getElementById('editPagado').value);
+                
+                if (pagado > precio) {
+                    showToast('El monto pagado no puede ser mayor al precio', 'error');
+                    return;
+                }
+                
+                const existente = await getReservaById(id);
+                
+                const actualizado = {
+                    ...existente,
+                    nombre: sanitizeInput(document.getElementById('editNombre').value),
+                    telefono: document.getElementById('editTelefono').value,
+                    producto: sanitizeInput(document.getElementById('editProducto').value),
+                    categorias: parseCategorias(document.getElementById('editCategorias').value),
+                    precioTotal: precio,
+                    montoPagado: pagado,
+                    montoRestante: Math.round((precio - pagado) * 100) / 100,
+                    estado: (precio - pagado) <= 0 ? 'completado' : 'pendiente',
+                    notas: sanitizeInput(document.getElementById('editNotas').value),
+                    ultimaModificacion: new Date().toISOString()
+                };
+                
+                await updateReserva(actualizado);
+                cerrarEditModal();
+                await cargarReservas();
+                showToast(MESSAGES.UPDATE_SUCCESS, 'success');
+                
+            } catch (error) {
+                console.error('Error actualizando:', error);
+                showToast(MESSAGES.ERROR_GENERIC, 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        }
+
+        async function addReserva(reserva) {
+            return withDB('readwrite', (store, resolve, reject) => {
+                const request = store.add(reserva);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function updateReserva(reserva) {
+            return withDB('readwrite', (store, resolve, reject) => {
+                const request = store.put(reserva);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function deleteReserva(id) {
+            return withDB('readwrite', (store, resolve, reject) => {
+                const request = store.delete(id);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getReservaById(id) {
+            return withDB('readonly', (store, resolve, reject) => {
+                const request = store.get(id);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getAllReservas() {
+            return withDB('readonly', (store, resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // ============================================
+        // CARGA Y VISUALIZACIÓN
+        // ============================================
         async function cargarReservas() {
-            if (!dbReady) return;
-            
-            const tx = db.transaction([STORE_NAME], 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
-            
-            req.onsuccess = () => mostrarTabla(req.result);
+            try {
+                mostrarSkeleton();
+                
+                let reservas = await getAllReservas();
+                
+                // Aplicar filtros
+                reservas = aplicarFiltrosLocales(reservas);
+                
+                // Aplicar ordenamiento
+                reservas = ordenarReservas(reservas);
+                
+                // Actualizar estadísticas (con todos los datos)
+                actualizarStats(reservas);
+                
+                // Actualizar filtros de categorías
+                actualizarFiltroCategorias(reservas);
+                
+                // Paginación
+                const total = reservas.length;
+                const totalPages = Math.ceil(total / CONFIG.ITEMS_PER_PAGE);
+                
+                // Ajustar página actual si es necesario
+                if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+                
+                const start = (currentPage - 1) * CONFIG.ITEMS_PER_PAGE;
+                const end = start + CONFIG.ITEMS_PER_PAGE;
+                const paginated = reservas.slice(start, end);
+                
+                mostrarTabla(paginated, total);
+                mostrarPaginacion(total, totalPages);
+                
+            } catch (error) {
+                console.error('Error cargando reservas:', error);
+                showToast('Error al cargar las reservas', 'error');
+            }
         }
 
-        function mostrarTabla(reservas) {
+        function aplicarFiltrosLocales(reservas) {
+            // Filtro de búsqueda
+            if (searchTerm) {
+                reservas = reservas.filter(r => 
+                    r.nombre.toLowerCase().includes(searchTerm) ||
+                    r.telefono.toLowerCase().includes(searchTerm) ||
+                    r.producto.toLowerCase().includes(searchTerm) ||
+                    (r.categorias && r.categorias.some(c => c.toLowerCase().includes(searchTerm)))
+                );
+            }
+            
+            // Filtro por estado
+            const estadoFiltro = document.getElementById('filtroEstado').value;
+            if (estadoFiltro) {
+                reservas = reservas.filter(r => r.estado === estadoFiltro);
+            }
+            
+            // Filtro por categoría
+            const categoriaFiltro = document.getElementById('filtroCategoria').value;
+            if (categoriaFiltro) {
+                reservas = reservas.filter(r => r.categorias && r.categorias.includes(categoriaFiltro));
+            }
+            
+            // Filtro por fecha
+            const desde = document.getElementById('fechaDesde').value;
+            const hasta = document.getElementById('fechaHasta').value;
+            
+            if (desde) {
+                reservas = reservas.filter(r => r.fecha >= desde);
+            }
+            if (hasta) {
+                reservas = reservas.filter(r => r.fecha <= hasta);
+            }
+            
+            // Filtro por click en stats
+            if (currentFilter !== 'todos') {
+                reservas = reservas.filter(r => r.estado === currentFilter);
+            }
+            
+            return reservas;
+        }
+
+        function ordenarReservas(reservas) {
+            return reservas.sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
+                
+                // Manejar fechas
+                if (sortColumn === 'fecha' || sortColumn === 'fechaRegistro') {
+                    valA = new Date(valA);
+                    valB = new Date(valB);
+                }
+                
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function mostrarTabla(reservas, total) {
             const container = document.getElementById('tablaContainer');
             
             if (reservas.length === 0) {
@@ -1062,8 +2491,8 @@
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
-                        <h3>No hay reservas registradas</h3>
-                        <p>Comience agregando una nueva reserva desde el panel izquierdo</p>
+                        <h3>${total === 0 ? 'No hay reservas registradas' : 'No se encontraron resultados'}</h3>
+                        <p>${total === 0 ? 'Comience agregando una nueva reserva desde el panel izquierdo' : 'Pruebe con otros términos de búsqueda o filtros'}</p>
                     </div>
                 `;
                 return;
@@ -1073,15 +2502,15 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Cliente</th>
-                            <th>Teléfono</th>
-                            <th>Fecha</th>
+                            <th class="sortable" onclick="ordenarPor('id')" data-column="id">ID</th>
+                            <th class="sortable" onclick="ordenarPor('nombre')" data-column="nombre">Cliente</th>
+                            <th class="sortable" onclick="ordenarPor('telefono')" data-column="telefono">Teléfono</th>
+                            <th class="sortable" onclick="ordenarPor('fecha')" data-column="fecha">Fecha</th>
                             <th>Producto</th>
-                            <th>Imagen</th>
-                            <th>Total</th>
-                            <th>Pagado</th>
-                            <th>Restante</th>
+                            <th>Img</th>
+                            <th class="sortable text-right" onclick="ordenarPor('precioTotal')" data-column="precioTotal">Total</th>
+                            <th class="text-right">Pagado</th>
+                            <th class="sortable text-right" onclick="ordenarPor('montoRestante')" data-column="montoRestante">Restante</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -1090,34 +2519,45 @@
             `;
 
             reservas.forEach(r => {
-                const completado = r.montoRestante === 0;
+                const completado = r.estado === 'completado';
+                const avatar = r.nombre.charAt(0).toUpperCase();
                 const imgHtml = r.imagen 
-                    ? `<img src="${r.imagen}" class="img-cell" onclick="abrirModal('${r.imagen}', '${escapeHtml(r.producto)}')" title="Click para ampliar">`
+                    ? `<div class="img-cell-container"><img src="${r.imagen}" class="img-cell" onclick="abrirModal('${r.imagen}', '${escapeHtml(r.producto)}')" loading="lazy" alt="Producto"></div>`
                     : `<div class="no-image">Sin img</div>`;
                 
+                const tagsHtml = r.categorias ? r.categorias.map(c => `<span class="tag">${escapeHtml(c)}</span>`).join('') : '';
+                
                 html += `
-                    <tr>
-                        <td>#${r.id}</td>
-                        <td class="cell-cliente">${escapeHtml(r.nombre)}</td>
+                    <tr data-id="${r.id}">
+                        <td class="cell-id">#${r.id}</td>
+                        <td class="cell-cliente">
+                            <div class="cliente-avatar">${avatar}</div>
+                            <div>
+                                <div>${escapeHtml(r.nombre)}</div>
+                                ${tagsHtml ? `<div class="tags">${tagsHtml}</div>` : ''}
+                            </div>
+                        </td>
                         <td class="cell-telefono">${escapeHtml(r.telefono)}</td>
-                        <td>${formatearFecha(r.fecha)}</td>
-                        <td>${escapeHtml(r.producto)}</td>
+                        <td class="cell-fecha">${formatearFecha(r.fecha)}</td>
+                        <td>
+                            <div>${escapeHtml(r.producto)}</div>
+                            ${r.notas ? `<small style="color: #718096; display: block; margin-top: 2px;">${escapeHtml(r.notas.substring(0, 50))}${r.notas.length > 50 ? '...' : ''}</small>` : ''}
+                        </td>
                         <td>${imgHtml}</td>
-                        <td class="cell-monto">$${r.precioTotal.toFixed(2)}</td>
-                        <td style="color: var(--color-exito); font-weight: 600;">$${r.montoPagado.toFixed(2)}</td>
-                        <td class="cell-restante ${completado ? 'completado' : ''}">$${r.montoRestante.toFixed(2)}</td>
+                        <td class="cell-monto text-right">${formatMoney(r.precioTotal)}</td>
+                        <td class="text-right" style="color: var(--color-exito); font-weight: 600;">${formatMoney(r.montoPagado)}</td>
+                        <td class="cell-restante ${completado ? 'completado' : ''} text-right">${formatMoney(r.montoRestante)}</td>
                         <td><span class="badge ${completado ? 'badge-completado' : 'badge-pendiente'}">${completado ? 'Completado' : 'Pendiente'}</span></td>
                         <td>
                             <div class="actions">
-                                <button class="btn-action btn-edit" onclick="abrirEditModal(${r.id})" title="Editar">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
+                                <button class="btn-action btn-duplicate" onclick="duplicarReserva(${r.id})" title="Duplicar" data-tooltip="Duplicar">
+                                    📋
                                 </button>
-                                <button class="btn-action btn-delete" onclick="eliminarReserva(${r.id})" title="Eliminar">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
+                                <button class="btn-action btn-edit" onclick="abrirEditModal(${r.id})" title="Editar" data-tooltip="Editar">
+                                    ✏️
+                                </button>
+                                <button class="btn-action btn-delete" onclick="confirmarEliminar(${r.id})" title="Eliminar" data-tooltip="Eliminar">
+                                    🗑️
                                 </button>
                             </div>
                         </td>
@@ -1127,241 +2567,505 @@
 
             html += '</tbody></table>';
             container.innerHTML = html;
+            
+            // Actualizar indicadores de ordenamiento
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.column === sortColumn) {
+                    th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
         }
 
-        // Modal de Imagen
+        function mostrarSkeleton() {
+            const container = document.getElementById('tablaContainer');
+            let html = '<table><thead><tr>';
+            const headers = ['ID', 'Cliente', 'Teléfono', 'Fecha', 'Producto', 'Img', 'Total', 'Pagado', 'Restante', 'Estado', 'Acciones'];
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            for (let i = 0; i < 5; i++) {
+                html += '<tr>';
+                for (let j = 0; j < 11; j++) {
+                    html += '<td><div class="skeleton" style="height: 20px; width: ' + (Math.random() * 50 + 50) + '%;"></div></td>';
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function mostrarPaginacion(total, totalPages) {
+            const container = document.getElementById('paginationContainer');
+            const controls = document.getElementById('paginationControls');
+            
+            if (totalPages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            document.getElementById('paginaInicio').textContent = ((currentPage - 1) * CONFIG.ITEMS_PER_PAGE) + 1;
+            document.getElementById('paginaFin').textContent = Math.min(currentPage * CONFIG.ITEMS_PER_PAGE, total);
+            document.getElementById('paginaTotal').textContent = total;
+            
+            let html = `
+                <button class="page-btn" onclick="cambiarPagina(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>←</button>
+            `;
+            
+            // Mostrar páginas alrededor de la actual
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="cambiarPagina(1)">1</button>`;
+                if (startPage > 2) html += `<span style="padding: 6px;">...</span>`;
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="cambiarPagina(${i})">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span style="padding: 6px;">...</span>`;
+                html += `<button class="page-btn" onclick="cambiarPagina(${totalPages})">${totalPages}</button>`;
+            }
+            
+            html += `
+                <button class="page-btn" onclick="cambiarPagina(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>→</button>
+            `;
+            
+            controls.innerHTML = html;
+        }
+
+        // ============================================
+        // ACCIONES DE TABLA
+        // ============================================
+        function ordenarPor(columna) {
+            if (sortColumn === columna) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columna;
+                sortDirection = 'asc';
+            }
+            cargarReservas();
+        }
+
+        function cambiarPagina(pagina) {
+            currentPage = pagina;
+            cargarReservas();
+            document.querySelector('.table-wrapper').scrollTop = 0;
+        }
+
+        async function duplicarReserva(id) {
+            try {
+                const original = await getReservaById(id);
+                if (!original) return;
+                
+                const duplicada = {
+                    ...original,
+                    id: undefined,
+                    nombre: original.nombre + ' (Copia)',
+                    fechaRegistro: new Date().toISOString(),
+                    ultimaModificacion: new Date().toISOString()
+                };
+                
+                await addReserva(duplicada);
+                await cargarReservas();
+                showToast('Reserva duplicada correctamente', 'success');
+            } catch (error) {
+                console.error('Error duplicando:', error);
+                showToast('Error al duplicar la reserva', 'error');
+            }
+        }
+
+        function confirmarEliminar(id) {
+            confirmCallback = async () => {
+                try {
+                    await deleteReserva(id);
+                    await cargarReservas();
+                    showToast(MESSAGES.DELETE_SUCCESS, 'success');
+                } catch (error) {
+                    console.error('Error eliminando:', error);
+                    showToast('Error al eliminar la reserva', 'error');
+                }
+            };
+            
+            document.getElementById('confirmIcon').textContent = '🗑️';
+            document.getElementById('confirmTitle').textContent = '¿Eliminar reserva?';
+            document.getElementById('confirmText').textContent = 'Esta acción eliminará permanentemente la reserva #${id}. No se puede deshacer.';
+            document.getElementById('confirmBtn').className = 'btn btn-danger';
+            document.getElementById('confirmBtn').onclick = ejecutarConfirmacion;
+            
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function ejecutarConfirmacion() {
+            if (confirmCallback) {
+                confirmCallback();
+                confirmCallback = null;
+            }
+            cerrarConfirmModal();
+        }
+
+        // ============================================
+        // MODALES
+        // ============================================
         function abrirModal(src, producto) {
             document.getElementById('modalImage').src = src;
             document.getElementById('modalInfo').textContent = producto;
             document.getElementById('imageModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
         function cerrarModal() {
             document.getElementById('imageModal').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
-        // Modal de Edición
-        function abrirEditModal(id) {
-            const tx = db.transaction([STORE_NAME], 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.get(id);
-            
-            req.onsuccess = () => {
-                const r = req.result;
+        async function abrirEditModal(id) {
+            try {
+                const r = await getReservaById(id);
                 if (!r) return;
                 
                 document.getElementById('editId').value = r.id;
                 document.getElementById('editNombre').value = r.nombre;
                 document.getElementById('editTelefono').value = r.telefono;
                 document.getElementById('editProducto').value = r.producto;
+                document.getElementById('editCategorias').value = r.categorias ? r.categorias.join(', ') : '';
                 document.getElementById('editPrecio').value = r.precioTotal;
                 document.getElementById('editPagado').value = r.montoPagado;
+                document.getElementById('editNotas').value = r.notas || '';
                 
                 calcularEditRestante();
                 document.getElementById('editModal').classList.add('active');
-            };
+                document.body.style.overflow = 'hidden';
+            } catch (error) {
+                console.error('Error cargando reserva:', error);
+                showToast('Error al cargar la reserva', 'error');
+            }
         }
 
         function cerrarEditModal() {
             document.getElementById('editModal').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
-        // Cálculo en modal de edición
-        document.getElementById('editPrecio').addEventListener('input', calcularEditRestante);
-        document.getElementById('editPagado').addEventListener('input', calcularEditRestante);
-
-        function calcularEditRestante() {
-            const precio = parseFloat(document.getElementById('editPrecio').value) || 0;
-            const pagado = parseFloat(document.getElementById('editPagado').value) || 0;
-            const restante = Math.max(0, precio - pagado);
-            document.getElementById('editRestante').textContent = `$${restante.toFixed(2)}`;
+        function cerrarConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            confirmCallback = null;
         }
 
-        // Guardar edición
-        document.getElementById('editForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const id = parseInt(document.getElementById('editId').value);
-            const precio = parseFloat(document.getElementById('editPrecio').value);
-            const pagado = parseFloat(document.getElementById('editPagado').value);
-            
-            if (pagado > precio) {
-                alert('El monto pagado no puede ser mayor al precio');
-                return;
-            }
+        function cerrarTodosLosModales() {
+            cerrarModal();
+            cerrarEditModal();
+            cerrarConfirmModal();
+        }
 
-            const tx = db.transaction([STORE_NAME], 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.get(id);
-            
-            req.onsuccess = () => {
-                const r = req.result;
-                r.nombre = document.getElementById('editNombre').value;
-                r.telefono = document.getElementById('editTelefono').value;
-                r.producto = document.getElementById('editProducto').value;
-                r.precioTotal = precio;
-                r.montoPagado = pagado;
-                r.montoRestante = precio - pagado;
-                
-                store.put(r);
-                cerrarEditModal();
-                cargarReservas();
-                actualizarStats();
-                mostrarNotificacion('Reserva actualizada');
-            };
-        });
+        // ============================================
+        // FILTROS Y BÚSQUEDA
+        // ============================================
+        function aplicarFiltros() {
+            currentPage = 1;
+            cargarReservas();
+        }
 
-        // Eliminar
-        async function eliminarReserva(id) {
-            if (!confirm('¿Eliminar esta reserva permanentemente?')) return;
+        function limpiarFiltros() {
+            document.getElementById('filtroEstado').value = '';
+            document.getElementById('filtroCategoria').value = '';
+            document.getElementById('fechaDesde').value = '';
+            document.getElementById('fechaHasta').value = '';
+            document.getElementById('buscar').value = '';
+            searchTerm = '';
+            currentFilter = 'todos';
+            currentPage = 1;
             
-            const tx = db.transaction([STORE_NAME], 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            await store.delete(id);
+            // Resetear active en stats
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
             
             cargarReservas();
-            actualizarStats();
-            mostrarNotificacion('Reserva eliminada');
         }
 
-        // Cargar al sidebar para editar principal
-        function cargarEnFormulario(id) {
-            const tx = db.transaction([STORE_NAME], 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.get(id);
+        function filtrarPorEstado(estado) {
+            currentFilter = estado;
+            currentPage = 1;
             
-            req.onsuccess = () => {
-                const r = req.result;
-                document.getElementById('reservaId').value = r.id;
-                document.getElementById('nombre').value = r.nombre;
-                document.getElementById('telefono').value = r.telefono;
-                document.getElementById('fecha').value = r.fecha;
-                document.getElementById('producto').value = r.producto;
-                document.getElementById('precioTotal').value = r.precioTotal;
-                document.getElementById('montoPagado').value = r.montoPagado;
-                
-                if (r.imagen) {
-                    document.getElementById('previewImagen').src = r.imagen;
-                    document.getElementById('previewImagen').classList.add('active');
-                    document.getElementById('dropZone').classList.add('has-image');
-                }
-                
-                calcularRestante();
-                document.getElementById('btnGuardar').innerHTML = '<span>💾</span> Actualizar Reserva';
-            };
-        }
-
-        // Limpiar
-        function limpiarFormulario() {
-            document.getElementById('reservaForm').reset();
-            document.getElementById('reservaId').value = '';
-            document.getElementById('previewImagen').classList.remove('active');
-            document.getElementById('dropZone').classList.remove('has-image');
-            document.getElementById('btnGuardar').innerHTML = '<span>💾</span> Guardar Reserva';
-            document.getElementById('fecha').valueAsDate = new Date();
-            calcularRestante();
-        }
-
-        // Búsqueda
-        function buscarReservas() {
-            const termino = document.getElementById('buscar').value.toLowerCase();
-            const tx = db.transaction([STORE_NAME], 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
-            
-            req.onsuccess = () => {
-                const filtradas = req.result.filter(r => 
-                    r.nombre.toLowerCase().includes(termino) ||
-                    r.telefono.toLowerCase().includes(termino) ||
-                    r.producto.toLowerCase().includes(termino)
-                );
-                mostrarTabla(filtradas);
-            };
-        }
-
-        // Estadísticas
-        async function actualizarStats() {
-            const tx = db.transaction([STORE_NAME], 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.getAll();
-            
-            req.onsuccess = () => {
-                const reservas = req.result;
-                const total = reservas.length;
-                const recaudado = reservas.reduce((s, r) => s + r.montoPagado, 0);
-                const pendiente = reservas.reduce((s, r) => s + r.montoRestante, 0);
-                
-                document.getElementById('totalReservas').textContent = total;
-                document.getElementById('totalRecaudado').textContent = `$${recaudado.toFixed(0)}`;
-                document.getElementById('totalPendiente').textContent = `$${pendiente.toFixed(0)}`;
-            };
-        }
-
-        // Modo Kiosco
-        function toggleKiosco() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log(`Error al entrar en pantalla completa: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
+            // Actualizar UI
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+            if (estado !== 'todos') {
+                document.getElementById('stat-' + estado).classList.add('active');
             }
-        }
-
-        // Notificación
-        function mostrarNotificacion(mensaje) {
-            const notif = document.createElement('div');
-            notif.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--color-exito);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 10px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                z-index: 9999;
-                font-weight: 600;
-                animation: slideIn 0.3s ease-out;
-            `;
-            notif.textContent = mensaje;
-            document.body.appendChild(notif);
             
-            setTimeout(() => {
-                notif.style.animation = 'fadeOut 0.3s ease-out';
-                setTimeout(() => notif.remove(), 300);
-            }, 3000);
+            cargarReservas();
         }
 
-        // Utilidades
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function limpiarBusqueda() {
+            document.getElementById('buscar').value = '';
+            searchTerm = '';
+            currentPage = 1;
+            cargarReservas();
+        }
+
+        function actualizarFiltroCategorias(reservas) {
+            const select = document.getElementById('filtroCategoria');
+            const categorias = new Set();
+            
+            reservas.forEach(r => {
+                if (r.categorias) {
+                    r.categorias.forEach(c => categorias.add(c));
+                }
+            });
+            
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Todas las categorías</option>';
+            
+            Array.from(categorias).sort().forEach(c => {
+                select.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+            });
+            
+            select.value = currentValue;
+        }
+
+        // ============================================
+        // ESTADÍSTICAS
+        // ============================================
+        function actualizarStats(reservas) {
+            const total = reservas.length;
+            const completados = reservas.filter(r => r.estado === 'completado').length;
+            const pendientes = reservas.filter(r => r.estado === 'pendiente').length;
+            
+            // Usar reduce con precisión decimal
+            const recaudado = reservas.reduce((sum, r) => sum + (r.montoPagado || 0), 0);
+            const porCobrar = reservas.reduce((sum, r) => sum + (r.montoRestante || 0), 0);
+            
+            // Animar números
+            animateNumber('totalReservas', total);
+            animateNumber('totalCompletados', completados);
+            animateNumber('totalPendientes', pendientes);
+            
+            // Formatear dinero con 2 decimales siempre
+            document.getElementById('totalRecaudado').textContent = formatMoney(recaudado);
+            document.getElementById('totalPendiente').textContent = formatMoney(porCobrar);
+        }
+
+        function animateNumber(elementId, target) {
+            const element = document.getElementById(elementId);
+            const start = parseInt(element.textContent) || 0;
+            const duration = 500;
+            const startTime = performance.now();
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+                const current = Math.round(start + (target - start) * easeProgress);
+                
+                element.textContent = current;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            
+            requestAnimationFrame(update);
+        }
+
+        // ============================================
+        // UTILIDADES
+        // ============================================
+        function formatMoney(amount) {
+            // Asegurar que siempre muestre 2 decimales
+            const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+            return '$' + num.toLocaleString('es-DO', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         }
 
         function formatearFecha(fechaStr) {
-            return new Date(fechaStr).toLocaleDateString('es-ES', {
+            if (!fechaStr) return '-';
+            const fecha = new Date(fechaStr);
+            return fecha.toLocaleDateString('es-DO', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
             });
         }
 
-        // Inicialización
-        window.onload = async () => {
-            await initDB();
-            document.getElementById('fecha').valueAsDate = new Date();
-            calcularRestante();
-            cargarReservas();
-            actualizarStats();
-        };
+        function sanitizeInput(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text.trim();
+            return div.innerHTML;
+        }
 
-        // Cerrar modales con ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                cerrarModal();
-                cerrarEditModal();
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function parseCategorias(texto) {
+            if (!texto) return [];
+            return texto.split(',')
+                .map(c => c.trim())
+                .filter(c => c.length > 0)
+                .map(c => sanitizeInput(c));
+        }
+
+        function setLoading(btn, loading) {
+            if (loading) {
+                btn.classList.add('loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================
+        // NOTIFICACIONES (TOASTS)
+        // ============================================
+        function showToast(message, type = 'info', title = '') {
+            const container = document.getElementById('toastContainer');
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            const titles = {
+                success: 'Éxito',
+                error: 'Error',
+                warning: 'Advertencia',
+                info: 'Información'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type]}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title || titles[type]}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+                <div class="toast-progress"></div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto-remove
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ============================================
+        // EXPORTAR DATOS
+        // ============================================
+        async function exportarDatos() {
+            try {
+                const reservas = await getAllReservas();
+                
+                if (reservas.length === 0) {
+                    showToast('No hay datos para exportar', 'warning');
+                    return;
+                }
+                
+                // Crear CSV
+                const headers = ['ID', 'Nombre', 'Teléfono', 'Fecha', 'Producto', 'Categorías', 'Precio Total', 'Monto Pagado', 'Monto Restante', 'Estado', 'Notas', 'Fecha Registro'];
+                const rows = reservas.map(r => [
+                    r.id,
+                    `"${r.nombre}"`,
+                    r.telefono,
+                    r.fecha,
+                    `"${r.producto}"`,
+                    `"${(r.categorias || []).join('; ')}"`,
+                    r.precioTotal.toFixed(2),
+                    r.montoPagado.toFixed(2),
+                    r.montoRestante.toFixed(2),
+                    r.estado,
+                    `"${r.notas || ''}"`,
+                    r.fechaRegistro
+                ]);
+                
+                const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                
+                // Descargar
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `reservas_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+                
+                showToast('Datos exportados correctamente', 'success');
+            } catch (error) {
+                console.error('Error exportando:', error);
+                showToast('Error al exportar datos', 'error');
+            }
+        }
+
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.drawer-overlay');
+            
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        function toggleKiosco() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    showToast('No se pudo activar pantalla completa', 'error');
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function mostrarAyuda() {
+            showToast('Sistema de Reservas v2.0 - Use el panel izquierdo para agregar reservas. Click en stats para filtrar.', 'info', 'Ayuda');
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('reservaForm').reset();
+            document.getElementById('reservaId').value = '';
+            
+            const dropZone = document.getElementById('dropZone');
+            const preview = document.getElementById('previewImagen');
+            
+            preview.src = '';
+            preview.classList.remove('active');
+            dropZone.classList.remove('has-image');
+            delete dropZone.dataset.image;
+            
+            document.getElementById('btnGuardar').querySelector('.btn-text').textContent = '💾 Guardar Reserva';
+            
+            setFechaMinima();
+            calcularRestante();
+        }
+
+        // Prevenir cierre accidental con cambios sin guardar
+        let formDirty = false;
+        document.getElementById('reservaForm').addEventListener('input', () => {
+            formDirty = true;
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formDirty) {
+                e.preventDefault();
+                e.returnValue = '';
             }
         });
     </script>

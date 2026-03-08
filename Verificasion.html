@@ -2678,22 +2678,64 @@
             });
         }
 
-        // NUEVO: Función para formatear/borrar toda la base de datos
+        // ============================================
+        // FORMATEAR TODO - VERSIÓN CORREGIDA (REINICIA IDs)
+        // ============================================
         async function formatearTodo() {
             try {
-                const todas = await getAllReservas();
-                
-                // Eliminar todas las reservas una por una
-                for (const reserva of todas) {
-                    await deleteReserva(reserva.id);
+                // Cerrar conexión actual
+                if (db) {
+                    db.close();
+                    db = null;
+                    dbReady = false;
                 }
                 
-                showToast(MESSAGES.FORMAT_SUCCESS, 'success');
-                await cargarReservas();
+                // Eliminar la base de datos completamente (esto reinicia el autoIncrement)
+                await new Promise((resolve, reject) => {
+                    const deleteRequest = indexedDB.deleteDatabase(CONFIG.DB_NAME);
+                    
+                    deleteRequest.onsuccess = () => {
+                        console.log('Base de datos eliminada completamente');
+                        resolve();
+                    };
+                    
+                    deleteRequest.onerror = () => {
+                        console.error('Error eliminando DB:', deleteRequest.error);
+                        reject(deleteRequest.error);
+                    };
+                    
+                    deleteRequest.onblocked = () => {
+                        showToast('Cierre otras pestañas para formatear completamente', 'warning');
+                        // Forzar cierre y reintentar
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    };
+                });
+                
+                // Reinicializar la base de datos desde cero
+                await initDB();
+                
+                // Limpiar UI
                 limpiarFormulario();
+                currentPage = 1;
+                currentFilter = 'todos';
+                
+                // Recargar datos (ahora debería estar vacía)
+                await cargarReservas();
+                
+                showToast('Base de datos formateada - IDs reiniciados a #1', 'success');
+                
             } catch (error) {
                 console.error('Error formateando:', error);
-                showToast('Error al formatear la base de datos', 'error');
+                showToast('Error al formatear. Recargue la página.', 'error');
+                
+                // Intentar recuperar la conexión
+                try {
+                    await initDB();
+                } catch (e) {
+                    console.error('No se pudo reconectar:', e);
+                }
             }
         }
 
@@ -2704,7 +2746,7 @@
             
             document.getElementById('confirmIcon').textContent = '⚠️';
             document.getElementById('confirmTitle').textContent = '¿Formatear Todo?';
-            document.getElementById('confirmText').textContent = 'Esta acción eliminará PERMANENTEMENTE todas las reservas, imágenes y datos. No se puede deshacer.';
+            document.getElementById('confirmText').textContent = 'Esta acción eliminará PERMANENTEMENTE todas las reservas y REINICIARÁ los IDs a #1. No se puede deshacer.';
             document.getElementById('confirmBtn').className = 'btn btn-danger';
             document.getElementById('confirmBtn').onclick = ejecutarConfirmacion;
             
@@ -3233,14 +3275,32 @@
                             r.imagen = await blobToBase64(imagenBlob);
                         }
 
-                        // Quitar ID para que se cree como nueva (si es mezclar)
-                        if (modo === 'mezclar') {
-                            delete r.id;
-                            r.fechaRegistro = new Date().toISOString();
-                            await addReserva(r);
+                        // Quitar ID asignado (edición), usarlo. Si no, generar uno nuevo
+                        if (!reserva.id) {
+                            // Obtener el último ID usado de localStorage o calcularlo
+                            let lastId = parseInt(localStorage.getItem('reservas_lastId') || '0');
+                            
+                            // Verificar si hay reservas existentes para obtener el máximo ID
+                            const checkRequest = store.getAll();
+                            checkRequest.onsuccess = () => {
+                                const existing = checkRequest.result;
+                                const maxId = existing.length > 0 ? Math.max(...existing.map(r => r.id)) : 0;
+                                
+                                // Usar el mayor entre el localStorage y el existente en DB
+                                reserva.id = Math.max(lastId, maxId) + 1;
+                                localStorage.setItem('reservas_lastId', reserva.id.toString());
+                                
+                                // Ahora sí agregar
+                                const addRequest = store.add(reserva);
+                                addRequest.onsuccess = () => resolve(request.result);
+                                addRequest.onerror = () => reject(request.error);
+                            };
+                            checkRequest.onerror = () => reject(checkRequest.error);
                         } else {
-                            // Reemplazar: primero limpiar todo (ya se hizo arriba)
-                            await addReserva(r);
+                            // Si ya tiene ID (actualización), usar put
+                            const request = store.put(reserva);
+                            request.onsuccess = () => resolve(request.result);
+                            request.onerror = () => reject(request.error);
                         }
                         
                         importadas++;

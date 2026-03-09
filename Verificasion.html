@@ -1484,6 +1484,11 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+
         .toast.error {
             border-left-color: var(--color-peligro);
         }
@@ -3141,7 +3146,7 @@
         }
 
         // ============================================
-        // MODAL BACKUP/RESTORE (ZIP)
+        // MODAL BACKUP/RESTORE (ZIP) - CORREGIDO
         // ============================================
         function abrirBackupModal() {
             document.getElementById('backupModal').classList.add('active');
@@ -3229,7 +3234,7 @@
             }
         }
 
-        // Importar datos desde ZIP
+        // Importar datos desde ZIP - VERSIÓN CORREGIDA
         async function importarZIP() {
             if (!selectedZipFile) {
                 showToast('Seleccione un archivo ZIP primero', 'warning');
@@ -3245,11 +3250,15 @@
                 // Leer datos.json
                 const datosFile = zip.file("reservas_backup/datos.json");
                 if (!datosFile) {
-                    throw new Error('El archivo ZIP no contiene datos válidos');
+                    throw new Error('El archivo ZIP no contiene datos válidos (falta datos.json)');
                 }
 
                 const datosJson = await datosFile.async("string");
                 const reservasImportadas = JSON.parse(datosJson);
+
+                if (!Array.isArray(reservasImportadas) || reservasImportadas.length === 0) {
+                    throw new Error('No hay reservas para importar en el archivo');
+                }
 
                 // Preguntar si reemplazar o mezclar
                 const modo = await mostrarDialogoImportacion();
@@ -3261,6 +3270,14 @@
 
                 let importadas = 0;
                 let errores = 0;
+
+                // Si es modo reemplazar, limpiar primero
+                if (modo === 'reemplazar') {
+                    const all = await getAllReservas();
+                    for (const r of all) {
+                        await deleteReserva(r.id);
+                    }
+                }
 
                 // Procesar cada reserva
                 for (const r of reservasImportadas) {
@@ -3275,38 +3292,27 @@
                             r.imagen = await blobToBase64(imagenBlob);
                         }
 
-                        // Quitar ID asignado (edición), usarlo. Si no, generar uno nuevo
-                        if (!reserva.id) {
-                            // Obtener el último ID usado de localStorage o calcularlo
-                            let lastId = parseInt(localStorage.getItem('reservas_lastId') || '0');
-                            
-                            // Verificar si hay reservas existentes para obtener el máximo ID
-                            const checkRequest = store.getAll();
-                            checkRequest.onsuccess = () => {
-                                const existing = checkRequest.result;
-                                const maxId = existing.length > 0 ? Math.max(...existing.map(r => r.id)) : 0;
-                                
-                                // Usar el mayor entre el localStorage y el existente en DB
-                                reserva.id = Math.max(lastId, maxId) + 1;
-                                localStorage.setItem('reservas_lastId', reserva.id.toString());
-                                
-                                // Ahora sí agregar
-                                const addRequest = store.add(reserva);
-                                addRequest.onsuccess = () => resolve(request.result);
-                                addRequest.onerror = () => reject(request.error);
-                            };
-                            checkRequest.onerror = () => reject(checkRequest.error);
-                        } else {
-                            // Si ya tiene ID (actualización), usar put
-                            const request = store.put(reserva);
-                            request.onsuccess = () => resolve(request.result);
-                            request.onerror = () => reject(request.error);
-                        }
+                        // Preparar reserva para guardar
+                        const reservaParaGuardar = { ...r };
                         
+                        // Si no tiene ID o estamos en modo mezclar, generar nuevo ID
+                        if (!reservaParaGuardar.id || modo === 'mezclar') {
+                            // Obtener todas las reservas existentes para calcular el siguiente ID
+                            const existentes = await getAllReservas();
+                            const maxId = existentes.length > 0 ? Math.max(...existentes.map(res => res.id)) : 0;
+                            reservaParaGuardar.id = maxId + 1;
+                        }
+
+                        // Asegurar que tenga fechas válidas
+                        reservaParaGuardar.fechaRegistro = reservaParaGuardar.fechaRegistro || new Date().toISOString();
+                        reservaParaGuardar.ultimaModificacion = new Date().toISOString();
+
+                        // Guardar en la base de datos
+                        await addReserva(reservaParaGuardar);
                         importadas++;
 
                     } catch (err) {
-                        console.error('Error importando reserva:', err);
+                        console.error('Error importando reserva:', err, r);
                         errores++;
                     }
                 }
@@ -3359,19 +3365,8 @@
                 };
                 
                 document.getElementById('btnReemplazar').onclick = async () => {
-                    // Limpiar base de datos actual
-                    try {
-                        const all = await getAllReservas();
-                        for (const r of all) {
-                            await deleteReserva(r.id);
-                        }
-                        document.body.removeChild(modal);
-                        resolve('reemplazar');
-                    } catch (e) {
-                        showToast('Error al limpiar datos existentes', 'error');
-                        document.body.removeChild(modal);
-                        resolve('cancelar');
-                    }
+                    document.body.removeChild(modal);
+                    resolve('reemplazar');
                 };
                 
                 document.getElementById('btnCancelarImport').onclick = () => {

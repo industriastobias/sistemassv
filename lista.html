@@ -37,9 +37,6 @@
     .card.deudas{background:linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);color:#fff}
     .card.deudas h3{color:#ffe0e0}
     .card.deudas p{color:#fff;font-size:1.6rem}
-    .card.por-cobrar{background:linear-gradient(135deg, #11998e 0%, #38ef7d 100%);color:#fff}
-    .card.por-cobrar h3{color:#e0f2f1}
-    .card.por-cobrar p{color:#fff;font-size:1.6rem}
     .icono{font-size:1.5rem}
     canvas{display:block;margin:2rem auto;max-width:350px}
     form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
@@ -60,7 +57,6 @@
     .excel-bar button:hover{background:#2e7d32}
     .error-msg{color:#e53935;font-size:0.85rem;margin-top:0.25rem}
     input:invalid{border-color:#e53935}
-    .sync-info{background:#e3f2fd;padding:10px;border-radius:8px;margin-bottom:10px;font-size:0.9rem;color:#0d47a1}
   </style>
 </head>
 <body>
@@ -80,9 +76,6 @@
   <!-- DASHBOARD -->
   <section id="dashboard" class="active">
     <h2>Resumen General</h2>
-    <div class="sync-info">
-      💡 <strong>Nota:</strong> Los ingresos incluyen ventas automáticas del sistema de inventario + ingresos manuales registrados.
-    </div>
     <div class="dashboard">
       <div class="card">
         <h3><span class="icono">💰</span> Total Ingresos</h3>
@@ -105,12 +98,8 @@
         <p id="inversionTotal">$0.00</p>
       </div>
       <div class="card deudas">
-        <h3><span class="icono">💳</span> Deudas por Pagar</h3>
+        <h3><span class="icono">💳</span> DEUDAS POR PAGAR</h3>
         <p id="totalDeudas">$0.00</p>
-      </div>
-      <div class="card por-cobrar">
-        <h3><span class="icono">📥</span> Cuentas por Cobrar</h3>
-        <p id="totalPorCobrar">$0.00</p>
       </div>
       <div class="card" id="balanceCard">
         <h3><span class="icono">💵</span> Balance Final</h3>
@@ -123,21 +112,6 @@
   <!-- INGRESOS -->
   <section id="ingresos">
     <h2>Ingresos</h2>
-    <form id="formIngreso">
-      <input name="fecha" type="date" required>
-      <input name="descripcion" placeholder="Descripción" required>
-      <input name="categoria" placeholder="Categoría">
-      <input name="monto" type="number" step="0.01" min="0.01" placeholder="Monto" required>
-      <input name="metodo_pago" placeholder="Método de pago">
-      <input name="responsable" placeholder="Responsable">
-      <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar Ingreso</button>
-    </form>
-    <div class="excel-bar">
-      <button id="exportIngresos">Exportar Excel</button>
-      <label for="importIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
-      <input type="file" id="importIngresos" accept=".xlsx,.xls" style="display:none">
-    </div>
     <table id="tablaIngresos">
       <thead>
         <tr>
@@ -160,7 +134,7 @@
       <input name="metodo_pago" placeholder="Método de pago">
       <input name="responsable" placeholder="Responsable">
       <textarea name="observaciones" placeholder="Observaciones"></textarea>
-      <button type="submit">Guardar Gasto</button>
+      <button type="submit">Guardar</button>
     </form>
     <div class="excel-bar">
       <button id="exportGastos">Exportar Excel</button>
@@ -276,9 +250,8 @@ tabs.forEach(btn => {
 });
 
 /* ---------- DATOS ---------- */
-// ✅ CORREGIDO: Ahora ingresos también se carga de localStorage
 const data = {
-  ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
+  ingresos: [],
   gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
   proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
   cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
@@ -286,7 +259,6 @@ const data = {
 const gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
 
 function saveData() {
-  // ✅ CORREGIDO: Ahora guarda TODOS los datos incluyendo ingresos
   for (const k in data) localStorage.setItem(k, JSON.stringify(data[k]));
   localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
   actualizarDashboard();
@@ -332,11 +304,6 @@ function actualizarDashboard() {
     .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
     .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
   
-  // ✅ NUEVO: Calcular cuentas por cobrar
-  const totalPorCobrar = data.cuentas
-    .filter(c => c.tipo === 'Por cobrar' && c.estado === 'Pendiente')
-    .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
-  
   const ingresoNeto = ti - gdi;
   const inversionTotal = tg + gdi;
   const balance = ti - inversionTotal;
@@ -349,9 +316,6 @@ function actualizarDashboard() {
   
   // ✅ NUEVO: Mostrar total de deudas
   document.getElementById('totalDeudas').textContent = '$' + totalDeudas.toFixed(2);
-  
-  // ✅ NUEVO: Mostrar cuentas por cobrar
-  document.getElementById('totalPorCobrar').textContent = '$' + totalPorCobrar.toFixed(2);
   
   const balanceEl = document.getElementById('balance');
   const balanceCard = document.getElementById('balanceCard');
@@ -385,35 +349,25 @@ function actualizarDashboard() {
 /* ---------- CARGAR VENTAS COMO INGRESOS ---------- */
 function cargarVentasComoIngresos() {
   const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  const ventasProcesadas = JSON.parse(localStorage.getItem('ventasProcesadas') || '[]');
   const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta));
-  let nuevasVentas = 0;
   
   ventas.forEach(v => {
-    const idVenta = `venta_${v.code}_${v.date || 'nodate'}`;
-    // ✅ CORREGIDO: Verificar tanto en ingresos actuales como en histórico de procesadas
-    if (!ventasExistentes.has(idVenta) && !ventasProcesadas.includes(idVenta)) {
+    const idVenta = `venta_${v.code}_${v.date || Date.now()}`;
+    if (!ventasExistentes.has(idVenta)) {
       data.ingresos.push({
         id_venta: idVenta,
         fecha: v.date || new Date().toISOString().split('T')[0],
         descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
         categoria: 'Venta',
-        monto: parseFloat(v.total) || 0,
-        metodo_pago: v.paymentMethod || 'Efectivo',
+        monto: parseFloat(v.total),
+        metodo_pago: 'Efectivo',
         responsable: 'Sistema',
         observaciones: `Cantidad vendida: ${v.quantity}`
       });
-      ventasProcesadas.push(idVenta);
-      nuevasVentas++;
     }
   });
   
-  // ✅ CORREGIDO: Guardar el registro de ventas procesadas para evitar duplicados
-  if (nuevasVentas > 0) {
-    localStorage.setItem('ventasProcesadas', JSON.stringify(ventasProcesadas));
-    saveData(); // Esto ahora guardará también los ingresos
-  }
-  
+  saveData();
   renderTable('tablaIngresos', data.ingresos, ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'], 'ingresos');
 }
 
@@ -423,7 +377,7 @@ function renderTable(id, arr, keys, keyName) {
   tbody.innerHTML = arr.map((it, i) => `
     <tr>
       ${keys.map(k => `<td>${it[k] !== undefined ? (k === 'monto' ? '$' + parseFloat(it[k]).toFixed(2) : it[k]) : ''}</td>`).join('')}
-      <td class="acciones">${keyName === 'ingresos' && it.id_venta && it.id_venta.startsWith('venta_') ? '<span style="color:#888;font-size:0.85rem;">Auto (Venta)</span>' : `
+      <td class="acciones">${keyName === 'ingresos' ? '<span style="color:#888;font-size:0.85rem;">Sistema</span>' : `
         <button class="editar" data-key="${keyName}" data-index="${i}" title="Editar">✏️</button>
         <button class="eliminar" data-key="${keyName}" data-index="${i}" title="Eliminar">🗑️</button>`}
       </td>
@@ -438,7 +392,6 @@ function validarMonto(valor) {
 
 /* ---------- FORMULARIOS ---------- */
 const forms = [
-  { id: 'formIngreso', key: 'ingresos', table: 'tablaIngresos', fields: ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones'] },
   { id: 'formGasto', key: 'gastos', table: 'tablaGastos', fields: ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones'] },
   { id: 'formProveedor', key: 'proveedores', table: 'tablaProveedores', fields: ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones'] },
   { id: 'formCuenta', key: 'cuentas', table: 'tablaCuentas', fields: ['tipo', 'cliente_proveedor', 'concepto', 'monto', 'fecha_vencimiento', 'estado', 'observaciones'] }
@@ -502,10 +455,7 @@ renderTable('tablaGastosDesdeIngresos', gastosDesdeIngresos, ['fecha', 'descripc
 document.addEventListener('click', e => {
   if (e.target.classList.contains('eliminar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos' && data.ingresos[index].id_venta) {
-      alert('No se pueden eliminar ingresos automáticos de ventas. Elimine la venta desde el sistema de inventario.');
-      return;
-    }
+    if (key === 'ingresos') return;
     if (confirm('¿Eliminar este registro?')) {
       if (key === 'gastosDesdeIngresos') {
         gastosDesdeIngresos.splice(index, 1);
@@ -522,10 +472,7 @@ document.addEventListener('click', e => {
   }
   if (e.target.classList.contains('editar')) {
     const { key, index } = e.target.dataset;
-    if (key === 'ingresos' && data.ingresos[index].id_venta) {
-      alert('No se pueden editar ingresos automáticos de ventas. Edite la venta desde el sistema de inventario.');
-      return;
-    }
+    if (key === 'ingresos') return;
     if (key === 'gastosDesdeIngresos') {
       const item = gastosDesdeIngresos[index];
       formGDI.fecha.value = item.fecha;
@@ -608,14 +555,12 @@ function importExcel(file, key, fields) {
 }
 
 /* botones exportar */
-document.getElementById('exportIngresos').onclick = () => exportExcel('ingresos', 'ingresos.xlsx');
 document.getElementById('exportGastos').onclick = () => exportExcel('gastos', 'gastos.xlsx');
 document.getElementById('exportGastosDesdeIngresos').onclick = () => exportExcel('gastosDesdeIngresos', 'gastos_desde_ingresos.xlsx');
 document.getElementById('exportProveedores').onclick = () => exportExcel('proveedores', 'proveedores.xlsx');
 document.getElementById('exportCuentas').onclick = () => exportExcel('cuentas', 'cuentas.xlsx');
 
 /* inputs importar */
-document.getElementById('importIngresos').onchange = function (e) { importExcel(e.target.files[0], 'ingresos', ['fecha', 'descripcion', 'categoria', 'monto', 'metodo_pago', 'responsable', 'observaciones']); this.value = ''; }
 document.getElementById('importGastos').onchange = function (e) { importExcel(e.target.files[0], 'gastos', ['fecha', 'proveedor', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'responsable', 'observaciones']); this.value = ''; }
 document.getElementById('importGastosDesdeIngresos').onchange = function (e) { importExcel(e.target.files[0], 'gastosDesdeIngresos', ['fecha', 'descripcion', 'categoria', 'monto', 'responsable', 'observaciones']); this.value = ''; }
 document.getElementById('importProveedores').onchange = function (e) { importExcel(e.target.files[0], 'proveedores', ['nombre', 'nit', 'telefono', 'email', 'direccion', 'observaciones']); this.value = ''; }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="Dashboard TOBIAS 👑">
+  <meta name="description" content="Dashboard INDUSTRIAS TOBIAS 👑">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" as="style" crossorigin>
-  <title>Dashboard – TOBIAS PALACIOS</title>
+  <title>Dashboard – INDUSTRIAS TOBIAS 🏭</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -43,7 +43,7 @@
     .nav-link:hover { background: rgba(219, 184, 188, 0.15); }
     .nav-link.active { background: var(--color-accent); color: #fff; }
     .nav-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; transition: outline-offset var(--transition-fast); }
-    .nav-link .material-icons { font-size: 22px; flex-shrink: 0; transform: translateZ(0); }
+    .nav-link .material-icons { font-size: 22px; flex-shrink: 0; transform: translateZ(0); width: 24px; text-align: center; }
     main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem clamp(1rem, 4vw, 2.5rem); }
     .welcome { font-size: clamp(1.8rem, 5cqw, 2.4rem); font-weight: 800; color: var(--color-accent); margin-bottom: .3rem; transform: translateZ(0); }
     .subtitle { font-size: clamp(1rem, 2.5cqw, 1.1rem); color: var(--color-muted); transform: translateZ(0); }
@@ -155,7 +155,7 @@
     <a class="nav-link" href="facturas.html" data-page="facturas"><span class="material-icons" aria-hidden="true">receipt_long</span><span>Facturas</span></a>
     <a class="nav-link" href="traslados.html" data-page="traslados"><span class="material-icons" aria-hidden="true">local_shipping</span><span>Cotización</span></a>
     <a class="nav-link" href="venta.html" data-page="venta"><span class="material-icons" aria-hidden="true">point_of_sale</span><span>Venta</span></a>
-    <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons" aria-hidden="true">booking</span><span>Reservas</span></a>
+    <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons" aria-hidden="true">event_available</span><span>Reservas</span></a>
 
     <button id="exportBtn" class="nav-link" style="margin-top: auto;"><span class="material-icons" aria-hidden="true">archive</span><span>Exportar ZIP</span></button>
     <button id="importBtn" class="nav-link"><span class="material-icons" aria-hidden="true">unarchive</span><span>Importar ZIP</span></button>
@@ -173,7 +173,7 @@
 </div>
 
 <main role="main">
-  <h1 class="welcome">TOBIAS PALACIOS</h1>
+  <h1 class="welcome">INDUSTRIAS TOBIAS 🏭</h1>
   <p class="subtitle">A FAMILY COMPANY</p>
 </main>
 
@@ -220,103 +220,202 @@
 
   const NavManager = { init() { const current = location.pathname.split('/').pop(); document.querySelectorAll('.nav-link').forEach(link => { if (link.getAttribute('href') === current) { link.classList.add('active'); link.setAttribute('aria-current', 'page'); } }); } };
 
-  /* ----------  EXPORTAR / IMPORTAR ZIP  ---------- */
-  async function exportLocalForageBlobs(zipFolder) {
-    const keys = await localforage.keys();
-    for (const key of keys) {
-      if (key.startsWith('img_compra_')) continue;
-      if (key.startsWith('img_')) {
-        try {
-          const blob = await localforage.getItem(key);
-          if (blob) zipFolder.file(`${key}.jpg`, blob);
-        } catch (e) {
-          console.warn('No se pudo leer', key, e);
-        }
-      }
-    }
-  }
-
-  async function importLocalForageBlobs(zip) {
-    const imgFolder = zip.folder('localforage');
-    if (!imgFolder) return;
-    for (const [fileName, zipEntry] of Object.entries(imgFolder.files)) {
-      if (!zipEntry.dir && fileName.startsWith('img_')) {
-        try {
-          const blob = await zipEntry.async('blob');
-          const key = fileName.replace('.jpg', '');
-          await localforage.setItem(key, blob);
-        } catch (e) {
-          console.warn('Error al restaurar', fileName, e);
-        }
-      }
-    }
-  }
-
-  async function exportZIP() {
+  /* ----------  EXPORTAR / IMPORTAR ZIP COMPLETO  ---------- */
+  async function exportAllData() {
     const zip = new JSZip();
-
-    for (let key in localStorage) {
-      if (key.startsWith('compra_')) continue;
+    
+    // 1. Exportar todo localStorage (sin filtros)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
       try {
         zip.file(`localStorage/${key}`, localStorage.getItem(key));
-      } catch {}
+      } catch (e) {
+        console.warn('Error exportando localStorage:', key, e);
+      }
     }
 
+    // 2. Exportar todo indexedDB
     const dbs = await window.indexedDB.databases?.() || [];
     for (const dbInfo of dbs) {
-      const db = await new Promise((res, rej) => {
-        const req = indexedDB.open(dbInfo.name);
-        req.onsuccess = () => res(req.result);
-        req.onerror = () => rej(req.error);
-      });
-      const tx = db.transaction(db.objectStoreNames, 'readonly');
-      for (const storeName of db.objectStoreNames) {
-        if (storeName.toLowerCase().includes('compra')) continue;
-        const store = tx.objectStore(storeName);
-        const all = await store.getAll();
-        zip.file(`indexedDB/${dbInfo.name}/${storeName}.json`, JSON.stringify(all));
-      }
-    }
-
-    await exportLocalForageBlobs(zip.folder('localforage'));
-
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `backup-${new Date().toISOString().split('T')[0]}.zip`;
-    a.click();
-  }
-
-  async function importZIP(file) {
-    const zip = await JSZip.loadAsync(file);
-    for (const [path, zipEntry] of Object.entries(zip.files)) {
-      if (path.startsWith('localStorage/')) {
-        const key = path.replace('localStorage/', '');
-        const content = await zipEntry.async('string');
-        localStorage.setItem(key, content);
-      }
-      if (path.startsWith('indexedDB/')) {
-        const json = await zipEntry.async('string');
-        const parts = path.split('/');
-        const dbName = parts[1];
-        const storeName = parts[2].replace('.json', '');
-        const data = JSON.parse(json);
-        const req = indexedDB.open(dbName, 1);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction(storeName, 'readwrite');
+      try {
+        const db = await new Promise((res, rej) => {
+          const req = indexedDB.open(dbInfo.name);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+        
+        const dbFolder = zip.folder(`indexedDB/${dbInfo.name}`);
+        
+        for (const storeName of db.objectStoreNames) {
+          const tx = db.transaction(storeName, 'readonly');
           const store = tx.objectStore(storeName);
-          data.forEach(item => store.put(item));
-        };
+          const allData = await new Promise((res, rej) => {
+            const req = store.getAll();
+            req.onsuccess = () => res(req.result);
+            req.onerror = () => rej(req.error);
+          });
+          
+          // Guardar metadatos de la estructura
+          const keyPath = store.keyPath;
+          const autoIncrement = store.autoIncrement;
+          
+          dbFolder.file(`${storeName}.json`, JSON.stringify({
+            data: allData,
+            keyPath: keyPath,
+            autoIncrement: autoIncrement
+          }));
+        }
+        
+        db.close();
+      } catch (e) {
+        console.warn('Error exportando IndexedDB:', dbInfo.name, e);
       }
     }
-    await importLocalForageBlobs(zip);
-    alert('✅ Datos importados correctamente. Refresca las páginas para ver los cambios.');
+
+    // 3. Exportar TODO localForage (incluyendo imágenes y datos)
+    const lfFolder = zip.folder('localforage');
+    const keys = await localforage.keys();
+    
+    for (const key of keys) {
+      try {
+        const value = await localforage.getItem(key);
+        
+        if (value instanceof Blob) {
+          // Es un blob (imagen), guardar como archivo binario
+          const ext = value.type.includes('png') ? 'png' : 
+                     value.type.includes('jpg') || value.type.includes('jpeg') ? 'jpg' : 
+                     value.type.includes('gif') ? 'gif' : 'bin';
+          lfFolder.file(`${key}.${ext}`, value);
+        } else if (typeof value === 'string') {
+          // Es texto/JSON
+          lfFolder.file(`${key}.txt`, value);
+        } else {
+          // Es objeto, guardar como JSON
+          lfFolder.file(`${key}.json`, JSON.stringify(value));
+        }
+      } catch (e) {
+        console.warn('Error exportando localForage:', key, e);
+      }
+    }
+
+    // Generar y descargar
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-completo-${new Date().toISOString().split('T')[0]}-${Date.now()}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
-  document.getElementById('exportBtn').addEventListener('click', exportZIP);
+  async function importAllData(file) {
+    try {
+      const zip = await JSZip.loadAsync(file);
+      
+      // 1. Importar localStorage
+      const lsFolder = zip.folder('localStorage');
+      if (lsFolder) {
+        for (const [path, zipEntry] of Object.entries(lsFolder.files)) {
+          if (!zipEntry.dir) {
+            const key = path.replace('localStorage/', '');
+            const content = await zipEntry.async('string');
+            localStorage.setItem(key, content);
+          }
+        }
+      }
+
+      // 2. Importar indexedDB
+      const idbFolder = zip.folder('indexedDB');
+      if (idbFolder) {
+        for (const [path, zipEntry] of Object.entries(idbFolder.files)) {
+          if (!zipEntry.dir && path.endsWith('.json')) {
+            const parts = path.split('/');
+            const dbName = parts[1];
+            const storeName = parts[2].replace('.json', '');
+            const content = JSON.parse(await zipEntry.async('string'));
+            
+            // Abrir o crear la base de datos
+            const db = await new Promise((res, rej) => {
+              const req = indexedDB.open(dbName, 1);
+              req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                  db.createObjectStore(storeName, { 
+                    keyPath: content.keyPath, 
+                    autoIncrement: content.autoIncrement 
+                  });
+                }
+              };
+              req.onsuccess = () => res(req.result);
+              req.onerror = () => rej(req.error);
+            });
+
+            // Insertar datos
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            content.data.forEach(item => store.put(item));
+            
+            await new Promise((res, rej) => {
+              tx.oncomplete = res;
+              tx.onerror = rej;
+            });
+            
+            db.close();
+          }
+        }
+      }
+
+      // 3. Importar localForage
+      const lfFolder = zip.folder('localforage');
+      if (lfFolder) {
+        for (const [path, zipEntry] of Object.entries(lfFolder.files)) {
+          if (!zipEntry.dir) {
+            const fileName = path.replace('localforage/', '');
+            const key = fileName.replace(/\.(jpg|png|gif|txt|json|bin)$/, '');
+            const ext = fileName.split('.').pop();
+            
+            if (['jpg', 'png', 'gif', 'bin'].includes(ext)) {
+              // Es una imagen/blob
+              const blob = await zipEntry.async('blob');
+              const mimeType = ext === 'jpg' ? 'image/jpeg' : 
+                              ext === 'png' ? 'image/png' : 
+                              ext === 'gif' ? 'image/gif' : 'application/octet-stream';
+              const typedBlob = new Blob([blob], { type: mimeType });
+              await localforage.setItem(key, typedBlob);
+            } else if (ext === 'txt') {
+              // Es texto
+              const text = await zipEntry.async('string');
+              await localforage.setItem(key, text);
+            } else if (ext === 'json') {
+              // Es JSON
+              const json = await zipEntry.async('string');
+              await localforage.setItem(key, JSON.parse(json));
+            }
+          }
+        }
+      }
+
+      alert('✅ Datos importados correctamente. La página se recargará.');
+      location.reload();
+    } catch (error) {
+      console.error('Error importando:', error);
+      alert('❌ Error al importar: ' + error.message);
+    }
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', exportAllData);
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
-  document.getElementById('importFile').addEventListener('change', e => { const file = e.target.files[0]; if (file) importZIP(file); });
+  document.getElementById('importFile').addEventListener('change', e => { 
+    const file = e.target.files[0]; 
+    if (file) {
+      if (confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
+        importAllData(file); 
+      }
+    }
+    e.target.value = ''; // Limpiar input
+  });
 
   /* ----------  MODO KIOSKO  ---------- */
   (() => {

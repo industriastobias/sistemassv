@@ -2111,7 +2111,7 @@
                     <label>NUEVO NOMBRE DEL LOTE</label>
                     <input type="text" id="editLoteNameInput" placeholder="Ej: LOTE-001" value="" autocomplete="off">
                 </div>
-                <div class="<div class="info-box" style="margin-top: 10px;">
+                <div class="info-box" style="margin-top: 10px;">
                     <strong>📝 Formato recomendado:</strong> LOTE-001, LOTE-002, etc.
                 </div>
                 <div class="info-box warning" style="margin-top: 10px;">
@@ -2520,7 +2520,7 @@
             URL.revokeObjectURL(url);
         }
 
-        // CORREGIDO: Función importZip con manejo asíncrono correcto
+        // CORREGIDO: Función importZip con manejo asíncrono correcto y arreglo de imágenes
         async function importZip() {
             closeModal('modalExportImport');
             
@@ -2557,6 +2557,9 @@
                             return;
                         }
 
+                        // Crear un mapa de imágenes: ruta -> datos base64
+                        const imageMap = new Map();
+                        
                         // Recopilar todos los archivos de imagen
                         const imageFiles = [];
                         zipContent.forEach((relativePath, file) => {
@@ -2565,21 +2568,44 @@
                             }
                         });
 
-                        // Procesar todas las imágenes en paralelo y actualizar las referencias
+                        // Procesar todas las imágenes y guardarlas en el mapa
                         await Promise.all(imageFiles.map(async (imageFile) => {
-                            const imageData = await imageFile.async('base64');
-                            const imagePath = imageFile.name;
-                            // Determinar el tipo MIME según la extensión (por simplicidad asumimos image/png, pero puedes mejorarlo)
-                            const mimeType = 'image/png';
-                            // Buscar en todos los productos de todos los lotes
-                            importData.lotes.forEach(lote => {
-                                lote.products.forEach(product => {
-                                    if (product.image === imagePath) {
-                                        product.image = `data:${mimeType};base64,${imageData}`;
-                                    }
-                                });
-                            });
+                            try {
+                                const imageData = await imageFile.async('base64');
+                                const imagePath = imageFile.name;
+                                // Detectar tipo MIME por extensión
+                                const ext = imagePath.split('.').pop().toLowerCase();
+                                let mimeType = 'image/png';
+                                if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                                else if (ext === 'gif') mimeType = 'image/gif';
+                                else if (ext === 'webp') mimeType = 'image/webp';
+                                
+                                // Guardar en el mapa con el formato data URI completo
+                                imageMap.set(imagePath, `data:${mimeType};base64,${imageData}`);
+                            } catch (imgError) {
+                                console.error('Error procesando imagen:', imageFile.name, imgError);
+                            }
                         }));
+
+                        // Ahora actualizar las referencias de imágenes en los productos
+                        let imagenesActualizadas = 0;
+                        importData.lotes.forEach(lote => {
+                            lote.products.forEach(product => {
+                                if (product.image && product.image.startsWith('images/')) {
+                                    const fullImageData = imageMap.get(product.image);
+                                    if (fullImageData) {
+                                        product.image = fullImageData;
+                                        imagenesActualizadas++;
+                                    } else {
+                                        // Si no se encuentra la imagen, eliminar la referencia
+                                        console.warn('Imagen no encontrada:', product.image);
+                                        product.image = null;
+                                    }
+                                }
+                            });
+                        });
+
+                        console.log(`Imágenes actualizadas: ${imagenesActualizadas} de ${imageMap.size} disponibles`);
 
                         // Preguntar cómo manejar la importación
                         if (allLotes.length > 0) {
@@ -2608,7 +2634,7 @@
                         await saveData();
                         renderHistorial();
                         
-                        await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
+                        await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados. ${imagenesActualizadas > 0 ? imagenesActualizadas + ' imágenes restauradas.' : ''}`);
                         
                         if (!historialVisible) {
                             toggleHistorial();
@@ -2620,7 +2646,7 @@
                         
                     } catch (error) {
                         console.error('Error al importar ZIP:', error);
-                        await showAlert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
+                        await showAlert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.\n\nError: ' + error.message);
                         resolve();
                     }
                 };

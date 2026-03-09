@@ -87,19 +87,29 @@
       background: var(--color-panel);
       border-radius: var(--radius);
       padding: 2rem;
-      max-width: 420px;
+      max-width: 520px;
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
       box-shadow: var(--shadow-md);
     }
     .modal-box h2 { margin-bottom: 1rem; font-size: 1.25rem; }
-    .modal-list { list-style: none; margin-bottom: 1.5rem; }
-    .modal-list li { display: flex; align-items: center; gap: .5rem; padding: .4rem 0; }
+    .modal-list { list-style: none; margin-bottom: 1.5rem; max-height: 400px; overflow-y: auto; }
+    .modal-list li { display: flex; align-items: center; gap: .5rem; padding: .6rem 0; border-bottom: 1px solid #eee; }
+    .modal-list li:last-child { border-bottom: none; }
     .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; }
     .modal-actions button { padding: .6rem 1.2rem; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 500; }
     .btn-danger { background: var(--color-danger); color: #fff; }
     .btn-secondary { background: #e5e7eb; color: var(--color-text); }
+    .btn-primary { background: var(--color-accent); color: #fff; }
+
+    .item-count {
+      background: #e0e0e0;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
 
     @media (max-width: 1024px) {
       .sidebar { height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -175,7 +185,9 @@
 </dialog>
 
 <script>
-  // Configuración
+  // ============================================
+  // CONFIGURACIÓN
+  // ============================================
   const CONFIG = { 
     DB_NAME: 'menuDB', 
     STORE_SESSION: 'userSession', 
@@ -190,7 +202,9 @@
     error: (...args) => console.error('[Dashboard]', ...args)
   };
 
-  // Storage Manager
+  // ============================================
+  // STORAGE MANAGER
+  // ============================================
   class StorageManager {
     static #instance = null;
     static getInstance() { 
@@ -237,7 +251,9 @@
     }
   }
 
-  // Auth Manager
+  // ============================================
+  // AUTH MANAGER
+  // ============================================
   const AuthManager = {
     check: () => {
       if (sessionStorage.getItem('loggedIn') !== 'true') {
@@ -253,7 +269,9 @@
     }
   };
 
-  // UI Manager
+  // ============================================
+  // UI MANAGER
+  // ============================================
   const UIManager = {
     async init() {
       const foto = sessionStorage.getItem('foto');
@@ -283,7 +301,9 @@
     }
   };
 
-  // Nav Manager
+  // ============================================
+  // NAV MANAGER
+  // ============================================
   const NavManager = {
     init() {
       const current = location.pathname.split('/').pop();
@@ -296,75 +316,228 @@
     }
   };
 
-  // ========== EXPORTAR / IMPORTAR CORREGIDO ==========
+  // ============================================
+  // EXPORTAR / IMPORTAR - VERSIÓN COMPLETA CORREGIDA
+  // ============================================
 
-  // Función para obtener todas las claves de imágenes de localForage
+  // Función para exportar datos de IndexedDB genérica
+  async function exportIndexedDB(dbName, storeName) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      
+      request.onerror = () => {
+        Logger.warn(`No se pudo abrir ${dbName}:`, request.error);
+        resolve([]);
+      };
+      
+      request.onsuccess = (event) => {
+        const db = event.target.result;
+        
+        if (!db.objectStoreNames.contains(storeName)) {
+          Logger.log(`Store ${storeName} no existe en ${dbName}`);
+          resolve([]);
+          return;
+        }
+        
+        const transaction = db.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        const getAllRequest = store.getAll();
+        
+        getAllRequest.onsuccess = () => {
+          resolve(getAllRequest.result || []);
+        };
+        
+        getAllRequest.onerror = () => {
+          Logger.error(`Error leyendo ${storeName}:`, getAllRequest.error);
+          resolve([]);
+        };
+      };
+    });
+  }
+
+  // Función para obtener todas las claves de imágenes de localForage principal
   async function getImageKeys() {
-    const allKeys = await localforage.keys();
-    return allKeys.filter(key => key.startsWith('img_'));
+    try {
+      const allKeys = await localforage.keys();
+      return allKeys.filter(key => key.startsWith('img_'));
+    } catch (e) {
+      Logger.error('Error obteniendo claves de imágenes:', e);
+      return [];
+    }
+  }
+
+  // Función auxiliar: Blob a Base64
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   // EXPORTAR DATOS COMPLETOS
   async function exportarDatos() {
-    Logger.log('=== INICIANDO EXPORTACIÓN ===');
+    Logger.log('=== INICIANDO EXPORTACIÓN COMPLETA ===');
     const zip = new JSZip();
+    let stats = { localStorage: 0, images: 0, lfData: 0, reservas: 0, traslados: 0 };
     
     try {
-      // 1. Exportar localStorage (incluyendo inventory y todo lo demás)
-      Logger.log('Exportando localStorage...');
+      // 1. LOCALSTORAGE
+      Logger.log('1. Exportando localStorage...');
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         const value = localStorage.getItem(key);
         zip.file(`localStorage/${key}.txt`, value);
-        Logger.log(`  ✓ localStorage: ${key}`);
+        stats.localStorage++;
       }
+      Logger.log(`   ✓ ${stats.localStorage} items`);
 
-      // 2. Exportar imágenes de localForage (claves que empiezan con img_)
-      Logger.log('Exportando imágenes de localForage...');
+      // 2. LOCALFORAGE - IMÁGENES (img_*)
+      Logger.log('2. Exportando imágenes de localForage...');
       const imageKeys = await getImageKeys();
-      Logger.log(`  Encontradas ${imageKeys.length} imágenes`);
       
       for (const key of imageKeys) {
         try {
           const blob = await localforage.getItem(key);
           if (blob && blob instanceof Blob) {
-            // Determinar extensión por tipo MIME
-            let ext = 'jpg';
-            if (blob.type) {
-              if (blob.type.includes('png')) ext = 'png';
-              else if (blob.type.includes('gif')) ext = 'gif';
-              else if (blob.type.includes('webp')) ext = 'webp';
-            }
-            
-            // Guardar como img_CODIGO.ext (sin el prefijo img_ duplicado)
-            const fileName = `${key}.${ext}`;
-            zip.file(`localforage/images/${fileName}`, blob);
-            Logger.log(`  ✓ Imagen: ${key}.${ext} (${Math.round(blob.size/1024)}KB)`);
+            const base64 = await blobToBase64(blob);
+            const ext = base64.match(/data:image\/(\w+);/)?.[1] || 'jpg';
+            zip.file(`localforage/images/${key}.${ext}`, base64.split(',')[1], { base64: true });
+            stats.images++;
           }
         } catch (e) {
-          Logger.error(`  ✗ Error exportando ${key}:`, e);
+          Logger.error(`   ✗ Error en imagen ${key}:`, e);
         }
       }
+      Logger.log(`   ✓ ${stats.images} imágenes`);
 
-      // 3. Exportar otros datos de localForage (que no sean imágenes)
-      Logger.log('Exportando otros datos de localForage...');
+      // 3. LOCALFORAGE - OTROS DATOS
+      Logger.log('3. Exportando otros datos de localForage...');
       const otherKeys = (await localforage.keys()).filter(k => !k.startsWith('img_'));
+      
       for (const key of otherKeys) {
         try {
           const value = await localforage.getItem(key);
-          if (typeof value === 'string') {
-            zip.file(`localforage/data/${key}.txt`, value);
-          } else {
-            zip.file(`localforage/data/${key}.json`, JSON.stringify(value));
-          }
-          Logger.log(`  ✓ Dato: ${key}`);
+          const fileName = typeof value === 'string' ? `${key}.txt` : `${key}.json`;
+          const content = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+          zip.file(`localforage/data/${fileName}`, content);
+          stats.lfData++;
         } catch (e) {
-          Logger.error(`  ✗ Error exportando ${key}:`, e);
+          Logger.error(`   ✗ Error en ${key}:`, e);
         }
       }
+      Logger.log(`   ✓ ${stats.lfData} datos`);
 
-      // Generar y descargar ZIP
-      Logger.log('Generando archivo ZIP...');
+      // 4. INDEXEDDB - RESERVAS (Verificasion.html)
+      Logger.log('4. Exportando IndexedDB ReservasDB_v2...');
+      try {
+        const reservas = await exportIndexedDB('ReservasDB_v2', 'reservas');
+        
+        if (reservas.length > 0) {
+          // Separar imágenes base64
+          const reservasSinImg = reservas.map(r => {
+            const { imagen, ...datos } = r;
+            return datos;
+          });
+          
+          zip.file('indexeddb/reservas/datos.json', JSON.stringify(reservasSinImg, null, 2));
+          
+          // Exportar imágenes como archivos separados
+          let imgCount = 0;
+          for (const r of reservas) {
+            if (r.imagen && typeof r.imagen === 'string' && r.imagen.startsWith('data:image')) {
+              const ext = r.imagen.includes('png') ? 'png' : 
+                         r.imagen.includes('gif') ? 'gif' : 
+                         r.imagen.includes('webp') ? 'webp' : 'jpg';
+              const base64Data = r.imagen.split(',')[1];
+              zip.file(`indexeddb/reservas/imagenes/${r.id}.${ext}`, base64Data, { base64: true });
+              imgCount++;
+            }
+          }
+          
+          stats.reservas = reservas.length;
+          Logger.log(`   ✓ ${reservas.length} reservas, ${imgCount} imágenes`);
+        } else {
+          Logger.log('   ℹ️ Sin datos de reservas');
+        }
+      } catch (e) {
+        Logger.error('   ✗ Error exportando reservas:', e);
+      }
+
+      // 5. INDEXEDDB - TRASLADOS (traslados.html)
+      Logger.log('5. Exportando IndexedDB TrasladosPasos...');
+      try {
+        const trasladosData = await exportIndexedDB('TrasladosPasos', 'productos');
+        
+        if (trasladosData.length > 0) {
+          // Buscar currentLote, allLotes, etc.
+          const trasladosObj = {};
+          for (const item of trasladosData) {
+            if (item.key && item.value !== undefined) {
+              trasladosObj[item.key] = item.value;
+            }
+          }
+          
+          // Si no hay estructura key-value, guardar como array
+          if (Object.keys(trasladosObj).length === 0) {
+            zip.file('indexeddb/traslados/array.json', JSON.stringify(trasladosData, null, 2));
+          } else {
+            // Separar lotes e imágenes
+            const datosParaZip = {};
+            
+            for (const [key, value] of Object.entries(trasladosObj)) {
+              if (key === 'allLotes' && Array.isArray(value)) {
+                // Procesar lotes y extraer imágenes
+                const lotesSinImg = value.map((lote, loteIdx) => {
+                  if (!lote.products) return lote;
+                  
+                  const productosSinImg = lote.products.map((p, prodIdx) => {
+                    const { image, ...prod } = p;
+                    return prod;
+                  });
+                  
+                  return { ...lote, products: productosSinImg };
+                });
+                
+                datosParaZip[key] = lotesSinImg;
+                
+                // Guardar imágenes separadas
+                let imgCount = 0;
+                value.forEach((lote, loteIdx) => {
+                  if (lote.products) {
+                    lote.products.forEach((p, prodIdx) => {
+                      if (p.image && p.image.startsWith('data:image')) {
+                        const ext = p.image.includes('png') ? 'png' : 
+                                   p.image.includes('gif') ? 'gif' : 
+                                   p.image.includes('webp') ? 'webp' : 'jpg';
+                        const base64 = p.image.split(',')[1];
+                        zip.file(`indexeddb/traslados/imagenes/lote${loteIdx}_prod${prodIdx}.${ext}`, base64, { base64: true });
+                        imgCount++;
+                      }
+                    });
+                  }
+                });
+                Logger.log(`   📦 ${imgCount} imágenes de productos extraídas`);
+              } else {
+                datosParaZip[key] = value;
+              }
+            }
+            
+            zip.file('indexeddb/traslados/datos.json', JSON.stringify(datosParaZip, null, 2));
+          }
+          
+          stats.traslados = trasladosData.length;
+          Logger.log(`   ✓ ${trasladosData.length} registros de traslados`);
+        } else {
+          Logger.log('   ℹ️ Sin datos de traslados');
+        }
+      } catch (e) {
+        Logger.error('   ✗ Error exportando traslados:', e);
+      }
+
+      // GENERAR ZIP
+      Logger.log('6. Generando archivo ZIP...');
       const blob = await zip.generateAsync({ 
         type: 'blob',
         compression: "DEFLATE",
@@ -381,7 +554,13 @@
       URL.revokeObjectURL(url);
       
       Logger.log('=== EXPORTACIÓN COMPLETADA ===');
-      alert(`✅ Backup creado exitosamente\n\nImágenes: ${imageKeys.length}\nTamaño: ${(blob.size/1024/1024).toFixed(2)} MB`);
+      alert(`✅ Backup creado:\n` +
+            `• LocalStorage: ${stats.localStorage}\n` +
+            `• Imágenes: ${stats.images}\n` +
+            `• Datos LF: ${stats.lfData}\n` +
+            `• Reservas: ${stats.reservas}\n` +
+            `• Traslados: ${stats.traslados}\n` +
+            `• Tamaño: ${(blob.size/1024/1024).toFixed(2)} MB`);
       
     } catch (error) {
       Logger.error('Error en exportación:', error);
@@ -393,10 +572,15 @@
   async function importarDatos(file) {
     Logger.log('=== INICIANDO IMPORTACIÓN ===');
     
+    if (!confirm('⚠️ Esto reemplazará TODOS los datos actuales.\n\n¿Continuar?')) {
+      return;
+    }
+    
     try {
       const zip = await JSZip.loadAsync(file);
-      
-      // 1. Importar localStorage
+      let stats = { localStorage: 0, images: 0, lfData: 0, reservas: 0, traslados: 0 };
+
+      // 1. LOCALSTORAGE
       Logger.log('1. Importando localStorage...');
       const lsFiles = Object.keys(zip.files).filter(p => 
         p.startsWith('localStorage/') && !zip.files[p].dir
@@ -406,20 +590,18 @@
         const key = path.replace('localStorage/', '').replace('.txt', '');
         const content = await zip.files[path].async('string');
         localStorage.setItem(key, content);
-        Logger.log(`  ✓ ${key}`);
+        stats.localStorage++;
       }
+      Logger.log(`   ✓ ${stats.localStorage} items`);
 
-      // 2. Importar imágenes a localForage
+      // 2. IMÁGENES LOCALFORAGE
       Logger.log('2. Importando imágenes...');
       const imgFiles = Object.keys(zip.files).filter(p => 
         p.startsWith('localforage/images/') && !zip.files[p].dir
       );
       
-      Logger.log(`  Encontradas ${imgFiles.length} imágenes en ZIP`);
-      
       for (const path of imgFiles) {
         const fileName = path.replace('localforage/images/', '');
-        // Extraer la clave original (img_CODIGO)
         const lastDot = fileName.lastIndexOf('.');
         const key = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
         const ext = lastDot > 0 ? fileName.substring(lastDot + 1).toLowerCase() : 'jpg';
@@ -429,17 +611,17 @@
           const mimeType = ext === 'png' ? 'image/png' : 
                           ext === 'gif' ? 'image/gif' : 
                           ext === 'webp' ? 'image/webp' : 'image/jpeg';
-          
           const imageBlob = new Blob([blob], { type: mimeType });
           await localforage.setItem(key, imageBlob);
-          Logger.log(`  ✓ Restaurada: ${key} (${ext})`);
+          stats.images++;
         } catch (e) {
-          Logger.error(`  ✗ Error restaurando ${key}:`, e);
+          Logger.error(`   ✗ Error imagen ${key}:`, e);
         }
       }
+      Logger.log(`   ✓ ${stats.images} imágenes`);
 
-      // 3. Importar otros datos de localForage
-      Logger.log('3. Importando otros datos...');
+      // 3. DATOS LOCALFORAGE
+      Logger.log('3. Importando datos localForage...');
       const dataFiles = Object.keys(zip.files).filter(p => 
         p.startsWith('localforage/data/') && !zip.files[p].dir
       );
@@ -452,19 +634,208 @@
         
         try {
           const content = await zip.files[path].async('string');
-          if (ext === 'json') {
-            await localforage.setItem(key, JSON.parse(content));
-          } else {
-            await localforage.setItem(key, content);
-          }
-          Logger.log(`  ✓ Dato: ${key}`);
+          const value = ext === 'json' ? JSON.parse(content) : content;
+          await localforage.setItem(key, value);
+          stats.lfData++;
         } catch (e) {
-          Logger.error(`  ✗ Error restaurando ${key}:`, e);
+          Logger.error(`   ✗ Error dato ${key}:`, e);
         }
+      }
+      Logger.log(`   ✓ ${stats.lfData} datos`);
+
+      // 4. INDEXEDDB - RESERVAS
+      Logger.log('4. Importando ReservasDB_v2...');
+      const reservasFile = zip.file('indexeddb/reservas/datos.json');
+      
+      if (reservasFile) {
+        try {
+          const reservasJson = await reservasFile.async('string');
+          const reservasData = JSON.parse(reservasJson);
+          
+          // Cargar imágenes
+          const imgFiles = Object.keys(zip.files).filter(p => 
+            p.startsWith('indexeddb/reservas/imagenes/') && !zip.files[p].dir
+          );
+          
+          const imagenesMap = new Map();
+          for (const imgPath of imgFiles) {
+            const fileName = imgPath.replace('indexeddb/reservas/imagenes/', '');
+            const id = parseInt(fileName.split('.')[0]);
+            const ext = fileName.split('.').pop();
+            const base64 = await zip.files[imgPath].async('base64');
+            const mimeType = ext === 'png' ? 'image/png' : 
+                            ext === 'gif' ? 'image/gif' : 
+                            ext === 'webp' ? 'image/webp' : 'image/jpeg';
+            imagenesMap.set(id, `data:${mimeType};base64,${base64}`);
+          }
+          
+          // Restaurar a IndexedDB
+          await new Promise((resolve, reject) => {
+            const request = indexedDB.open('ReservasDB_v2', 2);
+            
+            request.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains('reservas')) {
+                const store = db.createObjectStore('reservas', { keyPath: 'id', autoIncrement: true });
+                store.createIndex('nombre', 'nombre', { unique: false });
+                store.createIndex('telefono', 'telefono', { unique: false });
+                store.createIndex('fecha', 'fecha', { unique: false });
+                store.createIndex('estado', 'estado', { unique: false });
+                store.createIndex('categorias', 'categorias', { unique: false, multiEntry: true });
+                store.createIndex('fechaRegistro', 'fechaRegistro', { unique: false });
+              }
+            };
+            
+            request.onsuccess = (e) => {
+              const db = e.target.result;
+              const tx = db.transaction(['reservas'], 'readwrite');
+              const store = tx.objectStore('reservas');
+              
+              const clearReq = store.clear();
+              clearReq.onsuccess = () => {
+                let added = 0;
+                
+                const addNext = (idx) => {
+                  if (idx >= reservasData.length) {
+                    stats.reservas = added;
+                    resolve();
+                    return;
+                  }
+                  
+                  const item = reservasData[idx];
+                  if (imagenesMap.has(item.id)) {
+                    item.imagen = imagenesMap.get(item.id);
+                  }
+                  
+                  const addReq = store.add(item);
+                  addReq.onsuccess = () => {
+                    added++;
+                    addNext(idx + 1);
+                  };
+                  addReq.onerror = () => addNext(idx + 1);
+                };
+                
+                addNext(0);
+              };
+            };
+            
+            request.onerror = () => reject(request.error);
+          });
+          
+          Logger.log(`   ✓ ${stats.reservas} reservas importadas`);
+        } catch (e) {
+          Logger.error('   ✗ Error importando reservas:', e);
+        }
+      } else {
+        Logger.log('   ℹ️ No hay backup de reservas');
+      }
+
+      // 5. INDEXEDDB - TRASLADOS
+      Logger.log('5. Importando TrasladosPasos...');
+      const trasladosFile = zip.file('indexeddb/traslados/datos.json') || 
+                             zip.file('indexeddb/traslados/array.json');
+      
+      if (trasladosFile) {
+        try {
+          const trasladosJson = await trasladosFile.async('string');
+          const trasladosData = JSON.parse(trasladosJson);
+          
+          // Cargar imágenes de productos
+          const imgFiles = Object.keys(zip.files).filter(p => 
+            p.startsWith('indexeddb/traslados/imagenes/') && !zip.files[p].dir
+          );
+          
+          const imagenesMap = new Map();
+          for (const imgPath of imgFiles) {
+            const fileName = imgPath.replace('indexeddb/traslados/imagenes/', '');
+            const match = fileName.match(/lote(\d+)_prod(\d+)\.(\w+)/);
+            if (match) {
+              const [, loteIdx, prodIdx, ext] = match;
+              const base64 = await zip.files[imgPath].async('base64');
+              const mimeType = ext === 'png' ? 'image/png' : 
+                              ext === 'gif' ? 'image/gif' : 
+                              ext === 'webp' ? 'image/webp' : 'image/jpeg';
+              imagenesMap.set(`${loteIdx}_${prodIdx}`, `data:${mimeType};base64,${base64}`);
+            }
+          }
+          
+          // Restaurar imágenes en los datos
+          if (trasladosData.allLotes && Array.isArray(trasladosData.allLotes)) {
+            trasladosData.allLotes = trasladosData.allLotes.map((lote, loteIdx) => {
+              if (!lote.products) return lote;
+              const productosConImg = lote.products.map((p, prodIdx) => {
+                const imgKey = `${loteIdx}_${prodIdx}`;
+                if (imagenesMap.has(imgKey)) {
+                  return { ...p, image: imagenesMap.get(imgKey) };
+                }
+                return p;
+              });
+              return { ...lote, products: productosConImg };
+            });
+          }
+          
+          // Guardar en IndexedDB
+          await new Promise((resolve, reject) => {
+            const request = indexedDB.open('TrasladosPasos', 1);
+            
+            request.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains('productos')) {
+                db.createObjectStore('productos', { keyPath: 'id', autoIncrement: true });
+              }
+            };
+            
+            request.onsuccess = (e) => {
+              const db = e.target.result;
+              const tx = db.transaction(['productos'], 'readwrite');
+              const store = tx.objectStore('productos');
+              
+              const clearReq = store.clear();
+              clearReq.onsuccess = () => {
+                const dataToStore = Array.isArray(trasladosData) ? 
+                  trasladosData : 
+                  Object.entries(trasladosData).map(([key, value]) => ({ key, value }));
+                
+                let added = 0;
+                const addNext = (idx) => {
+                  if (idx >= dataToStore.length) {
+                    stats.traslados = added;
+                    resolve();
+                    return;
+                  }
+                  
+                  const addReq = store.add(dataToStore[idx]);
+                  addReq.onsuccess = () => {
+                    added++;
+                    addNext(idx + 1);
+                  };
+                  addReq.onerror = () => addNext(idx + 1);
+                };
+                
+                addNext(0);
+              };
+            };
+            
+            request.onerror = () => reject(request.error);
+          });
+          
+          Logger.log(`   ✓ ${stats.traslados} registros de traslados importados`);
+        } catch (e) {
+          Logger.error('   ✗ Error importando traslados:', e);
+        }
+      } else {
+        Logger.log('   ℹ️ No hay backup de traslados');
       }
 
       Logger.log('=== IMPORTACIÓN COMPLETADA ===');
-      alert('✅ Datos importados correctamente.\n\nLa página se recargará para aplicar los cambios.');
+      alert(`✅ Importación exitosa:\n` +
+            `• LocalStorage: ${stats.localStorage}\n` +
+            `• Imágenes: ${stats.images}\n` +
+            `• Datos LF: ${stats.lfData}\n` +
+            `• Reservas: ${stats.reservas}\n` +
+            `• Traslados: ${stats.traslados}\n\n` +
+            `La página se recargará.`);
+      
       location.reload();
       
     } catch (error) {
@@ -473,24 +844,9 @@
     }
   }
 
-  // Event listeners
-  document.getElementById('exportBtn').addEventListener('click', exportarDatos);
-  
-  document.getElementById('importBtn').addEventListener('click', () => {
-    document.getElementById('importFile').click();
-  });
-  
-  document.getElementById('importFile').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (confirm('⚠️ Esto reemplazará todos los datos actuales.\n\n¿Estás seguro de continuar?')) {
-        importarDatos(file);
-      }
-    }
-    e.target.value = '';
-  });
-
-  // ========== MODO KIOSKO ==========
+  // ============================================
+  // MODO KIOSKO
+  // ============================================
   (() => {
     const btn = document.getElementById('kioskBtn');
     const KIOSK_KEY = 'kioskActivo';
@@ -535,7 +891,9 @@
     }
   })();
 
-  // ========== FORMATEO SELECTIVO ==========
+  // ============================================
+  // FORMATEO SELECTIVO CORREGIDO
+  // ============================================
   (() => {
     const modal = document.getElementById('formatModal');
     const listEl = document.getElementById('formatList');
@@ -549,18 +907,51 @@
     async function collectOptions() {
       const opts = [];
       
-      // localStorage
+      // 1. LocalStorage
       for (let i = 0; i < localStorage.length; i++) {
-        opts.push({ type: 'ls', name: localStorage.key(i) });
+        const key = localStorage.key(i);
+        opts.push({ type: 'ls', name: key, display: `💾 ${key}` });
       }
       
-      // localForage (incluyendo imágenes)
+      // 2. LocalForage principal
       try {
         const lfKeys = await localforage.keys();
         lfKeys.forEach(key => {
-          const type = key.startsWith('img_') ? 'img' : 'lf';
-          opts.push({ type: type, name: key });
+          const isImg = key.startsWith('img_');
+          opts.push({ 
+            type: isImg ? 'img' : 'lf', 
+            name: key,
+            display: isImg ? `🖼️ ${key}` : `📦 ${key}`
+          });
         });
+      } catch (e) {}
+      
+      // 3. IndexedDB - Reservas
+      try {
+        const reservas = await exportIndexedDB('ReservasDB_v2', 'reservas');
+        if (reservas.length > 0) {
+          opts.push({ 
+            type: 'idb', 
+            name: 'ReservasDB_v2', 
+            store: 'reservas',
+            count: reservas.length,
+            display: `🗄️ ReservasDB_v2`
+          });
+        }
+      } catch (e) {}
+      
+      // 4. IndexedDB - Traslados
+      try {
+        const traslados = await exportIndexedDB('TrasladosPasos', 'productos');
+        if (traslados.length > 0) {
+          opts.push({ 
+            type: 'idb', 
+            name: 'TrasladosPasos', 
+            store: 'productos',
+            count: traslados.length,
+            display: `📋 TrasladosPasos`
+          });
+        }
       } catch (e) {}
       
       return opts;
@@ -570,16 +961,24 @@
       listEl.innerHTML = '';
       options.forEach((opt, idx) => {
         const li = document.createElement('li');
+        
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.id = `opt-${idx}`;
         cb.checked = allChecked;
+        cb.style.cssText = 'margin-right:10px;width:18px;height:18px;cursor:pointer;';
         
         const lbl = document.createElement('label');
         lbl.htmlFor = `opt-${idx}`;
-        const typeLabel = opt.type === 'img' ? '🖼️ IMG' : opt.type.toUpperCase();
-        lbl.textContent = `${typeLabel}: ${opt.name}`;
-        lbl.style.marginLeft = '8px';
+        lbl.textContent = opt.display;
+        lbl.style.cssText = 'cursor:pointer;flex:1;font-size:14px;';
+        
+        if (opt.count) {
+          const badge = document.createElement('span');
+          badge.textContent = `${opt.count} items`;
+          badge.className = 'item-count';
+          lbl.appendChild(badge);
+        }
         
         li.appendChild(cb);
         li.appendChild(lbl);
@@ -612,29 +1011,51 @@
         return;
       }
       
-      if (!confirm(`¿Eliminar ${checks.length} elemento(s)?`)) return;
+      if (!confirm(`¿Eliminar permanentemente ${checks.length} elemento(s)?`)) return;
 
       for (const ch of checks) {
         const idx = parseInt(ch.id.replace('opt-', ''));
         const opt = options[idx];
         
         try {
-          if (opt.type === 'ls') {
-            localStorage.removeItem(opt.name);
-          } else if (opt.type === 'lf' || opt.type === 'img') {
-            await localforage.removeItem(opt.name);
+          switch(opt.type) {
+            case 'ls':
+              localStorage.removeItem(opt.name);
+              break;
+            case 'img':
+            case 'lf':
+              await localforage.removeItem(opt.name);
+              break;
+            case 'idb':
+              // Eliminar toda la base de datos IndexedDB
+              await new Promise((resolve, reject) => {
+                const deleteReq = indexedDB.deleteDatabase(opt.name);
+                deleteReq.onsuccess = resolve;
+                deleteReq.onerror = reject;
+                deleteReq.onblocked = () => {
+                  alert(`Cierra otras pestañas que usen ${opt.name} para eliminarla`);
+                  reject(new Error('Blocked'));
+                };
+              });
+              break;
           }
+          Logger.log(`Eliminado: ${opt.name}`);
         } catch (e) {
-          Logger.error('Error eliminando:', opt, e);
+          Logger.error(`Error eliminando ${opt.name}:`, e);
         }
       }
       
-      alert('Elementos eliminados');
+      alert('Elementos eliminados correctamente');
       modal.removeAttribute('open');
+      // Actualizar lista
+      options = await collectOptions();
+      renderList();
     });
   })();
 
-  // ========== INICIALIZACIÓN ==========
+  // ============================================
+  // INICIALIZACIÓN Y EVENT LISTENERS
+  // ============================================
   (function() {
     'use strict';
     
@@ -649,9 +1070,24 @@
       
       NavManager.init();
       
+      // Event listeners
       document.getElementById('logoutBtn').addEventListener('click', (e) => {
         e.preventDefault();
         AuthManager.logout();
+      });
+      
+      document.getElementById('exportBtn').addEventListener('click', exportarDatos);
+      
+      document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFile').click();
+      });
+      
+      document.getElementById('importFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          importarDatos(file);
+        }
+        e.target.value = '';
       });
     }
 

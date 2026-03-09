@@ -489,19 +489,12 @@
             cursor: pointer;
             margin-bottom: 10px;
             background: #fafafa;
-            position: relative;
-            transition: all 0.3s ease;
+            outline: none;
         }
 
-        .image-upload:hover {
-            border-color: #888;
-            background: #f5f5f5;
-        }
-
-        .image-upload.dragover {
+        .image-upload:focus {
             border-color: #B5838D;
-            background: #f8f0f2;
-            transform: scale(1.02);
+            background: #f5f5f5;
         }
 
         .image-preview {
@@ -653,7 +646,6 @@
             overflow: hidden;
             background: #fff;
             transition: all 0.3s ease;
-            min-height: 0; /* Importante para que el grid funcione correctamente */
         }
 
         .summary-bar {
@@ -745,7 +737,6 @@
             overflow: auto;
             padding: 0;
             transition: all 0.3s ease;
-            position: relative;
         }
 
         table {
@@ -1452,9 +1443,7 @@
         }
 
         body.simplified-view .right-panel {
-            grid-template-rows: 1fr; /* Solo la tabla, sin summary ni footer */
-            display: flex; /* Cambiar a flex para mejor control */
-            flex-direction: column;
+            grid-template-rows: auto 1fr;
         }
 
         body.simplified-view .summary-bar {
@@ -1468,9 +1457,6 @@
         body.simplified-view .table-container {
             padding: 20px;
             background: #fafafa;
-            flex: 1;
-            height: 100%;
-            overflow: auto;
         }
 
         body.simplified-view table {
@@ -1478,7 +1464,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             border-radius: 12px;
             overflow: hidden;
-            background: #fff;
         }
 
         body.simplified-view thead {
@@ -1605,7 +1590,7 @@
             font-weight: 900;
             cursor: pointer;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 10000; /* Aumentado para asegurar visibilidad */
+            z-index: 9999;
             transition: all 0.3s;
         }
 
@@ -1616,7 +1601,7 @@
         }
 
         body.simplified-view .exit-simplified-btn {
-            display: block !important; /* Forzar display con !important */
+            display: block;
         }
 
         /* Indicador de modo vista simplificada */
@@ -1632,36 +1617,12 @@
             border-radius: 50px;
             font-size: 14px;
             font-weight: 900;
-            z-index: 9999;
+            z-index: 9998;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         body.simplified-view .simplified-mode-indicator {
             display: block;
-        }
-
-        /* Toast notification para pegar imagen */
-        .paste-notification {
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            background: #2e7d32;
-            color: #fff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 700;
-            z-index: 10001;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-
-        .paste-notification.show {
-            opacity: 1;
-            transform: translateY(0);
         }
     </style>
 </head>
@@ -1697,14 +1658,9 @@
         </div>
 
         <!-- Botón flotante para salir de vista simplificada -->
-        <button class="exit-simplified-btn" id="exitSimplifiedBtn" onclick="toggleSimplifiedView()">
+        <button class="exit-simplified-btn" onclick="toggleSimplifiedView()">
             ✕ SALIR DE VISTA TABLA
         </button>
-
-        <!-- Notificación de pegado -->
-        <div class="paste-notification" id="pasteNotification">
-            📋 Imagen pegada desde el portapapeles
-        </div>
 
         <!-- Panel de Historial -->
         <div class="historial-panel" id="historialPanel">
@@ -1776,11 +1732,10 @@
                     
                     <input type="file" id="imageInput" accept="image/*" class="hidden-file-input" tabindex="-1">
                     
-                    <div class="image-upload" id="imageUploadArea" onclick="triggerFileInput()">
+                    <div class="image-upload" onclick="triggerFileInput()" tabindex="0" id="imageUploadArea">
                         <img id="imagePreview" class="image-preview">
                         <div class="upload-text" id="uploadText">
-                            📷 CLICK PARA SUBIR IMAGEN<br>
-                            <small style="font-size: 10px; color: #999;">O PEGA CON CTRL+V</small>
+                            📷 CLICK PARA SUBIR IMAGEN (o pega una imagen)
                         </div>
                     </div>
                     <span class="remove-image" id="removeImage" onclick="removeImage(event)">ELIMINAR IMAGEN</span>
@@ -2286,84 +2241,34 @@
             renderHistorial();
             
             setupImageInput();
-            setupPasteListener(); // NUEVO: Configurar listener de pegado
             
             // Escuchar eventos de pantalla completa
             document.addEventListener('fullscreenchange', handleFullscreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.addEventListener('mozfullscreenchange', handleFullscreenChange);
             document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-        };
 
-        // NUEVO: Configurar listener para pegar imágenes
-        function setupPasteListener() {
-            document.addEventListener('paste', function(e) {
-                // Solo procesar si no estamos en un input de texto
-                if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
-                
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                
-                for (let index in items) {
-                    const item = items[index];
-                    
-                    if (item.kind === 'file') {
-                        const blob = item.getAsFile();
-                        const reader = new FileReader();
-                        
-                        reader.onload = function(event) {
-                            currentImage = event.target.result;
-                            showImagePreview(currentImage);
-                            showPasteNotification();
-                        };
-                        
-                        reader.readAsDataURL(blob);
-                    }
-                }
-            });
-            
-            // También permitir drag and drop en el área de imagen
+            // Permitir pegar imagen desde el portapapeles
             const imageUploadArea = document.getElementById('imageUploadArea');
-            
-            imageUploadArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('dragover');
-            });
-            
-            imageUploadArea.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('dragover');
-            });
-            
-            imageUploadArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.remove('dragover');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    const file = files[0];
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            currentImage = event.target.result;
-                            showImagePreview(currentImage);
-                        };
-                        reader.readAsDataURL(file);
+            if (imageUploadArea) {
+                imageUploadArea.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const items = e.clipboardData.items;
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            const blob = items[i].getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                currentImage = event.target.result;
+                                showImagePreview(currentImage);
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
                     }
-                }
-            });
-        }
-
-        // NUEVO: Mostrar notificación de pegado
-        function showPasteNotification() {
-            const notification = document.getElementById('pasteNotification');
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 2000);
-        }
+                });
+            }
+        };
 
         function handleFullscreenChange() {
             const kioskoBtn = document.getElementById('kioskoBtn');
@@ -2423,50 +2328,27 @@
             simplifiedViewActive = !simplifiedViewActive;
             const body = document.body;
             const btn = document.getElementById('simplifiedViewBtn');
-            const exitBtn = document.getElementById('exitSimplifiedBtn');
             
             if (simplifiedViewActive) {
-                // Agregar clase al body
                 body.classList.add('simplified-view');
                 btn.classList.add('active');
                 btn.textContent = '🔍 SALIR VISTA TABLA';
-                
-                // Asegurar que el botón de salir esté visible
-                if (exitBtn) {
-                    exitBtn.style.display = 'block';
-                }
                 
                 // Cerrar historial si está abierto
                 if (historialVisible) {
                     toggleHistorial();
                 }
-                
-                // Forzar reflow para asegurar que los cambios se apliquen
-                void body.offsetWidth;
-                
-                // Re-renderizar la tabla para asegurar que se muestre correctamente
-                setTimeout(() => {
-                    renderTable();
-                }, 100);
             } else {
-                // Remover clase del body
                 body.classList.remove('simplified-view');
                 btn.classList.remove('active');
                 btn.textContent = '🔍 VISTA TABLA';
-                
-                // Ocultar botón de salir
-                if (exitBtn) {
-                    exitBtn.style.display = 'none';
-                }
-                
-                // Forzar reflow
-                void body.offsetWidth;
-                
-                // Re-renderizar la tabla
-                setTimeout(() => {
-                    renderTable();
-                }, 100);
             }
+            
+            // FORZAR RENDERIZADO DE LA TABLA
+            renderTable();
+            
+            // Forzar reflow para asegurar estilos
+            void body.offsetWidth;
         }
 
         // Funciones para modales simples (reemplazan alert y confirm)
@@ -2638,7 +2520,8 @@
             URL.revokeObjectURL(url);
         }
 
-        function importZip() {
+        // CORREGIDO: Función importZip con manejo asíncrono correcto
+        async function importZip() {
             closeModal('modalExportImport');
             
             const input = document.createElement('input');
@@ -2667,30 +2550,29 @@
                         return;
                     }
 
-                    // Cargar imágenes si existen
-                    const imagesFolder = zipContent.folder('images');
-                    if (imagesFolder) {
-                        const imageFiles = [];
-                        zipContent.forEach((relativePath, file) => {
-                            if (relativePath.startsWith('images/') && !file.dir) {
-                                imageFiles.push(file);
-                            }
-                        });
-
-                        for (const imageFile of imageFiles) {
-                            const imageData = await imageFile.async('base64');
-                            const imagePath = imageFile.name;
-                            
-                            // Actualizar referencias en los productos
-                            importData.lotes.forEach(lote => {
-                                lote.products.forEach(product => {
-                                    if (product.image === imagePath) {
-                                        product.image = `data:image/png;base64,${imageData}`;
-                                    }
-                                });
-                            });
+                    // Recopilar todos los archivos de imagen
+                    const imageFiles = [];
+                    zipContent.forEach((relativePath, file) => {
+                        if (relativePath.startsWith('images/') && !file.dir) {
+                            imageFiles.push(file);
                         }
-                    }
+                    });
+
+                    // Procesar todas las imágenes en paralelo y actualizar las referencias
+                    await Promise.all(imageFiles.map(async (imageFile) => {
+                        const imageData = await imageFile.async('base64');
+                        const imagePath = imageFile.name;
+                        // Determinar el tipo MIME según la extensión (por simplicidad asumimos image/png, pero puedes mejorarlo)
+                        const mimeType = 'image/png'; // Podrías extraer la extensión del nombre
+                        // Buscar en todos los productos de todos los lotes
+                        importData.lotes.forEach(lote => {
+                            lote.products.forEach(product => {
+                                if (product.image === imagePath) {
+                                    product.image = `data:${mimeType};base64,${imageData}`;
+                                }
+                            });
+                        });
+                    }));
 
                     // Preguntar cómo manejar la importación
                     if (allLotes.length > 0) {
@@ -2721,7 +2603,6 @@
                     
                     await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
                     
-                    // Cerrar historial si está abierto y abrirlo para mostrar los nuevos lotes
                     if (!historialVisible) {
                         toggleHistorial();
                     } else {
@@ -3217,7 +3098,7 @@
             document.getElementById('btnStep2').classList.remove('completed');
             document.getElementById('statusStep1').textContent = 'PENDIENTE';
             document.getElementById('statusStep1').className = 'step-status status-pending';
-            document.getElementById('statusStep2            textContent = 'OPCIONAL';
+            document.getElementById('statusStep2').textContent = 'OPCIONAL';
             document.getElementById('statusStep2').className = 'step-status status-pending';
             
             ['boxVendor', 'boxTraslado', 'boxImpuesto'].forEach(id => {

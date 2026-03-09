@@ -2111,7 +2111,7 @@
                     <label>NUEVO NOMBRE DEL LOTE</label>
                     <input type="text" id="editLoteNameInput" placeholder="Ej: LOTE-001" value="" autocomplete="off">
                 </div>
-                <div class="info-box" style="margin-top: 10px;">
+                <div class="<div class="info-box" style="margin-top: 10px;">
                     <strong>📝 Formato recomendado:</strong> LOTE-001, LOTE-002, etc.
                 </div>
                 <div class="info-box warning" style="margin-top: 10px;">
@@ -2524,97 +2524,109 @@
         async function importZip() {
             closeModal('modalExportImport');
             
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.zip';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const zip = new JSZip();
-                try {
-                    const zipContent = await zip.loadAsync(file);
-                    
-                    // Leer el archivo JSON
-                    const jsonFile = zipContent.file('lotes.json');
-                    if (!jsonFile) {
-                        await showAlert('El archivo ZIP no contiene un archivo lotes.json válido');
+            return new Promise((resolve) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.zip';
+                
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        resolve();
                         return;
                     }
 
-                    const jsonContent = await jsonFile.async('string');
-                    const importData = JSON.parse(jsonContent);
-
-                    if (!importData.lotes || !Array.isArray(importData.lotes)) {
-                        await showAlert('El archivo JSON no tiene un formato válido');
-                        return;
-                    }
-
-                    // Recopilar todos los archivos de imagen
-                    const imageFiles = [];
-                    zipContent.forEach((relativePath, file) => {
-                        if (relativePath.startsWith('images/') && !file.dir) {
-                            imageFiles.push(file);
+                    const zip = new JSZip();
+                    try {
+                        const zipContent = await zip.loadAsync(file);
+                        
+                        // Leer el archivo JSON
+                        const jsonFile = zipContent.file('lotes.json');
+                        if (!jsonFile) {
+                            await showAlert('El archivo ZIP no contiene un archivo lotes.json válido');
+                            resolve();
+                            return;
                         }
-                    });
 
-                    // Procesar todas las imágenes en paralelo y actualizar las referencias
-                    await Promise.all(imageFiles.map(async (imageFile) => {
-                        const imageData = await imageFile.async('base64');
-                        const imagePath = imageFile.name;
-                        // Determinar el tipo MIME según la extensión (por simplicidad asumimos image/png, pero puedes mejorarlo)
-                        const mimeType = 'image/png'; // Podrías extraer la extensión del nombre
-                        // Buscar en todos los productos de todos los lotes
-                        importData.lotes.forEach(lote => {
-                            lote.products.forEach(product => {
-                                if (product.image === imagePath) {
-                                    product.image = `data:${mimeType};base64,${imageData}`;
-                                }
-                            });
-                        });
-                    }));
+                        const jsonContent = await jsonFile.async('string');
+                        const importData = JSON.parse(jsonContent);
 
-                    // Preguntar cómo manejar la importación
-                    if (allLotes.length > 0) {
-                        const action = await showConfirm(
-                            `Se encontraron ${importData.lotes.length} lotes en el archivo.\n\n` +
-                            '¿Deseas reemplazar todos los lotes existentes?\n' +
-                            'Click en OK para reemplazar, Cancelar para agregar al existente.'
-                        );
+                        if (!importData.lotes || !Array.isArray(importData.lotes)) {
+                            await showAlert('El archivo JSON no tiene un formato válido');
+                            resolve();
+                            return;
+                        }
 
-                        if (action) {
-                            allLotes = importData.lotes;
-                        } else {
-                            // Evitar duplicados por ID
-                            const existingIds = new Set(allLotes.map(l => l.id));
-                            const nuevosLotes = importData.lotes.filter(l => !existingIds.has(l.id));
-                            allLotes = [...allLotes, ...nuevosLotes];
-                            
-                            if (nuevosLotes.length < importData.lotes.length) {
-                                await showAlert(`${importData.lotes.length - nuevosLotes.length} lotes se omitieron por tener IDs duplicados.`);
+                        // Recopilar todos los archivos de imagen
+                        const imageFiles = [];
+                        zipContent.forEach((relativePath, file) => {
+                            if (relativePath.startsWith('images/') && !file.dir) {
+                                imageFiles.push(file);
                             }
-                        }
-                    } else {
-                        allLotes = importData.lotes;
-                    }
+                        });
 
-                    await saveData();
-                    renderHistorial();
-                    
-                    await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
-                    
-                    if (!historialVisible) {
-                        toggleHistorial();
-                    } else {
+                        // Procesar todas las imágenes en paralelo y actualizar las referencias
+                        await Promise.all(imageFiles.map(async (imageFile) => {
+                            const imageData = await imageFile.async('base64');
+                            const imagePath = imageFile.name;
+                            // Determinar el tipo MIME según la extensión (por simplicidad asumimos image/png, pero puedes mejorarlo)
+                            const mimeType = 'image/png';
+                            // Buscar en todos los productos de todos los lotes
+                            importData.lotes.forEach(lote => {
+                                lote.products.forEach(product => {
+                                    if (product.image === imagePath) {
+                                        product.image = `data:${mimeType};base64,${imageData}`;
+                                    }
+                                });
+                            });
+                        }));
+
+                        // Preguntar cómo manejar la importación
+                        if (allLotes.length > 0) {
+                            const action = await showConfirm(
+                                `Se encontraron ${importData.lotes.length} lotes en el archivo.\n\n` +
+                                '¿Deseas reemplazar todos los lotes existentes?\n' +
+                                'Click en OK para reemplazar, Cancelar para agregar al existente.'
+                            );
+
+                            if (action) {
+                                allLotes = importData.lotes;
+                            } else {
+                                // Evitar duplicados por ID
+                                const existingIds = new Set(allLotes.map(l => l.id));
+                                const nuevosLotes = importData.lotes.filter(l => !existingIds.has(l.id));
+                                allLotes = [...allLotes, ...nuevosLotes];
+                                
+                                if (nuevosLotes.length < importData.lotes.length) {
+                                    await showAlert(`${importData.lotes.length - nuevosLotes.length} lotes se omitieron por tener IDs duplicados.`);
+                                }
+                            }
+                        } else {
+                            allLotes = importData.lotes;
+                        }
+
+                        await saveData();
                         renderHistorial();
+                        
+                        await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
+                        
+                        if (!historialVisible) {
+                            toggleHistorial();
+                        } else {
+                            renderHistorial();
+                        }
+                        
+                        resolve();
+                        
+                    } catch (error) {
+                        console.error('Error al importar ZIP:', error);
+                        await showAlert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
+                        resolve();
                     }
-                    
-                } catch (error) {
-                    console.error('Error al importar ZIP:', error);
-                    await showAlert('Error al procesar el archivo ZIP. Asegúrate de que sea un archivo válido.');
-                }
-            };
-            input.click();
+                };
+                
+                input.click();
+            });
         }
 
         // Funciones del Historial

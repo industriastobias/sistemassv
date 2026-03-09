@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="description" content="INDUSTRIAS TOBIAS 👑">
+  <meta name="description" content="Dashboard INDUSTRIAS TOBIAS 👑">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
@@ -222,85 +222,59 @@
 
   /* ----------  EXPORTAR / IMPORTAR ZIP COMPLETO  ---------- */
   
-  // Función para obtener TODAS las bases de datos (incluyendo las que no están en databases())
-  async function getAllIndexedDBs() {
-    const dbs = [];
-    
-    // Intentar obtener lista oficial
-    if (window.indexedDB.databases) {
-      try {
-        const official = await window.indexedDB.databases();
-        official.forEach(db => dbs.push(db.name));
-      } catch (e) {
-        console.warn('No se pudo obtener databases():', e);
-      }
-    }
-    
-    // Buscar en localStorage referencias a DBs conocidas
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      // Patrones comunes de nombres de DB
-      if (key && (key.includes('DB') || key.includes('db') || key.includes('Index'))) {
-        if (!dbs.includes(key)) dbs.push(key);
-      }
-    }
-    
-    // Nombres comunes de bases de datos típicas en tu sistema
-    const commonNames = ['TrasladosPasos', 'menuDB', 'inventarioDB', 'ventasDB', 'clientesDB'];
-    for (const name of commonNames) {
-      if (!dbs.includes(name)) {
-        // Verificar si existe intentando abrirla
-        try {
-          await new Promise((res, rej) => {
-            const req = indexedDB.open(name);
-            req.onsuccess = () => {
-              req.result.close();
-              res(true);
-            };
-            req.onerror = () => res(false);
-            req.onupgradeneeded = (e) => {
-              e.target.result.close();
-              indexedDB.deleteDatabase(name);
-              res(false);
-            };
-          });
-          if (!dbs.includes(name)) dbs.push(name);
-        } catch (e) {}
-      }
-    }
-    
-    return [...new Set(dbs)]; // Eliminar duplicados
+  // Función para detectar si un valor es un Blob de imagen
+  function isImageBlob(value) {
+    return value instanceof Blob && value.type && value.type.startsWith('image/');
+  }
+
+  // Función para obtener extensión según tipo MIME
+  function getExtensionFromMime(mimeType) {
+    if (!mimeType) return 'bin';
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'jpg';
+    if (mimeType.includes('png')) return 'png';
+    if (mimeType.includes('gif')) return 'gif';
+    if (mimeType.includes('webp')) return 'webp';
+    if (mimeType.includes('svg')) return 'svg';
+    return 'bin';
   }
 
   async function exportAllData() {
+    console.log('=== INICIANDO EXPORTACIÓN ===');
     const zip = new JSZip();
     
-    // 1. Exportar todo localStorage (solo claves simples, no grandes blobs de datos)
+    // 1. Exportar localStorage (solo datos pequeños de configuración)
+    console.log('Exportando localStorage...');
+    let lsCount = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       try {
         const value = localStorage.getItem(key);
-        // Solo guardar si no es muy grande (< 1MB) y no parece ser datos de IndexedDB
-        if (value.length < 1000000 && !key.includes('indexedDB/') && !key.includes('localforage/')) {
+        // Filtrar claves que no sean datos grandes ni metadatos de exportación
+        if (value.length < 100000 && !key.startsWith('indexedDB/') && !key.startsWith('localforage/')) {
           zip.file(`localStorage/${key}`, value);
+          lsCount++;
         }
       } catch (e) {
-        console.warn('Error exportando localStorage:', key, e);
+        console.warn('Error localStorage:', key, e);
       }
     }
+    console.log(`✓ ${lsCount} items de localStorage exportados`);
 
-    // 2. Exportar todo indexedDB
-    const dbNames = await getAllIndexedDBs();
+    // 2. Exportar IndexedDB
+    console.log('Exportando IndexedDB...');
+    const dbs = await window.indexedDB.databases?.() || [];
+    console.log('Bases de datos encontradas:', dbs.map(d => d.name));
     
-    for (const dbName of dbNames) {
+    for (const dbInfo of dbs) {
       try {
         const db = await new Promise((res, rej) => {
-          const req = indexedDB.open(dbName);
+          const req = indexedDB.open(dbInfo.name);
           req.onsuccess = () => res(req.result);
           req.onerror = () => rej(req.error);
         });
         
-        const dbFolder = zip.folder(`indexedDB/${dbName}`);
+        const dbFolder = zip.folder(`indexedDB/${dbInfo.name}`);
+        console.log(`Procesando DB: ${dbInfo.name} (${db.objectStoreNames.length} stores)`);
         
         for (const storeName of db.objectStoreNames) {
           const tx = db.transaction(storeName, 'readonly');
@@ -311,162 +285,164 @@
             req.onerror = () => rej(req.error);
           });
           
-          // Guardar metadatos de la estructura
-          const keyPath = store.keyPath;
-          const autoIncrement = store.autoIncrement;
-          
-          // Dividir en chunks si es muy grande
-          const jsonStr = JSON.stringify({
+          const exportData = {
             data: allData,
-            keyPath: keyPath,
-            autoIncrement: autoIncrement
-          });
+            keyPath: store.keyPath,
+            autoIncrement: store.autoIncrement,
+            indexNames: Array.from(store.indexNames)
+          };
           
-          dbFolder.file(`${storeName}.json`, jsonStr);
+          dbFolder.file(`${storeName}.json`, JSON.stringify(exportData));
+          console.log(`  ✓ Store ${storeName}: ${allData.length} registros`);
         }
         
         db.close();
       } catch (e) {
-        console.warn('Error exportando IndexedDB:', dbName, e);
+        console.error(`Error exportando DB ${dbInfo.name}:`, e);
       }
     }
 
-    // 3. Exportar TODO localForage (incluyendo imágenes y datos)
+    // 3. Exportar localForage (IMÁGENES Y DATOS)
+    console.log('Exportando localForage...');
     const lfFolder = zip.folder('localforage');
     const keys = await localforage.keys();
+    console.log(`Encontradas ${keys.length} claves en localForage`);
     
     for (const key of keys) {
       try {
         const value = await localforage.getItem(key);
         
-        if (value instanceof Blob || value instanceof File) {
-          // Es un blob (imagen), guardar como archivo binario
-          const ext = value.type.includes('png') ? 'png' : 
-                     value.type.includes('jpg') || value.type.includes('jpeg') ? 'jpg' : 
-                     value.type.includes('gif') ? 'gif' : 
-                     value.type.includes('webp') ? 'webp' : 'bin';
-          lfFolder.file(`${key}.${ext}`, value);
+        if (isImageBlob(value)) {
+          // ES UNA IMAGEN - Guardar como archivo binario con extensión
+          const ext = getExtensionFromMime(value.type);
+          const fileName = `${key}.${ext}`;
+          lfFolder.file(fileName, value);
+          console.log(`  ✓ Imagen: ${key} (${ext}, ${Math.round(value.size/1024)}KB)`);
+          
         } else if (typeof value === 'string') {
-          // Es texto/JSON
-          if (value.length < 5000000) { // Límite de 5MB para strings
-            lfFolder.file(`${key}.txt`, value);
-          }
+          // TEXTO
+          lfFolder.file(`${key}.txt`, value);
+          console.log(`  ✓ Texto: ${key}`);
+          
+        } else if (typeof value === 'object' && value !== null) {
+          // OBJETO/JSON
+          lfFolder.file(`${key}.json`, JSON.stringify(value));
+          console.log(`  ✓ JSON: ${key}`);
+          
         } else {
-          // Es objeto, guardar como JSON
-          const jsonStr = JSON.stringify(value);
-          if (jsonStr.length < 5000000) {
-            lfFolder.file(`${key}.json`, jsonStr);
-          }
+          // OTROS TIPOS
+          lfFolder.file(`${key}.json`, JSON.stringify(value));
+          console.log(`  ✓ Otro: ${key}`);
         }
       } catch (e) {
-        console.warn('Error exportando localForage:', key, e);
+        console.error(`Error exportando ${key}:`, e);
       }
     }
 
-    // Generar y descargar
+    // Generar ZIP
+    console.log('Generando archivo ZIP...');
     const blob = await zip.generateAsync({ 
       type: 'blob',
       compression: "DEFLATE",
-      compressionOptions: { level: 9 }
+      compressionOptions: { level: 6 }
     });
     
+    // Descargar
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup-completo-${new Date().toISOString().split('T')[0]}-${Date.now()}.zip`;
+    a.download = `backup-industrias-tobias-${new Date().toISOString().split('T')[0]}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    console.log('✅ Exportación completada. Databases:', dbNames);
+    console.log('=== EXPORTACIÓN COMPLETADA ===');
+    alert(`✅ Backup creado exitosamente\n\nTamaño: ${(blob.size/1024/1024).toFixed(2)} MB`);
   }
 
   async function importAllData(file) {
+    console.log('=== INICIANDO IMPORTACIÓN ===');
     try {
-      console.log('Iniciando importación...');
       const zip = await JSZip.loadAsync(file);
+      const files = Object.keys(zip.files);
+      console.log('Archivos en ZIP:', files.length);
       
-      // 1. Importar localStorage primero (configuraciones básicas)
-      const lsFiles = Object.keys(zip.files).filter(p => p.startsWith('localStorage/') && !zip.files[p].dir);
+      // 1. Importar localStorage
+      console.log('1. Importando localStorage...');
+      const lsFiles = files.filter(p => p.startsWith('localStorage/') && !zip.files[p].dir);
       for (const path of lsFiles) {
-        const zipEntry = zip.files[path];
         const key = path.replace('localStorage/', '');
         try {
-          const content = await zipEntry.async('string');
-          if (content.length < 5000000) { // Solo si no es muy grande
-            localStorage.setItem(key, content);
-            console.log('✓ localStorage:', key);
-          }
+          const content = await zip.files[path].async('string');
+          localStorage.setItem(key, content);
+          console.log(`  ✓ ${key}`);
         } catch (e) {
-          console.warn('✗ Error localStorage:', key, e);
+          console.warn(`  ✗ Error ${key}:`, e);
         }
       }
 
-      // 2. Importar indexedDB - CONSTRUIR DESDE CERO
-      const idbFiles = Object.keys(zip.files).filter(p => p.startsWith('indexedDB/') && p.endsWith('.json'));
-      const dbMap = {}; // Agrupar por base de datos
+      // 2. Importar IndexedDB
+      console.log('2. Importando IndexedDB...');
+      const idbFiles = files.filter(p => p.startsWith('indexedDB/') && p.endsWith('.json'));
       
-      // Organizar archivos por DB
+      // Agrupar por base de datos
+      const dbStructure = {};
       for (const path of idbFiles) {
         const parts = path.split('/');
         if (parts.length >= 3) {
           const dbName = parts[1];
           const storeName = parts[2].replace('.json', '');
-          if (!dbMap[dbName]) dbMap[dbName] = [];
-          dbMap[dbName].push({ path, storeName });
+          if (!dbStructure[dbName]) dbStructure[dbName] = {};
+          
+          try {
+            const content = await zip.files[path].async('string');
+            dbStructure[dbName][storeName] = JSON.parse(content);
+          } catch (e) {
+            console.error(`Error leyendo ${path}:`, e);
+          }
         }
       }
       
-      // Procesar cada base de datos
-      for (const [dbName, stores] of Object.entries(dbMap)) {
+      // Crear cada base de datos
+      for (const [dbName, stores] of Object.entries(dbStructure)) {
+        console.log(`Procesando DB: ${dbName}`);
+        
         try {
-          console.log(`Procesando DB: ${dbName} (${stores.length} stores)`);
-          
-          // Primero, eliminar la base de datos existente para evitar conflictos de versión
+          // Eliminar DB existente
           await new Promise((res) => {
-            const deleteReq = indexedDB.deleteDatabase(dbName);
-            deleteReq.onsuccess = () => res();
-            deleteReq.onerror = () => res();
-            deleteReq.onblocked = () => res();
+            const delReq = indexedDB.deleteDatabase(dbName);
+            delReq.onsuccess = () => res();
+            delReq.onerror = () => res();
+            delReq.onblocked = () => res();
           });
           
-          // Esperar un momento para asegurar que se eliminó
-          await new Promise(r => setTimeout(r, 100));
+          // Esperar a que se elimine
+          await new Promise(r => setTimeout(r, 200));
           
-          // Leer el contenido de todas las stores primero
-          const storeData = {};
-          for (const { path, storeName } of stores) {
-            try {
-              const content = await zip.files[path].async('string');
-              storeData[storeName] = JSON.parse(content);
-            } catch (e) {
-              console.warn('Error leyendo store:', storeName, e);
-            }
-          }
+          // Calcular versión necesaria
+          const storeNames = Object.keys(stores);
+          const version = storeNames.length > 0 ? storeNames.length : 1;
           
-          // Crear la nueva base de datos con todas las stores
+          // Crear nueva DB
           await new Promise((res, rej) => {
-            // Calcular versión basada en número de stores
-            const version = Math.max(1, Object.keys(storeData).length);
-            
             const openReq = indexedDB.open(dbName, version);
             
             openReq.onupgradeneeded = (e) => {
               const db = e.target.result;
-              console.log(`Creando stores en ${dbName}...`);
+              console.log(`  Creando stores en ${dbName}...`);
               
-              for (const [storeName, data] of Object.entries(storeData)) {
+              for (const [storeName, storeData] of Object.entries(stores)) {
                 if (!db.objectStoreNames.contains(storeName)) {
                   const options = {};
-                  if (data.keyPath) options.keyPath = data.keyPath;
-                  if (data.autoIncrement) options.autoIncrement = data.autoIncrement;
+                  if (storeData.keyPath) options.keyPath = storeData.keyPath;
+                  if (storeData.autoIncrement) options.autoIncrement = storeData.autoIncrement;
                   
                   try {
                     db.createObjectStore(storeName, options);
-                    console.log(`  ✓ Creado store: ${storeName}`);
+                    console.log(`    ✓ Store creado: ${storeName}`);
                   } catch (err) {
-                    console.warn(`  ✗ Error creando ${storeName}:`, err);
+                    console.error(`    ✗ Error creando ${storeName}:`, err);
                   }
                 }
               }
@@ -475,116 +451,122 @@
             openReq.onsuccess = (e) => {
               const db = e.target.result;
               
-              // Insertar datos en cada store
-              const insertPromises = Object.entries(storeData).map(([storeName, data]) => {
-                return new Promise((resolveStore) => {
-                  try {
-                    if (!db.objectStoreNames.contains(storeName)) {
-                      console.warn(`Store no existe: ${storeName}`);
-                      resolveStore();
-                      return;
-                    }
-                    
-                    const tx = db.transaction(storeName, 'readwrite');
-                    const store = tx.objectStore(storeName);
-                    
-                    // Limpiar primero
-                    store.clear();
-                    
-                    // Insertar datos
-                    if (data.data && Array.isArray(data.data)) {
-                      data.data.forEach(item => {
-                        try {
-                          store.put(item);
-                        } catch (err) {
-                          console.warn('Error insertando item:', err);
-                        }
-                      });
-                    }
-                    
-                    tx.oncomplete = () => {
-                      console.log(`  ✓ Datos insertados en ${storeName}: ${data.data?.length || 0} items`);
-                      resolveStore();
-                    };
-                    tx.onerror = () => resolveStore();
-                  } catch (err) {
-                    console.warn(`Error en transacción ${storeName}:`, err);
-                    resolveStore();
+              // Insertar datos
+              const promises = Object.entries(stores).map(([storeName, storeData]) => {
+                return new Promise((resolve) => {
+                  if (!db.objectStoreNames.contains(storeName)) {
+                    resolve();
+                    return;
                   }
+                  
+                  const tx = db.transaction(storeName, 'readwrite');
+                  const store = tx.objectStore(storeName);
+                  
+                  // Limpiar
+                  store.clear();
+                  
+                  // Insertar
+                  if (storeData.data && Array.isArray(storeData.data)) {
+                    storeData.data.forEach(item => {
+                      try {
+                        store.put(item);
+                      } catch (err) {
+                        console.warn('Error insertando item:', err);
+                      }
+                    });
+                    console.log(`    ✓ ${storeName}: ${storeData.data.length} items`);
+                  }
+                  
+                  tx.oncomplete = () => resolve();
+                  tx.onerror = () => resolve();
                 });
               });
               
-              Promise.all(insertPromises).then(() => {
+              Promise.all(promises).then(() => {
                 db.close();
                 res();
               });
             };
             
-            openReq.onerror = () => {
-              console.error('Error abriendo DB:', dbName);
-              rej(openReq.error);
-            };
+            openReq.onerror = () => rej(openReq.error);
           });
           
         } catch (e) {
-          console.error(`Error procesando DB ${dbName}:`, e);
+          console.error(`Error en DB ${dbName}:`, e);
         }
       }
 
-      // 3. Importar localForage
-      const lfFiles = Object.keys(zip.files).filter(p => p.startsWith('localforage/') && !zip.files[p].dir);
+      // 3. Importar localForage (IMÁGENES Y DATOS)
+      console.log('3. Importando localForage...');
+      const lfFiles = files.filter(p => p.startsWith('localforage/') && !zip.files[p].dir);
+      
       for (const path of lfFiles) {
-        const zipEntry = zip.files[path];
         const fileName = path.replace('localforage/', '');
-        const key = fileName.replace(/\.(jpg|jpeg|png|gif|webp|txt|json|bin)$/, '');
-        const ext = fileName.split('.').pop().toLowerCase();
+        
+        // Extraer clave y extensión
+        const lastDot = fileName.lastIndexOf('.');
+        const key = lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
+        const ext = lastDot > 0 ? fileName.substring(lastDot + 1).toLowerCase() : '';
         
         try {
-          if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bin'].includes(ext)) {
-            // Es una imagen/blob
-            const blob = await zipEntry.async('blob');
+          if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+            // ES UNA IMAGEN
+            const blob = await zip.files[path].async('blob');
             const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
                             ext === 'png' ? 'image/png' : 
                             ext === 'gif' ? 'image/gif' : 
-                            ext === 'webp' ? 'image/webp' : 'application/octet-stream';
-            const typedBlob = new Blob([blob], { type: mimeType });
-            await localforage.setItem(key, typedBlob);
-            console.log('✓ localForage imagen:', key);
+                            ext === 'webp' ? 'image/webp' : 
+                            ext === 'svg' ? 'image/svg+xml' : 'application/octet-stream';
+            
+            const imageBlob = new Blob([blob], { type: mimeType });
+            await localforage.setItem(key, imageBlob);
+            console.log(`  ✓ Imagen restaurada: ${key} (${ext})`);
+            
           } else if (ext === 'txt') {
-            // Es texto
-            const text = await zipEntry.async('string');
+            // TEXTO
+            const text = await zip.files[path].async('string');
             await localforage.setItem(key, text);
-            console.log('✓ localForage texto:', key);
+            console.log(`  ✓ Texto restaurado: ${key}`);
+            
           } else if (ext === 'json') {
-            // Es JSON
-            const json = await zipEntry.async('string');
-            await localforage.setItem(key, JSON.parse(json));
-            console.log('✓ localForage JSON:', key);
+            // JSON
+            const jsonStr = await zip.files[path].async('string');
+            const jsonData = JSON.parse(jsonStr);
+            await localforage.setItem(key, jsonData);
+            console.log(`  ✓ JSON restaurado: ${key}`);
+            
+          } else {
+            // OTROS - intentar como blob genérico
+            const blob = await zip.files[path].async('blob');
+            await localforage.setItem(key, blob);
+            console.log(`  ✓ Blob restaurado: ${key}`);
           }
         } catch (e) {
-          console.warn('✗ Error localForage:', key, e);
+          console.error(`  ✗ Error restaurando ${key}:`, e);
         }
       }
 
-      console.log('Importación completada');
-      alert('✅ Datos importados correctamente. La página se recargará.');
+      console.log('=== IMPORTACIÓN COMPLETADA ===');
+      alert('✅ Datos importados correctamente.\n\nLa página se recargará para aplicar los cambios.');
       location.reload();
+      
     } catch (error) {
-      console.error('Error importando:', error);
+      console.error('Error fatal en importación:', error);
       alert('❌ Error al importar: ' + error.message);
     }
   }
 
+  // Event Listeners
   document.getElementById('exportBtn').addEventListener('click', exportAllData);
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', e => { 
     const file = e.target.files[0]; 
     if (file) {
-      if (confirm('⚠️ Esto reemplazará todos los datos actuales. ¿Continuar?')) {
+      if (confirm('⚠️ Esto reemplazará todos los datos actuales.\n\n¿Estás seguro de continuar?')) {
         importAllData(file); 
       }
     }
-    e.target.value = ''; // Limpiar input
+    e.target.value = '';
   });
 
   /* ----------  MODO KIOSKO  ---------- */
@@ -633,19 +615,31 @@
     const confirmBtn  = document.getElementById('confirmFormat');
     const toggleBtn   = document.getElementById('toggleAllBtn');
 
-    let options = [];          // array con {type,name}
-    let allChecked = false;    // estado actual
+    let options = [];
+    let allChecked = false;
 
     async function collectOptions() {
       const opts = [];
-      const dbs = await getAllIndexedDBs();
-      dbs.forEach((name) => opts.push({type:'db', name}));
+      
+      // IndexedDB
+      if (window.indexedDB.databases) {
+        try {
+          const dbs = await window.indexedDB.databases();
+          dbs.forEach(({name}) => opts.push({type:'db', name}));
+        } catch (e) {}
+      }
+      
+      // localStorage
       for(let i = 0; i < localStorage.length; i++){
         opts.push({type:'ls', name:localStorage.key(i)});
       }
-      for(const key of await localforage.keys()){
-        opts.push({type:'lf', name:key});
-      }
+      
+      // localForage
+      try {
+        const lfKeys = await localforage.keys();
+        lfKeys.forEach(key => opts.push({type:'lf', name:key}));
+      } catch (e) {}
+      
       return opts;
     }
 

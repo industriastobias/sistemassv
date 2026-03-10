@@ -97,6 +97,31 @@
             border-color: #fff;
         }
 
+        /* NUEVO: Estilos para botón de imágenes */
+        .btn-sm.images-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+        
+        .btn-sm.images-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-sm.images-btn.active {
+            background: #fff;
+            color: #B5838D;
+        }
+        
+        .image-count-badge {
+            background: #B5838D;
+            color: #fff;
+            border-radius: 12px;
+            padding: 2px 6px;
+            font-size: 10px;
+            margin-left: 5px;
+            font-weight: 900;
+        }
+
         .main {
             display: grid;
             grid-template-columns: 320px 1fr;
@@ -1427,6 +1452,77 @@
             font-weight: 600;
         }
 
+        /* NUEVO: Estilos para modal de imágenes */
+        .images-modal-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .images-modal-card {
+            background: #f8f8f8;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .images-modal-card:hover {
+            border-color: #B5838D;
+            background: #f8f0f2;
+            transform: translateY(-2px);
+        }
+        
+        .images-modal-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .images-modal-title {
+            font-size: 14px;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+        
+        .images-modal-desc {
+            font-size: 11px;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .progress-bar.active {
+            display: block;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #B5838D;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+
         /* ============================================
            ESTILOS PARA VISTA SIMPLIFICADA/AMPLIADA
            ============================================ */
@@ -1642,6 +1738,10 @@
                 </button>
                 <button class="btn-sm historial-btn" id="historialBtn" onclick="toggleHistorial()" title="Ver historial de lotes">
                     📋 HISTORIAL
+                </button>
+                <!-- NUEVO: Botón para descargar imágenes -->
+                <button class="btn-sm images-btn" onclick="openImagesModal()" title="Descargar imágenes en ZIP">
+                    🖼️ IMÁGENES <span id="imageCountBadge" class="image-count-badge">0</span>
                 </button>
                 <button class="btn-sm" onclick="openExportImportModal()" title="Exportar o Importar datos">
                     🔄 EXPORTAR/IMPORTAR
@@ -2198,6 +2298,36 @@
         </div>
     </div>
 
+    <!-- NUEVO: Modal para opciones de descarga de imágenes -->
+    <div class="modal-overlay" id="modalImages">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">🖼️ DESCARGAR IMÁGENES</div>
+                <button class="modal-close-btn" onclick="closeModal('modalImages')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-box" id="imagesInfo">
+                    Calculando imágenes disponibles...
+                </div>
+                
+                <!-- Barra de progreso -->
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText"></div>
+                
+                <div class="images-modal-options" id="imagesOptions">
+                    <!-- Las opciones se generarán dinámicamente -->
+                </div>
+                
+                <div style="margin-top: 20px; font-size: 12px; color: #666;" id="imagesStats"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" onclick="closeModal('modalImages')">CERRAR</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Image Modal -->
     <div class="image-modal" id="imageModal" onclick="closeImageModal()">
         <span class="image-modal-close">&times;</span>
@@ -2239,6 +2369,7 @@
             updateUI();
             renderTable();
             renderHistorial();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             
             setupImageInput();
             
@@ -2261,6 +2392,7 @@
                             reader.onload = function(event) {
                                 currentImage = event.target.result;
                                 showImagePreview(currentImage);
+                                updateImageCount(); // NUEVO: Actualizar contador
                             };
                             reader.readAsDataURL(blob);
                             break;
@@ -2269,6 +2401,331 @@
                 });
             }
         };
+
+        // NUEVA FUNCIÓN: Actualizar contador de imágenes
+        function updateImageCount() {
+            const badge = document.getElementById('imageCountBadge');
+            
+            // Contar imágenes en el lote actual
+            let currentImages = currentLote.products.filter(p => p.image).length;
+            
+            // Contar imágenes en el historial (únicas)
+            let historialImages = 0;
+            const uniqueImages = new Set();
+            allLotes.forEach(lote => {
+                lote.products.forEach(p => {
+                    if (p.image) {
+                        uniqueImages.add(p.image);
+                    }
+                });
+            });
+            historialImages = uniqueImages.size;
+            
+            const total = currentImages + historialImages;
+            badge.textContent = total;
+        }
+
+        // NUEVA FUNCIÓN: Abrir modal de opciones de imágenes
+        async function openImagesModal() {
+            const modal = document.getElementById('modalImages');
+            const info = document.getElementById('imagesInfo');
+            const options = document.getElementById('imagesOptions');
+            const stats = document.getElementById('imagesStats');
+            
+            // Contar imágenes
+            const currentImages = currentLote.products.filter(p => p.image);
+            const uniqueHistorialImages = new Set();
+            allLotes.forEach(lote => {
+                lote.products.forEach(p => {
+                    if (p.image) {
+                        uniqueHistorialImages.add(p.image);
+                    }
+                });
+            });
+            
+            const totalCurrent = currentImages.length;
+            const totalHistorial = uniqueHistorialImages.size;
+            const totalAll = totalCurrent + totalHistorial;
+            
+            info.innerHTML = `
+                <strong>📊 ESTADÍSTICAS DE IMÁGENES:</strong><br>
+                • Lote actual: ${totalCurrent} imágenes<br>
+                • Historial: ${totalHistorial} imágenes únicas<br>
+                • Total disponible: ${totalAll} imágenes
+            `;
+            
+            stats.innerHTML = `Las imágenes se descargarán organizadas por lote en carpetas separadas.`;
+            
+            // Generar opciones
+            let optionsHtml = '';
+            
+            if (totalCurrent > 0) {
+                optionsHtml += `
+                    <div class="images-modal-card" onclick="downloadImagesZip('current')">
+                        <div class="images-modal-icon">📸</div>
+                        <div class="images-modal-title">SOLO LOTE ACTUAL</div>
+                        <div class="images-modal-desc">Descargar imágenes del lote ${currentLote.id} (${totalCurrent} imágenes)</div>
+                    </div>
+                `;
+            }
+            
+            if (totalHistorial > 0) {
+                optionsHtml += `
+                    <div class="images-modal-card" onclick="downloadImagesZip('all')">
+                        <div class="images-modal-icon">📚</div>
+                        <div class="images-modal-title">TODOS LOS LOTES</div>
+                        <div class="images-modal-desc">Descargar imágenes de todos los lotes del historial (${totalHistorial} imágenes únicas)</div>
+                    </div>
+                `;
+            }
+            
+            if (totalAll > 0) {
+                optionsHtml += `
+                    <div class="images-modal-card" onclick="downloadImagesZip('current-with-all')">
+                        <div class="images-modal-icon">🖼️</div>
+                        <div class="images-modal-title">LOTE ACTUAL + HISTORIAL</div>
+                        <div class="images-modal-desc">Descargar todas las imágenes disponibles (${totalAll} imágenes)</div>
+                    </div>
+                `;
+            }
+            
+            if (optionsHtml === '') {
+                optionsHtml = `
+                    <div style="text-align: center; padding: 30px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📷</div>
+                        <div>No hay imágenes para descargar</div>
+                    </div>
+                `;
+            }
+            
+            options.innerHTML = optionsHtml;
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        // NUEVA FUNCIÓN: Descargar imágenes en ZIP
+        async function downloadImagesZip(type) {
+            const modal = document.getElementById('modalImages');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            closeModal('modalImages');
+            
+            progressBar.classList.add('active');
+            progressText.textContent = 'Preparando imágenes...';
+            
+            try {
+                const zip = new JSZip();
+                let imagesToDownload = [];
+                let imagesCount = 0;
+                
+                // Recolectar imágenes según el tipo
+                if (type === 'current') {
+                    // Solo lote actual
+                    currentLote.products.forEach((product, index) => {
+                        if (product.image) {
+                            imagesToDownload.push({
+                                image: product.image,
+                                name: product.name,
+                                lote: currentLote.id,
+                                index: index
+                            });
+                        }
+                    });
+                } else if (type === 'all') {
+                    // Solo historial (imágenes únicas)
+                    const addedImages = new Set();
+                    allLotes.forEach(lote => {
+                        lote.products.forEach((product, index) => {
+                            if (product.image && !addedImages.has(product.image)) {
+                                addedImages.add(product.image);
+                                imagesToDownload.push({
+                                    image: product.image,
+                                    name: product.name,
+                                    lote: lote.id,
+                                    index: index
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    // Lote actual + historial
+                    // Primero agregar imágenes del lote actual
+                    currentLote.products.forEach((product, index) => {
+                        if (product.image) {
+                            imagesToDownload.push({
+                                image: product.image,
+                                name: product.name,
+                                lote: currentLote.id,
+                                index: index
+                            });
+                        }
+                    });
+                    
+                    // Luego agregar imágenes únicas del historial
+                    const addedImages = new Set(imagesToDownload.map(img => img.image));
+                    allLotes.forEach(lote => {
+                        lote.products.forEach((product, index) => {
+                            if (product.image && !addedImages.has(product.image)) {
+                                addedImages.add(product.image);
+                                imagesToDownload.push({
+                                    image: product.image,
+                                    name: product.name,
+                                    lote: lote.id,
+                                    index: index
+                                });
+                            }
+                        });
+                    });
+                }
+                
+                imagesCount = imagesToDownload.length;
+                
+                if (imagesCount === 0) {
+                    progressBar.classList.remove('active');
+                    await showAlert('❌ No hay imágenes para descargar');
+                    return;
+                }
+                
+                progressText.textContent = `Procesando 0 de ${imagesCount} imágenes...`;
+                
+                // Procesar cada imagen
+                for (let i = 0; i < imagesToDownload.length; i++) {
+                    const img = imagesToDownload[i];
+                    
+                    try {
+                        // Extraer datos base64
+                        let base64Data = img.image;
+                        let extension = 'png';
+                        
+                        // Detectar tipo de imagen desde data URL
+                        if (img.image.startsWith('data:')) {
+                            const matches = img.image.match(/^data:([^;]+);base64,(.+)$/);
+                            if (matches) {
+                                const mimeType = matches[1];
+                                base64Data = matches[2];
+                                
+                                // Determinar extensión
+                                if (mimeType.includes('jpeg')) extension = 'jpg';
+                                else if (mimeType.includes('gif')) extension = 'gif';
+                                else if (mimeType.includes('webp')) extension = 'webp';
+                                else extension = 'png';
+                            }
+                        }
+                        
+                        // Crear nombre de archivo seguro
+                        const safeName = img.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                        const fileName = `${img.lote}/${safeName}_${img.index + 1}.${extension}`;
+                        
+                        // Agregar al ZIP
+                        zip.file(fileName, base64Data, { base64: true });
+                        
+                        // Actualizar progreso
+                        const percent = Math.round(((i + 1) / imagesCount) * 100);
+                        progressFill.style.width = percent + '%';
+                        progressText.textContent = `Procesando ${i + 1} de ${imagesCount} imágenes...`;
+                        
+                    } catch (imgError) {
+                        console.error('Error procesando imagen:', imgError);
+                    }
+                }
+                
+                // Crear archivo README
+                const readmeContent = generateImagesReadme(imagesToDownload, type);
+                zip.file('README.txt', readmeContent);
+                
+                progressText.textContent = 'Generando archivo ZIP...';
+                
+                // Generar y descargar ZIP
+                const content = await zip.generateAsync({ 
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 6 }
+                });
+                
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Nombre del archivo según el tipo
+                let fileName = 'imagenes_';
+                if (type === 'current') {
+                    fileName += `lote_${currentLote.id}_`;
+                } else if (type === 'all') {
+                    fileName += 'historial_';
+                } else {
+                    fileName += 'completas_';
+                }
+                fileName += new Date().toISOString().split('T')[0] + '.zip';
+                
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                progressText.textContent = `✅ Descarga completada: ${imagesCount} imágenes`;
+                setTimeout(() => {
+                    progressBar.classList.remove('active');
+                    progressText.textContent = '';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Error al crear ZIP:', error);
+                progressBar.classList.remove('active');
+                await showAlert('❌ Error al crear el archivo ZIP: ' + error.message);
+            }
+        }
+
+        // NUEVA FUNCIÓN: Generar archivo README para el ZIP de imágenes
+        function generateImagesReadme(images, type) {
+            let typeText = '';
+            if (type === 'current') {
+                typeText = `LOTE ACTUAL: ${currentLote.id}`;
+            } else if (type === 'all') {
+                typeText = 'TODOS LOS LOTES DEL HISTORIAL';
+            } else {
+                typeText = 'LOTE ACTUAL + HISTORIAL';
+            }
+            
+            const date = new Date().toLocaleString();
+            
+            // Agrupar por lote
+            const loteGroups = {};
+            images.forEach(img => {
+                if (!loteGroups[img.lote]) {
+                    loteGroups[img.lote] = [];
+                }
+                loteGroups[img.lote].push(img);
+            });
+            
+            let loteDetails = '';
+            for (const [lote, imgs] of Object.entries(loteGroups)) {
+                loteDetails += `\n📁 ${lote}: ${imgs.length} imágenes\n`;
+                imgs.forEach((img, i) => {
+                    loteDetails += `   ${i + 1}. ${img.name}\n`;
+                });
+            }
+            
+            return `IMÁGENES DE PRODUCTOS - KLOHESV
+================================
+Fecha de exportación: ${date}
+Tipo de exportación: ${typeText}
+Total de imágenes: ${images.length}
+
+${loteDetails}
+
+ORGANIZACIÓN DE CARPETAS:
+- Las imágenes están organizadas por lote en carpetas separadas
+- Cada imagen tiene el formato: NOMBRE_PRODUCTO_#.EXTENSION
+
+NOTAS:
+- Las imágenes están en su formato original
+- Este archivo README.txt contiene la lista completa de imágenes
+
+Para más información: KLOHESV Cotización System
+`;
+        }
 
         function handleFullscreenChange() {
             const kioskoBtn = document.getElementById('kioskoBtn');
@@ -2323,7 +2780,6 @@
             }
         }
 
-        // CORREGIDO: Función para alternar vista simplificada/ampliada
         function toggleSimplifiedView() {
             simplifiedViewActive = !simplifiedViewActive;
             const body = document.body;
@@ -2344,14 +2800,10 @@
                 btn.textContent = '🔍 VISTA TABLA';
             }
             
-            // FORZAR RENDERIZADO DE LA TABLA
             renderTable();
-            
-            // Forzar reflow para asegurar estilos
             void body.offsetWidth;
         }
 
-        // Funciones para modales simples (reemplazan alert y confirm)
         function showAlert(message) {
             return new Promise((resolve) => {
                 document.getElementById('simpleAlertMessage').textContent = message;
@@ -2359,7 +2811,6 @@
                 modal.classList.add('active');
                 modal.style.display = 'flex';
                 
-                // Configurar cierre temporal
                 const closeHandler = function() {
                     modal.classList.remove('active');
                     modal.style.display = '';
@@ -2367,7 +2818,6 @@
                     resolve();
                 };
                 
-                // Remover event listeners anteriores
                 const closeBtn = modal.querySelector('.modal-close-btn');
                 const acceptBtn = modal.querySelector('.modal-btn.primary');
                 
@@ -2388,7 +2838,6 @@
                 modal.classList.add('active');
                 modal.style.display = 'flex';
                 
-                // Configurar botones
                 const closeHandler = function(result) {
                     modal.classList.remove('active');
                     modal.style.display = '';
@@ -2396,7 +2845,6 @@
                     resolve(result);
                 };
                 
-                // Remover event listeners anteriores
                 const closeBtn = modal.querySelector('.modal-close-btn');
                 const cancelBtn = modal.querySelector('.modal-btn.secondary');
                 const confirmBtn = document.getElementById('simpleConfirmActionBtn');
@@ -2424,6 +2872,7 @@
                     reader.onload = function(event) {
                         currentImage = event.target.result;
                         showImagePreview(currentImage);
+                        updateImageCount(); // NUEVO: Actualizar contador
                     };
                     reader.readAsDataURL(file);
                 }
@@ -2431,7 +2880,6 @@
         }
 
         function triggerFileInput() {
-            // Usar requestAnimationFrame para mantener el foco en pantalla completa
             requestAnimationFrame(() => {
                 const input = document.getElementById('imageInput');
                 input.value = '';
@@ -2441,14 +2889,12 @@
             });
         }
 
-        // NUEVO: Modal de Exportar/Importar
         function openExportImportModal() {
             const modal = document.getElementById('modalExportImport');
             modal.classList.add('active');
             modal.style.display = 'flex';
         }
 
-        // Funciones de Exportación/Importación ZIP
         async function exportZip() {
             closeModal('modalExportImport');
             
@@ -2459,10 +2905,8 @@
 
             const zip = new JSZip();
             
-            // Exportar todos los lotes del historial
             const lotesParaExportar = [...allLotes];
             
-            // Preguntar si incluir el lote actual si tiene productos
             if (currentLote.products.length > 0 && 
                 !lotesParaExportar.some(l => l.id === currentLote.id)) {
                 const incluir = await showConfirm('¿Incluir el lote actual en la exportación?');
@@ -2471,7 +2915,6 @@
                 }
             }
 
-            // Crear archivo JSON con todos los lotes
             const exportData = {
                 version: '1.0',
                 exportDate: new Date().toISOString(),
@@ -2479,38 +2922,8 @@
                 lotes: lotesParaExportar
             };
 
-            // Agregar JSON al ZIP
             zip.file('lotes.json', JSON.stringify(exportData, null, 2));
 
-            // Recopilar todas las imágenes únicas
-            const images = {};
-            lotesParaExportar.forEach(lote => {
-                lote.products.forEach(product => {
-                    if (product.image && !images[product.image]) {
-                        // Extraer la imagen como base64 y guardarla
-                        const imageData = product.image.split(',')[1] || product.image;
-                        const imageName = `img_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-                        images[product.image] = imageName;
-                        zip.file(`images/${imageName}`, imageData, { base64: true });
-                    }
-                });
-            });
-
-            // Actualizar referencias de imágenes en los lotes
-            if (Object.keys(images).length > 0) {
-                exportData.lotes.forEach(lote => {
-                    lote.products.forEach(product => {
-                        if (product.image && images[product.image]) {
-                            product.image = `images/${images[product.image]}`;
-                        }
-                    });
-                });
-                
-                // Actualizar JSON con las nuevas referencias
-                zip.file('lotes.json', JSON.stringify(exportData, null, 2));
-            }
-
-            // Generar y descargar el ZIP
             const content = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(content);
             const a = document.createElement('a');
@@ -2520,7 +2933,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // CORREGIDO: Función importZip con manejo asíncrono correcto y arreglo de imágenes
         async function importZip() {
             closeModal('modalExportImport');
             
@@ -2540,7 +2952,6 @@
                     try {
                         const zipContent = await zip.loadAsync(file);
                         
-                        // Leer el archivo JSON
                         const jsonFile = zipContent.file('lotes.json');
                         if (!jsonFile) {
                             await showAlert('El archivo ZIP no contiene un archivo lotes.json válido');
@@ -2557,57 +2968,6 @@
                             return;
                         }
 
-                        // Crear un mapa de imágenes: ruta -> datos base64
-                        const imageMap = new Map();
-                        
-                        // Recopilar todos los archivos de imagen
-                        const imageFiles = [];
-                        zipContent.forEach((relativePath, file) => {
-                            if (relativePath.startsWith('images/') && !file.dir) {
-                                imageFiles.push(file);
-                            }
-                        });
-
-                        // Procesar todas las imágenes y guardarlas en el mapa
-                        await Promise.all(imageFiles.map(async (imageFile) => {
-                            try {
-                                const imageData = await imageFile.async('base64');
-                                const imagePath = imageFile.name;
-                                // Detectar tipo MIME por extensión
-                                const ext = imagePath.split('.').pop().toLowerCase();
-                                let mimeType = 'image/png';
-                                if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
-                                else if (ext === 'gif') mimeType = 'image/gif';
-                                else if (ext === 'webp') mimeType = 'image/webp';
-                                
-                                // Guardar en el mapa con el formato data URI completo
-                                imageMap.set(imagePath, `data:${mimeType};base64,${imageData}`);
-                            } catch (imgError) {
-                                console.error('Error procesando imagen:', imageFile.name, imgError);
-                            }
-                        }));
-
-                        // Ahora actualizar las referencias de imágenes en los productos
-                        let imagenesActualizadas = 0;
-                        importData.lotes.forEach(lote => {
-                            lote.products.forEach(product => {
-                                if (product.image && product.image.startsWith('images/')) {
-                                    const fullImageData = imageMap.get(product.image);
-                                    if (fullImageData) {
-                                        product.image = fullImageData;
-                                        imagenesActualizadas++;
-                                    } else {
-                                        // Si no se encuentra la imagen, eliminar la referencia
-                                        console.warn('Imagen no encontrada:', product.image);
-                                        product.image = null;
-                                    }
-                                }
-                            });
-                        });
-
-                        console.log(`Imágenes actualizadas: ${imagenesActualizadas} de ${imageMap.size} disponibles`);
-
-                        // Preguntar cómo manejar la importación
                         if (allLotes.length > 0) {
                             const action = await showConfirm(
                                 `Se encontraron ${importData.lotes.length} lotes en el archivo.\n\n` +
@@ -2618,7 +2978,6 @@
                             if (action) {
                                 allLotes = importData.lotes;
                             } else {
-                                // Evitar duplicados por ID
                                 const existingIds = new Set(allLotes.map(l => l.id));
                                 const nuevosLotes = importData.lotes.filter(l => !existingIds.has(l.id));
                                 allLotes = [...allLotes, ...nuevosLotes];
@@ -2633,8 +2992,9 @@
 
                         await saveData();
                         renderHistorial();
+                        updateImageCount(); // NUEVO: Actualizar contador de imágenes
                         
-                        await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados. ${imagenesActualizadas > 0 ? imagenesActualizadas + ' imágenes restauradas.' : ''}`);
+                        await showAlert(`✅ Importación completada: ${importData.lotes.length} lotes cargados.`);
                         
                         if (!historialVisible) {
                             toggleHistorial();
@@ -2655,7 +3015,6 @@
             });
         }
 
-        // Funciones del Historial
         function toggleHistorial() {
             historialVisible = !historialVisible;
             const panel = document.getElementById('historialPanel');
@@ -2666,7 +3025,6 @@
                 btn.classList.add('active');
                 renderHistorial();
                 
-                // Si estamos en vista simplificada, salir de ella
                 if (simplifiedViewActive) {
                     toggleSimplifiedView();
                 }
@@ -2699,7 +3057,6 @@
                 return;
             }
             
-            // Ordenar por fecha (más reciente primero)
             const lotesOrdenados = [...allLotes].sort((a, b) => {
                 return new Date(b.date) - new Date(a.date);
             });
@@ -2746,12 +3103,10 @@
         }
 
         function selectLote(loteId) {
-            // Quitar selección anterior
             document.querySelectorAll('.lote-card').forEach(card => {
                 card.classList.remove('selected');
             });
             
-            // Seleccionar el actual
             const cards = document.querySelectorAll('.lote-card');
             cards.forEach(card => {
                 if (card.querySelector('.lote-id').textContent === loteId) {
@@ -2859,11 +3214,10 @@
             if (currentLote.products.length > 0) {
                 const confirmed = await showConfirm(`¿CARGAR EL LOTE ${loteId}?\n\nSe perderán los cambios no guardados del lote actual.`);
                 if (!confirmed) {
-                    return; // Si el usuario cancela, salir de la función
+                    return;
                 }
             }
             
-            // Si llegamos aquí, o no hay productos en el lote actual, o el usuario confirmó
             performLoadLote(loteId);
         }
 
@@ -2871,12 +3225,11 @@
             const lote = allLotes.find(l => l.id === loteId);
             if (!lote) return;
             
-            currentLote = JSON.parse(JSON.stringify(lote)); // Clonar
-            currentLote.isFinished = false; // IMPORTANTE: Marcar como no finalizado al cargar
+            currentLote = JSON.parse(JSON.stringify(lote));
+            currentLote.isFinished = false;
             
             step1Completed = currentLote.vendorShipping > 0;
             
-            // Actualizar contador si es necesario
             const numMatch = currentLote.id.match(/\d+/);
             if (numMatch) {
                 const num = parseInt(numMatch[0]);
@@ -2889,13 +3242,12 @@
             renderTable();
             clearForm();
             saveData();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             
-            // Cerrar historial
             if (historialVisible) {
                 toggleHistorial();
             }
             
-            // Mostrar mensaje de éxito
             showAlert(`✅ Lote ${loteId} cargado correctamente.`);
         }
 
@@ -2913,14 +3265,13 @@
             allLotes = allLotes.filter(l => l.id !== loteId);
             saveData();
             renderHistorial();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             
-            // Si no hay más lotes, cerrar panel si está abierto
             if (allLotes.length === 0 && historialVisible) {
                 toggleHistorial();
             }
         }
 
-        // Función para editar nombre del lote
         function openEditLoteNameModal() {
             const input = document.getElementById('editLoteNameInput');
             if (input) {
@@ -2950,27 +3301,23 @@
                 return;
             }
             
-            // Validar que el nombre no tenga caracteres especiales problemáticos
             const nameRegex = /^[a-zA-Z0-9\-_]+$/;
             if (!nameRegex.test(newName)) {
                 showAlert('❌ EL NOMBRE SOLO PUEDE CONTENER LETRAS, NÚMEROS, GUIONES Y GUIONES BAJOS');
                 return;
             }
             
-            // Verificar si el nombre es diferente al actual
             if (newName === currentLote.id) {
                 closeModal('modalEditLoteName');
                 return;
             }
             
-            // Verificar si ya existe un lote con ese nombre en el historial (excluyendo el actual)
             const exists = allLotes.some(l => l.id === newName && l.id !== currentLote.id);
             
             if (exists) {
                 showConfirm(`⚠️ Ya existe un lote con el nombre "${newName}" en el historial.\n\n¿Deseas sobrescribirlo?`)
                     .then(confirmed => {
                         if (confirmed) {
-                            // Eliminar el existente
                             allLotes = allLotes.filter(l => l.id !== newName);
                             proceedWithNameChange(newName);
                         }
@@ -2982,37 +3329,28 @@
         }
 
         function proceedWithNameChange(newName) {
-            // Guardar el nombre anterior para referencia
             const oldName = currentLote.id;
             
-            // Actualizar el nombre del lote actual
             currentLote.id = newName;
             
-            // Actualizar todos los productos con el nuevo ID del lote
             currentLote.products.forEach(p => {
                 p.loteId = newName;
             });
             
-            // Cerrar el modal
             closeModal('modalEditLoteName');
             
-            // Actualizar toda la interfaz
             updateUI();
             renderTable();
             
-            // Guardar los cambios
             saveData();
             
-            // Actualizar el historial si está visible
             if (historialVisible) {
                 renderHistorial();
             }
             
-            // Mostrar mensaje de éxito
             showAlert(`✅ Nombre del lote cambiado de "${oldName}" a "${newName}"`);
         }
 
-        // Función para mostrar opciones de finalizar/actualizar lote
         function showFinishLoteOptions() {
             if (currentLote.products.length === 0) {
                 showAlert('NO HAY PRODUCTOS EN EL LOTE ACTUAL');
@@ -3072,7 +3410,6 @@
         function setFinishAction(action) {
             finishLoteAction = action;
             
-            // Resaltar la opción seleccionada
             const btns = document.querySelectorAll('#finishLoteOptions .lote-btn');
             btns.forEach(btn => {
                 btn.style.background = '#fff';
@@ -3085,14 +3422,11 @@
 
         async function executeFinishLote() {
             if (finishLoteAction === 'update') {
-                // Actualizar lote existente
                 const index = allLotes.findIndex(l => l.id === currentLote.id);
                 if (index !== -1) {
                     allLotes[index] = JSON.parse(JSON.stringify(currentLote));
                 }
             } else {
-                // Guardar como nuevo
-                // Verificar si ya existe y preguntar si se debe incrementar
                 let newId = currentLote.id;
                 let counter = 1;
                 
@@ -3114,11 +3448,9 @@
                 allLotes.push(JSON.parse(JSON.stringify(currentLote)));
             }
             
-            // IMPORTANTE: Marcar el lote actual como finalizado y limpiarlo
             currentLote.isFinished = true;
             await saveData();
             
-            // Crear un nuevo lote automáticamente para evitar que se vuelva a cargar el finalizado
             loteCounter++;
             currentLote = {
                 id: 'Lote-' + String(loteCounter).padStart(3, '0'),
@@ -3131,7 +3463,6 @@
             };
             step1Completed = false;
             
-            // Actualizar UI
             document.getElementById('btnStep1').classList.remove('completed', 'active');
             document.getElementById('btnStep2').classList.remove('completed');
             document.getElementById('statusStep1').textContent = 'PENDIENTE';
@@ -3147,6 +3478,7 @@
             updateUI();
             renderTable();
             clearForm();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             await saveData();
             
             closeModal('modalFinishLote');
@@ -3154,7 +3486,6 @@
             await showAlert(`✅ Lote guardado exitosamente. Se ha creado un nuevo lote: ${currentLote.id}`);
         }
 
-        // Funciones existentes modificadas
         async function saveData() {
             await localforage.setItem('currentLote', currentLote);
             await localforage.setItem('allLotes', allLotes);
@@ -3170,7 +3501,6 @@
                 currentLote = savedCurrent;
                 step1Completed = currentLote.vendorShipping > 0;
                 
-                // IMPORTANTE: Si el lote cargado está marcado como finalizado, crear uno nuevo
                 if (currentLote.isFinished) {
                     if (savedCounter) loteCounter = savedCounter;
                     loteCounter++;
@@ -3184,7 +3514,7 @@
                         isFinished: false
                     };
                     step1Completed = false;
-                    await saveData(); // Guardar el nuevo lote vacío
+                    await saveData();
                 }
             }
             
@@ -3224,6 +3554,7 @@
             renderTable();
             clearForm();
             renderHistorial();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
         }
 
         function newLote() {
@@ -3266,10 +3597,10 @@
             updateUI();
             renderTable();
             clearForm();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             saveData();
         }
 
-        // Funciones existentes (sin cambios)
         function openStep1Modal() {
             document.getElementById('modalLoteId').value = currentLote.id;
             document.getElementById('modalLoteDate').value = currentLote.date;
@@ -3431,6 +3762,7 @@
             document.getElementById('imagePreview').classList.remove('active');
             document.getElementById('uploadText').style.display = 'block';
             document.getElementById('removeImage').classList.remove('active');
+            updateImageCount(); // NUEVO: Actualizar contador
         }
 
         function adjustUnits(delta) {
@@ -3609,6 +3941,7 @@
             
             recalculateAllProducts();
             clearForm();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             saveData();
         }
 
@@ -3760,6 +4093,7 @@
             currentLote.products = currentLote.products.filter(p => p.id !== id);
             if (currentLote.products.length === 0) step1Completed = false;
             recalculateAllProducts();
+            updateImageCount(); // NUEVO: Actualizar contador de imágenes
             saveData();
         }
 
@@ -3890,6 +4224,7 @@
                     closeModal('modalSimpleConfirm');
                     closeModal('modalSimpleAlert');
                     closeModal('modalExportImport');
+                    closeModal('modalImages'); // NUEVO: Cerrar modal de imágenes
                     closeImageModal();
                 }
             }

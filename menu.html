@@ -317,10 +317,16 @@
   };
 
   // ============================================
-  // EXPORTAR / IMPORTAR - VERSIÓN COMPLETA CORREGIDA
+  // EXPORTAR / IMPORTAR - VERSIÓN CORREGIDA FINAL
   // ============================================
 
-  // Función para exportar datos de IndexedDB genérica
+  // Crear instancia de localForage para Traslados (igual que en traslados.html)
+  const trasladosStorage = localforage.createInstance({
+    name: 'TrasladosPasos',
+    storeName: 'productos'
+  });
+
+  // Función para exportar datos de IndexedDB (Reservas)
   async function exportIndexedDB(dbName, storeName) {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(dbName);
@@ -353,6 +359,24 @@
         };
       };
     });
+  }
+
+  // Función para exportar datos de localForage de Traslados
+  async function exportTrasladosData() {
+    try {
+      const keys = await trasladosStorage.keys();
+      const data = {};
+      
+      for (const key of keys) {
+        const value = await trasladosStorage.getItem(key);
+        data[key] = value;
+      }
+      
+      return data;
+    } catch (e) {
+      Logger.error('Error exportando traslados:', e);
+      return {};
+    }
   }
 
   // Función para obtener todas las claves de imágenes de localForage principal
@@ -393,8 +417,8 @@
       }
       Logger.log(`   ✓ ${stats.localStorage} items`);
 
-      // 2. LOCALFORAGE - IMÁGENES (img_*)
-      Logger.log('2. Exportando imágenes de localForage...');
+      // 2. LOCALFORAGE PRINCIPAL - IMÁGENES (img_*)
+      Logger.log('2. Exportando imágenes de localForage principal...');
       const imageKeys = await getImageKeys();
       
       for (const key of imageKeys) {
@@ -412,8 +436,8 @@
       }
       Logger.log(`   ✓ ${stats.images} imágenes`);
 
-      // 3. LOCALFORAGE - OTROS DATOS
-      Logger.log('3. Exportando otros datos de localForage...');
+      // 3. LOCALFORAGE PRINCIPAL - OTROS DATOS
+      Logger.log('3. Exportando otros datos de localForage principal...');
       const otherKeys = (await localforage.keys()).filter(k => !k.startsWith('img_'));
       
       for (const key of otherKeys) {
@@ -465,70 +489,102 @@
         Logger.error('   ✗ Error exportando reservas:', e);
       }
 
-      // 5. INDEXEDDB - TRASLADOS (traslados.html)
-      Logger.log('5. Exportando IndexedDB TrasladosPasos...');
+      // 5. LOCALFORAGE - TRASLADOS (traslados.html) - CORREGIDO
+      Logger.log('5. Exportando localForage TrasladosPasos...');
       try {
-        const trasladosData = await exportIndexedDB('TrasladosPasos', 'productos');
+        const trasladosData = await exportTrasladosData();
+        const keys = Object.keys(trasladosData);
         
-        if (trasladosData.length > 0) {
-          // Buscar currentLote, allLotes, etc.
-          const trasladosObj = {};
-          for (const item of trasladosData) {
-            if (item.key && item.value !== undefined) {
-              trasladosObj[item.key] = item.value;
-            }
-          }
+        if (keys.length > 0) {
+          // Procesar datos para separar imágenes
+          const datosParaExportar = {};
+          let totalImagenes = 0;
           
-          // Si no hay estructura key-value, guardar como array
-          if (Object.keys(trasladosObj).length === 0) {
-            zip.file('indexeddb/traslados/array.json', JSON.stringify(trasladosData, null, 2));
-          } else {
-            // Separar lotes e imágenes
-            const datosParaZip = {};
-            
-            for (const [key, value] of Object.entries(trasladosObj)) {
-              if (key === 'allLotes' && Array.isArray(value)) {
-                // Procesar lotes y extraer imágenes
-                const lotesSinImg = value.map((lote, loteIdx) => {
-                  if (!lote.products) return lote;
-                  
-                  const productosSinImg = lote.products.map((p, prodIdx) => {
-                    const { image, ...prod } = p;
-                    return prod;
-                  });
-                  
-                  return { ...lote, products: productosSinImg };
-                });
+          for (const [key, value] of Object.entries(trasladosData)) {
+            if (key === 'allLotes' && Array.isArray(value)) {
+              // Procesar lotes y extraer imágenes de productos
+              const lotesProcesados = [];
+              
+              for (let loteIdx = 0; loteIdx < value.length; loteIdx++) {
+                const lote = value[loteIdx];
                 
-                datosParaZip[key] = lotesSinImg;
+                if (!lote.products) {
+                  lotesProcesados.push(lote);
+                  continue;
+                }
                 
-                // Guardar imágenes separadas
-                let imgCount = 0;
-                value.forEach((lote, loteIdx) => {
-                  if (lote.products) {
-                    lote.products.forEach((p, prodIdx) => {
-                      if (p.image && p.image.startsWith('data:image')) {
-                        const ext = p.image.includes('png') ? 'png' : 
-                                   p.image.includes('gif') ? 'gif' : 
-                                   p.image.includes('webp') ? 'webp' : 'jpg';
-                        const base64 = p.image.split(',')[1];
-                        zip.file(`indexeddb/traslados/imagenes/lote${loteIdx}_prod${prodIdx}.${ext}`, base64, { base64: true });
-                        imgCount++;
-                      }
+                const productosProcesados = [];
+                
+                for (let prodIdx = 0; prodIdx < lote.products.length; prodIdx++) {
+                  const producto = lote.products[prodIdx];
+                  
+                  // Si tiene imagen, extraerla y guardar referencia
+                  if (producto.image && producto.image.startsWith('data:image')) {
+                    const ext = producto.image.includes('png') ? 'png' : 
+                               producto.image.includes('gif') ? 'gif' : 
+                               producto.image.includes('webp') ? 'webp' : 'jpg';
+                    const base64Data = producto.image.split(',')[1];
+                    
+                    // Guardar imagen en ZIP
+                    zip.file(`traslados/imagenes/lote${loteIdx}_prod${prodIdx}.${ext}`, base64Data, { base64: true });
+                    totalImagenes++;
+                    
+                    // Guardar producto sin imagen pero con referencia
+                    const { image, ...prodSinImg } = producto;
+                    productosProcesados.push({
+                      ...prodSinImg,
+                      _imageRef: `lote${loteIdx}_prod${prodIdx}.${ext}`
                     });
+                  } else {
+                    productosProcesados.push(producto);
                   }
+                }
+                
+                lotesProcesados.push({
+                  ...lote,
+                  products: productosProcesados
                 });
-                Logger.log(`   📦 ${imgCount} imágenes de productos extraídas`);
-              } else {
-                datosParaZip[key] = value;
               }
+              
+              datosParaExportar[key] = lotesProcesados;
+            } else if (key === 'currentLote' && value && value.products) {
+              // Procesar lote actual también
+              const loteProcesado = { ...value };
+              const productosProcesados = [];
+              
+              for (let prodIdx = 0; prodIdx < value.products.length; prodIdx++) {
+                const producto = value.products[prodIdx];
+                
+                if (producto.image && producto.image.startsWith('data:image')) {
+                  const ext = producto.image.includes('png') ? 'png' : 
+                             producto.image.includes('gif') ? 'gif' : 
+                             producto.image.includes('webp') ? 'webp' : 'jpg';
+                  const base64Data = producto.image.split(',')[1];
+                  
+                  zip.file(`traslados/imagenes/current_prod${prodIdx}.${ext}`, base64Data, { base64: true });
+                  totalImagenes++;
+                  
+                  const { image, ...prodSinImg } = producto;
+                  productosProcesados.push({
+                    ...prodSinImg,
+                    _imageRef: `current_prod${prodIdx}.${ext}`
+                  });
+                } else {
+                  productosProcesados.push(producto);
+                }
+              }
+              
+              loteProcesado.products = productosProcesados;
+              datosParaExportar[key] = loteProcesado;
+            } else {
+              datosParaExportar[key] = value;
             }
-            
-            zip.file('indexeddb/traslados/datos.json', JSON.stringify(datosParaZip, null, 2));
           }
           
-          stats.traslados = trasladosData.length;
-          Logger.log(`   ✓ ${trasladosData.length} registros de traslados`);
+          zip.file('traslados/datos.json', JSON.stringify(datosParaExportar, null, 2));
+          
+          stats.traslados = keys.length;
+          Logger.log(`   ✓ ${keys.length} claves de traslados, ${totalImagenes} imágenes de productos`);
         } else {
           Logger.log('   ℹ️ Sin datos de traslados');
         }
@@ -594,8 +650,8 @@
       }
       Logger.log(`   ✓ ${stats.localStorage} items`);
 
-      // 2. IMÁGENES LOCALFORAGE
-      Logger.log('2. Importando imágenes...');
+      // 2. IMÁGENES LOCALFORAGE PRINCIPAL
+      Logger.log('2. Importando imágenes principales...');
       const imgFiles = Object.keys(zip.files).filter(p => 
         p.startsWith('localforage/images/') && !zip.files[p].dir
       );
@@ -620,8 +676,8 @@
       }
       Logger.log(`   ✓ ${stats.images} imágenes`);
 
-      // 3. DATOS LOCALFORAGE
-      Logger.log('3. Importando datos localForage...');
+      // 3. DATOS LOCALFORAGE PRINCIPAL
+      Logger.log('3. Importando datos localForage principal...');
       const dataFiles = Object.keys(zip.files).filter(p => 
         p.startsWith('localforage/data/') && !zip.files[p].dir
       );
@@ -730,96 +786,98 @@
         Logger.log('   ℹ️ No hay backup de reservas');
       }
 
-      // 5. INDEXEDDB - TRASLADOS
+      // 5. LOCALFORAGE - TRASLADOS (CORREGIDO)
       Logger.log('5. Importando TrasladosPasos...');
-      const trasladosFile = zip.file('indexeddb/traslados/datos.json') || 
-                             zip.file('indexeddb/traslados/array.json');
+      const trasladosFile = zip.file('traslados/datos.json');
       
       if (trasladosFile) {
         try {
           const trasladosJson = await trasladosFile.async('string');
           const trasladosData = JSON.parse(trasladosJson);
           
-          // Cargar imágenes de productos
+          // Cargar imágenes de traslados
           const imgFiles = Object.keys(zip.files).filter(p => 
-            p.startsWith('indexeddb/traslados/imagenes/') && !zip.files[p].dir
+            p.startsWith('traslados/imagenes/') && !zip.files[p].dir
           );
           
           const imagenesMap = new Map();
           for (const imgPath of imgFiles) {
-            const fileName = imgPath.replace('indexeddb/traslados/imagenes/', '');
-            const match = fileName.match(/lote(\d+)_prod(\d+)\.(\w+)/);
-            if (match) {
-              const [, loteIdx, prodIdx, ext] = match;
-              const base64 = await zip.files[imgPath].async('base64');
-              const mimeType = ext === 'png' ? 'image/png' : 
-                              ext === 'gif' ? 'image/gif' : 
-                              ext === 'webp' ? 'image/webp' : 'image/jpeg';
-              imagenesMap.set(`${loteIdx}_${prodIdx}`, `data:${mimeType};base64,${base64}`);
-            }
+            const fileName = imgPath.replace('traslados/imagenes/', '');
+            const base64 = await zip.files[imgPath].async('base64');
+            const ext = fileName.split('.').pop();
+            const mimeType = ext === 'png' ? 'image/png' : 
+                            ext === 'gif' ? 'image/gif' : 
+                            ext === 'webp' ? 'image/webp' : 'image/jpeg';
+            imagenesMap.set(fileName, `data:${mimeType};base64,${base64}`);
           }
           
           // Restaurar imágenes en los datos
-          if (trasladosData.allLotes && Array.isArray(trasladosData.allLotes)) {
-            trasladosData.allLotes = trasladosData.allLotes.map((lote, loteIdx) => {
-              if (!lote.products) return lote;
-              const productosConImg = lote.products.map((p, prodIdx) => {
-                const imgKey = `${loteIdx}_${prodIdx}`;
-                if (imagenesMap.has(imgKey)) {
-                  return { ...p, image: imagenesMap.get(imgKey) };
+          const datosRestaurados = {};
+          
+          for (const [key, value] of Object.entries(trasladosData)) {
+            if (key === 'allLotes' && Array.isArray(value)) {
+              const lotesRestaurados = [];
+              
+              for (const lote of value) {
+                if (!lote.products) {
+                  lotesRestaurados.push(lote);
+                  continue;
                 }
-                return p;
-              });
-              return { ...lote, products: productosConImg };
-            });
+                
+                const productosRestaurados = [];
+                
+                for (const producto of lote.products) {
+                  if (producto._imageRef && imagenesMap.has(producto._imageRef)) {
+                    const { _imageRef, ...prodSinRef } = producto;
+                    productosRestaurados.push({
+                      ...prodSinRef,
+                      image: imagenesMap.get(_imageRef)
+                    });
+                  } else {
+                    productosRestaurados.push(producto);
+                  }
+                }
+                
+                lotesRestaurados.push({
+                  ...lote,
+                  products: productosRestaurados
+                });
+              }
+              
+              datosRestaurados[key] = lotesRestaurados;
+            } else if (key === 'currentLote' && value && value.products) {
+              const productosRestaurados = [];
+              
+              for (const producto of value.products) {
+                if (producto._imageRef && imagenesMap.has(producto._imageRef)) {
+                  const { _imageRef, ...prodSinRef } = producto;
+                  productosRestaurados.push({
+                    ...prodSinRef,
+                    image: imagenesMap.get(_imageRef)
+                  });
+                } else {
+                  productosRestaurados.push(producto);
+                }
+              }
+              
+              datosRestaurados[key] = {
+                ...value,
+                products: productosRestaurados
+              };
+            } else {
+              datosRestaurados[key] = value;
+            }
           }
           
-          // Guardar en IndexedDB
-          await new Promise((resolve, reject) => {
-            const request = indexedDB.open('TrasladosPasos', 1);
-            
-            request.onupgradeneeded = (e) => {
-              const db = e.target.result;
-              if (!db.objectStoreNames.contains('productos')) {
-                db.createObjectStore('productos', { keyPath: 'id', autoIncrement: true });
-              }
-            };
-            
-            request.onsuccess = (e) => {
-              const db = e.target.result;
-              const tx = db.transaction(['productos'], 'readwrite');
-              const store = tx.objectStore('productos');
-              
-              const clearReq = store.clear();
-              clearReq.onsuccess = () => {
-                const dataToStore = Array.isArray(trasladosData) ? 
-                  trasladosData : 
-                  Object.entries(trasladosData).map(([key, value]) => ({ key, value }));
-                
-                let added = 0;
-                const addNext = (idx) => {
-                  if (idx >= dataToStore.length) {
-                    stats.traslados = added;
-                    resolve();
-                    return;
-                  }
-                  
-                  const addReq = store.add(dataToStore[idx]);
-                  addReq.onsuccess = () => {
-                    added++;
-                    addNext(idx + 1);
-                  };
-                  addReq.onerror = () => addNext(idx + 1);
-                };
-                
-                addNext(0);
-              };
-            };
-            
-            request.onerror = () => reject(request.error);
-          });
+          // Limpiar y guardar en localForage de traslados
+          await trasladosStorage.clear();
           
-          Logger.log(`   ✓ ${stats.traslados} registros de traslados importados`);
+          for (const [key, value] of Object.entries(datosRestaurados)) {
+            await trasladosStorage.setItem(key, value);
+            stats.traslados++;
+          }
+          
+          Logger.log(`   ✓ ${stats.traslados} claves de traslados importadas`);
         } catch (e) {
           Logger.error('   ✗ Error importando traslados:', e);
         }
@@ -940,16 +998,26 @@
         }
       } catch (e) {}
       
-      // 4. IndexedDB - Traslados
+      // 4. LocalForage - Traslados (CORREGIDO)
       try {
-        const traslados = await exportIndexedDB('TrasladosPasos', 'productos');
-        if (traslados.length > 0) {
+        const trasladosKeys = await trasladosStorage.keys();
+        if (trasladosKeys.length > 0) {
+          let totalItems = 0;
+          for (const key of trasladosKeys) {
+            const value = await trasladosStorage.getItem(key);
+            if (key === 'allLotes' && Array.isArray(value)) {
+              totalItems += value.reduce((sum, lote) => sum + (lote.products?.length || 0), 0);
+            } else {
+              totalItems++;
+            }
+          }
+          
           opts.push({ 
-            type: 'idb', 
-            name: 'TrasladosPasos', 
-            store: 'productos',
-            count: traslados.length,
-            display: `📋 TrasladosPasos`
+            type: 'lf_traslados', 
+            name: 'TrasladosPasos',
+            count: trasladosKeys.length,
+            items: totalItems,
+            display: `📋 TrasladosPasos (${trasladosKeys.length} claves, ${totalItems} items)`
           });
         }
       } catch (e) {}
@@ -973,9 +1041,10 @@
         lbl.textContent = opt.display;
         lbl.style.cssText = 'cursor:pointer;flex:1;font-size:14px;';
         
-        if (opt.count) {
+        if (opt.count || opt.items) {
           const badge = document.createElement('span');
-          badge.textContent = `${opt.count} items`;
+          const text = opt.items ? `${opt.count} keys, ${opt.items} items` : `${opt.count} items`;
+          badge.textContent = text;
           badge.className = 'item-count';
           lbl.appendChild(badge);
         }
@@ -1038,16 +1107,19 @@
                 };
               });
               break;
+            case 'lf_traslados':
+              // Limpiar localForage de traslados
+              await trasladosStorage.clear();
+              break;
           }
-          Logger.log(`Eliminado: ${opt.name}`);
+          Logger.log(`Eliminado: ${opt.name || opt.display}`);
         } catch (e) {
-          Logger.error(`Error eliminando ${opt.name}:`, e);
+          Logger.error(`Error eliminando ${opt.name || opt.display}:`, e);
         }
       }
       
       alert('Elementos eliminados correctamente');
       modal.removeAttribute('open');
-      // Actualizar lista
       options = await collectOptions();
       renderList();
     });

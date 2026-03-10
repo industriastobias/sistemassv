@@ -318,7 +318,7 @@
   };
 
   // ============================================
-  // EXPORTAR / IMPORTAR - VERSIÓN COMPLETA Y FUNCIONAL
+  // EXPORTAR / IMPORTAR - VERSIÓN FINAL FUNCIONAL
   // ============================================
 
   // Crear instancia de localForage para Traslados
@@ -372,7 +372,7 @@
     });
   }
 
-  // EXPORTAR DATOS COMPLETOS - VERSIÓN FUNCIONAL
+  // EXPORTAR DATOS COMPLETOS - VERSIÓN FINAL
   async function exportarDatos() {
     Logger.log('=== INICIANDO EXPORTACIÓN COMPLETA ===');
     const zip = new JSZip();
@@ -426,17 +426,17 @@
       }
       Logger.log(`   ✓ ${stats.lfData} datos`);
 
-      // 4. INDEXEDDB - RESERVAS (Verificasion.html) - ESTRUCTURA COMPATIBLE
+      // 4. INDEXEDDB - RESERVAS (Verificasion.html) - EXPORTACIÓN DUAL
       Logger.log('4. Exportando IndexedDB ReservasDB_v2...');
       try {
         const reservas = await exportIndexedDB('ReservasDB_v2', 'reservas');
         
         if (reservas.length > 0) {
-          // Crear estructura compatible con verificasion.html
+          // === FORMATO NUEVO: reservas_backup/ (compatible con verificasion.html) ===
           const reservasFolder = zip.folder("reservas_backup");
           const imagenesFolder = reservasFolder.folder("imagenes");
           
-          // Separar datos e imágenes (mismo formato que verificasion.html)
+          // Separar datos e imágenes
           const datosSinImagenes = reservas.map(r => {
             const { imagen, ...datos } = r;
             return datos;
@@ -449,7 +449,6 @@
           let imgCount = 0;
           for (const r of reservas) {
             if (r.imagen && typeof r.imagen === 'string' && r.imagen.startsWith('data:image')) {
-              // Detectar extensión correcta
               let ext = 'jpg';
               if (r.imagen.includes('image/png')) ext = 'png';
               else if (r.imagen.includes('image/gif')) ext = 'gif';
@@ -462,8 +461,28 @@
             }
           }
           
+          // === FORMATO ANTIGUO: indexeddb/reservas/ (para compatibilidad con dashboard) ===
+          const oldFolder = zip.folder("indexeddb").folder("reservas");
+          const oldImagenesFolder = oldFolder.folder("imagenes");
+          
+          oldFolder.file("datos.json", JSON.stringify(datosSinImagenes, null, 2));
+          
+          // Copiar imágenes al formato antiguo también
+          for (const r of reservas) {
+            if (r.imagen && typeof r.imagen === 'string' && r.imagen.startsWith('data:image')) {
+              let ext = 'jpg';
+              if (r.imagen.includes('image/png')) ext = 'png';
+              else if (r.imagen.includes('image/gif')) ext = 'gif';
+              else if (r.imagen.includes('image/webp')) ext = 'webp';
+              else if (r.imagen.includes('image/jpeg')) ext = 'jpg';
+              
+              const base64Data = r.imagen.split(',')[1];
+              oldImagenesFolder.file(`${r.id}.${ext}`, base64Data, { base64: true });
+            }
+          }
+          
           stats.reservas = reservas.length;
-          Logger.log(`   ✓ ${reservas.length} reservas, ${imgCount} imágenes exportadas`);
+          Logger.log(`   ✓ ${reservas.length} reservas, ${imgCount} imágenes exportadas (ambos formatos)`);
         } else {
           Logger.log('   ℹ️ Sin datos de reservas');
         }
@@ -482,7 +501,6 @@
         }
         
         if (keys.length > 0) {
-          // Procesar datos para separar imágenes
           const datosParaExportar = {};
           let totalImagenes = 0;
           
@@ -581,7 +599,6 @@
         compressionOptions: { level: 6 }
       });
       
-      // Usar FileSaver.js para descargar
       const fecha = new Date().toISOString().slice(0,10);
       saveAs(blob, `backup-industrias-tobias-${fecha}.zip`);
       
@@ -600,7 +617,7 @@
     }
   }
 
-  // IMPORTAR DATOS COMPLETOS - VERSIÓN FUNCIONAL
+  // IMPORTAR DATOS COMPLETOS - VERSIÓN FINAL
   async function importarDatos(file) {
     Logger.log('=== INICIANDO IMPORTACIÓN ===');
     
@@ -675,17 +692,25 @@
       }
       Logger.log(`   ✓ ${stats.lfData} datos`);
 
-      // 4. INDEXEDDB - RESERVAS (Verificasion.html) - FORMATO NUEVO Y ANTIGUO
+      // 4. INDEXEDDB - RESERVAS - BUSCAR EN AMBOS FORMATOS
       Logger.log('4. Importando ReservasDB_v2...');
       
-      // Intentar formato nuevo primero (reservas_backup/)
-      let reservasFile = zip.file('reservas_backup/datos.json');
-      let imagenesPath = 'reservas_backup/imagenes/';
+      let reservasFile = null;
+      let imagenesPath = '';
+      let formatoUsado = '';
       
-      // Si no existe, intentar formato antiguo (indexeddb/reservas/)
-      if (!reservasFile) {
+      // Intentar formato nuevo primero
+      if (zip.file('reservas_backup/datos.json')) {
+        reservasFile = zip.file('reservas_backup/datos.json');
+        imagenesPath = 'reservas_backup/imagenes/';
+        formatoUsado = 'nuevo (reservas_backup)';
+        Logger.log('   ℹ️ Detectado formato nuevo de backup');
+      } 
+      // Luego formato antiguo
+      else if (zip.file('indexeddb/reservas/datos.json')) {
         reservasFile = zip.file('indexeddb/reservas/datos.json');
         imagenesPath = 'indexeddb/reservas/imagenes/';
+        formatoUsado = 'antiguo (indexeddb)';
         Logger.log('   ℹ️ Detectado formato antiguo de backup');
       }
       
@@ -699,12 +724,18 @@
             p.startsWith(imagenesPath) && !zip.files[p].dir
           );
           
+          Logger.log(`   ℹ️ Encontradas ${imgFiles.length} imágenes en ${imagenesPath}`);
+          
           const imagenesMap = new Map();
           for (const imgPath of imgFiles) {
             const fileName = imgPath.replace(imagenesPath, '');
-            // Extraer ID del nombre (reserva_123.jpg -> 123)
-            const idMatch = fileName.match(/reserva_(\d+)\./);
-            const id = idMatch ? parseInt(idMatch[1]) : parseInt(fileName.split('.')[0]);
+            // Extraer ID del nombre (reserva_123.jpg -> 123 o 123.jpg -> 123)
+            let id;
+            if (fileName.startsWith('reserva_')) {
+              id = parseInt(fileName.split('.')[0].replace('reserva_', ''));
+            } else {
+              id = parseInt(fileName.split('.')[0]);
+            }
             const ext = fileName.split('.').pop();
             const base64 = await zip.files[imgPath].async('base64');
             const mimeType = ext === 'png' ? 'image/png' : 
@@ -738,10 +769,12 @@
               const clearReq = store.clear();
               clearReq.onsuccess = () => {
                 let added = 0;
+                let failed = 0;
                 
                 const addNext = (idx) => {
                   if (idx >= reservasData.length) {
                     stats.reservas = added;
+                    Logger.log(`   ✓ ${added} reservas importadas, ${failed} fallidas`);
                     resolve();
                     return;
                   }
@@ -757,7 +790,8 @@
                     addNext(idx + 1);
                   };
                   addReq.onerror = () => {
-                    Logger.error(`Error agregando reserva ${item.id}:`, addReq.error);
+                    failed++;
+                    Logger.error(`   ✗ Error agregando reserva ${item.id}:`, addReq.error);
                     addNext(idx + 1);
                   };
                 };
@@ -769,12 +803,12 @@
             request.onerror = () => reject(request.error);
           });
           
-          Logger.log(`   ✓ ${stats.reservas} reservas importadas`);
+          Logger.log(`   ✓ Reservas importadas (${formatoUsado})`);
         } catch (e) {
           Logger.error('   ✗ Error importando reservas:', e);
         }
       } else {
-        Logger.log('   ℹ️ No hay backup de reservas');
+        Logger.log('   ℹ️ No se encontró backup de reservas en ningún formato');
       }
 
       // 5. LOCALFORAGE - TRASLADOS
@@ -786,7 +820,6 @@
           const trasladosJson = await trasladosFile.async('string');
           const trasladosData = JSON.parse(trasladosJson);
           
-          // Cargar imágenes de traslados
           const imgFiles = Object.keys(zip.files).filter(p => 
             p.startsWith('traslados/imagenes/') && !zip.files[p].dir
           );
@@ -802,7 +835,6 @@
             imagenesMap.set(fileName, `data:${mimeType};base64,${base64}`);
           }
           
-          // Restaurar imágenes en los datos
           const datosRestaurados = {};
           
           for (const [key, value] of Object.entries(trasladosData)) {
@@ -860,7 +892,6 @@
             }
           }
           
-          // Limpiar y guardar en localForage de traslados
           await trasladosStorage.clear();
           
           for (const [key, value] of Object.entries(datosRestaurados)) {
@@ -1087,7 +1118,6 @@
               await localforage.removeItem(opt.name);
               break;
             case 'idb':
-              // Eliminar toda la base de datos IndexedDB
               await new Promise((resolve, reject) => {
                 const deleteReq = indexedDB.deleteDatabase(opt.name);
                 deleteReq.onsuccess = resolve;
@@ -1099,7 +1129,6 @@
               });
               break;
             case 'lf_traslados':
-              // Limpiar localForage de traslados
               await trasladosStorage.clear();
               break;
           }
@@ -1133,7 +1162,6 @@
       
       NavManager.init();
       
-      // Event listeners
       document.getElementById('logoutBtn').addEventListener('click', (e) => {
         e.preventDefault();
         AuthManager.logout();

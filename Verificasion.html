@@ -193,7 +193,7 @@
         }
 
         /* ============================================
-           UPLOAD DE IMÁGENES
+           UPLOAD DE IMÁGENES - CORREGIDO
            ============================================ */
         .image-upload {
             position: relative;
@@ -304,7 +304,7 @@
             color: white;
         }
 
-        /* Indicador de paste */
+        /* Indicador de paste - NUEVO */
         .paste-indicator {
             position: absolute;
             top: 5px;
@@ -318,6 +318,7 @@
             opacity: 0;
             transition: opacity 0.3s;
             z-index: 3;
+            pointer-events: none;
         }
 
         .image-upload.paste-ready .paste-indicator {
@@ -2203,8 +2204,7 @@
         // ============================================
         // BASE DE DATOS (IndexedDB)
         // ============================================
-        function initDB() {
-            return new Promise((resolve, reject) => {
+        function initDB() {            return new Promise((resolve, reject) => {
                 const request = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
                 
                 request.onerror = () => {
@@ -2306,7 +2306,9 @@
             });
         }
 
-        // NUEVO: Configurar listener para pegar imágenes desde el portapapeles
+        // ============================================
+        // PASTE LISTENER - CORREGIDO PARA IMÁGENES
+        // ============================================
         function setupPasteListener() {
             const dropZone = document.getElementById('dropZone');
             
@@ -2401,7 +2403,7 @@
         }
 
         // ============================================
-        // MANEJO DE IMÁGENES
+        // MANEJO DE IMÁGENES - CORREGIDO
         // ============================================
         function handleDrop(e) {
             const dt = e.dataTransfer;
@@ -2413,7 +2415,15 @@
             if (e.target.files[0]) handleFile(e.target.files[0]);
         }
 
+        // FUNCIÓN PRINCIPAL CORREGIDA - Maneja File objects correctamente
         async function handleFile(file) {
+            // Validar que sea un archivo válido
+            if (!file || !(file instanceof File)) {
+                console.error('handleFile: No es un archivo válido', file);
+                showToast('Error: Archivo no válido', 'error');
+                return;
+            }
+            
             // Validar tamaño
             if (file.size > CONFIG.MAX_IMAGE_SIZE) {
                 showToast(MESSAGES.ERROR_IMAGE_SIZE, 'error');
@@ -2555,7 +2565,7 @@
                 
                 const reserva = {
                     nombre: sanitizeInput(document.getElementById('nombre').value),
-                    telefono: document.getElementById('telefono').value, // Sin validación de formato
+                    telefono: document.getElementById('telefono').value,
                     fecha: document.getElementById('fecha').value,
                     producto: sanitizeInput(document.getElementById('producto').value),
                     categorias: parseCategorias(document.getElementById('categorias').value),
@@ -2711,7 +2721,6 @@
                     
                     deleteRequest.onblocked = () => {
                         showToast('Cierre otras pestañas para formatear completamente', 'warning');
-                        // Forzar cierre y reintentar
                         setTimeout(() => {
                             window.location.reload();
                         }, 2000);

@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
     :root {
@@ -317,14 +318,24 @@
   };
 
   // ============================================
-  // EXPORTAR / IMPORTAR - VERSIÓN CORREGIDA FINAL
+  // EXPORTAR / IMPORTAR - VERSIÓN COMPLETA Y FUNCIONAL
   // ============================================
 
-  // Crear instancia de localForage para Traslados (igual que en traslados.html)
+  // Crear instancia de localForage para Traslados
   const trasladosStorage = localforage.createInstance({
     name: 'TrasladosPasos',
     storeName: 'productos'
   });
+
+  // Función auxiliar: Blob a Base64
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
 
   // Función para exportar datos de IndexedDB (Reservas)
   async function exportIndexedDB(dbName, storeName) {
@@ -361,46 +372,7 @@
     });
   }
 
-  // Función para exportar datos de localForage de Traslados
-  async function exportTrasladosData() {
-    try {
-      const keys = await trasladosStorage.keys();
-      const data = {};
-      
-      for (const key of keys) {
-        const value = await trasladosStorage.getItem(key);
-        data[key] = value;
-      }
-      
-      return data;
-    } catch (e) {
-      Logger.error('Error exportando traslados:', e);
-      return {};
-    }
-  }
-
-  // Función para obtener todas las claves de imágenes de localForage principal
-  async function getImageKeys() {
-    try {
-      const allKeys = await localforage.keys();
-      return allKeys.filter(key => key.startsWith('img_'));
-    } catch (e) {
-      Logger.error('Error obteniendo claves de imágenes:', e);
-      return [];
-    }
-  }
-
-  // Función auxiliar: Blob a Base64
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  // EXPORTAR DATOS COMPLETOS
+  // EXPORTAR DATOS COMPLETOS - VERSIÓN FUNCIONAL
   async function exportarDatos() {
     Logger.log('=== INICIANDO EXPORTACIÓN COMPLETA ===');
     const zip = new JSZip();
@@ -419,7 +391,8 @@
 
       // 2. LOCALFORAGE PRINCIPAL - IMÁGENES (img_*)
       Logger.log('2. Exportando imágenes de localForage principal...');
-      const imageKeys = await getImageKeys();
+      const allKeys = await localforage.keys();
+      const imageKeys = allKeys.filter(key => key.startsWith('img_'));
       
       for (const key of imageKeys) {
         try {
@@ -438,7 +411,7 @@
 
       // 3. LOCALFORAGE PRINCIPAL - OTROS DATOS
       Logger.log('3. Exportando otros datos de localForage principal...');
-      const otherKeys = (await localforage.keys()).filter(k => !k.startsWith('img_'));
+      const otherKeys = allKeys.filter(k => !k.startsWith('img_'));
       
       for (const key of otherKeys) {
         try {
@@ -453,35 +426,44 @@
       }
       Logger.log(`   ✓ ${stats.lfData} datos`);
 
-      // 4. INDEXEDDB - RESERVAS (Verificasion.html)
+      // 4. INDEXEDDB - RESERVAS (Verificasion.html) - ESTRUCTURA COMPATIBLE
       Logger.log('4. Exportando IndexedDB ReservasDB_v2...');
       try {
         const reservas = await exportIndexedDB('ReservasDB_v2', 'reservas');
         
         if (reservas.length > 0) {
-          // Separar imágenes base64
-          const reservasSinImg = reservas.map(r => {
+          // Crear estructura compatible con verificasion.html
+          const reservasFolder = zip.folder("reservas_backup");
+          const imagenesFolder = reservasFolder.folder("imagenes");
+          
+          // Separar datos e imágenes (mismo formato que verificasion.html)
+          const datosSinImagenes = reservas.map(r => {
             const { imagen, ...datos } = r;
             return datos;
           });
           
-          zip.file('indexeddb/reservas/datos.json', JSON.stringify(reservasSinImg, null, 2));
+          // Guardar datos.json
+          reservasFolder.file("datos.json", JSON.stringify(datosSinImagenes, null, 2));
           
-          // Exportar imágenes como archivos separados
+          // Guardar imágenes con nombre reserva_{id}.{ext}
           let imgCount = 0;
           for (const r of reservas) {
             if (r.imagen && typeof r.imagen === 'string' && r.imagen.startsWith('data:image')) {
-              const ext = r.imagen.includes('png') ? 'png' : 
-                         r.imagen.includes('gif') ? 'gif' : 
-                         r.imagen.includes('webp') ? 'webp' : 'jpg';
+              // Detectar extensión correcta
+              let ext = 'jpg';
+              if (r.imagen.includes('image/png')) ext = 'png';
+              else if (r.imagen.includes('image/gif')) ext = 'gif';
+              else if (r.imagen.includes('image/webp')) ext = 'webp';
+              else if (r.imagen.includes('image/jpeg')) ext = 'jpg';
+              
               const base64Data = r.imagen.split(',')[1];
-              zip.file(`indexeddb/reservas/imagenes/${r.id}.${ext}`, base64Data, { base64: true });
+              imagenesFolder.file(`reserva_${r.id}.${ext}`, base64Data, { base64: true });
               imgCount++;
             }
           }
           
           stats.reservas = reservas.length;
-          Logger.log(`   ✓ ${reservas.length} reservas, ${imgCount} imágenes`);
+          Logger.log(`   ✓ ${reservas.length} reservas, ${imgCount} imágenes exportadas`);
         } else {
           Logger.log('   ℹ️ Sin datos de reservas');
         }
@@ -489,11 +471,15 @@
         Logger.error('   ✗ Error exportando reservas:', e);
       }
 
-      // 5. LOCALFORAGE - TRASLADOS (traslados.html) - CORREGIDO
+      // 5. LOCALFORAGE - TRASLADOS (traslados.html)
       Logger.log('5. Exportando localForage TrasladosPasos...');
       try {
-        const trasladosData = await exportTrasladosData();
-        const keys = Object.keys(trasladosData);
+        const keys = await trasladosStorage.keys();
+        const trasladosData = {};
+        
+        for (const key of keys) {
+          trasladosData[key] = await trasladosStorage.getItem(key);
+        }
         
         if (keys.length > 0) {
           // Procesar datos para separar imágenes
@@ -502,7 +488,6 @@
           
           for (const [key, value] of Object.entries(trasladosData)) {
             if (key === 'allLotes' && Array.isArray(value)) {
-              // Procesar lotes y extraer imágenes de productos
               const lotesProcesados = [];
               
               for (let loteIdx = 0; loteIdx < value.length; loteIdx++) {
@@ -518,18 +503,15 @@
                 for (let prodIdx = 0; prodIdx < lote.products.length; prodIdx++) {
                   const producto = lote.products[prodIdx];
                   
-                  // Si tiene imagen, extraerla y guardar referencia
                   if (producto.image && producto.image.startsWith('data:image')) {
                     const ext = producto.image.includes('png') ? 'png' : 
                                producto.image.includes('gif') ? 'gif' : 
                                producto.image.includes('webp') ? 'webp' : 'jpg';
                     const base64Data = producto.image.split(',')[1];
                     
-                    // Guardar imagen en ZIP
                     zip.file(`traslados/imagenes/lote${loteIdx}_prod${prodIdx}.${ext}`, base64Data, { base64: true });
                     totalImagenes++;
                     
-                    // Guardar producto sin imagen pero con referencia
                     const { image, ...prodSinImg } = producto;
                     productosProcesados.push({
                       ...prodSinImg,
@@ -548,7 +530,6 @@
               
               datosParaExportar[key] = lotesProcesados;
             } else if (key === 'currentLote' && value && value.products) {
-              // Procesar lote actual también
               const loteProcesado = { ...value };
               const productosProcesados = [];
               
@@ -584,7 +565,7 @@
           zip.file('traslados/datos.json', JSON.stringify(datosParaExportar, null, 2));
           
           stats.traslados = keys.length;
-          Logger.log(`   ✓ ${keys.length} claves de traslados, ${totalImagenes} imágenes de productos`);
+          Logger.log(`   ✓ ${keys.length} claves de traslados, ${totalImagenes} imágenes`);
         } else {
           Logger.log('   ℹ️ Sin datos de traslados');
         }
@@ -600,19 +581,14 @@
         compressionOptions: { level: 6 }
       });
       
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `backup-industrias-tobias-${new Date().toISOString().slice(0,10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Usar FileSaver.js para descargar
+      const fecha = new Date().toISOString().slice(0,10);
+      saveAs(blob, `backup-industrias-tobias-${fecha}.zip`);
       
       Logger.log('=== EXPORTACIÓN COMPLETADA ===');
       alert(`✅ Backup creado:\n` +
             `• LocalStorage: ${stats.localStorage}\n` +
-            `• Imágenes: ${stats.images}\n` +
+            `• Imágenes LF: ${stats.images}\n` +
             `• Datos LF: ${stats.lfData}\n` +
             `• Reservas: ${stats.reservas}\n` +
             `• Traslados: ${stats.traslados}\n` +
@@ -624,7 +600,7 @@
     }
   }
 
-  // IMPORTAR DATOS COMPLETOS
+  // IMPORTAR DATOS COMPLETOS - VERSIÓN FUNCIONAL
   async function importarDatos(file) {
     Logger.log('=== INICIANDO IMPORTACIÓN ===');
     
@@ -699,9 +675,19 @@
       }
       Logger.log(`   ✓ ${stats.lfData} datos`);
 
-      // 4. INDEXEDDB - RESERVAS
+      // 4. INDEXEDDB - RESERVAS (Verificasion.html) - FORMATO NUEVO Y ANTIGUO
       Logger.log('4. Importando ReservasDB_v2...');
-      const reservasFile = zip.file('indexeddb/reservas/datos.json');
+      
+      // Intentar formato nuevo primero (reservas_backup/)
+      let reservasFile = zip.file('reservas_backup/datos.json');
+      let imagenesPath = 'reservas_backup/imagenes/';
+      
+      // Si no existe, intentar formato antiguo (indexeddb/reservas/)
+      if (!reservasFile) {
+        reservasFile = zip.file('indexeddb/reservas/datos.json');
+        imagenesPath = 'indexeddb/reservas/imagenes/';
+        Logger.log('   ℹ️ Detectado formato antiguo de backup');
+      }
       
       if (reservasFile) {
         try {
@@ -710,13 +696,15 @@
           
           // Cargar imágenes
           const imgFiles = Object.keys(zip.files).filter(p => 
-            p.startsWith('indexeddb/reservas/imagenes/') && !zip.files[p].dir
+            p.startsWith(imagenesPath) && !zip.files[p].dir
           );
           
           const imagenesMap = new Map();
           for (const imgPath of imgFiles) {
-            const fileName = imgPath.replace('indexeddb/reservas/imagenes/', '');
-            const id = parseInt(fileName.split('.')[0]);
+            const fileName = imgPath.replace(imagenesPath, '');
+            // Extraer ID del nombre (reserva_123.jpg -> 123)
+            const idMatch = fileName.match(/reserva_(\d+)\./);
+            const id = idMatch ? parseInt(idMatch[1]) : parseInt(fileName.split('.')[0]);
             const ext = fileName.split('.').pop();
             const base64 = await zip.files[imgPath].async('base64');
             const mimeType = ext === 'png' ? 'image/png' : 
@@ -768,7 +756,10 @@
                     added++;
                     addNext(idx + 1);
                   };
-                  addReq.onerror = () => addNext(idx + 1);
+                  addReq.onerror = () => {
+                    Logger.error(`Error agregando reserva ${item.id}:`, addReq.error);
+                    addNext(idx + 1);
+                  };
                 };
                 
                 addNext(0);
@@ -786,7 +777,7 @@
         Logger.log('   ℹ️ No hay backup de reservas');
       }
 
-      // 5. LOCALFORAGE - TRASLADOS (CORREGIDO)
+      // 5. LOCALFORAGE - TRASLADOS
       Logger.log('5. Importando TrasladosPasos...');
       const trasladosFile = zip.file('traslados/datos.json');
       
@@ -888,7 +879,7 @@
       Logger.log('=== IMPORTACIÓN COMPLETADA ===');
       alert(`✅ Importación exitosa:\n` +
             `• LocalStorage: ${stats.localStorage}\n` +
-            `• Imágenes: ${stats.images}\n` +
+            `• Imágenes LF: ${stats.images}\n` +
             `• Datos LF: ${stats.lfData}\n` +
             `• Reservas: ${stats.reservas}\n` +
             `• Traslados: ${stats.traslados}\n\n` +
@@ -950,7 +941,7 @@
   })();
 
   // ============================================
-  // FORMATEO SELECTIVO CORREGIDO
+  // FORMATEO SELECTIVO
   // ============================================
   (() => {
     const modal = document.getElementById('formatModal');
@@ -993,12 +984,12 @@
             name: 'ReservasDB_v2', 
             store: 'reservas',
             count: reservas.length,
-            display: `🗄️ ReservasDB_v2`
+            display: `🗄️ ReservasDB_v2 (${reservas.length} reservas)`
           });
         }
       } catch (e) {}
       
-      // 4. LocalForage - Traslados (CORREGIDO)
+      // 4. LocalForage - Traslados
       try {
         const trasladosKeys = await trasladosStorage.keys();
         if (trasladosKeys.length > 0) {

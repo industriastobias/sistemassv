@@ -1,14 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -433,12 +434,8 @@
       font-weight: 600;
     }
     @keyframes flash {
-      0% {
-        background: #fef08a;
-      }
-      100% {
-        background: transparent;
-      }
+      0% { background: #fef08a; }
+      100% { background: transparent; }
     }
     .flash {
       animation: flash 0.6s ease;
@@ -1040,10 +1037,71 @@
       to { transform: rotate(360deg); }
     }
 
-    /* OPTIMIZACIONES DE RENDIMIENTO */
+    /* ====== NUEVOS ESTILOS PARA PAGINACIÓN Y RENDIMIENTO ====== */
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: var(--highlight);
+      border-radius: 8px;
+      margin-top: 0.5rem;
+    }
+    .pagination-controls button {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .pagination-controls button:hover:not(:disabled) {
+      background: var(--accent);
+      color: white;
+    }
+    .pagination-controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .pagination-controls .page-info {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .pagination-controls .page-size-select {
+      padding: 0.3rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    /* Lazy loading placeholder */
     .img-placeholder {
       width: 48px;
       height: 48px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 0.7rem;
+    }
+    .card .img-placeholder {
+      width: 100%;
+      height: 160px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Barcode placeholder */
+    .barcode-placeholder {
+      width: 100px;
+      height: 40px;
       background: #f3f4f6;
       border-radius: 4px;
       display: flex;
@@ -1051,14 +1109,25 @@
       justify-content: center;
       color: #9ca3af;
       font-size: 0.7rem;
-      animation: pulse 1.5s ease-in-out infinite;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+
+    /* Render progress indicator */
+    .render-progress {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      z-index: 1000;
+      display: none;
     }
-    .img-loaded {
-      animation: none;
+    .render-progress.show {
+      display: block;
     }
 
     @media (max-width: 768px) {
@@ -1075,23 +1144,18 @@
       .cod-form-row {
         grid-template-columns: 1fr;
       }
-      
-      /* Ajustes responsive para modal editar */
       #editPendingModal .modal-content {
         max-width: 95vw;
         margin: 2vh auto;
         max-height: 95vh;
       }
-      
       #editPendingModal .cod-product-column {
         flex: 1;
         width: 100%;
       }
-      
       .summary-grid {
         grid-template-columns: repeat(2, 1fr);
       }
-      
       .card {
         width: calc((100% - 2rem) / 2);
       }
@@ -1101,7 +1165,6 @@
       .card {
         width: 100%;
       }
-      
       .summary-grid {
         grid-template-columns: 1fr;
       }
@@ -1117,6 +1180,9 @@
   <div id="spinnerOverlay" class="spinner-overlay">
     <div class="spinner"></div>
   </div>
+
+  <!-- Progress indicator -->
+  <div id="renderProgress" class="render-progress">Cargando productos...</div>
 
   <div id="notExistModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:white;padding:1rem 2rem;border-radius:8px;z-index:10000;font-weight:600;">Producto no existente</div>
   
@@ -1236,7 +1302,21 @@
 
     <div id="tableView" style="flex:1 1 auto; overflow:auto; margin-top:.5rem;">
       <table><thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Código de Barras</th><th>Código de Barras (img)</th><th>Precio</th><th>Desc(%)</th><th>Precio c/Desc</th><th>Fecha / Hora</th><th>Categoría</th><th>Stock</th><th>Acciones</th></tr></thead><tbody id="inventoryList"></tbody></table>
-      <div id="noResultsMessage" class="no-results" style="display:none;">No se encontraron productos.</div><div id="resultMessage" class="result-message" style="display:none;"></div>
+      <div id="noResultsMessage" class="no-results" style="display:none;">No se encontraron productos.</div>
+      <div id="resultMessage" class="result-message" style="display:none;"></div>
+      
+      <!-- Paginación -->
+      <div id="paginationControls" class="pagination-controls" style="display:none;">
+        <button onclick="changePage(-1)" id="prevPageBtn">← Anterior</button>
+        <span class="page-info" id="pageInfo">Página 1 de 1</span>
+        <button onclick="changePage(1)" id="nextPageBtn">Siguiente →</button>
+        <select id="pageSize" class="page-size-select" onchange="changePageSize()">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
     </div>
     <div id="cardsView" class="cards-view"></div>
   </div>
@@ -1523,12 +1603,8 @@
 
   <script>
     // ==========================================
-    // SISTEMA DE GESTIÓN DE MEMORIA Y UTILIDADES OPTIMIZADAS
+    // SISTEMA DE GESTIÓN DE MEMORIA Y UTILIDADES
     // ==========================================
-    
-    // Cache de imágenes en memoria (máximo 100 items)
-    const imageCache = new Map();
-    const MAX_CACHE_SIZE = 100;
     
     const urlManager = {
       urls: new Set(),
@@ -1556,23 +1632,7 @@
       }
     };
 
-    // Cache de imágenes con límite
-    async function getCachedImage(code) {
-      if (imageCache.has(code)) {
-        return imageCache.get(code);
-      }
-      const blob = await safeGetItem(`img_${code}`);
-      if (blob) {
-        if (imageCache.size >= MAX_CACHE_SIZE) {
-          const firstKey = imageCache.keys().next().value;
-          imageCache.delete(firstKey);
-        }
-        imageCache.set(code, blob);
-      }
-      return blob;
-    }
-
-    // Debounce optimizado
+    // Debounce para búsquedas - más agresivo para mejor rendimiento
     function debounce(func, wait) {
       let timeout;
       return function executedFunction(...args) {
@@ -1593,6 +1653,7 @@
       notification.textContent = message;
       container.appendChild(notification);
       
+      // Trigger reflow
       notification.offsetHeight;
       notification.classList.add('show');
       
@@ -1616,6 +1677,17 @@
       }
     }
 
+    // Progress indicator
+    function showProgress(message = 'Cargando...') {
+      const progress = document.getElementById('renderProgress');
+      progress.textContent = message;
+      progress.classList.add('show');
+    }
+
+    function hideProgress() {
+      document.getElementById('renderProgress').classList.remove('show');
+    }
+
     // Safe LocalForage
     async function safeGetItem(key) {
       try {
@@ -1632,6 +1704,7 @@
         return true;
       } catch (e) {
         console.error(`Error guardando ${key}:`, e);
+        showNotification(`Error al guardar datos: ${key}`, 'error');
         return false;
       }
     }
@@ -1648,6 +1721,54 @@
     }
 
     // ==========================================
+    // CACHÉ DE CÓDIGOS DE BARRAS
+    // ==========================================
+    const barcodeCache = new Map();
+    
+    function getCachedBarcode(barcode) {
+      if (!barcode) return null;
+      if (barcodeCache.has(barcode)) {
+        return barcodeCache.get(barcode);
+      }
+      return null;
+    }
+    
+    function setCachedBarcode(barcode, dataUrl) {
+      if (barcode && dataUrl) {
+        // Limitar caché a 500 códigos para no consumir memoria
+        if (barcodeCache.size >= 500) {
+          const firstKey = barcodeCache.keys().next().value;
+          barcodeCache.delete(firstKey);
+        }
+        barcodeCache.set(barcode, dataUrl);
+      }
+    }
+    
+    function generateBarcodeDataUrl(barcode) {
+      if (!barcode) return '';
+      
+      // Verificar caché primero
+      const cached = getCachedBarcode(barcode);
+      if (cached) return cached;
+      
+      try {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, barcode, { 
+          format: 'CODE128', 
+          width: 2, 
+          height: 40, 
+          displayValue: false 
+        });
+        const dataUrl = canvas.toDataURL('image/png');
+        setCachedBarcode(barcode, dataUrl);
+        return dataUrl;
+      } catch (e) {
+        console.error('Error generando barcode:', e);
+        return '';
+      }
+    }
+
+    // ==========================================
     // VARIABLES GLOBALES Y CONFIGURACIÓN
     // ==========================================
     
@@ -1659,8 +1780,12 @@
     let currentWhoPays = 'client';
     let pendingImages = new Map();
     
-    // IntersectionObserver para lazy loading
-    let barcodeObserver = null;
+    // Variables de paginación
+    let currentPage = 1;
+    let pageSize = parseInt(localStorage.getItem('pageSize')) || 50;
+    let filteredInventoryCache = [];
+    let isRendering = false;
+    let renderQueue = [];
 
     // ==========================================
     // FUNCIONES DE INICIALIZACIÓN Y DATOS
@@ -1797,7 +1922,8 @@
           }, 
           () => {},
           { 
-            formatsToSupport: [              Html5QrcodeSupportedFormats.CODE_128, 
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.CODE_128, 
               Html5QrcodeSupportedFormats.CODE_39, 
               Html5QrcodeSupportedFormats.EAN_13, 
               Html5QrcodeSupportedFormats.EAN_8, 
@@ -1965,7 +2091,7 @@
     }
 
     // ==========================================
-    // GESTIÓN DE PENDIENTES (COD)
+    // GESTIÓN DE PENDIENTES (COD) - OPTIMIZADO
     // ==========================================
     
     function updatePendingSummary() {
@@ -2001,7 +2127,6 @@
     async function loadPendingList() {
       showSpinner(true);
       try {
-        // Limpiar URLs anteriores
         pendingImages.forEach(url => urlManager.revoke(url));
         pendingImages.clear();
         
@@ -2019,72 +2144,98 @@
         noMsg.style.display = 'none';
         document.getElementById('pendingSummary').style.display = 'block';
         
+        // Renderizar en chunks para no bloquear
         let html = '';
-        for (let i = 0; i < pending.length; i++) {
-          const p = pending[i];
-          const productTotal = (p.price || 0) * (p.quantity || 0);
-          const shipping = p.codShipping || 0;
-          const commission = p.codCommissionAmount || 0;
-          const insurance = p.codInsurance || 0;
-          const totalToCollect = p.totalToCollect || (productTotal + shipping + commission + insurance);
+        const chunkSize = 10;
+        
+        for (let i = 0; i < pending.length; i += chunkSize) {
+          const chunk = pending.slice(i, i + chunkSize);
           
-          const imgBlob = await safeGetItem(`img_${p.code}`);
-          let imgHtml = '<div style="width:60px;height:60px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
-          
-          if (imgBlob) {
-            const imgUrl = urlManager.create(imgBlob);
-            pendingImages.set(`img_${i}`, imgUrl);
-            imgHtml = `<img src="${imgUrl}" onclick="openImageModal('${imgUrl}')" title="Ver imagen" style="max-height:60px;max-width:60px;border-radius:4px;cursor:pointer;">`;
+          for (let j = 0; j < chunk.length; j++) {
+            const p = chunk[j];
+            const idx = i + j;
+            const productTotal = (p.price || 0) * (p.quantity || 0);
+            const shipping = p.codShipping || 0;
+            const commission = p.codCommissionAmount || 0;
+            const insurance = p.codInsurance || 0;
+            const totalToCollect = p.totalToCollect || (productTotal + shipping + commission + insurance);
+            
+            // Placeholder para imagen - se carga lazy
+            const imgHtml = `<div class="img-placeholder" data-img-code="${p.code}" style="width:60px;height:60px;">Cargando...</div>`;
+            
+            html += `
+              <tr data-pending-idx="${idx}">
+                <td style="text-align:center;">${imgHtml}</td>
+                <td>
+                  <div class="pending-product-info">
+                    <strong>${p.name || 'Sin nombre'}</strong>
+                    <div class="barcode-text">${p.code || 'N/A'}</div>
+                    <small>Cant: ${p.quantity || 0} | Precio: $${p.price || 0}</small>
+                    ${p.whoPaysCommission === 'we' ? '<small style="color:var(--danger);">⚠️ Comisión a cargo del vendedor</small>' : ''}
+                  </div>
+                </td>
+                <td style="text-align:center;">${p.quantity || 0}</td>
+                <td style="text-align:right;">$${productTotal.toFixed(2)}</td>
+                <td style="text-align:right;">$${shipping.toFixed(2)}</td>
+                <td style="text-align:right;">
+                  $${commission.toFixed(2)}
+                  ${p.codCommissionType === 'percentage' ? `<br><small style="color:#6b7280;">(${p.codCommission}%)</small>` : ''}
+                  <br><small style="color:${p.whoPaysCommission === 'client' ? 'var(--success)' : 'var(--danger)'}">
+                    ${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}
+                  </small>
+                </td>
+                <td style="text-align:right;font-weight:700;color:var(--success);font-size:1rem;">$${totalToCollect.toFixed(2)}</td>
+                <td>
+                  <button class="btn-pay" onclick="markPendingAsPaid(${idx})" title="Cobrar pedido" type="button">💵 Cobrar</button>
+                  <button class="btn-edit-pending" onclick="openEditPendingModal(${idx})" title="Editar envío/comisión" type="button">✏️ Editar</button>
+                  <button class="btn-delete-pending" onclick="deletePending(${idx})" title="Eliminar y devolver stock" type="button">🗑️ Eliminar</button>
+                </td>
+              </tr>
+            `;
           }
           
-          html += `
-            <tr>
-              <td style="text-align:center;">
-                ${imgHtml}
-              </td>
-              <td>
-                <div class="pending-product-info">
-                  <strong>${p.name || 'Sin nombre'}</strong>
-                  <div class="barcode-text">${p.code || 'N/A'}</div>
-                  <small>Cant: ${p.quantity || 0} | Precio: $${p.price || 0}</small>
-                  ${p.whoPaysCommission === 'we' ? '<small style="color:var(--danger);">⚠️ Comisión a cargo del vendedor</small>' : ''}
-                </div>
-              </td>
-              <td style="text-align:center;">${p.quantity || 0}</td>
-              <td style="text-align:right;">$${productTotal.toFixed(2)}</td>
-              <td style="text-align:right;">$${shipping.toFixed(2)}</td>
-              <td style="text-align:right;">
-                $${commission.toFixed(2)}
-                ${p.codCommissionType === 'percentage' ? `<br><small style="color:#6b7280;">(${p.codCommission}%)</small>` : ''}
-                <br><small style="color:${p.whoPaysCommission === 'client' ? 'var(--success)' : 'var(--danger)'};">
-                  ${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}
-                </small>
-              </td>
-              <td style="text-align:right;font-weight:700;color:var(--success);font-size:1rem;">
-                $${totalToCollect.toFixed(2)}
-              </td>
-              <td>
-                <button class="btn-pay" onclick="markPendingAsPaid(${i})" title="Cobrar pedido" type="button">
-                  💵 Cobrar
-                </button>
-                <button class="btn-edit-pending" onclick="openEditPendingModal(${i})" title="Editar envío/comisión" type="button">
-                  ✏️ Editar
-                </button>
-                <button class="btn-delete-pending" onclick="deletePending(${i})" title="Eliminar y devolver stock" type="button">
-                  🗑️ Eliminar
-                </button>
-              </td>
-            </tr>
-          `;
+          // Permitir que el UI respire cada chunk
+          if (i + chunkSize < pending.length) {
+            await new Promise(r => requestAnimationFrame(r));
+          }
         }
         
         tbody.innerHTML = html;
         updatePendingSummary();
+        
+        // Cargar imágenes lazy
+        loadPendingImagesLazy();
+        
       } catch (e) {
         console.error('Error cargando pendientes:', e);
         showNotification('Error al cargar pedidos pendientes', 'error');
       } finally {
         showSpinner(false);
+      }
+    }
+    
+    async function loadPendingImagesLazy() {
+      const placeholders = document.querySelectorAll('#pendingList [data-img-code]');
+      
+      for (const placeholder of placeholders) {
+        const code = placeholder.dataset.imgCode;
+        if (!code) continue;
+        
+        try {
+          const imgBlob = await safeGetItem(`img_${code}`);
+          if (imgBlob) {
+            const imgUrl = urlManager.create(imgBlob);
+            pendingImages.set(`img_${code}`, imgUrl);
+            placeholder.outerHTML = `<img src="${imgUrl}" onclick="openImageModal('${imgUrl}')" title="Ver imagen" style="max-height:60px;max-width:60px;border-radius:4px;cursor:pointer;">`;
+          } else {
+            placeholder.outerHTML = '<div style="width:60px;height:60px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
+          }
+        } catch (e) {
+          placeholder.outerHTML = '<div style="width:60px;height:60px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
+        }
+        
+        // Pequeña pausa para no bloquear
+        await new Promise(r => setTimeout(r, 5));
       }
     }
     
@@ -2382,7 +2533,7 @@
         document.getElementById('codDisplayPrice').textContent = '$' + priceWithDiscount;
         document.getElementById('codDisplayStock').textContent = item.quantity || 0;
         
-        const imgBlob = await getCachedImage(item.code);
+        const imgBlob = await safeGetItem(`img_${item.code}`);
         const imgEl = document.getElementById('codProductImage');
         if (imgBlob) {
           const imgUrl = urlManager.create(imgBlob);
@@ -2743,12 +2894,16 @@
     }
 
     // ==========================================
-    // FILTRADO Y RENDERIZADO DE INVENTARIO OPTIMIZADO
+    // FILTRADO Y RENDERIZADO DE INVENTARIO OPTIMIZADO CON PAGINACIÓN
     // ==========================================
     
-    const debouncedFilterInventory = debounce(filterInventory, 300);
+    const debouncedFilterInventory = debounce(() => {
+      currentPage = 1;
+      filterInventory();
+    }, 150);
     
     function applyFilters() { 
+      currentPage = 1;
       filterInventory(); 
     }
     
@@ -2762,7 +2917,8 @@
               lowStock = document.getElementById('lowStockOnly').checked,
               searchDate = document.getElementById('searchDate').value;
               
-        let filtered = inventory.filter(it => { 
+        // Filtrar primero
+        filteredInventoryCache = inventory.filter(it => { 
           if (!it) return false;
           const okName = !name || (it.name && it.name.toLowerCase().includes(name)); 
           const okCat = !category || it.category === category; 
@@ -2782,8 +2938,14 @@
           }
           
           return okName && okCat && okCode && okPrice && okStock && okDate; 
-        }); 
-        renderInventoryWithHighlight(filtered, name); 
+        });
+        
+        // Ordenar por stock (mayor a menor)
+        filteredInventoryCache.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+        
+        // Renderizar con paginación
+        renderInventoryWithPagination(name);
+        
         document.getElementById('resultMessage').style.display = 'none';
       } catch (e) {
         console.error('Error filtrando inventario:', e);
@@ -2799,83 +2961,136 @@
         }); 
         document.getElementById('lowStockOnly').checked = false;
         document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight')); 
+        currentPage = 1;
         filterInventory();
       } catch (e) {
         console.error('Error limpiando filtros:', e);
       }
     }
     
-    // RENDERIZADO OPTIMIZADO CON LAZY LOADING
-    async function renderInventoryWithHighlight(filteredInventory, searchName) {
-      showSpinner(true);
+    function changePage(direction) {
+      const totalPages = Math.ceil(filteredInventoryCache.length / pageSize);
+      const newPage = currentPage + direction;
+      
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+        renderInventoryWithPagination(searchName);
+        
+        // Scroll al inicio de la tabla
+        document.getElementById('tableView').scrollTop = 0;
+      }
+    }
+    
+    function changePageSize() {
+      const select = document.getElementById('pageSize');
+      pageSize = parseInt(select.value);
+      localStorage.setItem('pageSize', pageSize);
+      currentPage = 1;
+      const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+      renderInventoryWithPagination(searchName);
+    }
+    
+    async function renderInventoryWithPagination(searchName) {
+      if (isRendering) {
+        // Si ya estamos renderizando, encolar para después
+        renderQueue.push(() => renderInventoryWithPagination(searchName));
+        return;
+      }
+      
+      isRendering = true;
+      showProgress('Cargando productos...');
       
       try {
-        const list = document.getElementById('inventoryList'), 
-              cards = document.getElementById('cardsView'), 
-              noResults = document.getElementById('noResultsMessage');
+        const list = document.getElementById('inventoryList');
+        const cards = document.getElementById('cardsView');
+        const noResults = document.getElementById('noResultsMessage');
+        const paginationControls = document.getElementById('paginationControls');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
         
-        // Limpiar solo la vista activa
-        if (currentView === 'table') {
-          cards.innerHTML = '';
-        } else {
-          list.innerHTML = '';
-        }
+        urlManager.revokeAll();
         
-        if (!filteredInventory || filteredInventory.length === 0) { 
+        if (!filteredInventoryCache || filteredInventoryCache.length === 0) { 
           list.innerHTML = ''; 
           cards.innerHTML = ''; 
           noResults.style.display = 'block'; 
-          showSpinner(false);
+          paginationControls.style.display = 'none';
+          hideProgress();
+          isRendering = false;
           return; 
         }
         
-        noResults.style.display = 'none'; 
+        noResults.style.display = 'none';
         
-        // Limitar a 50 items para carga inicial rápida
-        const LIMIT = 50;
-        const sorted = [...filteredInventory]
-          .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
-          .slice(0, LIMIT);
+        // Calcular paginación
+        const totalItems = filteredInventoryCache.length;
+        const totalPages = Math.ceil(totalItems / pageSize);
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageItems = filteredInventoryCache.slice(startIndex, endIndex);
         
-        // Precalcular datos básicos
-        const productData = sorted.map((item, idx) => ({
-          item,
-          realIndex: inventory.indexOf(item),
-          idx,
-          priceWithDiscount: ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2),
-          dateStr: item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A'
-        }));
-
-        if (currentView === 'table') {
-          await renderTableOptimized(productData, searchName, list);
-        } else {
-          await renderCardsOptimized(productData, searchName, cards);
+        // Actualizar controles de paginación
+        paginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
+        pageInfo.textContent = `Página ${currentPage} de ${totalPages} (${totalItems} productos)`;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+        
+        // Renderizar tabla con placeholders
+        await renderTableWithPlaceholders(pageItems, startIndex, searchName);
+        
+        // Renderizar tarjetas (solo si es vista de tarjetas)
+        if (currentView === 'cards') {
+          await renderCardsWithPlaceholders(pageItems, startIndex, searchName);
         }
         
-        // Cargar imágenes en segundo plano
-        setTimeout(() => loadImagesLazy(sorted), 100);
-        
         updateDash();
+        
+        // Cargar imágenes y barcodes lazy
+        loadImagesAndBarcodesLazy();
+        
       } catch (e) {
         console.error('Error renderizando inventario:', e);
         showNotification('Error al mostrar productos', 'error');
       } finally {
-        showSpinner(false);
+        hideProgress();
+        isRendering = false;
+        
+        // Procesar cola si hay pendientes
+        if (renderQueue.length > 0) {
+          const nextRender = renderQueue.shift();
+          setTimeout(nextRender, 50);
+        }
       }
     }
     
-    // Renderizado de tabla optimizado sin barcodes sincrónicos
-    async function renderTableOptimized(productData, searchName, container) {
-      const html = productData.map(({ item, realIndex, idx, priceWithDiscount, dateStr }) => `
-        <tr id="product-${idx}" data-real-index="${realIndex}" data-code="${item.code}">
-          <td>${idx + 1}</td>
-          <td class="img-cell" data-code="${item.code}">
-            <div class="img-placeholder">Cargando...</div>
+    async function renderTableWithPlaceholders(items, startIdx, searchName) {
+      const list = document.getElementById('inventoryList');
+      const fragment = document.createDocumentFragment();
+      
+      // Crear filas con placeholders
+      items.forEach((item, idx) => {
+        const realIndex = inventory.indexOf(item);
+        const displayIdx = startIdx + idx + 1;
+        const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
+        const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
+        
+        const tr = document.createElement('tr');
+        tr.id = `product-${displayIdx}`;
+        tr.dataset.realIndex = realIndex;
+        tr.dataset.itemCode = item.code;
+        tr.dataset.barcode = item.barcode || '';
+        
+        tr.innerHTML = `
+          <td>${displayIdx}</td>
+          <td>
+            <div class="img-placeholder" data-img-for="${item.code}" style="width:48px;height:48px;">...</div>
           </td>
           <td>${highlightText(item.name, searchName)}</td>
           <td>${item.barcode || 'N/A'}</td>
-          <td class="barcode-cell" data-barcode="${item.barcode || ''}">
-            <span class="barcode-text">${item.barcode || 'N/A'}</span>
+          <td>
+            <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
           </td>
           <td>$${(item.price || 0).toFixed(2)}</td>
           <td>${item.discount || 0}%</td>
@@ -2888,23 +3103,36 @@
             <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
             <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
           </td>
-        </tr>
-      `).join('');
+        `;
+        
+        fragment.appendChild(tr);
+      });
       
-      container.innerHTML = html;
+      list.innerHTML = '';
+      list.appendChild(fragment);
     }
     
-    // Renderizado de tarjetas optimizado
-    async function renderCardsOptimized(productData, searchName, container) {
-      const html = productData.map(({ item, realIndex, idx, priceWithDiscount, dateStr }) => `
-        <div class="card" data-real-index="${realIndex}" data-code="${item.code}">
-          <div class="img-cell" data-code="${item.code}">
-            <div class="img-placeholder" style="width:100%;height:160px;">Cargando...</div>
-          </div>
+    async function renderCardsWithPlaceholders(items, startIdx, searchName) {
+      const cards = document.getElementById('cardsView');
+      const fragment = document.createDocumentFragment();
+      
+      items.forEach((item, idx) => {
+        const realIndex = inventory.indexOf(item);
+        const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
+        const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.realIndex = realIndex;
+        card.dataset.itemCode = item.code;
+        card.dataset.barcode = item.barcode || '';
+        
+        card.innerHTML = `
+          <div class="img-placeholder" data-img-for="${item.code}">...</div>
           <div><strong>${highlightText(item.name, searchName)}</strong></div>
           <div>Barras: ${item.barcode || 'N/A'}</div>
-          <div class="barcode-cell" data-barcode="${item.barcode || ''}">
-            <span class="barcode-text">${item.barcode || 'N/A'}</span>
+          <div>
+            <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
           </div>
           <div>Precio: $${priceWithDiscount} <small>(${(item.discount || 0)}% dto)</small></div>
           <div>Stock: <strong>${item.quantity || 0}</strong></div>
@@ -2915,83 +3143,70 @@
             <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
             <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
           </div>
-        </div>
-      `).join('');
+        `;
+        
+        fragment.appendChild(card);
+      });
       
-      container.innerHTML = html;
+      cards.innerHTML = '';
+      cards.appendChild(fragment);
     }
     
-    // Carga lazy de imágenes y barcodes
-    async function loadImagesLazy(items) {
-      // Inicializar IntersectionObserver si no existe
-      if (!barcodeObserver && 'IntersectionObserver' in window) {
-        barcodeObserver = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const cell = entry.target;
-              const barcode = cell.dataset.barcode;
-              if (barcode && barcode !== 'N/A') {
-                generateBarcodeAsync(barcode, cell);
-              }
-              barcodeObserver.unobserve(cell);
-            }
-          });
-        }, { rootMargin: '50px' });
-      }
-      
+    async function loadImagesAndBarcodesLazy() {
       // Cargar imágenes
-      for (const item of items) {
-        const cells = document.querySelectorAll(`.img-cell[data-code="${item.code}"]`);
+      const imgPlaceholders = document.querySelectorAll('[data-img-for]');
+      
+      for (const placeholder of imgPlaceholders) {
+        const code = placeholder.dataset.imgFor;
+        if (!code) continue;
         
-        for (const cell of cells) {
-          const imgBlob = await getCachedImage(item.code);
+        try {
+          const imgBlob = await safeGetItem(`img_${code}`);
           if (imgBlob) {
             const imgUrl = urlManager.create(imgBlob);
-            if (currentView === 'table') {
-              cell.innerHTML = `<img src="${imgUrl}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${imgUrl}')" alt="${item.name}">`;
+            const isCard = placeholder.classList.contains('img-placeholder') && placeholder.parentElement.classList.contains('card');
+            
+            if (isCard) {
+              placeholder.outerHTML = `<img src="${imgUrl}" onclick="openImageModal('${imgUrl}')" alt="Producto" style="width:100%;height:160px;object-fit:cover;border-radius:6px;cursor:pointer;">`;
             } else {
-              cell.innerHTML = `<img src="${imgUrl}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openImageModal('${imgUrl}')" alt="${item.name}">`;
+              placeholder.outerHTML = `<img src="${imgUrl}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${imgUrl}')" alt="Producto">`;
             }
           } else {
-            cell.innerHTML = '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
-          }
-        }
-        
-        // Observar celdas de barcode para lazy loading
-        const barcodeCells = document.querySelectorAll(`.barcode-cell[data-barcode="${item.barcode}"]`);
-        barcodeCells.forEach(cell => {
-          if (barcodeObserver) {
-            barcodeObserver.observe(cell);
-          } else {
-            // Fallback: generar inmediatamente si no hay soporte
-            if (item.barcode) {
-              setTimeout(() => generateBarcodeAsync(item.barcode, cell), 100);
-            }
-          }
-        });
-      }
-    }
-    
-    // Generar barcode asíncrono
-    function generateBarcodeAsync(barcode, container) {
-      requestAnimationFrame(() => {
-        try {
-          const canvas = document.createElement('canvas');
-          JsBarcode(canvas, barcode, { 
-            format: 'CODE128', 
-            width: 2, 
-            height: 40, 
-            displayValue: false 
-          });
-          const src = canvas.toDataURL();
-          const currentContent = container.innerHTML;
-          if (currentContent.includes('barcode-text')) {
-            container.innerHTML = `<img src="${src}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${src}')" alt="Código de barras">`;
+            placeholder.outerHTML = '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
           }
         } catch (e) {
-          console.error('Error generando barcode:', e);
+          placeholder.outerHTML = '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
         }
-      });
+        
+        // Pequeña pausa para no bloquear el UI
+        await new Promise(r => setTimeout(r, 2));
+      }
+      
+      // Cargar códigos de barras
+      const barcodePlaceholders = document.querySelectorAll('[data-barcode-for]');
+      
+      for (const placeholder of barcodePlaceholders) {
+        const barcode = placeholder.dataset.barcodeFor;
+        if (!barcode) {
+          placeholder.outerHTML = '<span class="barcode-text">N/A</span>';
+          continue;
+        }
+        
+        const barcodeUrl = generateBarcodeDataUrl(barcode);
+        if (barcodeUrl) {
+          const isCard = placeholder.parentElement.classList.contains('card');
+          if (isCard) {
+            placeholder.outerHTML = `<img src="${barcodeUrl}" style="height:60px;cursor:pointer" onclick="openImageModal('${barcodeUrl}')" alt="Código de barras">`;
+          } else {
+            placeholder.outerHTML = `<img src="${barcodeUrl}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${barcodeUrl}')" alt="Código de barras">`;
+          }
+        } else {
+          placeholder.outerHTML = `<span class="barcode-text">${barcode}</span>`;
+        }
+        
+        // Pequeña pausa
+        await new Promise(r => setTimeout(r, 2));
+      }
     }
     
     function toggleView() { 
@@ -3011,37 +3226,44 @@
         btn.textContent = 'Ver Tarjetas'; 
       } 
       localStorage.setItem('preferredView', currentView);
-      // Re-renderizar para aplicar lazy loading
-      filterInventory();
+      
+      // Re-renderizar para mostrar la vista correcta
+      const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+      renderInventoryWithPagination(searchName);
     }
 
     function goToRow() { 
-      const row = parseInt(document.getElementById('goToRow').value); 
-      if (currentView === 'table') { 
-        const rows = document.querySelectorAll('#inventoryList tr'); 
-        rows.forEach(r => r.classList.remove('highlight')); 
-        if (row >= 1 && row <= rows.length) { 
-          const target = rows[row - 1]; 
-          target.classList.add('highlight'); 
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+      const row = parseInt(document.getElementById('goToRow').value);
+      if (!row || row < 1) {
+        showNotification('Número de fila inválido', 'warning');
+        return;
+      }
+      
+      // Calcular en qué página está la fila
+      const targetPage = Math.ceil(row / pageSize);
+      
+      if (targetPage !== currentPage) {
+        currentPage = targetPage;
+        const searchName = document.getElementById('searchName').value.trim().toLowerCase();
+        renderInventoryWithPagination(searchName);
+      }
+      
+      // Resaltar la fila
+      setTimeout(() => {
+        const displayIdx = row;
+        const target = document.getElementById(`product-${displayIdx}`);
+        if (target) {
+          document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight'));
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
           showNotification('Fila fuera de rango', 'warning');
         }
-      } else { 
-        const cards = document.querySelectorAll('.card'); 
-        cards.forEach(c => c.classList.remove('highlight')); 
-        if (row >= 1 && row <= cards.length) { 
-          const target = cards[row - 1]; 
-          target.classList.add('highlight'); 
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-        } else {
-          showNotification('Fila fuera de rango', 'warning');
-        }
-      } 
+      }, 100);
     }
 
     // ==========================================
-    // MODAL DE HISTORIAL DE VENTAS DETALLADO
+    // MODAL DE HISTORIAL DE VENTAS DETALLADO CORREGIDO
     // ==========================================
     
     function openSalesHistoryModal() { 
@@ -3110,33 +3332,46 @@
           return; 
         }
         
-        const html = await Promise.all(sales.slice(0, 100).map(async (s, i) => {
-          const imgBlob = await getCachedImage(s.code);
-          let imgSrc = '';
-          if (imgBlob) {
-            imgSrc = urlManager.create(imgBlob);
-          }
-          
-          const dateStr = s.date ? new Date(s.date).toLocaleString('es-ES') : 'N/A';
-          
-          return `
-            <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:6px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
-              ${imgSrc ? `<img src="${imgSrc}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" alt="${s.name}">` : '<div style="width:80px;height:80px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>'}
-              <div style="flex:1;">
-                <strong>#${i + 1} – ${s.name || 'N/A'}</strong><br>
-                Código: ${s.code || 'N/A'}<br>
-                Cantidad: ${s.quantity || 0} | Precio: $${(s.price || 0).toFixed(2)} | Total: $${(s.total || 0).toFixed(2)}<br>
-                <small>Fecha: ${dateStr} | Vendedor: ${s.seller || 'Desconocido'}</small>
-                <button onclick="deleteSale(${i})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;cursor:pointer;" type="button">🗑️</button>
-              </div>
-            </div>
-          `;
-        }));
+        // Renderizar en chunks
+        let html = '';
+        const chunkSize = 20;
         
-        container.innerHTML = html.join('');
-        if (sales.length > 100) {
-          container.innerHTML += `<p style="text-align:center;color:#6b7280;">... y ${sales.length - 100} ventas más</p>`;
+        for (let i = 0; i < sales.length; i += chunkSize) {
+          const chunk = sales.slice(i, i + chunkSize);
+          
+          const chunkHtml = await Promise.all(chunk.map(async (s, idx) => {
+            const globalIdx = i + idx;
+            const imgBlob = await safeGetItem(`img_${s.code}`);
+            let imgSrc = '';
+            if (imgBlob) {
+              imgSrc = urlManager.create(imgBlob);
+            }
+            
+            const dateStr = s.date ? new Date(s.date).toLocaleString('es-ES') : 'N/A';
+            
+            return `
+              <div style="display:flex;gap:1rem;border:1px solid #ccc;border-radius:6px;padding:.8rem;margin-bottom:.8rem;align-items:center;">
+                ${imgSrc ? `<img src="${imgSrc}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;" alt="${s.name}">` : '<div style="width:80px;height:80px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>'}
+                <div style="flex:1;">
+                  <strong>#${globalIdx + 1} – ${s.name || 'N/A'}</strong><br>
+                  Código: ${s.code || 'N/A'}<br>
+                  Cantidad: ${s.quantity || 0} | Precio: $${(s.price || 0).toFixed(2)} | Total: $${(s.total || 0).toFixed(2)}<br>
+                  <small>Fecha: ${dateStr} | Vendedor: ${s.seller || 'Desconocido'}</small>
+                  <button onclick="deleteSale(${globalIdx})" style="margin-left:.4rem;background:var(--danger);border:none;color:#fff;padding:.1rem .3rem;border-radius:3px;font-size:.7rem;cursor:pointer;" type="button">🗑️</button>
+                </div>
+              </div>
+            `;
+          }));
+          
+          html += chunkHtml.join('');
+          
+          // Permitir que el UI respire
+          if (i + chunkSize < sales.length) {
+            await new Promise(r => requestAnimationFrame(r));
+          }
         }
+        
+        container.innerHTML = html;
       } catch (e) {
         console.error('Error renderizando historial:', e);
         showNotification('Error al mostrar historial', 'error');
@@ -3380,16 +3615,11 @@
     
     function renderCashProducts(container) {
       container.innerHTML = '';
-      
-      // Limitar a 50 productos inicialmente
-      const VISIBLE_COUNT = 50;
-      const sorted = [...inventory]
-        .sort((a, b) => {
-          if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
-          if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
-          return (a.name || '').localeCompare(b.name || '');
-        })
-        .slice(0, VISIBLE_COUNT);
+      const sorted = [...inventory].sort((a, b) => {
+        if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
+        if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
+        return (a.name || '').localeCompare(b.name || '');
+      });
 
       if (cashViewMode === 'grid') {
         const grid = document.createElement('div');
@@ -3406,7 +3636,7 @@
           const priceWithDiscount = ((it.price || 0) * (1 - (it.discount || 0) / 100)).toFixed(0);
 
           card.innerHTML = `
-            <div id="cashimg-${realIdx}" style="width:100%;height:160px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Cargando...</div>
+            <div class="img-placeholder" id="cashimg-${realIdx}" style="width:100%;height:160px;">...</div>
             <div><strong>${it.name || 'N/A'}</strong></div>
             <div>Cód: ${it.barcode || 'N/A'}</div>
             <div>Cat: ${it.category || 'N/A'}</div>
@@ -3421,14 +3651,17 @@
           grid.appendChild(card);
           
           // Cargar imagen lazy
-          setTimeout(async () => {
-            const imgBlob = await getCachedImage(it.code);
-            const imgDiv = card.querySelector(`#cashimg-${realIdx}`);
-            if (imgBlob && imgDiv) {
-              const url = urlManager.create(imgBlob);
-              imgDiv.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImageModal('${url}')" alt="${it.name}">`;
-            }
-          }, idx * 10); // Stagger loading cada 10ms
+          setTimeout(() => {
+            safeGetItem(`img_${it.code}`).then(blob => {
+              const img = document.getElementById(`cashimg-${realIdx}`);
+              if (img && blob) {
+                const url = urlManager.create(blob);
+                img.outerHTML = `<img src="${url}" alt="${it.name}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImageModal('${url}')">`;
+              } else if (img) {
+                img.outerHTML = '<div style="width:100%;height:160px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Sin imagen</div>';
+              }
+            });
+          }, idx * 10);
         });
         
         container.appendChild(grid);
@@ -3447,7 +3680,7 @@
 
           tr.innerHTML = `
             <td>${idx + 1}</td>
-            <td><div id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;background:#f3f4f6;width:40px;height:40px;"></div></td>
+            <td><div class="img-placeholder" id="cashimg-${realIdx}" style="width:40px;height:40px;">...</div></td>
             <td>${it.name || 'N/A'}</td>
             <td>${it.barcode || 'N/A'}</td>
             <td>${it.category || 'N/A'}</td>
@@ -3460,13 +3693,16 @@
           tbody.appendChild(tr);
           
           // Cargar imagen lazy
-          setTimeout(async () => {
-            const imgBlob = await getCachedImage(it.code);
-            const imgDiv = tr.querySelector(`#cashimg-${realIdx}`);
-            if (imgBlob && imgDiv) {
-              const url = urlManager.create(imgBlob);
-              imgDiv.innerHTML = `<img src="${url}" style="max-height:40px;border-radius:4px;cursor:pointer" onclick="openImageModal('${url}')" alt="${it.name}">`;
-            }
+          setTimeout(() => {
+            safeGetItem(`img_${it.code}`).then(blob => {
+              const img = document.getElementById(`cashimg-${realIdx}`);
+              if (img && blob) {
+                const url = urlManager.create(blob);
+                img.outerHTML = `<img src="${url}" style="max-height:40px;border-radius:4px;cursor:pointer;" onclick="openImageModal('${url}')" alt="${it.name}">`;
+              } else if (img) {
+                img.outerHTML = '<div style="width:40px;height:40px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.6rem;">Sin</div>';
+              }
+            });
           }, idx * 10);
         });
         
@@ -3637,6 +3873,7 @@
       const fl = document.getElementById('cashFloatList'); 
       if (fl) fl.remove(); 
       cashItems = [];
+      urlManager.revokeAll();
     }
 
     // ==========================================
@@ -3697,7 +3934,7 @@
       }
     });
     
-    // Filtros en tiempo real con debounce
+    // Filtros en tiempo real con debounce más agresivo
     ['searchName', 'searchCode', 'minPrice', 'maxPrice'].forEach(id => { 
       const el = document.getElementById(id); 
       if (el) {
@@ -3722,6 +3959,9 @@
 
     // Inicialización
     window.addEventListener('DOMContentLoaded', () => {
+      // Configurar tamaño de página
+      document.getElementById('pageSize').value = pageSize;
+      
       loadInventory();
       
       // Configurar vista inicial
@@ -3735,6 +3975,7 @@
         document.getElementById('toggleViewBtn').textContent = 'Ver Tarjetas'; 
       }
       
+      // Renderizar inventario
       filterInventory();
       updateDash();
       
@@ -3766,4 +4007,3 @@
   </script>
 </body>
 </html>
-             

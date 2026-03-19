@@ -770,25 +770,84 @@
       margin-right: auto;
     }
 
-    .bulk-section:last-child {
-      margin-bottom: 0;
+    /* SECCIONES QUE SE OCULTAN CUANDO ESTÁ EL EDITOR ACTIVO */
+    .bulk-section.hidden-when-editing {
+      display: none;
     }
 
-    /* Grid de botones de exportación en 4 columnas en pantallas grandes */
-    .export-grid {
+    /* EDITOR DE LOTE - MODO FULLSCREEN DENTRO DEL MODAL */
+    #editLoteBubble {
+      display: none;
+      position: fixed;
+      inset: 64px 0 0 0; /* Deja espacio para el header del modal */
+      background: var(--bg);
+      z-index: 10;
+      flex-direction: column;
+      padding: 0;
+      margin: 0;
+      max-width: 100%;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      height: calc(100vh - 64px);
+    }
+
+    #editLoteBubble.active {
+      display: flex;
+    }
+
+    .lote-editor-header {
+      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .lote-editor-header h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .lote-editor-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .lote-editor-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    .lote-editor-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
+      gap: 1.5rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1400px) {
+      .lote-editor-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     @media (max-width: 1024px) {
-      .export-grid {
+      .lote-editor-grid {
         grid-template-columns: repeat(2, 1fr);
       }
     }
 
     @media (max-width: 640px) {
-      .export-grid {
+      .lote-editor-grid {
         grid-template-columns: 1fr;
       }
       
@@ -810,35 +869,14 @@
         width: 56px;
         height: 56px;
       }
-    }
-
-    /* EDITOR DE LOTE - GRID DE 4 COLUMNAS */
-    .lote-editor-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-      max-height: 65vh;
-      overflow-y: auto;
-      padding: 1rem;
-      background: var(--bg);
-      border-radius: var(--radius);
-    }
-
-    @media (max-width: 1400px) {
-      .lote-editor-grid {
-        grid-template-columns: repeat(3, 1fr);
+      
+      #editLoteBubble {
+        inset: 56px 0 0 0;
+        height: calc(100vh - 56px);
       }
-    }
-
-    @media (max-width: 1024px) {
-      .lote-editor-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 640px) {
-      .lote-editor-grid {
-        grid-template-columns: 1fr;
+      
+      .lote-editor-content {
+        padding: 1rem;
       }
     }
 
@@ -856,11 +894,12 @@
     .lote-edit-card:hover {
       border-color: var(--accent);
       box-shadow: var(--shadow);
+      transform: translateY(-2px);
     }
 
     .lote-edit-image {
       width: 100%;
-      height: 160px;
+      height: 180px;
       object-fit: cover;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
@@ -877,7 +916,7 @@
       font-family: monospace;
       font-size: 0.875rem;
       color: var(--accent);
-      font-weight: 600;
+      font-weight: 700;
       text-align: center;
       padding: 0.5rem;
       background: rgba(212, 165, 154, 0.1);
@@ -918,14 +957,22 @@
       margin: 0;
     }
 
-    #editLoteBubble {
-      display: none;
-      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-      border-color: #f59e0b;
+    .export-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
     }
 
-    #editLoteBubble h3 {
-      color: #92400e;
+    @media (max-width: 1024px) {
+      .export-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .export-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -1003,9 +1050,9 @@
       </button>
     </div>
     
-    <div class="bulk-modal-body">
+    <div class="bulk-modal-body" id="modalBody">
       <!-- Carga por Imágenes -->
-      <div class="bulk-section">
+      <div class="bulk-section" id="cargaSection">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
           <div>
             <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--text-primary);">
@@ -1044,26 +1091,8 @@
         <div class="mini-lote" id="lotePreview"></div>
       </div>
 
-      <!-- Editor de Lote - DISEÑO TIPO GRID 4 COLUMNAS -->
-      <div id="editLoteBubble" class="bulk-section">
-        <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-pen-to-square" style="color: #f59e0b;"></i>
-          Editar Productos del Lote
-        </h3>
-        
-        <!-- Aquí va el grid de 4 columnas -->
-        <div class="lote-editor-grid" id="editLoteGrid"></div>
-        
-        <div class="actions-bar" style="margin-top: 1.5rem; justify-content: center;">
-          <button class="btn btn-success" onclick="guardarLoteCompleto()" style="font-size: 1.1rem; padding: 1rem 3rem;">
-            <i class="fa-solid fa-check-circle"></i>
-            Guardar Lote Completo
-          </button>
-        </div>
-      </div>
-
       <!-- Exportaciones -->
-      <div class="bulk-section">
+      <div class="bulk-section" id="exportSection">
         <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--text-primary);">
           <i class="fa-solid fa-file-export" style="color: var(--accent); margin-right: 0.5rem;"></i>
           Exportar e Importar
@@ -1097,6 +1126,30 @@
           <i class="fa-solid fa-trash-can"></i>
           Vaciar Inventario Completo
         </button>
+      </div>
+    </div>
+
+    <!-- EDITOR DE LOTE - APARTADO QUE CUBRE TODA LA PANTALLA DEL MODAL -->
+    <div id="editLoteBubble">
+      <div class="lote-editor-header">
+        <h3>
+          <i class="fa-solid fa-pen-to-square"></i>
+          Editar Productos del Lote (${loteTemporal.length} productos)
+        </h3>
+        <div class="lote-editor-actions">
+          <button class="btn btn-secondary" onclick="cancelarEdicionLote()" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+            <i class="fa-solid fa-xmark"></i>
+            Cancelar
+          </button>
+          <button class="btn btn-success" onclick="guardarLoteCompleto()">
+            <i class="fa-solid fa-check-circle"></i>
+            Guardar Lote Completo
+          </button>
+        </div>
+      </div>
+      
+      <div class="lote-editor-content">
+        <div class="lote-editor-grid" id="editLoteGrid"></div>
       </div>
     </div>
   </div>
@@ -1318,12 +1371,20 @@ function closeBulkModal() {
   const modal = document.getElementById('bulkModal');
   modal.classList.remove('show');
   document.body.style.overflow = '';
+  // Si el editor está activo, también lo cerramos
+  document.getElementById('editLoteBubble').classList.remove('active');
 }
 
 // Cerrar con ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    closeBulkModal();
+    // Si el editor está activo, primero cierra el editor, luego el modal
+    const editor = document.getElementById('editLoteBubble');
+    if (editor.classList.contains('active')) {
+      cancelarEdicionLote();
+    } else {
+      closeBulkModal();
+    }
   }
 });
 
@@ -1669,7 +1730,6 @@ async function procesarLote() {
   const preview = document.getElementById('lotePreview');
   preview.innerHTML = '';
   document.getElementById('loteStatus').textContent = 'Procesando imágenes...';
-  document.getElementById('editLoteBubble').style.display = 'block';
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -1703,7 +1763,7 @@ async function procesarLote() {
     });
   }
   
-  document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos. Códigos: ${loteTemporal[0].code}...`;
+  document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos.`;
   mostrarEditorLote();
 }
 
@@ -1713,34 +1773,42 @@ function vaciarLote() {
   loteTemporal = [];
   document.getElementById('lotePreview').innerHTML = '';
   document.getElementById('loteStatus').textContent = '';
-  document.getElementById('editLoteBubble').style.display = 'none';
+  document.getElementById('editLoteBubble').classList.remove('active');
   document.getElementById('loteFiles').value = '';
   updateLoteStatus();
 }
 
-// FUNCIÓN CORREGIDA PARA MOSTRAR EL EDITOR EN GRID DE 4 COLUMNAS
+// CANCELAR EDICIÓN DEL LOTE Y VOLVER A LA VISTA ANTERIOR
+function cancelarEdicionLote() {
+  document.getElementById('editLoteBubble').classList.remove('active');
+  // No borramos loteTemporal por si quiere volver a editar
+}
+
 function mostrarEditorLote() {
   const grid = document.getElementById('editLoteGrid');
+  const editorBubble = document.getElementById('editLoteBubble');
   grid.innerHTML = '';
+
+  // Actualizar título con cantidad de productos
+  editorBubble.querySelector('h3').innerHTML = `
+    <i class="fa-solid fa-pen-to-square"></i>
+    Editar Productos del Lote (${loteTemporal.length} productos)
+  `;
 
   loteTemporal.forEach((p, i) => {
     const card = document.createElement('div');
     card.className = 'lote-edit-card';
     card.innerHTML = `
-      <!-- Imagen arriba como en tu captura -->
       <img id="loteImg${i}" class="lote-edit-image" src="" alt="Producto ${i+1}">
       
       <div class="lote-edit-content">
-        <!-- Código como título -->
         <div class="lote-edit-code">${p.code}</div>
         
-        <!-- Nombre -->
         <div class="lote-edit-field">
           <label>Nombre *</label>
           <input type="text" id="loteName${i}" placeholder="Nombre del producto">
         </div>
         
-        <!-- Precio y Stock lado a lado -->
         <div class="lote-edit-row">
           <div class="lote-edit-field">
             <label>Precio *</label>
@@ -1752,19 +1820,16 @@ function mostrarEditorLote() {
           </div>
         </div>
         
-        <!-- Código de barras -->
         <div class="lote-edit-field">
           <label>Código de Barras *</label>
           <input type="text" id="loteBarcode${i}" placeholder="Código">
         </div>
         
-        <!-- Costo -->
         <div class="lote-edit-field">
           <label>Costo</label>
           <input type="number" id="loteValorReal${i}" step="0.01" placeholder="0.00" oninput="calcSugLote(${i})">
         </div>
         
-        <!-- % Ganancia y Sugerencia lado a lado -->
         <div class="lote-edit-row">
           <div class="lote-edit-field">
             <label>% Gan.</label>
@@ -1776,19 +1841,16 @@ function mostrarEditorLote() {
           </div>
         </div>
         
-        <!-- Fecha -->
         <div class="lote-edit-field">
           <label>Fecha Compra *</label>
           <input type="date" id="loteFecha${i}" value="${fechaActualGlobal}">
         </div>
         
-        <!-- Descripción -->
         <div class="lote-edit-field">
           <label>Descripción *</label>
           <textarea id="loteDescription${i}" rows="2" placeholder="Descripción..."></textarea>
         </div>
         
-        <!-- Categoría -->
         <div class="lote-edit-field">
           <label>Categoría *</label>
           <select id="loteCategory${i}">
@@ -1813,7 +1875,6 @@ function mostrarEditorLote() {
     `;
     grid.appendChild(card);
 
-    // Cargar imagen desde localforage
     localforage.getItem(`img_${p.code}`).then(blob => {
       const imgEl = document.getElementById(`loteImg${i}`);
       if (blob && imgEl) {
@@ -1823,6 +1884,9 @@ function mostrarEditorLote() {
     
     calcSugLote(i);
   });
+
+  // MOSTRAR EL EDITOR EN MODO FULLSCREEN DENTRO DEL MODAL
+  editorBubble.classList.add('active');
 }
 
 function calcSugLote(i) {
@@ -1868,8 +1932,13 @@ function guardarLoteCompleto() {
     localStorage.setItem('inventory', JSON.stringify(inventory));
     
     alert('Lote guardado correctamente ✅');
+    
+    // Cerrar el editor y el modal
+    document.getElementById('editLoteBubble').classList.remove('active');
+    closeBulkModal();
+    
+    // Limpiar
     loteTemporal = [];
-    document.getElementById('editLoteBubble').style.display = 'none';
     document.getElementById('lotePreview').innerHTML = '';
     document.getElementById('loteFiles').value = '';
     document.getElementById('loteStatus').textContent = '';

@@ -3,98 +3,756 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Compra</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
-
+  <title>Gestión de Inventario</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  
   <style>
-    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;}
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
-    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
-    .sticky-menu{position:fixed;top:1rem;right:1rem;z-index:9999;}
-    .menu-toggle{background:var(--card);border:none;border-radius:var(--radius);width:48px;height:48px;font-size:1.4rem;cursor:pointer;box-shadow:var(--shadow-hover);transition:transform .2s;}
-    .menu-toggle:hover{transform:scale(1.1)}
-    .menu-icons{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;background:var(--card);padding:.75rem;border-radius:var(--radius);box-shadow:var(--shadow-hover);display:none;}
-    .menu-icons.show{display:flex}
-    .menu-icons a{color:var(--text);font-size:1.3rem;text-align:center;padding:.4rem;border-radius:8px;transition:background .2s, color .2s;}
-    .menu-icons a:hover{background:var(--accent);color:#fff}
-    body.kiosco .sticky-menu{top:unset; bottom:1rem; right:1rem}
-    body.kiosco .menu-toggle{background:rgba(0,0,0,.5); color:#fff}
-    body.kiosco .menu-icons{background:rgba(0,0,0,.5)}
-    body.kiosco .menu-icons a{color:#fff}
-    body.kiosco .menu-icons a:hover{background:var(--accent)}
-
-    .total-box-fixed{
-      position:fixed;
-      top:1rem;
-      left:1rem;
-      z-index:9998;
-      background:var(--card);
-      padding:.75rem 1.25rem;
-      border-radius:var(--radius);
-      box-shadow:var(--shadow-hover);
-      font-size:.9rem;
-      line-height:1.2;
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+      --transition: all 0.2s ease;
     }
-    .total-box-fixed h2{font-size:.9rem;color:var(--accent);margin:0}
-    .total-box-fixed p{font-size:1.4rem;font-weight:700;margin:0;color:var(--accent)}
-
-    #editModeFlag{
-      display:none;
-      position:fixed;
-      top:1rem;
-      left:50%;
-      transform:translateX(-50%);
-      background:#10b981;
-      color:#fff;
-      padding:.4rem .8rem;
-      border-radius:20px;
-      font-size:.75rem;
-      z-index:9999;
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-
-    h1{font-size:2rem;font-weight:700;margin:3.5rem 0 1rem;letter-spacing:-.5px}
-    .tipo-compra{display:flex;gap:.75rem;margin-bottom:1.2rem}
-    .tipo-compra label{cursor:pointer;font-weight:500}
-    .tipo-compra input{margin-right:.25rem}
-    form, .table-cards, .mini-lote, #editLoteBubble > div{width:95%;max-width:1200px;margin:0 auto 2rem;}
-    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}
-    label{font-size:.9rem;font-weight:500;margin-bottom:.25rem;display:block}
-    input,select,textarea{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;color:var(--text);transition:background .3s,border-color .3s;}
-    input:focus,select:focus,textarea:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
-    button{padding:.75rem 1.5rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;}
-    button:hover{transform:translateY(-2px)}
-    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4)}
-    .btn-primary:hover{background:var(--accent-hover)}
-    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4)}
-    .btn-success{background:var(--success);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.4)}
-    .actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.2rem}
-    #imagePreview{max-height:200px;border-radius:12px;margin-top:.5rem;display:none;box-shadow:var(--shadow)}
-    .table-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;place-content:center;}
-    .card-item{background:var(--card);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.75rem;transition:transform var(--transition),box-shadow var(--transition);}
-    .card-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
-    .card-item img{width:100%;height:160px;object-fit:cover;border-radius:12px}
-    .card-item h3{font-size:1.1rem;color:var(--accent)}
-    .card-item p{margin:0;font-size:.85rem;color:#6b7280}
-    .card-item .actions{margin-top:auto;display:flex;gap:.5rem}
-    .mini-lote{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-top:1rem;max-height:320px;overflow-y:auto;}
-    .mini-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:.75rem;text-align:center;font-size:.75rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
-    .mini-item img{width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:.5rem}
-    .mini-item input{width:100%;padding:.4rem;font-size:.7rem;margin-top:.2rem;border-radius:8px}
-    #barcodeCanvas{margin-top:.5rem;width:100%;height:80px;display:none;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-    #loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:99999;}
-    #loadingOverlay.show{display:flex}
-    .spinner{width:60px;height:60px;border:6px solid #e5e7eb;border-top-color:var(--success);border-radius:50%;animation:spin 1s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Navegación sticky minimalista */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+    }
+    
+    .nav-brand {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .nav-brand i {
+      color: var(--accent);
+    }
+    
+    .nav-menu {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      position: relative;
+    }
+    
+    .nav-btn:hover {
+      background: var(--bg);
+      color: var(--accent);
+    }
+    
+    .total-badge {
+      background: var(--accent);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .total-badge span {
+      opacity: 0.9;
+      font-weight: 400;
+    }
+    
+    /* Menú desplegable */
+    .menu-dropdown {
+      position: absolute;
+      top: 48px;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 0.5rem;
+      min-width: 220px;
+      display: none;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .menu-dropdown.show {
+      display: flex;
+    }
+    
+    .menu-item {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: var(--transition);
+    }
+    
+    .menu-item:hover {
+      background: var(--bg);
+      color: var(--accent);
+    }
+    
+    .menu-item i {
+      width: 20px;
+      color: var(--text-secondary);
+    }
+    
+    /* Layout principal */
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 88px 1.5rem 2rem;
+    }
+    
+    /* Indicador de modo edición */
+    .edit-indicator {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--warning);
+      color: white;
+      padding: 0.5rem 1.25rem;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: var(--shadow);
+      z-index: 999;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    
+    /* Secciones */
+    .section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .section-title i {
+      color: var(--accent);
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      background: var(--bg);
+      padding: 0.25rem;
+      border-radius: var(--radius);
+      width: fit-content;
+    }
+    
+    .tab {
+      padding: 0.625rem 1.25rem;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+    
+    .tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    /* Formularios */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+    
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .label-hint {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+    
+    input, select, textarea {
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-primary);
+      font-size: 0.9375rem;
+      transition: var(--transition);
+      width: 100%;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    input:read-only {
+      background: var(--bg);
+      color: var(--text-secondary);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    /* Input groups */
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .input-group input {
+      flex: 1;
+    }
+    
+    .input-addon {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 0.875rem;
+      display: flex;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    /* Preview de imagen */
+    .image-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: var(--bg);
+    }
+    
+    .image-upload-area:hover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.02);
+    }
+    
+    .image-upload-area.has-image {
+      padding: 0.5rem;
+      border-style: solid;
+      border-color: var(--accent);
+    }
+    
+    #imagePreview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      display: none;
+    }
+    
+    /* Botones */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+    
+    .btn-danger {
+      background: white;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      opacity: 0.9;
+    }
+    
+    .actions-bar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Barcode canvas */
+    #barcodeCanvas {
+      margin-top: 0.5rem;
+      width: 100%;
+      height: 60px;
+      display: none;
+      border-radius: 8px;
+      background: white;
+    }
+    
+    /* Filtros del inventario */
+    .filters-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .filters-bar input, .filters-bar select {
+      max-width: 300px;
+    }
+    
+    /* Grid de inventario */
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    
+    .product-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .product-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    
+    .product-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .product-info {
+      padding: 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.75rem;
+    }
+    
+    .product-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-primary);
+      line-height: 1.4;
+      margin-bottom: 0.25rem;
+    }
+    
+    .product-code {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+    
+    .product-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    
+    .product-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin: 0.75rem 0;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+    
+    .product-detail {
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .product-detail span:last-child {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .barcode-container {
+      margin: 0.75rem 0;
+      padding: 0.75rem;
+      background: var(--bg);
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .barcode-container img {
+      max-width: 100%;
+      height: 40px;
+    }
+    
+    .product-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+    
+    .product-actions button {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 0.8125rem;
+    }
+    
+    /* Mini lote grid */
+    .mini-lote {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+    }
+    
+    .mini-item {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+      font-size: 0.75rem;
+    }
+    
+    .mini-item img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Editor de lote */
+    #editLoteBubble {
+      display: none;
+      margin-top: 1.5rem;
+    }
+    
+    .lote-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      margin: 1rem 0;
+    }
+    
+    .lote-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .lote-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    
+    .lote-card h4 {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-family: monospace;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Loading overlay */
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    #loadingOverlay.show {
+      display: flex;
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Utilidades */
+    .hidden { display: none !important; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .badge-success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+    
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+    }
+    
+    /* Modo kiosco */
+    body.kiosco .top-nav {
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-bottom-color: rgba(255,255,255,0.1);
+    }
+    
+    body.kiosco .nav-brand,
+    body.kiosco .nav-btn {
+      color: white;
+    }
+    
+    body.kiosco .menu-dropdown {
+      background: rgba(30, 30, 30, 0.95);
+      border-color: rgba(255,255,255,0.1);
+    }
+    
+    body.kiosco .menu-item {
+      color: white;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 80px 1rem 1rem;
+      }
+      
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .actions-bar {
+        flex-direction: column;
+      }
+      
+      .actions-bar .btn {
+        width: 100%;
+      }
+      
+      .filters-bar {
+        flex-direction: column;
+      }
+      
+      .filters-bar input, .filters-bar select {
+        max-width: 100%;
+      }
+    }
+    
+    /* Scrollbar minimalista */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
   </style>
 </head>
 <body>
 
-<!-- RESTO DEL CÓDIGO ORIGINAL (SIN CAMBIOS) -->
 <script>
   (function () {
     const kiosco = localStorage.getItem('kiosco') === 'true';
@@ -105,161 +763,330 @@
   })();
 </script>
 
-<nav class="sticky-menu" aria-label="Navegación principal">
-  <button class="menu-toggle" id="menuToggle"><i class="fa-solid fa-bars"></i></button>
-  <div class="menu-icons" id="menuIcons">
-    <a href="compra.html" title="Compra"><i class="fa-solid fa-cart-plus"></i></a>
-    <a href="almacenamiento.html" title="Almacenamiento"><i class="fa-solid fa-warehouse"></i></a>
-    <a href="finanzas.html" title="Finanzas"><i class="fa-solid fa-dollar-sign"></i></a>
-    <a href="inventario.html" title="Inventario"><i class="fa-solid fa-boxes-stacked"></i></a>
-    <a href="catalogo.html" title="Catálogo"><i class="fa-solid fa-book"></i></a>
-    <a href="clientes.html" title="Clientes"><i class="fa-solid fa-users"></i></a>
-    <a href="descuentos.html" title="Descuentos"><i class="fa-solid fa-percent"></i></a>
-    <a href="facturas.html" title="Facturas"><i class="fa-solid fa-file-invoice"></i></a>
-    <a href="traslados.html" title="Traslados"><i class="fa-solid fa-truck-fast"></i></a>
-    <a href="venta.html" title="Venta"><i class="fa-solid fa-cash-register"></i></a>
-    <a href="#" onclick="salirKiosco()" title="Salir modo kiosco"><i class="fa-solid fa-xmark"></i></a>
+<nav class="top-nav">
+  <div class="nav-brand">
+    <i class="fa-solid fa-boxes-stacked"></i>
+    <span>Inventario Pro</span>
+  </div>
+  
+  <div class="nav-menu">
+    <div class="total-badge">
+      <span>Total:</span>
+      <span id="totalAmount">$0.00</span>
+    </div>
+    
+    <button class="nav-btn" onclick="toggleMenu()" title="Menú">
+      <i class="fa-solid fa-bars"></i>
+      <div class="menu-dropdown" id="menuDropdown">
+        <a href="compra.html" class="menu-item"><i class="fa-solid fa-cart-plus"></i> Compra</a>
+        <a href="almacenamiento.html" class="menu-item"><i class="fa-solid fa-warehouse"></i> Almacenamiento</a>
+        <a href="finanzas.html" class="menu-item"><i class="fa-solid fa-dollar-sign"></i> Finanzas</a>
+        <a href="inventario.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventario</a>
+        <a href="catalogo.html" class="menu-item"><i class="fa-solid fa-book"></i> Catálogo</a>
+        <a href="clientes.html" class="menu-item"><i class="fa-solid fa-users"></i> Clientes</a>
+        <a href="descuentos.html" class="menu-item"><i class="fa-solid fa-percent"></i> Descuentos</a>
+        <a href="facturas.html" class="menu-item"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
+        <a href="traslados.html" class="menu-item"><i class="fa-solid fa-truck-fast"></i> Traslados</a>
+        <a href="venta.html" class="menu-item"><i class="fa-solid fa-cash-register"></i> Venta</a>
+        <div style="height: 1px; background: var(--border); margin: 0.5rem 0;"></div>
+        <a href="#" onclick="salirKiosco()" class="menu-item" style="color: var(--danger);"><i class="fa-solid fa-xmark"></i> Salir modo kiosco</a>
+      </div>
+    </button>
   </div>
 </nav>
 
+<div class="edit-indicator" id="editModeFlag">
+  <i class="fa-solid fa-pen-to-square"></i>
+  <span>Editando producto</span>
+</div>
+
 <div id="loadingOverlay">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:.75rem">
-    <div style="color:#10b981;font-weight:600;font-size:1.1rem">Guardado en el sistema</div>
-    <div class="spinner"></div>
+  <div class="spinner"></div>
+  <p style="color: var(--text-secondary); font-weight: 500;">Guardando en el sistema...</p>
+</div>
+
+<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
+
+<div class="main-container">
+  <!-- Formulario Principal -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="fa-solid fa-plus-circle"></i>
+        <span id="formTitle">Nuevo Producto</span>
+      </h2>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('normal', this)">Producto Normal</button>
+        <button class="tab" onclick="switchTab('lote', this)">Por Lote/Mayoreo</button>
+      </div>
+    </div>
+    
+    <form id="purchaseForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre del producto *</label>
+          <input type="text" id="name" name="name" required placeholder="Ej: Reloj Deportivo Negro">
+        </div>
+        
+        <div class="form-group">
+          <label>Código SKU *</label>
+          <input type="text" id="code" name="code" required placeholder="Ej: REL-001">
+        </div>
+        
+        <div class="form-group">
+          <label>Código de Barras *</label>
+          <input type="text" id="barcode" name="barcode" required placeholder="Escanea o ingresa el código">
+          <canvas id="barcodeCanvas"></canvas>
+        </div>
+        
+        <div class="form-group">
+          <label>Precio de Venta *</label>
+          <div class="input-group">
+            <span class="input-addon">$</span>
+            <input type="number" id="price" name="price" step="0.01" required placeholder="0.00">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Valor Real (Costo)</label>
+          <div class="input-group">
+            <span class="input-addon">$</span>
+            <input type="number" id="valorReal" name="valorReal" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>% Ganancia</label>
+          <div class="input-group">
+            <input type="number" id="porcentajeGanancia" value="60" step="1" min="0" max="999">
+            <span class="input-addon">%</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Sugerencia de Venta</label>
+          <div class="input-group">
+            <span class="input-addon">$</span>
+            <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background: var(--bg); color: var(--text-secondary);">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Fecha de Compra *</label>
+          <input type="date" id="fechaCompra" name="fechaCompra" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Descuento</label>
+          <div class="input-group">
+            <input type="number" id="discount" name="discount" step="0.01" value="0">
+            <span class="input-addon">%</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Stock Inicial *</label>
+          <input type="number" id="quantity" name="quantity" required placeholder="0">
+        </div>
+        
+        <div class="form-group full-width">
+          <label>Descripción *</label>
+          <textarea id="description" name="description" rows="3" required placeholder="Describe las características del producto..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="category" name="category" required>
+            <option value="">Seleccionar categoría...</option>
+            <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+            <option value="Anillos">Anillos</option>
+            <option value="Aritos">Aritos</option>
+            <option value="Billeteras">Billeteras</option>
+            <option value="Carteras">Carteras</option>
+            <option value="Case audífonos">Case audífonos</option>
+            <option value="Case teléfonos">Case teléfonos</option>
+            <option value="Chokers">Chokers</option>
+            <option value="Collares">Collares</option>
+            <option value="General">General</option>
+            <option value="Lentes de sol">Lentes de sol</option>
+            <option value="Otros">Otros</option>
+            <option value="Pulseras">Pulseras</option>
+            <option value="Relojes">Relojes</option>
+          </select>
+        </div>
+        
+        <div class="form-group full-width">
+          <label>Imagen del Producto</label>
+          <div class="image-upload-area" onclick="document.getElementById('imageFile').click()">
+            <input type="file" id="imageFile" accept="image/*" style="display: none;" onchange="previewImage(event)">
+            <div id="uploadPlaceholder">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i>
+              <p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir imagen</p>
+            </div>
+            <img id="imagePreview" alt="Vista previa">
+          </div>
+        </div>
+      </div>
+      
+      <div class="actions-bar">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save"></i>
+          <span id="btnSubmitText">Guardar Producto</span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+          <i class="fa-solid fa-rotate-left"></i>
+          Limpiar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Acciones Masivas -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="fa-solid fa-layer-group"></i>
+        Carga Masiva y Exportación
+      </h2>
+    </div>
+    
+    <div style="display: grid; gap: 1.5rem;">
+      <!-- Carga de imágenes -->
+      <div style="padding: 1.25rem; background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Carga por Imágenes</h3>
+            <p class="label-hint">Sube entre 1 y 130 imágenes. Se generarán códigos únicos automáticamente.</p>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label>Prefijo</label>
+            <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="width: 140px;">
+          </div>
+        </div>
+        
+        <input type="file" id="loteFiles" accept="image/*" multiple style="margin-bottom: 1rem;">
+        
+        <div class="actions-bar" style="margin: 0; padding: 0; border: none;">
+          <button class="btn btn-primary" onclick="procesarLote()">
+            <i class="fa-solid fa-images"></i>
+            Procesar Lote
+          </button>
+          <button class="btn btn-danger" onclick="vaciarLote()">
+            <i class="fa-solid fa-trash"></i>
+            Vaciar
+          </button>
+        </div>
+        
+        <div id="loteStatus" style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);"></div>
+        <div class="mini-lote" id="lotePreview"></div>
+      </div>
+
+      <!-- Editor de lote -->
+      <div id="editLoteBubble">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">
+          <i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i>
+          Editar Productos del Lote
+        </h3>
+        <div class="lote-grid" id="editLoteGrid"></div>
+        <div class="actions-bar">
+          <button class="btn btn-success" onclick="guardarLoteCompleto()">
+            <i class="fa-solid fa-check"></i>
+            Guardar Lote Completo
+          </button>
+        </div>
+      </div>
+
+      <!-- Exportaciones -->
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="exportToZip()">
+          <i class="fa-solid fa-file-zipper"></i>
+          Exportar ZIP
+        </button>
+        <button class="btn btn-secondary" onclick="exportToPDF()">
+          <i class="fa-solid fa-file-pdf"></i>
+          Exportar PDF
+        </button>
+        <button class="btn btn-secondary" onclick="printLabels()">
+          <i class="fa-solid fa-tags"></i>
+          Imprimir Etiquetas
+        </button>
+        <button class="btn btn-secondary" onclick="resetAndOpenImport()">
+          <i class="fa-solid fa-file-import"></i>
+          Importar ZIP
+        </button>
+        <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
+        <button class="btn btn-danger" onclick="vaciarInventario()" style="margin-left: auto;">
+          <i class="fa-solid fa-trash-can"></i>
+          Vaciar Inventario
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inventario -->
+  <div class="section" style="padding: 0; overflow: hidden;">
+    <div class="section-header" style="padding: 1.5rem; margin: 0; background: var(--bg); border-bottom: 1px solid var(--border);">
+      <h2 class="section-title" style="margin: 0;">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        Inventario Actual
+        <span class="badge badge-success" id="countBadge" style="margin-left: 0.5rem;">0 items</span>
+      </h2>
+    </div>
+    
+    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface);">
+      <div class="filters-bar">
+        <input id="searchBox" type="text" placeholder="Buscar por código de barras exacto..." style="flex: 1;">
+        <select id="categoryFilter" style="flex: 1;">
+          <option value="">Todas las categorías</option>
+          <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Case audífonos">Case audífonos</option>
+          <option value="Case teléfonos">Case teléfonos</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="General">General</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Otros">Otros</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+        </select>
+      </div>
+    </div>
+    
+    <div style="padding: 1.5rem; background: var(--bg);">
+      <div class="inventory-grid" id="inventoryList"></div>
+    </div>
   </div>
 </div>
 
-<div class="total-box-fixed">
-  <h2>Total en USD</h2>
-  <p id="totalAmount">$0.00</p>
-</div>
-
-<div id="editModeFlag">✏️ Editando producto</div>
-
-<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3 "></audio>
-
-<h1>Compra</h1>
-
-<div class="tipo-compra">
-  <label><input type="radio" name="tipoCompra" value="normal" checked> Producto normal</label>
-  <label><input type="radio" name="tipoCompra" value="lote"> Producto por lote / mayoreo</label>
-</div>
-
-<form id="purchaseForm" class="form-grid">
-  <div><label>Nombre *</label><input type="text" id="name" name="name" required></div>
-  <div><label>Código *</label><input type="text" id="code" name="code" required></div>
-  <div>
-    <label>Código de Barras *</label>
-    <input type="text" id="barcode" name="barcode" required>
-    <canvas id="barcodeCanvas"></canvas>
-  </div>
-
-  <div><label>Precio de venta *</label><input type="number" id="price" name="price" step="0.01" required></div>
-  <div><label>Valor real (costo)</label><input type="number" id="valorReal" name="valorReal" step="0.01"></div>
-  <div>
-    <label>% ganancia sugerida</label>
-    <input type="number" id="porcentajeGanancia" value="60" step="1" min="0" max="999">
-  </div>
-  <div>
-    <label>Sugerencia venta</label>
-    <input type="number" id="sugerenciaVenta" step="0.01" readonly style="background:#e5e7eb;color:#333">
-  </div>
-  <div><label>Fecha de compra *</label><input type="date" id="fechaCompra" name="fechaCompra" required></div>
-
-  <div><label>Descuento (%)</label><input type="number" id="discount" name="discount" step="0.01" value="0"></div>
-  <div><label>Cantidad en Stock *</label><input type="number" id="quantity" name="quantity" required></div>
-  <div style="grid-column:1/-1"><label>Descripción *</label><textarea id="description" name="description" rows="2" required></textarea></div>
-  <div><label>Categoría *</label>
-    <select id="category" name="category" required>
-      <option value="">-- Seleccione --</option>
-      <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-      <option value="Anillos">Anillos</option>
-      <option value="Aritos">Aritos</option>
-      <option value="Billeteras">Billeteras</option>
-      <option value="Carteras">Carteras</option>
-      <option value="Case audífonos">Case audífonos</option>
-      <option value="Case teléfonos">Case teléfonos</option>
-      <option value="Chokers">Chokers</option>
-      <option value="Collares">Collares</option>
-      <option value="General">General</option>
-      <option value="Lentes de sol">Lentes de sol</option>
-      <option value="Otros">Otros</option>
-      <option value="Pulseras">Pulseras</option>
-      <option value="Relojes">Relojes</option>
-    </select>
-  </div>
-  <div style="grid-column:1/-1">
-    <label>Imagen del producto:</label>
-    <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
-    <div style="margin-top:.5rem"><img id="imagePreview" src="" alt="Vista previa"></div>
-  </div>
-  <div style="grid-column:1/-1" class="actions">
-    <button type="submit" class="btn-primary">Guardar producto</button>
-    <button type="button" class="btn-primary" onclick="exportToZip()">Exportar ZIP</button>
-    <button type="button" class="btn-primary" onclick="exportToPDF()">Exportar PDF con Imágenes</button>
-    <button type="button" class="btn-primary" onclick="resetAndOpenImport()">Importar ZIP</button>
-    <button type="button" class="btn-primary" onclick="printLabels()">🖨️ Imprimir etiquetas</button>
-    <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
-    <button type="button" class="btn-danger" onclick="vaciarInventario()">Vaciar Inventario</button>
-  </div>
-</form>
-
-<div>
-  <h2><i class="fa fa-images"></i> Carga imágenes</h2>
-  <p>Selecciona entre <strong>1 y 130 imágenes</strong>. Se crearán productos solo con código único. Luego podrás editar el resto de datos.</p>
-  <div style="margin-bottom:1rem">
-    <label>Prefijo de lote (ej: LOTE001, LOTE2025, etc.)</label>
-    <input type="text" id="lotePrefix" value="LOTE" maxlength="20" style="max-width:200px">
-  </div>
-  <input type="file" id="loteFiles" accept="image/*" multiple>
-  <div class="actions">
-    <button class="btn-primary" onclick="procesarLote()">Crear productos en lote</button>
-    <button class="btn-danger" onclick="vaciarLote()">Vaciar lote actual</button>
-  </div>
-  <div id="loteStatus"></div>
-  <div class="mini-lote" id="lotePreview"></div>
-</div>
-
-<div id="editLoteBubble" style="display:none">
-  <h2><i class="fa fa-edit"></i> Editar productos del lote</h2>
-  <div class="table-cards" id="editLoteGrid"></div>
-  <div class="actions">
-    <button class="btn-success" onclick="guardarLoteCompleto()">💾 Guardar lote completo</button>
-  </div>
-</div>
-
-<div style="width:95%;max-width:1200px;margin:0 auto 1rem;display:flex;gap:.75rem;flex-wrap:wrap">
-  <input id="searchBox" type="text" placeholder="🔍 Buscar por código de barras (exacto)…" style="flex:1 1 260px">
-  <select id="categoryFilter" style="flex:1 1 200px">
-    <option value="">Todas las categorías</option>
-    <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-    <option value="Anillos">Anillos</option>
-    <option value="Aritos">Aritos</option>
-    <option value="Billeteras">Billeteras</option>
-    <option value="Carteras">Carteras</option>
-    <option value="Case audífonos">Case audífonos</option>
-    <option value="Case teléfonos">Case teléfonos</option>
-    <option value="Chokers">Chokers</option>
-    <option value="Collares">Collares</option>
-    <option value="General">General</option>
-    <option value="Lentes de sol">Lentes de sol</option>
-    <option value="Otros">Otros</option>
-    <option value="Pulseras">Pulseras</option>
-    <option value="Relojes">Relojes</option>
-  </select>
-</div>
-
-<div>
-  <h2><i class="fa fa-boxes"></i> Inventario actual</h2>
-  <div class="table-cards" id="inventoryList"></div>
-</div>
-
-<!-- SCRIPTS ORIGINALES (SIN CAMBIOS) -->
 <script>
+/* ----------  Inicialización  ---------- */
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+let editIndex = -1;
+let loteTemporal = [];
+
+// Fecha automática al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaCompra').value = today;
+  renderTable();
+  calculateTotal();
+});
+
 /* ----------  Menú  ---------- */
-const menuToggle = document.getElementById('menuToggle');
-const menuIcons = document.getElementById('menuIcons');
-menuToggle.addEventListener('click', () => menuIcons.classList.toggle('show'));
+function toggleMenu() {
+  document.getElementById('menuDropdown').classList.toggle('show');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.nav-btn')) {
+    document.getElementById('menuDropdown').classList.remove('show');
+  }
+});
+
 function salirKiosco() {
   localStorage.setItem('kiosco', 'false');
   document.body.classList.remove('kiosco');
@@ -267,106 +1094,31 @@ function salirKiosco() {
   location.reload();
 }
 
-/* ----------  Globales  ---------- */
-let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-let editIndex = -1;
-let loteTemporal = [];
-
-/* ----------  Total inventario  ---------- */
-function calculateTotal() {
-  const total = inventory.reduce((sum, item) => {
-    const price = Number(item.price) || 0;
-    const quantity = Number(item.quantity) || 0;
-    const discount = Number(item.discount) || 0;
-    const finalPrice = price * (1 - discount / 100);
-    return sum + finalPrice * quantity;
-  }, 0);
-  document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+function switchTab(type, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('input[name="tipoCompra"]').value = type;
 }
 
-/* ----------  Render tabla  ---------- */
-function renderTable() {
-  const list = document.getElementById('inventoryList');
-  list.innerHTML = inventory.map((item, idx) => `
-    <div class="card-item" data-barcode="${item.barcode}" data-category="${item.category}">
-      <img id="invImg${idx}" src="" alt="${escapeHtml(item.name)}"/>
-      <h3>${escapeHtml(item.name)}</h3>
-      <p>Código: ${escapeHtml(item.code)}</p>
-      <p>Cód.Barras: ${escapeHtml(item.barcode)}</p>
-      <img id="barcodeImg${idx}" src="" alt="Código de barras" style="display:none;width:100%;margin-top:.5rem"/>
-      <p>Precio: $${Number(item.price).toFixed(2)}</p>
-      ${item.valorReal ? `<p style="color:#10b981;font-size:.8rem">Costo: $${Number(item.valorReal).toFixed(2)}</p>` : ''}
-      <p>Stock: ${Number(item.quantity)}</p>
-      <p style="font-size:.7rem;color:#999;margin-top:auto">Añadido: ${item.addedAt || '—'}</p>
-      <div class="actions">
-        <button class="btn-primary" onclick="editProduct(${idx})"><i class="fa fa-edit"></i> Editar</button>
-        <button class="btn-danger" onclick="deleteProduct(${idx})"><i class="fa fa-trash"></i> Eliminar</button>
-      </div>
-    </div>
-  `).join('');
-
-  inventory.forEach((p, i) => {
-    localforage.getItem(`img_${p.code}`).then(blob => {
-      if (blob && document.getElementById(`invImg${i}`)) {
-        document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
-      }
-    }).catch(() => {});
-    if (p.barcode) {
-      const canvas = document.createElement('canvas');
-      JsBarcode(canvas, p.barcode, { format: "CODE128", width: 2, height: 40, displayValue: true, fontSize: 12 });
-      const img = document.getElementById(`barcodeImg${i}`);
-      if (img) {
-        img.src = canvas.toDataURL('image/png');
-        img.style.display = 'block';
-      }
-    }
-  });
-}
-
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"'`]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[s]);
-}
-
-/* ----------  Preview imagen  ---------- */
-function previewImage(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  new Compressor(file, {
-    quality: 0.6, maxWidth: 800, maxHeight: 800,
-    success(result) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        document.getElementById('imagePreview').src = e.target.result;
-        document.getElementById('imagePreview').style.display = 'block';
-      };
-      reader.readAsDataURL(result);
-    },
-    error(err) { console.error(err); }
-  });
-}
-
-/* ----------  Cálculo sugerencia con % editable  ---------- */
+/* ----------  Cálculos y validaciones  ---------- */
 const valorRealInput = document.getElementById('valorReal');
 const porcentajeInput = document.getElementById('porcentajeGanancia');
 const sugerenciaInput = document.getElementById('sugerenciaVenta');
+
 function calcularSugerencia() {
   const costo = parseFloat(valorRealInput.value) || 0;
   const porcentaje = parseFloat(porcentajeInput.value) || 60;
   const sugerencia = costo * (1 + porcentaje / 100);
   sugerenciaInput.value = sugerencia.toFixed(2);
 }
+
 valorRealInput.addEventListener('input', calcularSugerencia);
 porcentajeInput.addEventListener('input', calcularSugerencia);
 
-/* ============================================================
-   VALIDACIÓN #9 ANTES DE GUARDAR
-============================================================ */
 function validarAntesDeGuardar(item) {
-  // 1. Valor real > precio venta
   if (item.valorReal && item.price && Number(item.valorReal) > Number(item.price)) {
     if (!confirm('⚠️ El costo es MAYOR que el precio de venta. ¿Seguro de guardar?')) return false;
   }
-  // 2. Fecha futura
   const hoy = new Date().toISOString().slice(0, 10);
   if (item.fechaCompra > hoy) {
     alert('❌ No puedes guardar una fecha futura.');
@@ -375,11 +1127,36 @@ function validarAntesDeGuardar(item) {
   return true;
 }
 
+/* ----------  Preview imagen  ---------- */
+function previewImage(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  
+  const uploadArea = document.querySelector('.image-upload-area');
+  const placeholder = document.getElementById('uploadPlaceholder');
+  const preview = document.getElementById('imagePreview');
+  
+  new Compressor(file, {
+    quality: 0.6, maxWidth: 800, maxHeight: 800,
+    success(result) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        uploadArea.classList.add('has-image');
+      };
+      reader.readAsDataURL(result);
+    }
+  });
+}
+
 /* ----------  Guardar producto  ---------- */
-document.getElementById('purchaseForm').addEventListener('submit', function (e) {
+document.getElementById('purchaseForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const form = new FormData(e.target);
-  const esLote = document.querySelector('input[name="tipoCompra"]:checked').value === 'lote';
+  const esLote = document.querySelector('.tab.active').textContent.includes('Lote');
+  
   const item = {
     name: form.get('name') || '',
     code: form.get('code') || '',
@@ -395,25 +1172,20 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
     tipoCompra: esLote ? 'lote' : 'normal'
   };
 
-  // VALIDACIÓN
   if (!validarAntesDeGuardar(item)) return;
 
   document.getElementById('loadingOverlay').classList.add('show');
+  
   setTimeout(() => {
     if (editIndex === -1) {
       const exists = inventory.find(i => i.code === item.code);
       if (exists) {
-        if (!confirm('Código ya existe. ¿Sumar stock al existente? (Aceptar = sumar, Cancelar = crear igualmente)')) {
+        if (!confirm('Código ya existe. ¿Sumar stock al existente?')) {
           item.code = `${item.code}_${Date.now()}`;
         } else {
           exists.quantity = Number(exists.quantity) + Number(item.quantity);
           localStorage.setItem('inventory', JSON.stringify(inventory));
-          renderTable(); calculateTotal();
-          e.target.reset();
-          document.getElementById('imagePreview').style.display = 'none';
-          barcodeCanvas.style.display = 'none';
-          document.getElementById('loadingOverlay').classList.remove('show');
-          document.getElementById('editModeFlag').style.display = 'none';
+          finalizarGuardado(e.target);
           return;
         }
       }
@@ -422,236 +1194,260 @@ document.getElementById('purchaseForm').addEventListener('submit', function (e) 
       inventory[editIndex] = item;
       editIndex = -1;
     }
+    
     localStorage.setItem('inventory', JSON.stringify(inventory));
+    
     const imgFile = document.getElementById('imageFile').files[0];
     if (imgFile) {
       new Compressor(imgFile, {
         quality: 0.6, maxWidth: 800, maxHeight: 800,
         success(result) {
-          localforage.setItem(`img_${item.code}`, result).catch(() => {});
+          localforage.setItem(`img_${item.code}`, result);
         }
       });
     }
-    e.target.reset();
-    document.getElementById('imagePreview').style.display = 'none';
-    barcodeCanvas.style.display = 'none';
-    // === MEJORA 6: SONIDO OK ===
-    document.getElementById('okSound').play();
-    // === MEJORA 4: QUITAR INDICADOR ===
-    document.getElementById('editModeFlag').style.display = 'none';
-    renderTable(); calculateTotal();
-    document.getElementById('loadingOverlay').classList.remove('show');
+    
+    finalizarGuardado(e.target);
   }, 500);
 });
 
-/* ----------  Eliminar producto  ---------- */
-function deleteProduct(idx) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  const code = inventory[idx].code;
-  inventory.splice(idx, 1);
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  localforage.removeItem(`img_${code}`).catch(() => {});
-  renderTable(); calculateTotal();
+function finalizarGuardado(form) {
+  form.reset();
+  resetImagePreview();
+  document.getElementById('barcodeCanvas').style.display = 'none';
+  document.getElementById('okSound').play();
+  document.getElementById('editModeFlag').style.display = 'none';
+  document.getElementById('formTitle').textContent = 'Nuevo Producto';
+  document.getElementById('btnSubmitText').textContent = 'Guardar Producto';
+  document.getElementById('code').readOnly = false;
+  document.getElementById('code').style.background = '';
+  
+  // Restablecer fecha actual
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaCompra').value = today;
+  
+  renderTable();
+  calculateTotal();
+  document.getElementById('loadingOverlay').classList.remove('show');
 }
 
-/* ----------  Vaciar inventario  ---------- */
-function vaciarInventario() {
-  if (!confirm('¿Vaciar todo el inventario?')) return;
-  inventory.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
-  inventory = [];
-  localStorage.setItem('inventory', JSON.stringify(inventory));
-  renderTable(); calculateTotal();
+function resetForm() {
+  document.getElementById('purchaseForm').reset();
+  resetImagePreview();
+  document.getElementById('barcodeCanvas').style.display = 'none';
+  editIndex = -1;
+  document.getElementById('editModeFlag').style.display = 'none';
+  document.getElementById('formTitle').textContent = 'Nuevo Producto';
+  document.getElementById('btnSubmitText').textContent = 'Guardar Producto';
+  document.getElementById('code').readOnly = false;
+  document.getElementById('code').style.background = '';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaCompra').value = today;
 }
 
-/* ----------  Exportar ZIP  ---------- */
-async function exportToZip() {
-  try {
-    const zip = new JSZip();
-    zip.file('inventory.json', JSON.stringify(inventory, null, 2));
-    const imgFolder = zip.folder('images');
-    for (const p of inventory) {
-      try {
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if (blob) imgFolder.file(`${p.code}.jpg`, blob);
-      } catch (e) {}
-    }
-    const blobZip = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blobZip);
-    a.download = 'inventario.zip';
-    a.click();
-  } catch (e) {
-    alert('Error exportando ZIP: ' + (e.message || e));
+function resetImagePreview() {
+  const uploadArea = document.querySelector('.image-upload-area');
+  const placeholder = document.getElementById('uploadPlaceholder');
+  const preview = document.getElementById('imagePreview');
+  preview.src = '';
+  preview.style.display = 'none';
+  placeholder.style.display = 'block';
+  uploadArea.classList.remove('has-image');
+  document.getElementById('imageFile').value = '';
+}
+
+/* ----------  Renderizado  ---------- */
+function calculateTotal() {
+  const total = inventory.reduce((sum, item) => {
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 0;
+    const discount = Number(item.discount) || 0;
+    const finalPrice = price * (1 - discount / 100);
+    return sum + finalPrice * quantity;
+  }, 0);
+  document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('countBadge').textContent = `${inventory.length} items`;
+}
+
+function renderTable() {
+  const list = document.getElementById('inventoryList');
+  if (inventory.length === 0) {
+    list.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+        <i class="fa-solid fa-box-open" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+        <p>No hay productos en el inventario</p>
+      </div>
+    `;
+    return;
   }
-}
+  
+  list.innerHTML = inventory.map((item, idx) => `
+    <div class="product-card" data-barcode="${item.barcode}" data-category="${item.category}">
+      <img id="invImg${idx}" class="product-image" src="" alt="${escapeHtml(item.name)}">
+      <div class="product-info">
+        <div class="product-header">
+          <div>
+            <div class="product-name">${escapeHtml(item.name)}</div>
+            <div class="product-code">${escapeHtml(item.code)}</div>
+          </div>
+          <div class="product-price">$${Number(item.price).toFixed(2)}</div>
+        </div>
+        
+        <div class="product-details">
+          <div class="product-detail">
+            <span>Stock:</span>
+            <span>${item.quantity} unidades</span>
+          </div>
+          <div class="product-detail">
+            <span>Categoría:</span>
+            <span>${item.category}</span>
+          </div>
+          ${item.valorReal ? `
+          <div class="product-detail">
+            <span>Costo:</span>
+            <span style="color: var(--success);">$${Number(item.valorReal).toFixed(2)}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="barcode-container">
+          <img id="barcodeImg${idx}" alt="${item.barcode}">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">${item.barcode}</div>
+        </div>
+        
+        <div class="product-actions">
+          <button class="btn btn-primary" onclick="editProduct(${idx})">
+            <i class="fa-solid fa-pen"></i> Editar
+          </button>
+          <button class="btn btn-danger" onclick="deleteProduct(${idx})">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
 
-/* ----------  Importar ZIP  ---------- */
-async function importFromZip(evt) {
-  const file = evt.target.files[0];
-  if (!file || !file.name.toLowerCase().endsWith('.zip')) { alert('Selecciona un archivo .zip'); evt.target.value = ''; return; }
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    const jsonFile = zip.file('inventory.json');
-    if (!jsonFile) { alert('El ZIP no contiene inventory.json'); evt.target.value = ''; return; }
-    const jsonText = await jsonFile.async('string');
-    let imported = JSON.parse(jsonText);
-    if (!Array.isArray(imported)) imported = [];
-    for (const p of imported) {
-      p.price = Number(p.price) || 0;
-      p.quantity = Number(p.quantity) || 0;
-      p.discount = Number(p.discount) || 0;
-      const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
-      if (imgEntry) {
-        try {
-          const blob = await imgEntry.async('blob');
-          await localforage.setItem(`img_${p.code}`, blob);
-        } catch (e) {}
+  inventory.forEach((p, i) => {
+    localforage.getItem(`img_${p.code}`).then(blob => {
+      if (blob && document.getElementById(`invImg${i}`)) {
+        document.getElementById(`invImg${i}`).src = URL.createObjectURL(blob);
       }
-      const idx = inventory.findIndex(x => x.code === p.code);
-      if (idx > -1) {
-        inventory[idx].quantity = Number(inventory[idx].quantity || 0) + Number(p.quantity || 0);
-        if (!inventory[idx].name && p.name) inventory[idx].name = p.name;
-        if (!inventory[idx].barcode && p.barcode) inventory[idx].barcode = p.barcode;
-        if ((!inventory[idx].price || inventory[idx].price === 0) && p.price) inventory[idx].price = p.price;
-        if (!inventory[idx].description && p.description) inventory[idx].description = p.description;
-        if (!inventory[idx].category && p.category) inventory[idx].category = p.category;
-        if (!inventory[idx].addedAt && p.addedAt) inventory[idx].addedAt = p.addedAt;
-      } else {
-        const nuevo = {
-          name: p.name || p.code,
-          code: p.code,
-          barcode: p.barcode || '',
-          price: Number(p.price) || 0,
-          valorReal: Number(p.valorReal) || 0,
-          fechaCompra: p.fechaCompra || '',
-          discount: Number(p.discount) || 0,
-          quantity: Number(p.quantity) || 0,
-          description: p.description || '',
-          category: p.category || '',
-          addedAt: p.addedAt || new Date().toLocaleString('es-ES'),
-          tipoCompra: p.tipoCompra || 'normal'
-        };
-        inventory.push(nuevo);
-      }
+    });
+    
+    if (p.barcode) {
+      JsBarcode(`#barcodeImg${i}`, p.barcode, { 
+        format: "CODE128", 
+        width: 2, 
+        height: 30, 
+        displayValue: false,
+        margin: 0
+      });
     }
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    renderTable(); calculateTotal();
-    alert('Importación ZIP completada y fusionada correctamente ✅');
-  } catch (e) {
-    console.error(e);
-    alert('Error leyendo ZIP: ' + (e.message || e));
-  } finally {
-    evt.target.value = '';
-  }
-}
-
-function resetAndOpenImport() {
-  const inp = document.getElementById('importFile');
-  inp.value = '';
-  inp.click();
-}
-
-/* ----------  Exportar PDF  ---------- */
-async function exportToPDF() {
-  try {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const margin = 15; let y = margin;
-    pdf.setFontSize(16);
-    pdf.text('Inventario con imágenes', margin, y); y += 10;
-    for (let i = 0; i < inventory.length; i++) {
-      const p = inventory[i];
-      let blob = null;
-      try { blob = await localforage.getItem(`img_${p.code}`); } catch (e) { blob = null; }
-      if (blob) {
-        const dataUrl = await blobToDataURL(blob);
-        try { pdf.addImage(dataUrl, 'JPEG', margin, y, 40, 40); } catch (e) {}
-      }
-      pdf.setFontSize(11);
-      pdf.text(`Código: ${p.code}`, 60, y + 7);
-      pdf.text(`Nombre: ${p.name}`, 60, y + 14);
-      pdf.text(`Precio: $${Number(p.price).toFixed(2)}`, 60, y + 21);
-      pdf.text(`Stock: ${Number(p.quantity)}`, 60, y + 28);
-      y += 48;
-      if (y > 250) { pdf.addPage(); y = margin; }
-    }
-    pdf.save('inventario.pdf');
-  } catch (e) {
-    console.error(e);
-    alert('Error generando PDF: ' + (e.message || e));
-  }
-}
-
-function blobToDataURL(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
   });
 }
 
-/* ----------  Editar producto  ---------- */
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"'`]/g, s => ({ 
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' 
+  })[s]);
+}
+
+/* ----------  Editar y Eliminar  ---------- */
 function editProduct(idx) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const p = inventory[idx];
+  
   document.getElementById('name').value = p.name;
-  /* =====  BLOQUEAR CÓDIGO  ===== */
-  const codeInput = document.getElementById('code');
-  codeInput.value = p.code;
-  codeInput.readOnly = true;
-  codeInput.style.background = '#e5e7eb';
-
+  document.getElementById('code').value = p.code;
+  document.getElementById('code').readOnly = true;
+  document.getElementById('code').style.background = 'var(--bg)';
   document.getElementById('barcode').value = p.barcode;
   document.getElementById('price').value = p.price;
   document.getElementById('valorReal').value = p.valorReal || '';
   document.getElementById('fechaCompra').value = p.fechaCompra || '';
-  document.getElementById('porcentajeGanancia').value = 60;
-  calcularSugerencia();
   document.getElementById('discount').value = p.discount;
   document.getElementById('quantity').value = p.quantity;
   document.getElementById('description').value = p.description;
   document.getElementById('category').value = p.category;
+  
+  calcularSugerencia();
   editIndex = idx;
-  document.querySelector(`input[name="tipoCompra"][value="${p.tipoCompra || 'normal'}"]`).checked = true;
+  
+  document.getElementById('formTitle').textContent = 'Editar Producto';
+  document.getElementById('btnSubmitText').textContent = 'Actualizar Producto';
+  document.getElementById('editModeFlag').style.display = 'flex';
+  
   localforage.getItem(`img_${p.code}`).then(blob => {
     if (blob) {
-      document.getElementById('imagePreview').src = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      document.getElementById('imagePreview').src = url;
       document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+      document.querySelector('.image-upload-area').classList.add('has-image');
     }
-  }).catch(() => {});
+  });
+  
   generarBarcode(p.barcode);
-  // === MEJORA 4: MOSTRAR INDICADOR ===
-  document.getElementById('editModeFlag').style.display = 'block';
+}
+
+function deleteProduct(idx) {
+  if (!confirm('¿Eliminar este producto permanentemente?')) return;
+  const code = inventory[idx].code;
+  inventory.splice(idx, 1);
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  localforage.removeItem(`img_${code}`);
+  renderTable();
+  calculateTotal();
+}
+
+function vaciarInventario() {
+  if (!confirm('¿Vaciar TODO el inventario? Esta acción no se puede deshacer.')) return;
+  inventory.forEach(p => localforage.removeItem(`img_${p.code}`));
+  inventory = [];
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  renderTable();
+  calculateTotal();
 }
 
 /* ----------  Código de barras  ---------- */
 const barcodeInput = document.getElementById('barcode');
-const barcodeCanvas = document.getElementById('barcodeCanvas');
-function generarBarcode(value) {
-  if (!value || value.trim() === '') { barcodeCanvas.style.display = 'none'; return; }
-  barcodeCanvas.style.display = 'block';
-  JsBarcode(barcodeCanvas, value, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: true, fontSize: 14, margin: 5 });
-}
-barcodeInput.addEventListener('input', () => generarBarcode(barcodeInput.value));
+barcodeInput.addEventListener('input', (e) => generarBarcode(e.target.value));
 
-/* ============================================================
-   C A R G A   M A S I V A  (1-130 imágenes)  –  100 % funcional
-============================================================ */
+function generarBarcode(value) {
+  const canvas = document.getElementById('barcodeCanvas');
+  if (!value || value.trim() === '') {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = 'block';
+  JsBarcode(canvas, value, { 
+    format: "CODE128", 
+    lineColor: "#000", 
+    width: 2, 
+    height: 50, 
+    displayValue: true, 
+    fontSize: 12,
+    margin: 5
+  });
+}
+
+/* ----------  Carga Masiva  ---------- */
 async function procesarLote() {
   const files = document.getElementById('loteFiles').files;
-  if (!files.length) { alert('Selecciona imágenes'); return; }
-  if (files.length < 1 || files.length > 130) { alert('Elige entre 1 y 130 imágenes'); return; }
+  if (!files.length) { alert('Selecciona imágenes primero'); return; }
+  if (files.length > 130) { alert('Máximo 130 imágenes'); return; }
+  
   const prefix = document.getElementById('lotePrefix').value.trim() || 'LOTE';
   loteTemporal = [];
   const preview = document.getElementById('lotePreview');
   preview.innerHTML = '';
-  document.getElementById('loteStatus').textContent = 'Comprimiendo y guardando...';
+  document.getElementById('loteStatus').textContent = 'Procesando imágenes...';
+  document.getElementById('editLoteBubble').style.display = 'block';
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const codigo = `${prefix}${Date.now()}${i}`;
+    const codigo = `${prefix}${Date.now().toString().slice(-6)}${i}`;
+    
     await new Promise(res => {
       new Compressor(file, {
         quality: 0.6, maxWidth: 800, maxHeight: 800,
@@ -660,7 +1456,10 @@ async function procesarLote() {
           reader.onload = e => {
             const mini = document.createElement('div');
             mini.className = 'mini-item';
-            mini.innerHTML = `<img src="${e.target.result}" alt="img"><div>Código: <b>${codigo}</b></div>`;
+            mini.innerHTML = `
+              <img src="${e.target.result}" alt="img">
+              <div style="font-size: 0.65rem; color: var(--text-secondary);">${codigo}</div>
+            `;
             preview.appendChild(mini);
             localforage.setItem(`img_${codigo}`, result);
             loteTemporal.push({
@@ -672,139 +1471,138 @@ async function procesarLote() {
           };
           reader.readAsDataURL(result);
         },
-        error(err) { console.error(err); res(); }
+        error: res
       });
     });
   }
-  document.getElementById('loteStatus').textContent = `Listo: ${loteTemporal.length} productos creados. Ahora edítalos.`;
+  
+  document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos para editar`;
   mostrarEditorLote();
 }
 
 function vaciarLote() {
-  if (!confirm('¿Vaciar lote actual?')) return;
-  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`).catch(() => {}));
+  if (!confirm('¿Cancelar carga del lote?')) return;
+  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`));
   loteTemporal = [];
   document.getElementById('lotePreview').innerHTML = '';
   document.getElementById('loteStatus').textContent = '';
   document.getElementById('editLoteBubble').style.display = 'none';
 }
 
-/* ----------  Editor de lote con labels arriba de cada campo  ---------- */
 function mostrarEditorLote() {
   const grid = document.getElementById('editLoteGrid');
   grid.innerHTML = '';
-  document.getElementById('editLoteBubble').style.display = 'block';
 
   loteTemporal.forEach((p, i) => {
     const card = document.createElement('div');
-    card.className = 'card-item';
+    card.className = 'lote-card';
     card.innerHTML = `
-      <img id="loteImg${i}" src="" alt="img" style="height:160px;object-fit:cover;border-radius:12px;">
-      <h3>${p.code}</h3>
-
-      <!-- 1. Nombre -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Nombre *</label>
-      <input id="loteName${i}" value="${escapeHtml(p.name)}">
-
-      <!-- 2. Código (solo lectura) -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código</label>
-      <input value="${p.code}" readonly style="background:#e5e7eb">
-
-      <!-- 3. Barras -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Código de Barras *</label>
-      <input id="loteBarcode${i}" value="${escapeHtml(p.barcode)}">
-
-      <!-- 4. Precio venta -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Precio de venta *</label>
-      <input id="lotePrice${i}" type="number" step="0.01" value="${Number(p.price)}">
-
-      <!-- 5. Costo -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Valor real (costo)</label>
-      <input id="loteValorReal${i}" type="number" step="0.01" value="${Number(p.valorReal)}">
-
-      <!-- 6. Fecha compra -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Fecha de compra *</label>
-      <input id="loteFecha${i}" type="text" placeholder="dd/mm/aaaa" onfocus="this.type='date'" onblur="if(!this.value)this.type='text'" value="${p.fechaCompra}">
-
-      <!-- 7. % Ganancia -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">% ganancia</label>
-      <input id="lotePorcentaje${i}" type="number" value="60" step="1" min="0" max="999" oninput="calcSugLote(${i})">
-
-      <!-- 8. Sugerencia venta -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Sugerencia venta</label>
-      <input id="loteSug${i}" type="number" step="0.01" readonly style="background:#e5e7eb;color:#333">
-
-      <!-- 9. Descuento -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descuento (%)</label>
-      <input id="loteDiscount${i}" type="number" step="0.01" value="${Number(p.discount)}">
-
-      <!-- 10. Stock -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Cantidad en Stock *</label>
-      <input id="loteQuantity${i}" type="number" value="${Number(p.quantity)}">
-
-      <!-- 11. Descripción -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Descripción *</label>
-      <textarea id="loteDescription${i}" rows="2">${escapeHtml(p.description)}</textarea>
-
-      <!-- 12. Categoría -->
-      <label style="font-size:.75rem;font-weight:500;margin-top:.5rem;display:block">Categoría *</label>
-      <select id="loteCategory${i}">
-        <option value="">-- Seleccione --</option>
-        <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-        <option value="Anillos">Anillos</option>
-        <option value="Aritos">Aritos</option>
-        <option value="Billeteras">Billeteras</option>
-        <option value="Carteras">Carteras</option>
-        <option value="Case audífonos">Case audífonos</option>
-        <option value="Case teléfonos">Case teléfonos</option>
-        <option value="Chokers">Chokers</option>
-        <option value="Collares">Collares</option>
-        <option value="General">General</option>
-        <option value="Lentes de sol">Lentes de sol</option>
-        <option value="Otros">Otros</option>
-        <option value="Pulseras">Pulseras</option>
-        <option value="Relojes">Relojes</option>
-      </select>
+      <img id="loteImg${i}" src="" alt="preview">
+      <h4>${p.code}</h4>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Nombre *</label>
+        <input type="text" id="loteName${i}" value="" placeholder="Nombre del producto">
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Precio *</label>
+          <input type="number" id="lotePrice${i}" step="0.01" placeholder="0.00">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Stock *</label>
+          <input type="number" id="loteQuantity${i}" placeholder="0">
+        </div>
+      </div>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Código de Barras *</label>
+        <input type="text" id="loteBarcode${i}" value="" placeholder="Código">
+      </div>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Costo</label>
+        <input type="number" id="loteValorReal${i}" step="0.01" placeholder="0.00" oninput="calcSugLote(${i})">
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">% Ganancia</label>
+          <input type="number" id="lotePorcentaje${i}" value="60" oninput="calcSugLote(${i})">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.75rem;">Sugerencia</label>
+          <input type="number" id="loteSug${i}" readonly style="background: var(--bg); font-size: 0.875rem;">
+        </div>
+      </div>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Fecha Compra *</label>
+        <input type="date" id="loteFecha${i}" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Descripción *</label>
+        <textarea id="loteDescription${i}" rows="2" placeholder="Descripción..."></textarea>
+      </div>
+      
+      <div class="form-group" style="margin: 0;">
+        <label style="font-size: 0.75rem;">Categoría *</label>
+        <select id="loteCategory${i}">
+          <option value="">Seleccionar...</option>
+          <option value="Accesorios para el cabello">Accesorios cabello</option>
+          <option value="Anillos">Anillos</option>
+          <option value="Aritos">Aritos</option>
+          <option value="Billeteras">Billeteras</option>
+          <option value="Carteras">Carteras</option>
+          <option value="Case audífonos">Case audífonos</option>
+          <option value="Case teléfonos">Case teléfonos</option>
+          <option value="Chokers">Chokers</option>
+          <option value="Collares">Collares</option>
+          <option value="General">General</option>
+          <option value="Lentes de sol">Lentes de sol</option>
+          <option value="Otros">Otros</option>
+          <option value="Pulseras">Pulseras</option>
+          <option value="Relojes">Relojes</option>
+        </select>
+      </div>
     `;
     grid.appendChild(card);
 
-    // Cargar mini-imagen
     localforage.getItem(`img_${p.code}`).then(blob => {
       if (blob) document.getElementById(`loteImg${i}`).src = URL.createObjectURL(blob);
-    }).catch(() => {});
-
-    // Calcula sugerencia inicial
+    });
     calcSugLote(i);
   });
 }
 
-/* ----------  Calcula sugerencia por item del lote  ---------- */
 function calcSugLote(i) {
   const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
   const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
   document.getElementById(`loteSug${i}`).value = (costo * (1 + porc / 100)).toFixed(2);
 }
 
-/* ----------  Guardar lote completo con validación  ---------- */
 function guardarLoteCompleto() {
-  if (!confirm(`¿Guardar ${loteTemporal.length} productos en el inventario?`)) return;
+  if (!confirm(`¿Guardar ${loteTemporal.length} productos?`)) return;
 
-  // Validación por item
   for (let i = 0; i < loteTemporal.length; i++) {
     const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
     const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
     const fecha = document.getElementById(`loteFecha${i}`).value;
     const hoy = new Date().toISOString().slice(0, 10);
+    
     if (costo > precio) {
-      if (!confirm(`⚠️ Producto ${i + 1}: el costo es mayor que el precio de venta. ¿Sigues?`)) return;
+      if (!confirm(`Producto ${i+1}: costo > precio. ¿Continuar?`)) return;
     }
     if (fecha > hoy) {
-      alert(`❌ Producto ${i + 1}: fecha futura no permitida.`);
+      alert(`Producto ${i+1}: fecha futura no permitida`);
       return;
     }
   }
 
   document.getElementById('loadingOverlay').classList.add('show');
+  
   setTimeout(() => {
     loteTemporal.forEach((p, i) => {
       p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
@@ -812,18 +1610,24 @@ function guardarLoteCompleto() {
       p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
       p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
       p.fechaCompra = document.getElementById(`loteFecha${i}`).value;
-      p.discount = Number(document.getElementById(`loteDiscount${i}`).value) || 0;
+      p.discount = 0;
       p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0;
       p.description = document.getElementById(`loteDescription${i}`).value.trim();
       p.category = document.getElementById(`loteCategory${i}`).value;
-      if (!p.addedAt) p.addedAt = new Date().toLocaleString('es-ES');
     });
+    
     inventory = inventory.concat(loteTemporal);
     localStorage.setItem('inventory', JSON.stringify(inventory));
-    alert('Lote guardado ✅');
+    
+    alert('Lote guardado correctamente ✅');
     loteTemporal = [];
     document.getElementById('editLoteBubble').style.display = 'none';
-    renderTable(); calculateTotal();
+    document.getElementById('lotePreview').innerHTML = '';
+    document.getElementById('loteFiles').value = '';
+    document.getElementById('loteStatus').textContent = '';
+    
+    renderTable();
+    calculateTotal();
     document.getElementById('loadingOverlay').classList.remove('show');
   }, 500);
 }
@@ -835,7 +1639,8 @@ const categoryFilter = document.getElementById('categoryFilter');
 function aplicarFiltros() {
   const q = searchBox.value.trim();
   const cat = categoryFilter.value;
-  const cards = document.querySelectorAll('#inventoryList .card-item');
+  const cards = document.querySelectorAll('#inventoryList .product-card');
+  
   cards.forEach(card => {
     const barcode = card.dataset.barcode;
     const categoria = card.dataset.category;
@@ -848,31 +1653,156 @@ function aplicarFiltros() {
 searchBox.addEventListener('input', aplicarFiltros);
 categoryFilter.addEventListener('change', aplicarFiltros);
 
-/* ----------  MEJORA 15: IMPRIMIR ETIQUETAS ---------- */
-function printLabels() {
-  const printWindow = window.open('', '', 'width=800,height=600');
-  printWindow.document.write('<html><head><title>Etiquetas</title></head><body>');
-  inventory.forEach(p => {
-    printWindow.document.write(`
-      <div style="border:1px solid #ccc;padding:10px;margin:10px;text-align:center;width:200px;display:inline-block">
-        <h4>${p.name}</h4>
-        <p><b>$${p.price}</b></p>
-        <canvas id="barcode-${p.code}"></canvas>
-      </div>
-    `);
-  });
-  printWindow.document.write('</body></html>');
-  printWindow.document.close();
-  printWindow.onload = () => {
-    inventory.forEach(p => JsBarcode(`#barcode-${p.code}`, p.barcode, { format: 'CODE128', width: 2, height: 30 }));
-    printWindow.print();
-  };
+/* ----------  Exportar/Importar  ---------- */
+async function exportToZip() {
+  try {
+    const zip = new JSZip();
+    zip.file('inventory.json', JSON.stringify(inventory, null, 2));
+    const imgFolder = zip.folder('images');
+    
+    for (const p of inventory) {
+      const blob = await localforage.getItem(`img_${p.code}`);
+      if (blob) imgFolder.file(`${p.code}.jpg`, blob);
+    }
+    
+    const blobZip = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blobZip);
+    a.download = `inventario_${new Date().toISOString().split('T')[0]}.zip`;
+    a.click();
+  } catch (e) {
+    alert('Error exportando: ' + e.message);
+  }
 }
 
-/* ----------  Inicializar  ---------- */
-window.addEventListener('DOMContentLoaded', () => {
-  renderTable(); calculateTotal();
-});
+async function importFromZip(evt) {
+  const file = evt.target.files[0];
+  if (!file?.name.endsWith('.zip')) { alert('Selecciona un ZIP'); return; }
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const jsonFile = zip.file('inventory.json');
+    if (!jsonFile) { alert('ZIP no válido'); return; }
+    
+    const imported = JSON.parse(await jsonFile.async('string'));
+    
+    for (const p of imported) {
+      const imgEntry = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
+      if (imgEntry) {
+        const blob = await imgEntry.async('blob');
+        await localforage.setItem(`img_${p.code}`, blob);
+      }
+      
+      const idx = inventory.findIndex(x => x.code === p.code);
+      if (idx > -1) {
+        inventory[idx].quantity += Number(p.quantity || 0);
+      } else {
+        inventory.push({
+          ...p,
+          price: Number(p.price) || 0,
+          quantity: Number(p.quantity) || 0,
+          discount: Number(p.discount) || 0
+        });
+      }
+    }
+    
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    renderTable(); calculateTotal();
+    alert('Importación completada ✅');
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+  evt.target.value = '';
+}
+
+function resetAndOpenImport() {
+  document.getElementById('importFile').click();
+}
+
+async function exportToPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let y = 15;
+    
+    pdf.setFontSize(18);
+    pdf.text('Inventario', 15, y); y += 10;
+    
+    for (const p of inventory) {
+      if (y > 270) { pdf.addPage(); y = 15; }
+      
+      const blob = await localforage.getItem(`img_${p.code}`);
+      if (blob) {
+        const dataUrl = await blobToDataURL(blob);
+        try { 
+          pdf.addImage(dataUrl, 'JPEG', 15, y, 30, 30); 
+        } catch(e) {}
+      }
+      
+      pdf.setFontSize(11);
+      pdf.text(`${p.name} (${p.code})`, 50, y + 8);
+      pdf.text(`Precio: $${Number(p.price).toFixed(2)} | Stock: ${p.quantity}`, 50, y + 15);
+      pdf.text(`Cat: ${p.category}`, 50, y + 22);
+      y += 35;
+    }
+    
+    pdf.save('inventario.pdf');
+  } catch (e) {
+    alert('Error PDF: ' + e.message);
+  }
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function printLabels() {
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Etiquetas</title>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+        <style>
+          body { font-family: Arial; margin: 20px; }
+          .label { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px; 
+            text-align: center; 
+            width: 200px; 
+            display: inline-block;
+            border-radius: 8px;
+          }
+          .price { font-size: 18px; font-weight: bold; color: #2563eb; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        ${inventory.map(p => `
+          <div class="label">
+            <div style="font-weight: bold; margin-bottom: 5px;">${p.name}</div>
+            <div class="price">$${Number(p.price).toFixed(2)}</div>
+            <svg id="bc${p.code}"></svg>
+          </div>
+        `).join('')}
+        <script>
+          ${inventory.map(p => `
+            JsBarcode("#bc${p.code}", "${p.barcode}", { format: "CODE128", width: 2, height: 40, displayValue: true });
+          `).join('')}
+        <\/script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.onload = () => printWindow.print();
+}
 </script>
+
 </body>
 </html>

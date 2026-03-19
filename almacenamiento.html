@@ -4,11 +4,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
       --bg: #ffffff;
@@ -1040,6 +1040,27 @@
       to { transform: rotate(360deg); }
     }
 
+    /* OPTIMIZACIONES DE RENDIMIENTO */
+    .img-placeholder {
+      width: 48px;
+      height: 48px;
+      background: #f3f4f6;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 0.7rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .img-loaded {
+      animation: none;
+    }
+
     @media (max-width: 768px) {
       .cod-horizontal-layout {
         flex-direction: column;
@@ -1502,8 +1523,12 @@
 
   <script>
     // ==========================================
-    // SISTEMA DE GESTIÓN DE MEMORIA Y UTILIDADES
+    // SISTEMA DE GESTIÓN DE MEMORIA Y UTILIDADES OPTIMIZADAS
     // ==========================================
+    
+    // Cache de imágenes en memoria (máximo 100 items)
+    const imageCache = new Map();
+    const MAX_CACHE_SIZE = 100;
     
     const urlManager = {
       urls: new Set(),
@@ -1531,7 +1556,23 @@
       }
     };
 
-    // Debounce para búsquedas
+    // Cache de imágenes con límite
+    async function getCachedImage(code) {
+      if (imageCache.has(code)) {
+        return imageCache.get(code);
+      }
+      const blob = await safeGetItem(`img_${code}`);
+      if (blob) {
+        if (imageCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = imageCache.keys().next().value;
+          imageCache.delete(firstKey);
+        }
+        imageCache.set(code, blob);
+      }
+      return blob;
+    }
+
+    // Debounce optimizado
     function debounce(func, wait) {
       let timeout;
       return function executedFunction(...args) {
@@ -1552,7 +1593,6 @@
       notification.textContent = message;
       container.appendChild(notification);
       
-      // Trigger reflow
       notification.offsetHeight;
       notification.classList.add('show');
       
@@ -1582,7 +1622,6 @@
         return await localforage.getItem(key);
       } catch (e) {
         console.error(`Error cargando ${key}:`, e);
-        showNotification(`Error al cargar datos: ${key}`, 'error');
         return null;
       }
     }
@@ -1593,7 +1632,6 @@
         return true;
       } catch (e) {
         console.error(`Error guardando ${key}:`, e);
-        showNotification(`Error al guardar datos: ${key}`, 'error');
         return false;
       }
     }
@@ -1619,7 +1657,10 @@
     let html5QrCode;
     const PASSWORD_EDIT = 'admin123';
     let currentWhoPays = 'client';
-    let pendingImages = new Map(); // Cache de imágenes pendientes
+    let pendingImages = new Map();
+    
+    // IntersectionObserver para lazy loading
+    let barcodeObserver = null;
 
     // ==========================================
     // FUNCIONES DE INICIALIZACIÓN Y DATOS
@@ -1687,16 +1728,13 @@
           
           const x = margLeft + col * dx, y = margTop + fil * dy;
           
-          // Nombre del producto (máximo 16 caracteres)
           doc.setFontSize(8); 
           doc.text(p.name.slice(0, 16), x + w / 2, y + 3, { align: 'center' }); 
           
-          // Precio con descuento
           const finalPrice = (p.price * (1 - (p.discount || 0) / 100)).toFixed(0);
           doc.setFontSize(10);
           doc.text(`$${finalPrice}`, x + w / 2, y + 7, { align: 'center' });
           
-          // Generar código de barras SIN TEXTO (lo pondremos nosotros manualmente)
           const canvas = document.createElement('canvas'); 
           const scale = 300 / 25.4; 
           canvas.width = w * scale; 
@@ -1706,14 +1744,13 @@
             format: 'CODE128', 
             width: 2, 
             height: h * scale * 0.35,
-            fontSize: 0, // Sin texto en el barcode
-            displayValue: false // NO mostrar valor en el barcode
+            fontSize: 0,
+            displayValue: false
           });
           
           const imgData = canvas.toDataURL('image/png'); 
           doc.addImage(imgData, 'PNG', x, y + 8, w, h * 0.4);
           
-          // Dibujar el número del código de barras MANUALMENTE debajo
           doc.setFontSize(9);
           doc.setFont('courier', 'normal');
           doc.text(p.barcode, x + w / 2, y + h - 2, { align: 'center' });
@@ -1760,8 +1797,7 @@
           }, 
           () => {},
           { 
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.CODE_128, 
+            formatsToSupport: [              Html5QrcodeSupportedFormats.CODE_128, 
               Html5QrcodeSupportedFormats.CODE_39, 
               Html5QrcodeSupportedFormats.EAN_13, 
               Html5QrcodeSupportedFormats.EAN_8, 
@@ -2068,7 +2104,6 @@
         document.getElementById('editPendingQty').textContent = p.quantity || 0;
         document.getElementById('editPendingPrice').textContent = p.price || 0;
         
-        // Cargar imagen del producto
         const imgBlob = await safeGetItem(`img_${p.code}`);
         const imgEl = document.getElementById('editPendingImg');
         if (imgBlob) {
@@ -2078,7 +2113,6 @@
           imgEl.src = '';
         }
         
-        // Generar y mostrar código de barras
         const barcodeCanvas = document.createElement('canvas');
         JsBarcode(barcodeCanvas, p.code || '000000', { 
           format: 'CODE128', 
@@ -2089,13 +2123,11 @@
         document.getElementById('editBarcodeImage').src = barcodeCanvas.toDataURL();
         document.getElementById('editBarcodeNumbers').textContent = p.code || 'N/A';
         
-        // Cargar valores actuales
         document.getElementById('editCodShipping').value = p.codShipping || 0;
         document.getElementById('editCodCommissionType').value = p.codCommissionType || 'percentage';
         document.getElementById('editCodCommission').value = p.codCommission || 0;
         document.getElementById('editCodInsurance').value = p.codInsurance || 0;
         
-        // Seleccionar quién paga
         const whoPays = p.whoPaysCommission || 'client';
         const radio = document.querySelector(`input[name="editWhoPays"][value="${whoPays}"]`);
         if (radio) radio.checked = true;
@@ -2214,7 +2246,6 @@
           totalToCollect = productTotal + shipping + insurance;
         }
         
-        // Actualizar datos
         pending[index] = {
           ...p,
           codShipping: shipping,
@@ -2250,10 +2281,8 @@
           return;
         }
         
-        // Mover a ventas completadas con info COD
         let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
         
-        // Calcular el precio real de venta según quién pagó la comisión
         let finalPrice = item.price || 0;
         let finalTotal = (item.price || 0) * (item.quantity || 0);
         
@@ -2279,7 +2308,6 @@
         });
         localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
         
-        // Eliminar de pendientes
         pending.splice(index, 1);
         localStorage.setItem('pendingInventory', JSON.stringify(pending));
         
@@ -2309,14 +2337,12 @@
           return;
         }
         
-        // Devolver stock
         const invItem = inventory.find(p => p.code === item.code);
         if (invItem) {
           invItem.quantity += (item.quantity || 0);
           localStorage.setItem('inventory', JSON.stringify(inventory));
         }
         
-        // Eliminar de pendientes
         pending.splice(index, 1);
         localStorage.setItem('pendingInventory', JSON.stringify(pending));
         
@@ -2350,15 +2376,13 @@
         
         const priceWithDiscount = (item.price * (1 - (item.discount || 0) / 100)).toFixed(2);
         
-        // Actualizar info del producto en el modal
         document.getElementById('codProductName').textContent = item.name || 'Sin nombre';
         document.getElementById('soldPrice').value = priceWithDiscount;
         document.getElementById('soldQuantity').value = 1;
         document.getElementById('codDisplayPrice').textContent = '$' + priceWithDiscount;
         document.getElementById('codDisplayStock').textContent = item.quantity || 0;
         
-        // Cargar imagen del producto
-        const imgBlob = await safeGetItem(`img_${item.code}`);
+        const imgBlob = await getCachedImage(item.code);
         const imgEl = document.getElementById('codProductImage');
         if (imgBlob) {
           const imgUrl = urlManager.create(imgBlob);
@@ -2367,7 +2391,6 @@
           imgEl.src = '';
         }
         
-        // Generar código de barras
         const barcodeCanvas = document.createElement('canvas');
         JsBarcode(barcodeCanvas, item.barcode || '000000', { 
           format: 'CODE128', 
@@ -2378,7 +2401,6 @@
         document.getElementById('codBarcodeImage').src = barcodeCanvas.toDataURL();
         document.getElementById('codBarcodeNumbers').textContent = item.barcode || 'N/A';
         
-        // Resetear COD
         document.getElementById('isCOD').checked = false;
         document.getElementById('codConfig').style.display = 'none';
         document.getElementById('codShipping').value = '';
@@ -2495,7 +2517,6 @@
           return; 
         } 
         
-        // Restar stock
         item.quantity -= soldQty; 
         localStorage.setItem('inventory', JSON.stringify(inventory)); 
         
@@ -2534,7 +2555,6 @@
             totalToCollect = productTotal + shipping + insurance;
           }
           
-          // Guardar en pendientes
           let pendingInventory = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
           pendingInventory.push({
             ...baseSaleData,
@@ -2557,7 +2577,6 @@
           beepOK();
           updateDash();
         } else {
-          // Venta normal
           let soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
           soldInventory.push(baseSaleData); 
           localStorage.setItem('soldInventory', JSON.stringify(soldInventory)); 
@@ -2671,11 +2690,6 @@
       overlay.addEventListener('click', () => {
         document.body.removeChild(overlay);
       });
-      overlay.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          document.body.removeChild(overlay);
-        }
-      });
     }
     
     function openPriceModal(index) { 
@@ -2729,7 +2743,7 @@
     }
 
     // ==========================================
-    // FILTRADO Y RENDERIZADO DE INVENTARIO CORREGIDO
+    // FILTRADO Y RENDERIZADO DE INVENTARIO OPTIMIZADO
     // ==========================================
     
     const debouncedFilterInventory = debounce(filterInventory, 300);
@@ -2791,126 +2805,55 @@
       }
     }
     
+    // RENDERIZADO OPTIMIZADO CON LAZY LOADING
     async function renderInventoryWithHighlight(filteredInventory, searchName) {
       showSpinner(true);
+      
       try {
         const list = document.getElementById('inventoryList'), 
               cards = document.getElementById('cardsView'), 
-              noResults = document.getElementById('noResultsMessage'), 
-              resultMsg = document.getElementById('resultMessage');
-              
-        // Limpiar URLs anteriores
-        urlManager.revokeAll();
+              noResults = document.getElementById('noResultsMessage');
+        
+        // Limpiar solo la vista activa
+        if (currentView === 'table') {
+          cards.innerHTML = '';
+        } else {
+          list.innerHTML = '';
+        }
         
         if (!filteredInventory || filteredInventory.length === 0) { 
           list.innerHTML = ''; 
           cards.innerHTML = ''; 
           noResults.style.display = 'block'; 
-          resultMsg.style.display = 'none'; 
+          showSpinner(false);
           return; 
         }
         
         noResults.style.display = 'none'; 
-        const sorted = [...filteredInventory].sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
         
-        // Renderizar tabla
-        list.innerHTML = await Promise.all(sorted.map(async (item, idx) => {
-          const realIndex = inventory.indexOf(item);
-          const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
-          
-          let imgSrc = '';
-          const imgBlob = await safeGetItem(`img_${item.code}`);
-          if (imgBlob) {
-            imgSrc = urlManager.create(imgBlob);
-          }
-          
-          // Generar código de barras dinámicamente como Data URL
-          let barcodeSrc = '';
-          if (item.barcode) {
-            const barcodeCanvas = document.createElement('canvas');
-            JsBarcode(barcodeCanvas, item.barcode, { 
-              format: 'CODE128', 
-              width: 2, 
-              height: 40, 
-              displayValue: false 
-            });
-            barcodeSrc = barcodeCanvas.toDataURL();
-          }
-          
-          const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
-          
-          return `
-            <tr id="product-${idx}" data-real-index="${realIndex}">
-              <td>${idx + 1}</td>
-              <td>
-                ${imgSrc ? `<img src="${imgSrc}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${imgSrc}')" alt="${item.name}">` : '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>'}
-              </td>
-              <td>${highlightText(item.name, searchName)}</td>
-              <td>${item.barcode || 'N/A'}</td>
-              <td>
-                ${barcodeSrc ? `<img src="${barcodeSrc}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${barcodeSrc}')" alt="Código de barras">` : '<span class="barcode-text">' + (item.barcode || 'N/A') + '</span>'}
-              </td>
-              <td>$${(item.price || 0).toFixed(2)}</td>
-              <td>${item.discount || 0}%</td>
-              <td>$${priceWithDiscount}</td>
-              <td>${dateStr}</td>
-              <td>${highlightText(item.category, searchName)}</td>
-              <td>${item.quantity || 0}</td>
-              <td>
-                <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
-                <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
-                <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
-              </td>
-            </tr>
-          `;
-        })).then(rows => rows.join(''));
+        // Limitar a 50 items para carga inicial rápida
+        const LIMIT = 50;
+        const sorted = [...filteredInventory]
+          .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
+          .slice(0, LIMIT);
         
-        // Renderizar tarjetas
-        cards.innerHTML = await Promise.all(sorted.map(async (item, idx) => {
-          const realIndex = inventory.indexOf(item);
-          const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
-          
-          let imgSrc = '';
-          const imgBlob = await safeGetItem(`img_${item.code}`);
-          if (imgBlob) {
-            imgSrc = urlManager.create(imgBlob);
-          }
-          
-          // Generar código de barras dinámicamente como Data URL
-          let barcodeSrc = '';
-          if (item.barcode) {
-            const barcodeCanvas = document.createElement('canvas');
-            JsBarcode(barcodeCanvas, item.barcode, { 
-              format: 'CODE128', 
-              width: 2, 
-              height: 50, 
-              displayValue: false 
-            });
-            barcodeSrc = barcodeCanvas.toDataURL();
-          }
-          
-          const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
-          
-          return `
-            <div class="card" data-real-index="${realIndex}">
-              ${imgSrc ? `<img src="${imgSrc}" onclick="openImageModal('${imgSrc}')" alt="${item.name}">` : '<div style="width:100%;height:160px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Sin imagen</div>'}
-              <div><strong>${highlightText(item.name, searchName)}</strong></div>
-              <div>Barras: ${item.barcode || 'N/A'}</div>
-              <div>
-                ${barcodeSrc ? `<img src="${barcodeSrc}" style="height:60px;cursor:pointer" onclick="openImageModal('${barcodeSrc}')" alt="Código de barras">` : '<span class="barcode-text">' + (item.barcode || 'N/A') + '</span>'}
-              </div>
-              <div>Precio: $${priceWithDiscount} <small>(${(item.discount || 0)}% dto)</small></div>
-              <div>Stock: <strong>${item.quantity || 0}</strong></div>
-              <div>Cat: ${highlightText(item.category, searchName)}</div>
-              <div>Fecha: ${dateStr}</div>
-              <div class="card-footer">
-                <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
-                <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
-                <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
-              </div>
-            </div>
-          `;
-        })).then(cards => cards.join(''));
+        // Precalcular datos básicos
+        const productData = sorted.map((item, idx) => ({
+          item,
+          realIndex: inventory.indexOf(item),
+          idx,
+          priceWithDiscount: ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2),
+          dateStr: item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A'
+        }));
+
+        if (currentView === 'table') {
+          await renderTableOptimized(productData, searchName, list);
+        } else {
+          await renderCardsOptimized(productData, searchName, cards);
+        }
+        
+        // Cargar imágenes en segundo plano
+        setTimeout(() => loadImagesLazy(sorted), 100);
         
         updateDash();
       } catch (e) {
@@ -2919,6 +2862,136 @@
       } finally {
         showSpinner(false);
       }
+    }
+    
+    // Renderizado de tabla optimizado sin barcodes sincrónicos
+    async function renderTableOptimized(productData, searchName, container) {
+      const html = productData.map(({ item, realIndex, idx, priceWithDiscount, dateStr }) => `
+        <tr id="product-${idx}" data-real-index="${realIndex}" data-code="${item.code}">
+          <td>${idx + 1}</td>
+          <td class="img-cell" data-code="${item.code}">
+            <div class="img-placeholder">Cargando...</div>
+          </td>
+          <td>${highlightText(item.name, searchName)}</td>
+          <td>${item.barcode || 'N/A'}</td>
+          <td class="barcode-cell" data-barcode="${item.barcode || ''}">
+            <span class="barcode-text">${item.barcode || 'N/A'}</span>
+          </td>
+          <td>$${(item.price || 0).toFixed(2)}</td>
+          <td>${item.discount || 0}%</td>
+          <td>$${priceWithDiscount}</td>
+          <td>${dateStr}</td>
+          <td>${highlightText(item.category, searchName)}</td>
+          <td>${item.quantity || 0}</td>
+          <td>
+            <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
+            <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
+            <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
+          </td>
+        </tr>
+      `).join('');
+      
+      container.innerHTML = html;
+    }
+    
+    // Renderizado de tarjetas optimizado
+    async function renderCardsOptimized(productData, searchName, container) {
+      const html = productData.map(({ item, realIndex, idx, priceWithDiscount, dateStr }) => `
+        <div class="card" data-real-index="${realIndex}" data-code="${item.code}">
+          <div class="img-cell" data-code="${item.code}">
+            <div class="img-placeholder" style="width:100%;height:160px;">Cargando...</div>
+          </div>
+          <div><strong>${highlightText(item.name, searchName)}</strong></div>
+          <div>Barras: ${item.barcode || 'N/A'}</div>
+          <div class="barcode-cell" data-barcode="${item.barcode || ''}">
+            <span class="barcode-text">${item.barcode || 'N/A'}</span>
+          </div>
+          <div>Precio: $${priceWithDiscount} <small>(${(item.discount || 0)}% dto)</small></div>
+          <div>Stock: <strong>${item.quantity || 0}</strong></div>
+          <div>Cat: ${highlightText(item.category, searchName)}</div>
+          <div>Fecha: ${dateStr}</div>
+          <div class="card-footer">
+            <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
+            <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
+            <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
+          </div>
+        </div>
+      `).join('');
+      
+      container.innerHTML = html;
+    }
+    
+    // Carga lazy de imágenes y barcodes
+    async function loadImagesLazy(items) {
+      // Inicializar IntersectionObserver si no existe
+      if (!barcodeObserver && 'IntersectionObserver' in window) {
+        barcodeObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const cell = entry.target;
+              const barcode = cell.dataset.barcode;
+              if (barcode && barcode !== 'N/A') {
+                generateBarcodeAsync(barcode, cell);
+              }
+              barcodeObserver.unobserve(cell);
+            }
+          });
+        }, { rootMargin: '50px' });
+      }
+      
+      // Cargar imágenes
+      for (const item of items) {
+        const cells = document.querySelectorAll(`.img-cell[data-code="${item.code}"]`);
+        
+        for (const cell of cells) {
+          const imgBlob = await getCachedImage(item.code);
+          if (imgBlob) {
+            const imgUrl = urlManager.create(imgBlob);
+            if (currentView === 'table') {
+              cell.innerHTML = `<img src="${imgUrl}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${imgUrl}')" alt="${item.name}">`;
+            } else {
+              cell.innerHTML = `<img src="${imgUrl}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openImageModal('${imgUrl}')" alt="${item.name}">`;
+            }
+          } else {
+            cell.innerHTML = '<div style="width:48px;height:48px;background:#f3f4f6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.7rem;">Sin img</div>';
+          }
+        }
+        
+        // Observar celdas de barcode para lazy loading
+        const barcodeCells = document.querySelectorAll(`.barcode-cell[data-barcode="${item.barcode}"]`);
+        barcodeCells.forEach(cell => {
+          if (barcodeObserver) {
+            barcodeObserver.observe(cell);
+          } else {
+            // Fallback: generar inmediatamente si no hay soporte
+            if (item.barcode) {
+              setTimeout(() => generateBarcodeAsync(item.barcode, cell), 100);
+            }
+          }
+        });
+      }
+    }
+    
+    // Generar barcode asíncrono
+    function generateBarcodeAsync(barcode, container) {
+      requestAnimationFrame(() => {
+        try {
+          const canvas = document.createElement('canvas');
+          JsBarcode(canvas, barcode, { 
+            format: 'CODE128', 
+            width: 2, 
+            height: 40, 
+            displayValue: false 
+          });
+          const src = canvas.toDataURL();
+          const currentContent = container.innerHTML;
+          if (currentContent.includes('barcode-text')) {
+            container.innerHTML = `<img src="${src}" style="max-height:48px;border-radius:4px;cursor:pointer" onclick="openImageModal('${src}')" alt="Código de barras">`;
+          }
+        } catch (e) {
+          console.error('Error generando barcode:', e);
+        }
+      });
     }
     
     function toggleView() { 
@@ -2937,7 +3010,9 @@
         cards.style.display = 'none'; 
         btn.textContent = 'Ver Tarjetas'; 
       } 
-      localStorage.setItem('preferredView', currentView); 
+      localStorage.setItem('preferredView', currentView);
+      // Re-renderizar para aplicar lazy loading
+      filterInventory();
     }
 
     function goToRow() { 
@@ -2966,7 +3041,7 @@
     }
 
     // ==========================================
-    // MODAL DE HISTORIAL DE VENTAS DETALLADO CORREGIDO
+    // MODAL DE HISTORIAL DE VENTAS DETALLADO
     // ==========================================
     
     function openSalesHistoryModal() { 
@@ -3035,8 +3110,8 @@
           return; 
         }
         
-        const html = await Promise.all(sales.map(async (s, i) => {
-          const imgBlob = await safeGetItem(`img_${s.code}`);
+        const html = await Promise.all(sales.slice(0, 100).map(async (s, i) => {
+          const imgBlob = await getCachedImage(s.code);
           let imgSrc = '';
           if (imgBlob) {
             imgSrc = urlManager.create(imgBlob);
@@ -3059,6 +3134,9 @@
         }));
         
         container.innerHTML = html.join('');
+        if (sales.length > 100) {
+          container.innerHTML += `<p style="text-align:center;color:#6b7280;">... y ${sales.length - 100} ventas más</p>`;
+        }
       } catch (e) {
         console.error('Error renderizando historial:', e);
         showNotification('Error al mostrar historial', 'error');
@@ -3144,7 +3222,7 @@
     }
 
     // ==========================================
-    // CAJA REGISTRADORA
+    // CAJA REGISTRADORA OPTIMIZADA
     // ==========================================
     
     let cashItems = [], cashViewMode = 'grid';
@@ -3302,16 +3380,22 @@
     
     function renderCashProducts(container) {
       container.innerHTML = '';
-      const sorted = [...inventory].sort((a, b) => {
-        if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
-        if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
-        return (a.name || '').localeCompare(b.name || '');
-      });
+      
+      // Limitar a 50 productos inicialmente
+      const VISIBLE_COUNT = 50;
+      const sorted = [...inventory]
+        .sort((a, b) => {
+          if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
+          if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
+          return (a.name || '').localeCompare(b.name || '');
+        })
+        .slice(0, VISIBLE_COUNT);
 
       if (cashViewMode === 'grid') {
         const grid = document.createElement('div');
         grid.id = 'cashProductsGrid';
         grid.className = 'products-grid';
+        
         sorted.forEach((it, idx) => {
           const realIdx = inventory.indexOf(it);
           const card = document.createElement('div');
@@ -3322,7 +3406,7 @@
           const priceWithDiscount = ((it.price || 0) * (1 - (it.discount || 0) / 100)).toFixed(0);
 
           card.innerHTML = `
-            <img id="cashimg-${realIdx}" alt="${it.name}" style="width:100%;height:160px;object-fit:cover;border-radius:6px;cursor:pointer;">
+            <div id="cashimg-${realIdx}" style="width:100%;height:160px;background:#f3f4f6;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">Cargando...</div>
             <div><strong>${it.name || 'N/A'}</strong></div>
             <div>Cód: ${it.barcode || 'N/A'}</div>
             <div>Cat: ${it.category || 'N/A'}</div>
@@ -3334,21 +3418,25 @@
             <input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity || 0}" value="0" style="width:70px;margin-top:.4rem;" oninput="handleManualInput(this, ${it.quantity || 0})">
           `;
 
-          const img = card.querySelector(`#cashimg-${realIdx}`);
-          safeGetItem(`img_${it.code}`).then(blob => {
-            if (blob) {
-              const url = urlManager.create(blob);
-              img.src = url;
-            }
-          });
-          img.onclick = () => openImageModal(img.src);
           grid.appendChild(card);
+          
+          // Cargar imagen lazy
+          setTimeout(async () => {
+            const imgBlob = await getCachedImage(it.code);
+            const imgDiv = card.querySelector(`#cashimg-${realIdx}`);
+            if (imgBlob && imgDiv) {
+              const url = urlManager.create(imgBlob);
+              imgDiv.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImageModal('${url}')" alt="${it.name}">`;
+            }
+          }, idx * 10); // Stagger loading cada 10ms
         });
+        
         container.appendChild(grid);
       } else {
         const tbl = document.createElement('table');
         tbl.innerHTML = `<thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cat</th><th>Precio</th><th>Stock</th><th>+1</th><th>Cant</th></tr></thead><tbody></tbody></table>`;
         const tbody = tbl.querySelector('tbody');
+        
         sorted.forEach((it, idx) => {
           const realIdx = inventory.indexOf(it);
           const tr = document.createElement('tr');
@@ -3359,7 +3447,7 @@
 
           tr.innerHTML = `
             <td>${idx + 1}</td>
-            <td><img id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;" alt="${it.name}"></td>
+            <td><div id="cashimg-${realIdx}" style="max-height:40px;border-radius:4px;background:#f3f4f6;width:40px;height:40px;"></div></td>
             <td>${it.name || 'N/A'}</td>
             <td>${it.barcode || 'N/A'}</td>
             <td>${it.category || 'N/A'}</td>
@@ -3369,16 +3457,19 @@
             <td><input type="number" id="cashqty-${realIdx}" min="0" max="${it.quantity || 0}" value="0" style="width:60px;" oninput="handleManualInput(this, ${it.quantity || 0})"></td>
           `;
 
-          const img = tr.querySelector(`#cashimg-${realIdx}`);
-          safeGetItem(`img_${it.code}`).then(blob => {
-            if (blob) {
-              const url = urlManager.create(blob);
-              img.src = url;
-            }
-          });
-          img.onclick = () => openImageModal(img.src);
           tbody.appendChild(tr);
+          
+          // Cargar imagen lazy
+          setTimeout(async () => {
+            const imgBlob = await getCachedImage(it.code);
+            const imgDiv = tr.querySelector(`#cashimg-${realIdx}`);
+            if (imgBlob && imgDiv) {
+              const url = urlManager.create(imgBlob);
+              imgDiv.innerHTML = `<img src="${url}" style="max-height:40px;border-radius:4px;cursor:pointer" onclick="openImageModal('${url}')" alt="${it.name}">`;
+            }
+          }, idx * 10);
         });
+        
         container.appendChild(tbl);
       }
     }
@@ -3546,7 +3637,6 @@
       const fl = document.getElementById('cashFloatList'); 
       if (fl) fl.remove(); 
       cashItems = [];
-      urlManager.revokeAll();
     }
 
     // ==========================================
@@ -3676,3 +3766,4 @@
   </script>
 </body>
 </html>
+             

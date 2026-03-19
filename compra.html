@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gestión de COMPRAS</title>
+  <title>Gestión de Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
@@ -615,6 +615,17 @@
       color: var(--success);
     }
     
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--warning);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
     body.kiosco .top-nav {
       background: rgba(0, 0, 0, 0.8);
       color: white;
@@ -653,7 +664,7 @@
       }
     }
 
-    /* BOTÓN FLOTANTE */
+    /* BOTÓN FLOTANTE CON INDICADOR DE PAUSA */
     .fab-bulk {
       position: fixed;
       bottom: 2rem;
@@ -680,12 +691,39 @@
       box-shadow: 0 12px 40px rgba(212, 165, 154, 0.6);
     }
 
+    .fab-bulk.has-pending {
+      animation: pulse-pending 1.5s infinite;
+      box-shadow: 0 8px 32px rgba(245, 158, 11, 0.6);
+    }
+
+    .fab-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--warning);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid white;
+    }
+
     @keyframes pulse-fab {
       0%, 100% { box-shadow: 0 8px 32px rgba(212, 165, 154, 0.4); }
       50% { box-shadow: 0 8px 40px rgba(212, 165, 154, 0.7); }
     }
 
-    /* MODAL FULLSCREEN 100% PANTALLA */
+    @keyframes pulse-pending {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* MODAL FULLSCREEN */
     .bulk-modal {
       position: fixed;
       inset: 0;
@@ -770,16 +808,37 @@
       margin-right: auto;
     }
 
-    /* SECCIONES QUE SE OCULTAN CUANDO ESTÁ EL EDITOR ACTIVO */
-    .bulk-section.hidden-when-editing {
-      display: none;
+    /* ALERTA DE LOTE PENDIENTE */
+    .pending-alert {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 2px solid #f59e0b;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
-    /* EDITOR DE LOTE - MODO FULLSCREEN DENTRO DEL MODAL */
+    .pending-alert-text {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .pending-alert-text i {
+      font-size: 1.5rem;
+    }
+
+    /* EDITOR DE LOTE FULLSCREEN */
     #editLoteBubble {
       display: none;
       position: fixed;
-      inset: 64px 0 0 0; /* Deja espacio para el header del modal */
+      inset: 64px 0 0 0;
       background: var(--bg);
       z-index: 10;
       flex-direction: column;
@@ -877,6 +936,11 @@
       
       .lote-editor-content {
         padding: 1rem;
+      }
+      
+      .pending-alert {
+        flex-direction: column;
+        text-align: center;
       }
     }
 
@@ -1032,12 +1096,13 @@
 
 <audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
 
-<!-- BOTÓN FLOTANTE -->
-<button class="fab-bulk" onclick="openBulkModal()" title="Carga Masiva y Exportación">
+<!-- BOTÓN FLOTANTE CON BADGE -->
+<button class="fab-bulk" id="fabBulk" onclick="openBulkModal()" title="Carga Masiva y Exportación">
   <i class="fa-solid fa-layer-group"></i>
+  <span class="fab-badge" id="fabBadge" style="display: none;">!</span>
 </button>
 
-<!-- MODAL FULLSCREEN 100% -->
+<!-- MODAL FULLSCREEN -->
 <div class="bulk-modal" id="bulkModal">
   <div class="bulk-modal-content">
     <div class="bulk-modal-header">
@@ -1051,6 +1116,22 @@
     </div>
     
     <div class="bulk-modal-body" id="modalBody">
+      <!-- ALERTA DE LOTE PENDIENTE -->
+      <div id="pendingAlert" class="pending-alert" style="display: none;">
+        <div class="pending-alert-text">
+          <i class="fa-solid fa-pause-circle"></i>
+          <span>Tienes un lote pendiente de edición (${loteTemporal.length} productos)</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" onclick="descartarLotePendiente()">
+            <i class="fa-solid fa-trash"></i> Descartar
+          </button>
+          <button class="btn btn-primary" onclick="continuarLotePendiente()" style="background: #f59e0b; border-color: #f59e0b;">
+            <i class="fa-solid fa-play"></i> Continuar Edición
+          </button>
+        </div>
+      </div>
+
       <!-- Carga por Imágenes -->
       <div class="bulk-section" id="cargaSection">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
@@ -1129,17 +1210,17 @@
       </div>
     </div>
 
-    <!-- EDITOR DE LOTE - APARTADO QUE CUBRE TODA LA PANTALLA DEL MODAL -->
+    <!-- EDITOR DE LOTE FULLSCREEN -->
     <div id="editLoteBubble">
       <div class="lote-editor-header">
-        <h3>
+        <h3 id="editorTitle">
           <i class="fa-solid fa-pen-to-square"></i>
-          Editar Productos del Lote (${loteTemporal.length} productos)
+          Editar Productos del Lote
         </h3>
         <div class="lote-editor-actions">
-          <button class="btn btn-secondary" onclick="cancelarEdicionLote()" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
-            <i class="fa-solid fa-xmark"></i>
-            Cancelar
+          <button class="btn btn-secondary" onclick="pausarYVolver()" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);">
+            <i class="fa-solid fa-pause"></i>
+            Guardar y Salir
           </button>
           <button class="btn btn-success" onclick="guardarLoteCompleto()">
             <i class="fa-solid fa-check-circle"></i>
@@ -1332,10 +1413,12 @@ let editIndex = -1;
 let loteTemporal = [];
 let fechaActualGlobal = new Date().toISOString().split('T')[0];
 
+// Al cargar, verificar si hay un lote pendiente
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('fechaCompra').value = fechaActualGlobal;
   renderTable();
   calculateTotal();
+  verificarLotePendiente();
 });
 
 function toggleMenu() {
@@ -1360,28 +1443,59 @@ function switchTab(type, btn) {
   btn.classList.add('active');
 }
 
-// FUNCIONES DEL MODAL FULLSCREEN
+// VERIFICAR SI HAY LOTE PENDIENTE AL ABRIR LA PÁGINA
+function verificarLotePendiente() {
+  const lotePendiente = localStorage.getItem('loteTemporalData');
+  if (lotePendiente) {
+    const data = JSON.parse(lotePendiente);
+    loteTemporal = data.productos || [];
+    
+    // Actualizar indicador en el botón flotante
+    if (loteTemporal.length > 0) {
+      const fab = document.getElementById('fabBulk');
+      const badge = document.getElementById('fabBadge');
+      fab.classList.add('has-pending');
+      badge.style.display = 'flex';
+      badge.textContent = loteTemporal.length;
+    }
+  }
+}
+
+// ABRIR MODAL CON DETECCIÓN DE LOTE PENDIENTE
 function openBulkModal() {
   const modal = document.getElementById('bulkModal');
   modal.classList.add('show');
   document.body.style.overflow = 'hidden';
+  
+  // Verificar si hay lote pendiente para mostrar alerta
+  const lotePendiente = localStorage.getItem('loteTemporalData');
+  if (lotePendiente && loteTemporal.length > 0) {
+    document.getElementById('pendingAlert').style.display = 'flex';
+    document.getElementById('pendingAlert').querySelector('span').textContent = 
+      `Tienes un lote pendiente de edición (${loteTemporal.length} productos)`;
+  } else {
+    document.getElementById('pendingAlert').style.display = 'none';
+  }
 }
 
 function closeBulkModal() {
   const modal = document.getElementById('bulkModal');
   modal.classList.remove('show');
   document.body.style.overflow = '';
-  // Si el editor está activo, también lo cerramos
-  document.getElementById('editLoteBubble').classList.remove('active');
+  
+  // Si estábamos editando, pausamos automáticamente antes de cerrar
+  const editor = document.getElementById('editLoteBubble');
+  if (editor.classList.contains('active')) {
+    pausarEdicion();
+  }
 }
 
 // Cerrar con ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    // Si el editor está activo, primero cierra el editor, luego el modal
     const editor = document.getElementById('editLoteBubble');
     if (editor.classList.contains('active')) {
-      cancelarEdicionLote();
+      pausarYVolver();
     } else {
       closeBulkModal();
     }
@@ -1715,6 +1829,13 @@ function generateShortCode(prefix, index) {
 }
 
 async function procesarLote() {
+  // Si ya hay un lote pendiente, preguntar
+  if (loteTemporal.length > 0) {
+    if (!confirm('Ya tienes un lote en proceso. ¿Reemplazar con el nuevo?')) {
+      return;
+    }
+  }
+  
   const files = document.getElementById('loteFiles').files;
   if (!files.length) { alert('Selecciona imágenes primero'); return; }
   if (files.length > 130) { alert('Máximo 130 imágenes'); return; }
@@ -1726,6 +1847,7 @@ async function procesarLote() {
     return;
   }
   
+  // Limpiar lote anterior
   loteTemporal = [];
   const preview = document.getElementById('lotePreview');
   preview.innerHTML = '';
@@ -1764,38 +1886,118 @@ async function procesarLote() {
   }
   
   document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos.`;
+  
+  // Limpiar datos previos de localStorage del lote
+  localStorage.removeItem('loteTemporalData');
+  
   mostrarEditorLote();
 }
 
 function vaciarLote() {
-  if (!confirm('¿Cancelar carga del lote?')) return;
-  loteTemporal.forEach(p => localforage.removeItem(`img_${p.code}`));
+  if (!confirm('¿Cancelar carga del lote? Se perderán los datos no guardados.')) return;
+  
+  // Limpiar todo incluyendo localStorage
   loteTemporal = [];
+  localStorage.removeItem('loteTemporalData');
   document.getElementById('lotePreview').innerHTML = '';
   document.getElementById('loteStatus').textContent = '';
   document.getElementById('editLoteBubble').classList.remove('active');
   document.getElementById('loteFiles').value = '';
   updateLoteStatus();
+  
+  // Quitar badge del botón
+  const fab = document.getElementById('fabBulk');
+  const badge = document.getElementById('fabBadge');
+  fab.classList.remove('has-pending');
+  badge.style.display = 'none';
 }
 
-// CANCELAR EDICIÓN DEL LOTE Y VOLVER A LA VISTA ANTERIOR
-function cancelarEdicionLote() {
+// PAUSAR EDICIÓN Y GUARDAR ESTADO
+function pausarEdicion() {
+  // Guardar el estado actual de todos los inputs
+  const datosGuardados = {
+    productos: loteTemporal,
+    datos: []
+  };
+  
+  for (let i = 0; i < loteTemporal.length; i++) {
+    datosGuardados.datos.push({
+      name: document.getElementById(`loteName${i}`)?.value || '',
+      price: document.getElementById(`lotePrice${i}`)?.value || '',
+      quantity: document.getElementById(`loteQuantity${i}`)?.value || '',
+      barcode: document.getElementById(`loteBarcode${i}`)?.value || '',
+      valorReal: document.getElementById(`loteValorReal${i}`)?.value || '',
+      porcentaje: document.getElementById(`lotePorcentaje${i}`)?.value || '60',
+      fechaCompra: document.getElementById(`loteFecha${i}`)?.value || fechaActualGlobal,
+      description: document.getElementById(`loteDescription${i}`)?.value || '',
+      category: document.getElementById(`loteCategory${i}`)?.value || ''
+    });
+  }
+  
+  localStorage.setItem('loteTemporalData', JSON.stringify(datosGuardados));
+  
+  // Actualizar indicador visual
+  const fab = document.getElementById('fabBulk');
+  const badge = document.getElementById('fabBadge');
+  fab.classList.add('has-pending');
+  badge.style.display = 'flex';
+  badge.textContent = loteTemporal.length;
+}
+
+// PAUSAR Y VOLVER AL MENÚ PRINCIPAL DEL MODAL
+function pausarYVolver() {
+  pausarEdicion();
   document.getElementById('editLoteBubble').classList.remove('active');
-  // No borramos loteTemporal por si quiere volver a editar
+  document.getElementById('pendingAlert').style.display = 'flex';
+  document.getElementById('pendingAlert').querySelector('span').textContent = 
+    `Tienes un lote pendiente de edición (${loteTemporal.length} productos) - Último guardado: ${new Date().toLocaleTimeString()}`;
 }
 
-function mostrarEditorLote() {
+// CONTINUAR LOTE PENDIENTE
+function continuarLotePendiente() {
+  const dataGuardada = localStorage.getItem('loteTemporalData');
+  if (dataGuardada) {
+    const data = JSON.parse(dataGuardada);
+    loteTemporal = data.productos || [];
+    
+    // Ocultar alerta y mostrar editor
+    document.getElementById('pendingAlert').style.display = 'none';
+    mostrarEditorLote(data.datos);
+  }
+}
+
+// DESCARTAR LOTE PENDIENTE
+function descartarLotePendiente() {
+  if (!confirm('¿Descartar el lote pendiente? Esta acción no se puede deshacer.')) return;
+  
+  loteTemporal = [];
+  localStorage.removeItem('loteTemporalData');
+  document.getElementById('pendingAlert').style.display = 'none';
+  document.getElementById('lotePreview').innerHTML = '';
+  document.getElementById('loteStatus').textContent = '';
+  document.getElementById('loteFiles').value = '';
+  
+  // Quitar badge
+  const fab = document.getElementById('fabBulk');
+  const badge = document.getElementById('fabBadge');
+  fab.classList.remove('has-pending');
+  badge.style.display = 'none';
+}
+
+function mostrarEditorLote(datosPrevios = null) {
   const grid = document.getElementById('editLoteGrid');
   const editorBubble = document.getElementById('editLoteBubble');
   grid.innerHTML = '';
 
-  // Actualizar título con cantidad de productos
-  editorBubble.querySelector('h3').innerHTML = `
+  // Actualizar título
+  document.getElementById('editorTitle').innerHTML = `
     <i class="fa-solid fa-pen-to-square"></i>
     Editar Productos del Lote (${loteTemporal.length} productos)
   `;
 
   loteTemporal.forEach((p, i) => {
+    const datos = datosPrevios && datosPrevios[i] ? datosPrevios[i] : {};
+    
     const card = document.createElement('div');
     card.className = 'lote-edit-card';
     card.innerHTML = `
@@ -1806,75 +2008,78 @@ function mostrarEditorLote() {
         
         <div class="lote-edit-field">
           <label>Nombre *</label>
-          <input type="text" id="loteName${i}" placeholder="Nombre del producto">
+          <input type="text" id="loteName${i}" placeholder="Nombre del producto" value="${datos.name || ''}">
         </div>
         
         <div class="lote-edit-row">
           <div class="lote-edit-field">
             <label>Precio *</label>
-            <input type="number" id="lotePrice${i}" step="0.01" placeholder="0.00">
+            <input type="number" id="lotePrice${i}" step="0.01" placeholder="0.00" value="${datos.price || ''}">
           </div>
           <div class="lote-edit-field">
             <label>Stock *</label>
-            <input type="number" id="loteQuantity${i}" placeholder="0">
+            <input type="number" id="loteQuantity${i}" placeholder="0" value="${datos.quantity || ''}">
           </div>
         </div>
         
         <div class="lote-edit-field">
           <label>Código de Barras *</label>
-          <input type="text" id="loteBarcode${i}" placeholder="Código">
+          <input type="text" id="loteBarcode${i}" placeholder="Código" value="${datos.barcode || ''}">
         </div>
         
         <div class="lote-edit-field">
           <label>Costo</label>
-          <input type="number" id="loteValorReal${i}" step="0.01" placeholder="0.00" oninput="calcSugLote(${i})">
+          <input type="number" id="loteValorReal${i}" step="0.01" placeholder="0.00" 
+                 value="${datos.valorReal || ''}" oninput="calcSugLote(${i})">
         </div>
         
         <div class="lote-edit-row">
           <div class="lote-edit-field">
             <label>% Gan.</label>
-            <input type="number" id="lotePorcentaje${i}" value="60" oninput="calcSugLote(${i})">
+            <input type="number" id="lotePorcentaje${i}" value="${datos.porcentaje || '60'}" 
+                   oninput="calcSugLote(${i})">
           </div>
           <div class="lote-edit-field">
             <label>Sugerencia</label>
-            <input type="number" id="loteSug${i}" readonly style="background: var(--bg);">
+            <input type="number" id="loteSug${i}" readonly style="background: var(--bg);" value="">
           </div>
         </div>
         
         <div class="lote-edit-field">
           <label>Fecha Compra *</label>
-          <input type="date" id="loteFecha${i}" value="${fechaActualGlobal}">
+          <input type="date" id="loteFecha${i}" value="${datos.fechaCompra || fechaActualGlobal}">
         </div>
         
         <div class="lote-edit-field">
           <label>Descripción *</label>
-          <textarea id="loteDescription${i}" rows="2" placeholder="Descripción..."></textarea>
+          <textarea id="loteDescription${i}" rows="2" placeholder="Descripción...">${datos.description || ''}</textarea>
         </div>
         
         <div class="lote-edit-field">
           <label>Categoría *</label>
           <select id="loteCategory${i}">
             <option value="">Seleccionar...</option>
-            <option value="Accesorios para el cabello">Accesorios cabello</option>
-            <option value="Anillos">Anillos</option>
-            <option value="Aritos">Aritos</option>
-            <option value="Billeteras">Billeteras</option>
-            <option value="Carteras">Carteras</option>
-            <option value="Case audífonos">Case audífonos</option>
-            <option value="Case teléfonos">Case teléfonos</option>
-            <option value="Chokers">Chokers</option>
-            <option value="Collares">Collares</option>
-            <option value="General">General</option>
-            <option value="Lentes de sol">Lentes de sol</option>
-            <option value="Otros">Otros</option>
-            <option value="Pulseras">Pulseras</option>
-            <option value="Relojes">Relojes</option>
+            <option value="Accesorios para el cabello" ${datos.category === 'Accesorios para el cabello' ? 'selected' : ''}>Accesorios cabello</option>
+            <option value="Anillos" ${datos.category === 'Anillos' ? 'selected' : ''}>Anillos</option>
+            <option value="Aritos" ${datos.category === 'Aritos' ? 'selected' : ''}>Aritos</option>
+            <option value="Billeteras" ${datos.category === 'Billeteras' ? 'selected' : ''}>Billeteras</option>
+            <option value="Carteras" ${datos.category === 'Carteras' ? 'selected' : ''}>Carteras</option>
+            <option value="Case audífonos" ${datos.category === 'Case audífonos' ? 'selected' : ''}>Case audífonos</option>
+            <option value="Case teléfonos" ${datos.category === 'Case teléfonos' ? 'selected' : ''}>Case teléfonos</option>
+            <option value="Chokers" ${datos.category === 'Chokers' ? 'selected' : ''}>Chokers</option>
+            <option value="Collares" ${datos.category === 'Collares' ? 'selected' : ''}>Collares</option>
+            <option value="General" ${datos.category === 'General' ? 'selected' : ''}>General</option>
+            <option value="Lentes de sol" ${datos.category === 'Lentes de sol' ? 'selected' : ''}>Lentes de sol</option>
+            <option value="Otros" ${datos.category === 'Otros' ? 'selected' : ''}>Otros</option>
+            <option value="Pulseras" ${datos.category === 'Pulseras' ? 'selected' : ''}>Pulseras</option>
+            <option value="Relojes" ${datos.category === 'Relojes' ? 'selected' : ''}>Relojes</option>
           </select>
         </div>
       </div>
     `;
     grid.appendChild(card);
 
+    // Cargar imagen
     localforage.getItem(`img_${p.code}`).then(blob => {
       const imgEl = document.getElementById(`loteImg${i}`);
       if (blob && imgEl) {
@@ -1882,10 +2087,13 @@ function mostrarEditorLote() {
       }
     });
     
-    calcSugLote(i);
+    // Calcular sugerencia si hay valor real
+    if (datos.valorReal) {
+      setTimeout(() => calcSugLote(i), 0);
+    }
   });
 
-  // MOSTRAR EL EDITOR EN MODO FULLSCREEN DENTRO DEL MODAL
+  // MOSTRAR EL EDITOR
   editorBubble.classList.add('active');
 }
 
@@ -1931,19 +2139,24 @@ function guardarLoteCompleto() {
     inventory = inventory.concat(loteTemporal);
     localStorage.setItem('inventory', JSON.stringify(inventory));
     
-    alert('Lote guardado correctamente ✅');
+    // Limpiar todo
+    localStorage.removeItem('loteTemporalData');
+    loteTemporal = [];
     
-    // Cerrar el editor y el modal
+    // Actualizar UI
+    const fab = document.getElementById('fabBulk');
+    const badge = document.getElementById('fabBadge');
+    fab.classList.remove('has-pending');
+    badge.style.display = 'none';
+    
     document.getElementById('editLoteBubble').classList.remove('active');
     closeBulkModal();
     
-    // Limpiar
-    loteTemporal = [];
     document.getElementById('lotePreview').innerHTML = '';
     document.getElementById('loteFiles').value = '';
     document.getElementById('loteStatus').textContent = '';
-    updateLoteStatus();
     
+    alert('Lote guardado correctamente ✅');
     renderTable();
     calculateTotal();
     document.getElementById('loadingOverlay').classList.remove('show');

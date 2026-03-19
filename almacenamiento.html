@@ -1111,23 +1111,20 @@
       font-size: 0.7rem;
     }
 
-    /* Render progress indicator */
-    .render-progress {
-      position: fixed;
-      bottom: 5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      z-index: 1000;
-      display: none;
+    /* Transiciones suaves para tabla y tarjetas */
+    #inventoryList, #cardsView {
+      transition: opacity 0.15s ease;
     }
-    .render-progress.show {
-      display: block;
+    #inventoryList.fading, #cardsView.fading {
+      opacity: 0.3;
+    }
+
+    /* Min-height para evitar saltos de layout */
+    #tableView {
+      min-height: 200px;
+    }
+    #cardsView {
+      min-height: 200px;
     }
 
     @media (max-width: 768px) {
@@ -1180,9 +1177,6 @@
   <div id="spinnerOverlay" class="spinner-overlay">
     <div class="spinner"></div>
   </div>
-
-  <!-- Progress indicator -->
-  <div id="renderProgress" class="render-progress">Cargando productos...</div>
 
   <div id="notExistModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--danger);color:white;padding:1rem 2rem;border-radius:8px;z-index:10000;font-weight:600;">Producto no existente</div>
   
@@ -1675,17 +1669,6 @@
       } else {
         spinner.classList.remove('show');
       }
-    }
-
-    // Progress indicator
-    function showProgress(message = 'Cargando...') {
-      const progress = document.getElementById('renderProgress');
-      progress.textContent = message;
-      progress.classList.add('show');
-    }
-
-    function hideProgress() {
-      document.getElementById('renderProgress').classList.remove('show');
     }
 
     // Safe LocalForage
@@ -2899,12 +2882,16 @@
     
     const debouncedFilterInventory = debounce(() => {
       currentPage = 1;
+      // El debounce ya da un delay, aplicar directamente
       filterInventory();
-    }, 150);
+    }, 200);
     
     function applyFilters() { 
       currentPage = 1;
-      filterInventory(); 
+      // Pequeño delay para feedback visual
+      setTimeout(() => {
+        filterInventory();
+      }, 50);
     }
     
     function filterInventory() { 
@@ -2955,14 +2942,21 @@
     
     function clearAllFilters() { 
       try {
+        // Limpiar inputs
         ['searchName', 'searchCategory', 'searchCode', 'minPrice', 'maxPrice', 'goToRow', 'searchDate'].forEach(id => { 
           const el = document.getElementById(id); 
           if (el) el.value = ''; 
         }); 
         document.getElementById('lowStockOnly').checked = false;
         document.querySelectorAll('#inventoryList tr, .card').forEach(el => el.classList.remove('highlight')); 
+        
+        // Reset paginación y aplicar filtros
         currentPage = 1;
-        filterInventory();
+        
+        // Pequeño delay para que el usuario vea que se limpió
+        setTimeout(() => {
+          filterInventory();
+        }, 50);
       } catch (e) {
         console.error('Error limpiando filtros:', e);
       }
@@ -2975,10 +2969,18 @@
       if (newPage >= 1 && newPage <= totalPages) {
         currentPage = newPage;
         const searchName = document.getElementById('searchName').value.trim().toLowerCase();
-        renderInventoryWithPagination(searchName);
         
-        // Scroll al inicio de la tabla
-        document.getElementById('tableView').scrollTop = 0;
+        // Scroll suave al inicio antes de cambiar página
+        const tableView = document.getElementById('tableView');
+        if (tableView.scrollTop > 0) {
+          tableView.scrollTo({ top: 0, behavior: 'smooth' });
+          // Pequeño delay para que termine el scroll antes de renderizar
+          setTimeout(() => {
+            renderInventoryWithPagination(searchName);
+          }, 150);
+        } else {
+          renderInventoryWithPagination(searchName);
+        }
       }
     }
     
@@ -2988,18 +2990,20 @@
       localStorage.setItem('pageSize', pageSize);
       currentPage = 1;
       const searchName = document.getElementById('searchName').value.trim().toLowerCase();
-      renderInventoryWithPagination(searchName);
+      
+      // Pequeño delay para que el usuario vea el cambio
+      setTimeout(() => {
+        renderInventoryWithPagination(searchName);
+      }, 50);
     }
     
     async function renderInventoryWithPagination(searchName) {
       if (isRendering) {
-        // Si ya estamos renderizando, encolar para después
         renderQueue.push(() => renderInventoryWithPagination(searchName));
         return;
       }
       
       isRendering = true;
-      showProgress('Cargando productos...');
       
       try {
         const list = document.getElementById('inventoryList');
@@ -3010,6 +3014,13 @@
         const prevBtn = document.getElementById('prevPageBtn');
         const nextBtn = document.getElementById('nextPageBtn');
         
+        // Iniciar fade out suave
+        list.classList.add('fading');
+        cards.classList.add('fading');
+        
+        // Pequeña pausa para que se vea el fade
+        await new Promise(r => setTimeout(r, 50));
+        
         urlManager.revokeAll();
         
         if (!filteredInventoryCache || filteredInventoryCache.length === 0) { 
@@ -3017,7 +3028,8 @@
           cards.innerHTML = ''; 
           noResults.style.display = 'block'; 
           paginationControls.style.display = 'none';
-          hideProgress();
+          list.classList.remove('fading');
+          cards.classList.remove('fading');
           isRendering = false;
           return; 
         }
@@ -3031,13 +3043,13 @@
         const endIndex = Math.min(startIndex + pageSize, totalItems);
         const pageItems = filteredInventoryCache.slice(startIndex, endIndex);
         
-        // Actualizar controles de paginación
+        // Actualizar controles de paginación inmediatamente
         paginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
         pageInfo.textContent = `Página ${currentPage} de ${totalPages} (${totalItems} productos)`;
         prevBtn.disabled = currentPage === 1;
         nextBtn.disabled = currentPage === totalPages;
         
-        // Renderizar tabla con placeholders
+        // Renderizar tabla con placeholders (sin limpiar primero, reemplazamos directamente)
         await renderTableWithPlaceholders(pageItems, startIndex, searchName);
         
         // Renderizar tarjetas (solo si es vista de tarjetas)
@@ -3045,19 +3057,23 @@
           await renderCardsWithPlaceholders(pageItems, startIndex, searchName);
         }
         
+        // Fade in suave
+        list.classList.remove('fading');
+        cards.classList.remove('fading');
+        
         updateDash();
         
-        // Cargar imágenes y barcodes lazy
-        loadImagesAndBarcodesLazy();
+        // Cargar imágenes y barcodes lazy (en background)
+        setTimeout(() => loadImagesAndBarcodesLazy(), 100);
         
       } catch (e) {
         console.error('Error renderizando inventario:', e);
         showNotification('Error al mostrar productos', 'error');
+        list.classList.remove('fading');
+        cards.classList.remove('fading');
       } finally {
-        hideProgress();
         isRendering = false;
         
-        // Procesar cola si hay pendientes
         if (renderQueue.length > 0) {
           const nextRender = renderQueue.shift();
           setTimeout(nextRender, 50);
@@ -3067,89 +3083,86 @@
     
     async function renderTableWithPlaceholders(items, startIdx, searchName) {
       const list = document.getElementById('inventoryList');
-      const fragment = document.createDocumentFragment();
       
-      // Crear filas con placeholders
+      // Guardar scroll position
+      const scrollTop = list.parentElement ? list.parentElement.scrollTop : 0;
+      
+      // Crear nuevo contenido
+      let html = '';
       items.forEach((item, idx) => {
         const realIndex = inventory.indexOf(item);
         const displayIdx = startIdx + idx + 1;
         const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
         const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
         
-        const tr = document.createElement('tr');
-        tr.id = `product-${displayIdx}`;
-        tr.dataset.realIndex = realIndex;
-        tr.dataset.itemCode = item.code;
-        tr.dataset.barcode = item.barcode || '';
-        
-        tr.innerHTML = `
-          <td>${displayIdx}</td>
-          <td>
-            <div class="img-placeholder" data-img-for="${item.code}" style="width:48px;height:48px;">...</div>
-          </td>
-          <td>${highlightText(item.name, searchName)}</td>
-          <td>${item.barcode || 'N/A'}</td>
-          <td>
-            <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
-          </td>
-          <td>$${(item.price || 0).toFixed(2)}</td>
-          <td>${item.discount || 0}%</td>
-          <td>$${priceWithDiscount}</td>
-          <td>${dateStr}</td>
-          <td>${highlightText(item.category, searchName)}</td>
-          <td>${item.quantity || 0}</td>
-          <td>
-            <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
-            <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
-            <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
-          </td>
+        html += `
+          <tr id="product-${displayIdx}" data-real-index="${realIndex}" data-item-code="${item.code}" data-barcode="${item.barcode || ''}">
+            <td>${displayIdx}</td>
+            <td>
+              <div class="img-placeholder" data-img-for="${item.code}" style="width:48px;height:48px;">...</div>
+            </td>
+            <td>${highlightText(item.name, searchName)}</td>
+            <td>${item.barcode || 'N/A'}</td>
+            <td>
+              <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
+            </td>
+            <td>$${(item.price || 0).toFixed(2)}</td>
+            <td>${item.discount || 0}%</td>
+            <td>$${priceWithDiscount}</td>
+            <td>${dateStr}</td>
+            <td>${highlightText(item.category, searchName)}</td>
+            <td>${item.quantity || 0}</td>
+            <td>
+              <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
+              <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
+              <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
+            </td>
+          </tr>
         `;
-        
-        fragment.appendChild(tr);
       });
       
-      list.innerHTML = '';
-      list.appendChild(fragment);
+      // Reemplazar contenido de una sola vez (más rápido que limpiar y agregar)
+      list.innerHTML = html;
+      
+      // Restaurar scroll
+      if (list.parentElement) {
+        list.parentElement.scrollTop = scrollTop;
+      }
     }
     
     async function renderCardsWithPlaceholders(items, startIdx, searchName) {
       const cards = document.getElementById('cardsView');
-      const fragment = document.createDocumentFragment();
       
+      // Crear nuevo contenido
+      let html = '';
       items.forEach((item, idx) => {
         const realIndex = inventory.indexOf(item);
         const priceWithDiscount = ((item.price || 0) * (1 - (item.discount || 0) / 100)).toFixed(2);
         const dateStr = item.date ? new Date(item.date).toLocaleString('es-ES') : 'N/A';
         
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.realIndex = realIndex;
-        card.dataset.itemCode = item.code;
-        card.dataset.barcode = item.barcode || '';
-        
-        card.innerHTML = `
-          <div class="img-placeholder" data-img-for="${item.code}">...</div>
-          <div><strong>${highlightText(item.name, searchName)}</strong></div>
-          <div>Barras: ${item.barcode || 'N/A'}</div>
-          <div>
-            <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
-          </div>
-          <div>Precio: $${priceWithDiscount} <small>(${(item.discount || 0)}% dto)</small></div>
-          <div>Stock: <strong>${item.quantity || 0}</strong></div>
-          <div>Cat: ${highlightText(item.category, searchName)}</div>
-          <div>Fecha: ${dateStr}</div>
-          <div class="card-footer">
-            <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
-            <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
-            <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
+        html += `
+          <div class="card" data-real-index="${realIndex}" data-item-code="${item.code}" data-barcode="${item.barcode || ''}">
+            <div class="img-placeholder" data-img-for="${item.code}">...</div>
+            <div><strong>${highlightText(item.name, searchName)}</strong></div>
+            <div>Barras: ${item.barcode || 'N/A'}</div>
+            <div>
+              <div class="barcode-placeholder" data-barcode-for="${item.barcode || ''}">...</div>
+            </div>
+            <div>Precio: $${priceWithDiscount} <small>(${(item.discount || 0)}% dto)</small></div>
+            <div>Stock: <strong>${item.quantity || 0}</strong></div>
+            <div>Cat: ${highlightText(item.category, searchName)}</div>
+            <div>Fecha: ${dateStr}</div>
+            <div class="card-footer">
+              <button class="stamp" onclick="markSold(${realIndex})" type="button">Vender</button>
+              <button class="btn-edit" onclick="openPriceModal(${realIndex})" title="Editar precio" type="button">✏️</button>
+              <button class="btn-view" onclick="openDescriptionModal(${realIndex})" title="Ver descripción" type="button">👁️</button>
+            </div>
           </div>
         `;
-        
-        fragment.appendChild(card);
       });
       
-      cards.innerHTML = '';
-      cards.appendChild(fragment);
+      // Reemplazar contenido de una sola vez
+      cards.innerHTML = html;
     }
     
     async function loadImagesAndBarcodesLazy() {

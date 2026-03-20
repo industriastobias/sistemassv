@@ -5,269 +5,990 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Descuentos</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     :root {
-      --primary: #0052d4;
-      --primary-light: #4f83cc;
-      --bg: #f5f7fa;
-      --card: #ffffff;
-      --text: #222;
-      --green: #00c853;
-      --red: #ff5252;
-      --shadow: 0 4px 12px rgba(0,0,0,.08);
+      --bg: #0f0f0f;
+      --surface: #141414;
+      --surface-hover: #1a1a1a;
+      --border: #262626;
+      --text: #fafafa;
+      --text-secondary: #a3a3a3;
+      --text-muted: #525252;
+      --accent: #ffffff;
+      --accent-hover: #e5e5e5;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 8px;
+      --radius-sm: 6px;
     }
-    * { box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
-    html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
-    body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
-    header {
-      background: var(--primary);
-      color: #fff;
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.3rem;
-      font-weight: 600;
-      box-shadow: var(--shadow);
-      flex-shrink: 0;
+    
+    * { 
+      box-sizing: border-box; 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    .wrap {
-      flex: 1 1 auto;
-      width: 100%;
-      max-width: 1200px;
-      margin: auto;
-      padding: 1rem;
-      overflow-y: auto;
+    
+    html, body { 
+      height: 100%; 
+      background: var(--bg); 
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
     }
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .8rem;
-      margin-bottom: 1.2rem;
-    }
-    .filters input, .filters select, .filters button {
-      padding: .55rem .7rem;
-      border: 1px solid #bbb;
-      border-radius: 6px;
-      font-size: .95rem;
-    }
-    .filters button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    .filters button:hover { background: var(--primary-light); }
-    table {
-      width: 100%;
-      background: var(--card);
-      border-collapse: collapse;
-      box-shadow: var(--shadow);
-      border-radius: 8px;
+    
+    /* Layout */
+    .app {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      height: 100vh;
       overflow: hidden;
     }
-    th, td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid #e5e5e5; }
-    th { background: #f2f5ff; }
-    tr.highlight { background: var(--green); color: #fff; }
-    .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-    .info { margin: .5rem 0; font-weight: 600; }
-    .counters {
-      margin: .5rem 0;
-      font-size: .95rem;
-      font-weight: 600;
+    
+    /* Sidebar */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      padding: 24px;
     }
-    .price-desc {
-      font-size: .85rem;
-      color: #555;
-      margin-top: .25rem;
+    
+    .logo {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .logo::before {
+      content: "◆";
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .nav-section {
+      margin-bottom: 24px;
+    }
+    
+    .nav-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    
+    .nav-item {
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+    
+    .nav-item:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    
+    .nav-item.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    
+    /* Main Content */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    /* Header */
+    .header {
+      height: 64px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      background: var(--bg);
+    }
+    
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    /* Content */
+    .content {
+      flex: 1;
+      overflow: auto;
+      padding: 32px;
+    }
+    
+    /* Stats Row */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .stat-change {
+      font-size: 12px;
+      color: var(--success);
+      font-weight: 500;
+    }
+    
+    .stat-change.negative {
+      color: var(--danger);
+    }
+    
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+    
+    .search-box {
+      position: relative;
+      flex: 1;
+      max-width: 400px;
+    }
+    
+    .search-box input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px 10px 36px;
+      color: var(--text);
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--text-muted);
+    }
+    
+    .search-box::before {
+      content: "⌕";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+    
+    .filters {
+      display: flex;
+      gap: 8px;
+    }
+    
+    select, input[type="number"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      min-width: 140px;
+      cursor: pointer;
+    }
+    
+    select:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--text-muted);
+    }
+    
+    /* Buttons */
+    .btn {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+    
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+    }
+    
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    /* Table */
+    .table-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    thead {
+      background: var(--bg);
+    }
+    
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    
+    tr:hover td {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Product Cell */
+    .product {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .product-img {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    
+    .product-name {
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    
+    .product-code {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'SF Mono', monospace;
+    }
+    
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    
+    .badge-success {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.2);
+      color: var(--success);
+    }
+    
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.2);
+      color: var(--warning);
+    }
+    
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+    
+    /* Price */
+    .price {
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .price-original {
+      text-decoration: line-through;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-right: 8px;
+      font-weight: 400;
+    }
+    
+    .price-final {
+      color: var(--success);
+    }
+    
+    /* Inputs */
+    .input-discount {
+      width: 60px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      text-align: center;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    
+    .input-discount:focus {
+      outline: none;
+      border-color: var(--success);
+    }
+    
+    /* Category Discount Panel */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    
+    .panel-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    /* Empty State */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar {
+        display: none;
+      }
+      
+      .stats {
+        grid-template-columns: 1fr;
+      }
+      
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .search-box {
+        max-width: 100%;
+      }
+      
+      .filters {
+        flex-wrap: wrap;
+      }
+      
+      th, td {
+        padding: 10px 12px;
+      }
+      
+      .product-img {
+        width: 32px;
+        height: 32px;
+      }
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      color: var(--text);
+      font-weight: 500;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .toast-success {
+      border-left: 3px solid var(--success);
+    }
+    
+    .toast-error {
+      border-left: 3px solid var(--danger);
     }
   </style>
 </head>
 <body>
 
-<header>Sistema de Descuentos</header>
-
-<div class="wrap">
-  <!-- Filtros -->
-  <div class="filters">
-    <input id="searchBarcode" placeholder="Código de barras (ENTER)" autocomplete="off">
-    <select id="catFilter">
-      <option value="">-- Categoría --</option>
-      <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-      <option value="Anillos">Anillos</option>
-      <option value="Aritos">Aritos</option>
-      <option value="Billeteras">Billeteras</option>
-      <option value="Carteras">Carteras</option>
-      <option value="Case audífonos">Case audífonos</option>
-      <option value="Case teléfonos">Case teléfonos</option>
-      <option value="Chokers">Chokers</option>
-      <option value="Collares">Collares</option>
-      <option value="General">General</option>
-      <option value="Lentes de sol">Lentes de sol</option>
-      <option value="Otros">Otros</option>
-      <option value="Pulseras">Pulseras</option>
-      <option value="Relojes">Relojes</option>
-    </select>
-    <input id="globalDisc" type="number" min="0" max="100" placeholder="Dto global %">
-    <button onclick="applyGlobal()">Aplicar</button>
-    <button onclick="removeGlobal()">Quitar</button>
-  </div>
-
-  <div class="info" id="info"></div>
-  <div class="counters" id="counters"></div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Cód.Barras</th><th>Precio</th>
-        <th>Dto %</th><th>Final</th><th>Categoría</th><th>Stock</th><th>Acción</th>
-      </tr>
-    </thead>
-    <tbody id="list"></tbody>
-  </table>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">Descuentos</div>
+    
+    <div class="nav-section">
+      <div class="nav-title">Principal</div>
+      <div class="nav-item active">Productos</div>
+      <div class="nav-item">Categorías</div>
+      <div class="nav-item">Historial</div>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-title">Configuración</div>
+      <div class="nav-item">Ajustes</div>
+      <div class="nav-item">Exportar</div>
+    </div>
+    
+    <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border);">
+      <div style="color: var(--text-muted); font-size: 12px;">
+        v2.0.0 • Sistema de Descuentos
+      </div>
+    </div>
+  </aside>
+  
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header-title">Gestión de Inventario</h1>
+      <div class="header-actions">
+        <span id="currentTime" style="color: var(--text-muted); font-size: 13px;"></span>
+      </div>
+    </header>
+    
+    <!-- Content -->
+    <div class="content">
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Total Productos</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-change">en inventario</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Con Descuento</div>
+          <div class="stat-value" id="statDiscounted">0</div>
+          <div class="stat-change" id="statDiscountedChange">0% del total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valor Inventario</div>
+          <div class="stat-value" id="statValue">$0</div>
+          <div class="stat-change">precio regular</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Proyección Ventas</div>
+          <div class="stat-value" id="statProjected">$0</div>
+          <div class="stat-change" id="statSavings">ahorro $0</div>
+        </div>
+      </div>
+      
+      <!-- Category Discount Panel -->
+      <div class="panel">
+        <div class="panel-title">Descuento por Categoría</div>
+        <div class="panel-row">
+          <div class="form-group">
+            <label class="form-label">Categoría</label>
+            <select id="catDiscSelect">
+              <option value="">Seleccionar...</option>
+              <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+              <option value="Anillos">Anillos</option>
+              <option value="Aritos">Aritos</option>
+              <option value="Billeteras">Billeteras</option>
+              <option value="Carteras">Carteras</option>
+              <option value="Case audífonos">Case audífonos</option>
+              <option value="Case teléfonos">Case teléfonos</option>
+              <option value="Chokers">Chokers</option>
+              <option value="Collares">Collares</option>
+              <option value="General">General</option>
+              <option value="Lentes de sol">Lentes de sol</option>
+              <option value="Otros">Otros</option>
+              <option value="Pulseras">Pulseras</option>
+              <option value="Relojes">Relojes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descuento %</label>
+            <input type="number" id="catDiscValue" min="0" max="100" placeholder="0">
+          </div>
+          <button class="btn" onclick="applyCategoryDiscount()">Aplicar</button>
+          <button class="btn btn-secondary" onclick="clearCategoryInputs()">Limpiar</button>
+          <div style="margin-left: auto; display: flex; gap: 8px;">
+            <input type="number" id="globalDisc" min="0" max="100" placeholder="Dto global %" style="width: 100px;">
+            <button class="btn" onclick="applyGlobal()">Global</button>
+            <button class="btn btn-danger btn-sm" onclick="removeGlobal()">Reset</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="text" id="searchBarcode" placeholder="Buscar por código, nombre o barcode..." autocomplete="off">
+        </div>
+        <div class="filters">
+          <select id="catFilter">
+            <option value="">Todas las categorías</option>
+            <option value="Accesorios para el cabello">Accesorios para el cabello</option>
+            <option value="Anillos">Anillos</option>
+            <option value="Aritos">Aritos</option>
+            <option value="Billeteras">Billeteras</option>
+            <option value="Carteras">Carteras</option>
+            <option value="Case audífonos">Case audífonos</option>
+            <option value="Case teléfonos">Case teléfonos</option>
+            <option value="Chokers">Chokers</option>
+            <option value="Collares">Collares</option>
+            <option value="General">General</option>
+            <option value="Lentes de sol">Lentes de sol</option>
+            <option value="Otros">Otros</option>
+            <option value="Pulseras">Pulseras</option>
+            <option value="Relojes">Relojes</option>
+          </select>
+          <select id="stockFilter">
+            <option value="">Stock</option>
+            <option value="high">Alto (>20)</option>
+            <option value="medium">Medio (10-20)</option>
+            <option value="low">Bajo (<10)</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th style="text-align: center;">Stock</th>
+              <th style="text-align: right;">Precio</th>
+              <th style="text-align: center; width: 80px;">Dto %</th>
+              <th style="text-align: right;">Final</th>
+              <th style="width: 100px;"></th>
+            </tr>
+          </thead>
+          <tbody id="list"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- localforage para imágenes -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 <script>
-/* ----------  DATOS  ---------- */
 const inv = JSON.parse(localStorage.getItem('inventory')) || [];
-const qs  = (s) => document.querySelector(s);
+const qs = (s) => document.querySelector(s);
 
-/* ----------  PINTAR  ---------- */
-function render(arr = inv) {
-  const tb = qs('#list');
-  tb.innerHTML = '';
-  arr.forEach((it, idx) => {
-    const final = (+it.price * (1 - (it.discount||0)/100)).toFixed(2);
-    const tr = document.createElement('tr');
-    tr.dataset.line = idx + 1;
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><img class="thumb" id="img-${it.code}" alt="img"></td>
-      <td>${it.name}</td>
-      <td>${it.code}</td>
-      <td>${it.barcode || ''}</td>
-      <td>
-        <span style="text-decoration: line-through; opacity: .7;">$${(+it.price).toFixed(2)}</span>
-        <strong>$${final}</strong>
-      </td>
-      <td><input type="number" min="0" max="100" value="${it.discount||0}"
-                 onchange="startSave('${it.code}', this.value)"></td>
-      <td>$${final}</td>
-      <td>${it.category}</td>
-      <td>${it.quantity}</td>
-      <td><button onclick="removeDiscount('${it.code}')">Quitar descuento</button></td>`;
-    tb.appendChild(tr);
-  });
-  loadImages();
-  totals();
-  updateCounters();
+function init() {
+  render();
+  updateTime();
+  setInterval(updateTime, 60000);
+  
+  qs('#searchBarcode').addEventListener('input', debounce(filterAndRender, 300));
+  qs('#catFilter').addEventListener('change', filterAndRender);
+  qs('#stockFilter').addEventListener('change', filterAndRender);
 }
 
-/* ----------  CARGAR IMAGENES DESDE LOCALFORAGE ---------- */
+function updateTime() {
+  const now = new Date();
+  qs('#currentTime').textContent = now.toLocaleString('es-ES', { 
+    weekday: 'short', 
+    day: 'numeric', 
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function render(arr = inv) {
+  const tb = qs('#list');
+  
+  if (arr.length === 0) {
+    tb.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="empty">
+            <div class="empty-icon">📦</div>
+            <div>No se encontraron productos</div>
+          </div>
+        </td>
+      </tr>
+    `;
+    updateStats();
+    return;
+  }
+  
+  tb.innerHTML = arr.map((it, idx) => {
+    const final = (it.price * (1 - (it.discount || 0) / 100)).toFixed(2);
+    const hasDiscount = (it.discount || 0) > 0;
+    const stockClass = it.quantity > 20 ? 'badge-success' : it.quantity >= 10 ? '' : 'badge-danger';
+    const stockText = it.quantity > 20 ? 'Alto' : it.quantity >= 10 ? 'Medio' : 'Bajo';
+    
+    return `
+      <tr class="fade-in" style="animation-delay: ${idx * 0.02}s">
+        <td style="color: var(--text-muted); font-size: 12px;">${idx + 1}</td>
+        <td>
+          <div class="product">
+            <img class="product-img" id="img-${it.code}" alt="">
+            <div>
+              <div class="product-name">${it.name}</div>
+              <div class="product-code">${it.code} • ${it.barcode || 'Sin barcode'}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge">${it.category}</span></td>
+        <td style="text-align: center;">
+          <span class="badge ${stockClass}">${stockText} (${it.quantity})</span>
+        </td>
+        <td style="text-align: right;">
+          ${hasDiscount ? `<span class="price-original">$${(+it.price).toFixed(2)}</span>` : ''}
+          <span class="price">$${(+it.price).toFixed(2)}</span>
+        </td>
+        <td style="text-align: center;">
+          <input type="number" 
+                 class="input-discount" 
+                 value="${it.discount || 0}" 
+                 min="0" 
+                 max="100"
+                 onchange="updateDiscount('${it.code}', this.value)">
+        </td>
+        <td style="text-align: right;">
+          <span class="price ${hasDiscount ? 'price-final' : ''}">$${final}</span>
+        </td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="removeDiscount('${it.code}')" 
+                  style="${!hasDiscount ? 'visibility: hidden;' : ''}">Quitar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  loadImages();
+  updateStats();
+}
+
 function loadImages() {
   inv.forEach(it => {
-    const imgEl = document.getElementById(`img-${it.code}`);
-    if (!imgEl) return;
+    const img = document.getElementById(`img-${it.code}`);
+    if (!img) return;
+    
     localforage.getItem(`img_${it.code}`).then(blob => {
-      if (blob) {
-        imgEl.src = URL.createObjectURL(blob);
-      } else {
-        imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
-      }
+      img.src = blob ? URL.createObjectURL(blob) : 
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(it.name)}&background=262626&color=525252&size=64&font-size=0.4&length=1`;
     }).catch(() => {
-      imgEl.src = 'https://via.placeholder.com/60?text=Sin+img ';
+      img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(it.name)}&background=262626&color=525252&size=64&font-size=0.4&length=1`;
     });
   });
 }
 
-/* ----------  LÓGICA DE DESCUENTOS ---------- */
-let saveTimeout = {};
-function startSave(code, val) {
-  clearTimeout(saveTimeout[code]);
-  saveTimeout[code] = setTimeout(() => {
-    setDisc(code, val);
-  }, 500);
-}
-function setDisc(code, val) {
-  const it = inv.find(i => i.code === code);
-  if (it) {
-    it.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
-    save();
-    filterAndRender();
+function updateDiscount(code, val) {
+  const item = inv.find(i => i.code === code);
+  if (!item) return;
+  
+  item.discount = Math.max(0, Math.min(100, parseFloat(val) || 0));
+  save();
+  filterAndRender();
+  
+  if (item.discount > 0) {
+    showToast(`${item.name}: ${item.discount}% descuento aplicado`, 'success');
   }
 }
+
 function removeDiscount(code) {
-  setDisc(code, 0);
+  updateDiscount(code, 0);
+  showToast('Descuento removido', 'success');
 }
+
 function applyGlobal() {
-  const v = parseFloat(qs('#globalDisc').value);
-  if (isNaN(v) || v < 0 || v > 100) return alert('Descuento inválido');
-  inv.forEach(i => i.discount = v);
+  const val = parseFloat(qs('#globalDisc').value);
+  if (isNaN(val) || val < 0 || val > 100) {
+    showToast('Ingrese un descuento válido (0-100)', 'error');
+    return;
+  }
+  
+  inv.forEach(i => i.discount = val);
   save();
   filterAndRender();
+  showToast(`Descuento global del ${val}% aplicado`, 'success');
+  qs('#globalDisc').value = '';
 }
+
 function removeGlobal() {
-  inv.forEach(i => i.discount = 0);
+  if (!inv.some(i => i.discount > 0)) return;
+  if (!confirm('¿Quitar todos los descuentos?')) return;
+  
+  inv.forEach(i => delete i.discount);
   save();
   filterAndRender();
+  showToast('Todos los descuentos removidos', 'success');
 }
 
-/* ----------  CONTADORES + PRECIOS ---------- */
-function updateCounters() {
-  const withDisc = inv.filter(i => (i.discount || 0) > 0).length;
-  const normal = inv.length - withDisc;
+function applyCategoryDiscount() {
+  const cat = qs('#catDiscSelect').value;
+  const val = parseFloat(qs('#catDiscValue').value);
+  
+  if (!cat) return showToast('Seleccione una categoría', 'error');
+  if (isNaN(val) || val < 0 || val > 100) return showToast('Ingrese un descuento válido', 'error');
+  
+  const items = inv.filter(i => i.category === cat);
+  if (items.length === 0) return showToast('No hay productos en esta categoría', 'error');
+  
+  items.forEach(i => i.discount = val);
+  save();
+  filterAndRender();
+  showToast(`${items.length} productos de "${cat}" con ${val}% descuento`, 'success');
+  clearCategoryInputs();
+}
 
-  const normalTotal = inv.reduce((sum, i) => {
-    if ((i.discount || 0) === 0) return sum + (i.price * i.quantity);
-    return sum;
+function clearCategoryInputs() {
+  qs('#catDiscSelect').value = '';
+  qs('#catDiscValue').value = '';
+}
+
+function filterAndRender() {
+  const search = qs('#searchBarcode').value.toLowerCase();
+  const cat = qs('#catFilter').value;
+  const stock = qs('#stockFilter').value;
+  
+  let filtered = inv;
+  
+  if (search) {
+    filtered = filtered.filter(i => 
+      i.name.toLowerCase().includes(search) ||
+      i.code.toLowerCase().includes(search) ||
+      (i.barcode && i.barcode.toLowerCase().includes(search))
+    );
+  }
+  
+  if (cat) filtered = filtered.filter(i => i.category === cat);
+  
+  if (stock) {
+    filtered = filtered.filter(i => {
+      const q = +i.quantity;
+      if (stock === 'high') return q > 20;
+      if (stock === 'medium') return q >= 10 && q <= 20;
+      return q < 10;
+    });
+  }
+  
+  render(filtered);
+}
+
+function updateStats() {
+  const total = inv.length;
+  const discounted = inv.filter(i => (i.discount || 0) > 0).length;
+  const totalValue = inv.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+  const projected = inv.reduce((sum, i) => {
+    const final = i.price * (1 - (i.discount || 0) / 100);
+    return sum + (final * i.quantity);
   }, 0);
-
-  const discTotal = inv.reduce((sum, i) => {
-    if ((i.discount || 0) > 0) return sum + (i.price * (1 - (i.discount || 0)/100) * i.quantity);
-    return sum;
-  }, 0);
-
-  qs('#counters').innerHTML = `
-    Con descuento: ${withDisc} | Precio normal: ${normal} |
-    Normal: <strong>$${normalTotal.toFixed(2)}</strong> |
-    Con dto: <strong>$${discTotal.toFixed(2)}</strong>
-  `;
+  const savings = totalValue - projected;
+  
+  qs('#statTotal').textContent = total;
+  qs('#statDiscounted').textContent = discounted;
+  qs('#statDiscountedChange').textContent = total ? `${((discounted/total)*100).toFixed(0)}% del total` : '0%';
+  qs('#statValue').textContent = '$' + totalValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  qs('#statProjected').textContent = '$' + projected.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  qs('#statSavings').textContent = `ahorro $${savings.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  qs('#statSavings').className = 'stat-change ' + (savings > 0 ? '' : 'negative');
 }
 
-/* ----------  TOTALES ---------- */
-function totals() {
-  let norm = 0, desc = 0;
-  inv.forEach(i => {
-    const q = +i.quantity, p = +i.price, d = (+i.discount||0);
-    norm += p * q;
-    desc += p * (1 - d/100) * q;
-  });
-}
 function save() {
   localStorage.setItem('inventory', JSON.stringify(inv));
 }
 
-/* ----------  FILTRAR ---------- */
-function filterAndRender() {
-  const barcode = qs('#searchBarcode').value.trim();
-  const cat  = qs('#catFilter').value;
-  let aux = inv;
-  if (barcode) aux = aux.filter(i => i.barcode === barcode);
-  if (cat)  aux = aux.filter(i => i.category === cat);
-  render(aux);
+function showToast(msg, type = 'success') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.remove(), 3000);
 }
 
-/* ----------  EVENTOS ---------- */
-qs('#searchBarcode').addEventListener('input', filterAndRender);
-qs('#catFilter').addEventListener('change', filterAndRender);
-qs('#searchBarcode').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); filterAndRender(); qs('#searchBarcode').select(); }
-});
+function debounce(fn, ms) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  };
+}
 
-/* ----------  INICIO ---------- */
-render();
+// Sample data
+if (inv.length === 0) {
+  const sample = [
+    { code: 'ACC001', name: 'Pinza para cabello dorada', barcode: '7501234567890', price: 15.99, quantity: 25, category: 'Accesorios para el cabello' },
+    { code: 'ANI001', name: 'Anillo plata 925', barcode: '7501234567891', price: 45.50, quantity: 12, category: 'Anillos' },
+    { code: 'ARI001', name: 'Aritos de perla', barcode: '7501234567892', price: 28.00, quantity: 8, category: 'Aritos' },
+    { code: 'BIL001', name: 'Billetera de cuero', barcode: '7501234567893', price: 35.00, quantity: 30, category: 'Billeteras' },
+    { code: 'CAR001', name: 'Cartera mediana negra', barcode: '7501234567894', price: 89.99, quantity: 15, category: 'Carteras' },
+    { code: 'CAS001', name: 'Case AirPods Pro', barcode: '7501234567895', price: 12.50, quantity: 50, category: 'Case audífonos' },
+    { code: 'TEL001', name: 'Case iPhone 15', barcode: '7501234567896', price: 18.00, quantity: 22, category: 'Case teléfonos' },
+    { code: 'CHO001', name: 'Choker gótico', barcode: '7501234567897', price: 22.00, quantity: 5, category: 'Chokers' },
+    { code: 'COL001', name: 'Collar corazón', barcode: '7501234567898', price: 55.00, quantity: 18, category: 'Collares' },
+    { code: 'LEN001', name: 'Lentes de sol aviador', barcode: '7501234567899', price: 120.00, quantity: 7, category: 'Lentes de sol' }
+  ];
+  inv.push(...sample);
+  save();
+}
+
+init();
 </script>
 </body>
 </html>

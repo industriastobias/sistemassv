@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario klohe</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css  "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js  "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;--info:#06b6d4;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -172,7 +174,12 @@
       color:#fff;
       box-shadow:0 4px 14px rgba(59,130,246,.4);
     }
-    .btn-catalog i{font-size:1.2rem}
+    .btn-barcode{
+      background:var(--warning);
+      color:#fff;
+      box-shadow:0 4px 14px rgba(245,158,11,.4);
+    }
+    .btn-catalog i, .btn-barcode i{font-size:1.2rem}
 
     .table-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.5rem;width:100%;max-width:1200px;}
     @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
@@ -185,12 +192,13 @@
     .line-item h3{font-size:1rem;color:var(--accent)}
     .line-item p{margin:0;font-size:.75rem;color:#6b7280}
     .stock-line{font-weight:600;color:var(--success)}
-    .actions{display:flex;gap:.5rem;margin-top:auto}
+    .actions{display:flex;gap:.5rem;margin-top:auto;flex-wrap:wrap;}
     button{padding:.4rem .8rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;font-size:.75rem;}
     button:hover{transform:translateY(-2px)}
     .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4);}
     .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4);}
     .btn-warning{background:var(--warning);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.4);}
+    .btn-barcode-small{background:var(--info);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.4);}
     .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem;}
     .total-box h2{font-size:1rem;color:var(--accent);margin:0}
     .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
@@ -204,6 +212,27 @@
     #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
 
     #pdfContent{display: none;}
+
+    /* Estilos para el código de barras en la tarjeta */
+    .barcode-container {
+      background: #fff;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 5px 0;
+      border: 1px solid #e5e7eb;
+    }
+    .barcode-container svg {
+      max-width: 100%;
+      height: 40px;
+    }
+    .barcode-number {
+      font-size: 0.7rem;
+      color: #374151;
+      font-family: monospace;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
@@ -249,6 +278,9 @@
   </button>
   <button onclick="downloadCatalogPDF()" class="btn-catalog">
     <i class="fa fa-images"></i> PRODUCTOS (Catálogo)
+  </button>
+  <button onclick="downloadBarcodeLabelsPDF()" class="btn-barcode">
+    <i class="fa fa-barcode"></i> ETIQUETAS CÓDIGOS DE BARRA
   </button>
 </div>
 
@@ -328,6 +360,9 @@
 <div id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
+
+<!-- Contenedor oculto para generar etiquetas de códigos de barras -->
+<div id="barcodeLabelsContainer" style="display:none;"></div>
 
 <div id="pdfContent"></div>
 
@@ -617,7 +652,7 @@ function renderTable(){
     return;
   }
 
-  // ELIMINADOS: Botones de Eliminar y Editar. Solo queda "Ver"
+  // ELIMINADOS: Botones de Eliminar y Editar. Solo queda "Ver" y "Etiqueta"
   container.innerHTML = filtered.map((item,idx)=>`
     <div class="line-item" id="card-${idx}">
       <img id="invImg${idx}" src="" alt="${item.name}"/>
@@ -632,14 +667,36 @@ function renderTable(){
       `}
       <p>Categoría: ${highlight(item.category, searchTerm)}</p>
       ${item.description ? `<p style="font-size:.7rem;color:#4b5563;"><i class="fa fa-info-circle"></i> ${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}</p>` : ''}
-      <p style="font-size:.7rem;">Barras: ${highlight(item.barcode, searchTerm)}
-        <i class="fa fa-copy copy-barcode" onclick="copyToClipboard('${item.barcode}')" title="Copiar código"></i>
-      </p>
+      
+      <!-- CÓDIGO DE BARRAS -->
+      <div class="barcode-container">
+        <svg id="barcode-${idx}"></svg>
+        <div class="barcode-number">${item.barcode}</div>
+      </div>
+      
       <div class="actions">
         <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
+        <button onclick="downloadSingleBarcodeLabel(${idx})" class="btn-barcode-small" title="Descargar etiqueta"><i class="fa fa-barcode"></i></button>
       </div>
     </div>
   `).join('');
+
+  // Generar códigos de barras
+  filtered.forEach((item, idx) => {
+    if (item.barcode) {
+      try {
+        JsBarcode(`#barcode-${idx}`, item.barcode, {
+          format: "CODE128",
+          width: 2,
+          height: 40,
+          displayValue: false,
+          margin: 0
+        });
+      } catch (e) {
+        console.error('Error generando código de barras:', e);
+      }
+    }
+  });
 
   filtered.forEach((p,i)=>{
     localforage.getItem(`img_${p.code}`).then(blob=>{
@@ -658,6 +715,190 @@ function renderTable(){
 
 function viewItem(index){
   alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
+}
+
+// Función para descargar una sola etiqueta
+async function downloadSingleBarcodeLabel(index) {
+  const item = filtered[index];
+  if (!item || !item.barcode) {
+    alert('Este producto no tiene código de barras');
+    return;
+  }
+  
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', [50, 30]); // Tamaño etiqueta pequeña
+  
+  const finalPrice = item.discount > 0 
+    ? (item.price * (1 - item.discount / 100)).toFixed(2)
+    : parseFloat(item.price).toFixed(2);
+  
+  // MARCA KLOHE (vertical en la izquierda)
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('K', 2, 8);
+  pdf.text('L', 2, 12);
+  pdf.text('O', 2, 16);
+  pdf.text('H', 2, 20);
+  pdf.text('E', 2, 24);
+  
+  // Nombre del producto y precio (arriba derecha)
+  pdf.setFontSize(7);
+  let nombre = item.name;
+  if (nombre.length > 20) nombre = nombre.substring(0, 17) + '...';
+  pdf.text(nombre, 12, 6);
+  
+  pdf.setFontSize(9);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(`$${finalPrice}`, 12, 11);
+  
+  // Código de barras
+  const canvas = document.createElement('canvas');
+  try {
+    JsBarcode(canvas, item.barcode, {
+      format: "CODE128",
+      width: 1.5,
+      height: 15,
+      displayValue: false,
+      margin: 0
+    });
+    
+    const barcodeData = canvas.toDataURL('image/png');
+    pdf.addImage(barcodeData, 'PNG', 12, 14, 35, 10);
+    
+    // Números del código de barras debajo
+    pdf.setFontSize(6);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(item.barcode, 29.5, 26, { align: 'center' });
+    
+    pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
+  } catch (e) {
+    alert('Error al generar el código de barras');
+    console.error(e);
+  }
+}
+
+// FUNCIÓN: Descargar etiquetas de códigos de barras en PDF
+async function downloadBarcodeLabelsPDF() {
+  const { jsPDF } = window.jspdf;
+  
+  if (!filtered || filtered.length === 0) {
+    alert('No hay productos para generar etiquetas');
+    return;
+  }
+  
+  // Filtrar solo productos con código de barras
+  const productsWithBarcode = filtered.filter(item => item.barcode && item.barcode.trim() !== '');
+  
+  if (productsWithBarcode.length === 0) {
+    alert('No hay productos con código de barras');
+    return;
+  }
+  
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  
+  // Configuración de etiquetas: 3 columnas x 8 filas = 24 etiquetas por página
+  const cols = 3;
+  const rows = 8;
+  const labelWidth = 63;  // Ancho de etiqueta en mm
+  const labelHeight = 35; // Alto de etiqueta en mm
+  const marginX = 6;      // Margen izquierdo
+  const marginY = 8;      // Margen superior
+  const gapX = 3;         // Espacio entre columnas
+  const gapY = 2;         // Espacio entre filas
+  
+  let currentPage = 1;
+  let labelCount = 0;
+  
+  // Función para dibujar una etiqueta
+  const drawLabel = (item, x, y) => {
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+    
+    // Borde de la etiqueta (opcional, para corte)
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, y, labelWidth, labelHeight);
+    
+    // MARCA KLOHE (vertical en la izquierda)
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(0, 0, 0);
+    const letterY = y + 8;
+    const letterSpacing = 4;
+    pdf.text('K', x + 2, letterY);
+    pdf.text('L', x + 2, letterY + letterSpacing);
+    pdf.text('O', x + 2, letterY + letterSpacing * 2);
+    pdf.text('H', x + 2, letterY + letterSpacing * 3);
+    pdf.text('E', x + 2, letterY + letterSpacing * 4);
+    
+    // Línea separadora vertical
+    pdf.setDrawColor(150, 150, 150);
+    pdf.line(x + 10, y + 3, x + 10, y + labelHeight - 3);
+    
+    // Nombre del producto (arriba derecha)
+    pdf.setFontSize(7);
+    pdf.setFont(undefined, 'normal');
+    let nombre = item.name;
+    if (nombre.length > 28) nombre = nombre.substring(0, 25) + '...';
+    pdf.text(nombre, x + 13, y + 7);
+    
+    // Precio
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`$${finalPrice}`, x + 13, y + 13);
+    
+    // Código de barras
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, item.barcode, {
+        format: "CODE128",
+        width: 1.5,
+        height: 18,
+        displayValue: false,
+        margin: 0
+      });
+      
+      const barcodeData = canvas.toDataURL('image/png');
+      pdf.addImage(barcodeData, 'PNG', x + 13, y + 16, labelWidth - 17, 12);
+      
+      // Números del código de barras debajo
+      pdf.setFontSize(6);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(item.barcode, x + labelWidth / 2 + 4, y + 31, { align: 'center' });
+    } catch (e) {
+      console.error('Error generando código de barras para:', item.name);
+    }
+  };
+  
+  // Generar etiquetas
+  for (let i = 0; i < productsWithBarcode.length; i++) {
+    const item = productsWithBarcode[i];
+    
+    // Calcular posición
+    const col = labelCount % cols;
+    const row = Math.floor((labelCount % (cols * rows)) / cols);
+    
+    const x = marginX + col * (labelWidth + gapX);
+    const y = marginY + row * (labelHeight + gapY);
+    
+    drawLabel(item, x, y);
+    
+    labelCount++;
+    
+    // Nueva página si se llenó
+    if (labelCount % (cols * rows) === 0 && i < productsWithBarcode.length - 1) {
+      pdf.addPage();
+      currentPage++;
+    }
+  }
+  
+  // Guardar
+  pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // ELIMINADAS: Las funciones deleteItem(), editItem(), cancelEdit() y saveEdit()

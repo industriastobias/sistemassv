@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -652,7 +651,6 @@ function renderTable(){
     return;
   }
 
-  // ELIMINADOS: Botones de Eliminar y Editar. Solo queda "Ver" y "Etiqueta"
   container.innerHTML = filtered.map((item,idx)=>`
     <div class="line-item" id="card-${idx}">
       <img id="invImg${idx}" src="" alt="${item.name}"/>
@@ -825,7 +823,7 @@ async function downloadSingleBarcodeLabel(index) {
   }
 }
 
-// FUNCIÓN: Descargar etiquetas de códigos de barras en PDF
+// FUNCIÓN MODIFICADA: Descargar etiquetas de códigos de barras en PDF - 3x7 filas
 async function downloadBarcodeLabelsPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -846,15 +844,15 @@ async function downloadBarcodeLabelsPDF() {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // Configuración de etiquetas: 3 columnas x 5 filas = 15 etiquetas por página
+  // ✅ CONFIGURACIÓN MODIFICADA: 3 columnas x 7 filas = 21 etiquetas por página
   const cols = 3;
-  const rows = 5;
+  const rows = 7;  // Cambiado de 5 a 7 filas
   const labelWidth = 63;  // Ancho de etiqueta en mm
-  const labelHeight = 55; // Alto de etiqueta en mm (más grande para 5 filas)
+  const labelHeight = 37; // Alto reducido para caber 7 filas (antes era 55)
   const marginX = 8;      // Margen izquierdo
   const marginY = 10;     // Margen superior
   const gapX = 3;         // Espacio entre columnas
-  const gapY = 3;         // Espacio entre filas
+  const gapY = 2;         // Espacio reducido entre filas
   
   let currentPage = 1;
   let labelCount = 0;
@@ -882,23 +880,23 @@ async function downloadBarcodeLabelsPDF() {
     return lines;
   };
   
-  // Función para dibujar una etiqueta
+  // Función para dibujar una etiqueta - POSICIONES AJUSTADAS
   const drawLabel = (item, x, y) => {
     const finalPrice = item.discount > 0 
       ? (item.price * (1 - item.discount / 100)).toFixed(2)
       : parseFloat(item.price).toFixed(2);
     
-    // Borde de la etiqueta (opcional, para corte)
+    // Borde de la etiqueta
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.2);
     pdf.rect(x, y, labelWidth, labelHeight);
     
-    // MARCA KLOHE (vertical en la izquierda) - más grande
-    pdf.setFontSize(14);
+    // MARCA KLOHE (vertical en la izquierda) - POSICIONES COMPACTAS
+    pdf.setFontSize(11); // Ligeramente más pequeño
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(0, 0, 0);
-    const letterY = y + 10;
-    const letterSpacing = 6;
+    const letterY = y + 5; // Empezar más arriba (antes y + 10)
+    const letterSpacing = 5; // Espaciado reducido (antes 6)
     pdf.text('K', x + 2, letterY);
     pdf.text('L', x + 2, letterY + letterSpacing);
     pdf.text('O', x + 2, letterY + letterSpacing * 2);
@@ -907,70 +905,66 @@ async function downloadBarcodeLabelsPDF() {
     
     // Línea separadora vertical
     pdf.setDrawColor(150, 150, 150);
-    pdf.line(x + 12, y + 3, x + 12, y + labelHeight - 3);
+    pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
     
-    // Nombre del producto - ajustar tamaño según longitud
-    const textX = x + 15;
-    const maxTextWidth = labelWidth - 19; // Ancho disponible para texto
-    let fontSize = 9;
+    // Nombre del producto - MÁS ARRIBA
+    const textX = x + 13;
+    const maxTextWidth = labelWidth - 16;
+    let fontSize = 8; // Reducido para ahorrar espacio
     let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
     
-    // Si es muy largo, reducir tamaño de fuente
+    // Ajustar si es muy largo
     if (lines.length > 2) {
-      fontSize = 8;
-      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
-    }
-    if (lines.length > 3) {
       fontSize = 7;
       lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
     }
-    if (lines.length > 4) {
+    if (lines.length > 3) {
       fontSize = 6;
       lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
     }
     
-    // Limitar a máximo 4 líneas
-    if (lines.length > 4) {
-      lines = lines.slice(0, 4);
-      const lastLine = lines[3];
-      if (lastLine.length > 20) {
-        lines[3] = lastLine.substring(0, 17) + '...';
+    // Limitar a máximo 3 líneas
+    if (lines.length > 3) {
+      lines = lines.slice(0, 3);
+      const lastLine = lines[2];
+      if (lastLine.length > 18) {
+        lines[2] = lastLine.substring(0, 15) + '...';
       }
     }
     
-    // Dibujar nombre del producto
+    // Dibujar nombre
     pdf.setFontSize(fontSize);
     pdf.setFont(undefined, 'normal');
-    let textY = y + 10;
+    let textY = y + 6; // Más arriba (antes y + 10)
     lines.forEach(line => {
       pdf.text(line, textX, textY);
-      textY += fontSize * 0.45;
+      textY += fontSize * 0.4;
     });
     
-    // Precio
-    pdf.setFontSize(12);
+    // Precio - POSICIÓN AJUSTADA
+    pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
-    pdf.text(`$${finalPrice}`, textX, textY + 3);
+    pdf.text(`$${finalPrice}`, textX, y + 16); // Fijo en y + 16
     
-    // Código de barras
+    // Código de barras - MÁS ARRIBA
     const canvas = document.createElement('canvas');
     try {
       JsBarcode(canvas, item.barcode, {
         format: "CODE128",
-        width: 1.5,
-        height: 14,
+        width: 1.2, // Ligeramente más delgado
+        height: 10, // Altura reducida (antes 14)
         displayValue: false,
         margin: 0
       });
       
       const barcodeData = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeData, 'PNG', textX, y + 32, labelWidth - 20, 14);
+      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10); // y + 19 (antes y + 32)
       
-      // Números del código de barras debajo
-      pdf.setFontSize(7);
+      // Números del código de barras - AL FINAL
+      pdf.setFontSize(6); // Más pequeño
       pdf.setFont(undefined, 'normal');
       pdf.setTextColor(80, 80, 80);
-      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 50, { align: 'center' });
+      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' }); // y + 34 (antes y + 50)
     } catch (e) {
       console.error('Error generando código de barras para:', item.name);
     }
@@ -991,7 +985,7 @@ async function downloadBarcodeLabelsPDF() {
     
     labelCount++;
     
-    // Nueva página si se llenó
+    // Nueva página si se llenó (21 etiquetas)
     if (labelCount % (cols * rows) === 0 && i < productsWithBarcode.length - 1) {
       pdf.addPage();
       currentPage++;
@@ -1001,9 +995,6 @@ async function downloadBarcodeLabelsPDF() {
   // Guardar
   pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
 }
-
-// ELIMINADAS: Las funciones deleteItem(), editItem(), cancelEdit() y saveEdit()
-// ya no están disponibles para evitar modificaciones en los productos.
 
 function doFilter(){
   searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();

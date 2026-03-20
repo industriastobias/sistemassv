@@ -1,851 +1,1399 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>💰 VENTAS – TOBIAS</title>
+  <title>VENTAS – KLOHESV</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     :root {
-      --bg: #f5f5f5;
+      /* Paleta minimalista: blancos, grises, rosa pálido */
+      --bg: #fafafa;
       --card: #ffffff;
-      --text: #222;
-      --accent: #444;
-      --danger: #d63384;
-      --success: #16a34a;
+      --text-primary: #2d2d2d;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --accent: #4b5563;
+      --accent-hover: #374151;
+      --rose-pale: #fdf2f4;
+      --rose-soft: #fce7eb;
+      --rose-medium: #f9d5dc;
+      --rose-text: #be185d;
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --success: #10b981;
+      --success-soft: #ecfdf5;
       --warning: #f59e0b;
-      --radius: 10px;
-      --shadow: 0 2px 8px rgba(0,0,0,.05);
+      --warning-soft: #fffbeb;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+      --transition: all 0.2s ease;
     }
+    
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 0; min-height: 100vh; }
-
-    .container {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 20px;
-      background: var(--card);
-      border-radius: 0;
-      box-shadow: none;
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text-primary); 
+      min-height: 100vh;
+      line-height: 1.5;
     }
 
-    .header {
+    /* ===== HEADER ===== */
+    .header-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border-light);
+      padding: 16px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
       gap: 12px;
     }
 
-    .header h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--accent);
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--rose-soft) 0%, var(--rose-medium) 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--rose-text);
+      font-size: 1.1rem;
     }
 
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* ===== MENÚ ===== */
     #menuToggle {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      z-index: 1001;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
       font-size: 1rem;
       cursor: pointer;
-      box-shadow: var(--shadow);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #menuToggle:hover {
+      background: var(--rose-pale);
+      border-color: var(--rose-medium);
+      color: var(--rose-text);
     }
 
     #sideMenu {
       position: fixed;
       top: 0;
-      right: -50px;
-      width: 50px;
+      right: -280px;
+      width: 280px;
       height: 100vh;
-      background: #ffffff;
-      box-shadow: -2px 0 6px rgba(0,0,0,.05);
+      background: var(--card);
+      box-shadow: var(--shadow-lg);
       display: flex;
       flex-direction: column;
-      align-items: center;
-      padding-top: 60px;
-      gap: 16px;
-      transition: right .3s;
-      z-index: 1000;
+      padding: 80px 16px 24px;
+      gap: 4px;
+      transition: right 0.3s ease;
+      z-index: 999;
     }
 
     #sideMenu.show { right: 0; }
 
     #sideMenu a {
-      color: var(--accent);
-      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
       text-decoration: none;
-      position: relative;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: var(--transition);
     }
 
-    #sideMenu a:hover::after {
-      content: attr(data-title);
+    #sideMenu a:hover {
+      background: var(--rose-pale);
+      color: var(--rose-text);
+    }
+
+    #sideMenu a i {
+      width: 20px;
+      text-align: center;
+    }
+
+    .menu-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+      z-index: 998;
+    }
+
+    .menu-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ===== CONTROLES ===== */
+    .controls-bar {
+      background: var(--card);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 240px;
+      max-width: 320px;
+    }
+
+    .search-box i {
       position: absolute;
-      right: 40px;
+      left: 14px;
       top: 50%;
       transform: translateY(-50%);
-      background: #333;
-      color: #fff;
-      padding: 4px 6px;
-      border-radius: 4px;
-      font-size: .7rem;
-      white-space: nowrap;
+      color: var(--text-muted);
+      font-size: 0.9rem;
     }
 
-    .controls {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-      align-items: center;
-      font-size: 0.8rem;
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: var(--transition);
     }
 
-    .controls input,
-    .controls select,
-    .controls button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: var(--radius);
-      background: #f5f5f5;
-      color: var(--text);
-      box-shadow: var(--shadow);
-      font-size: 0.8rem;
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--rose-medium);
+      background: var(--card);
+      box-shadow: 0 0 0 3px var(--rose-soft);
     }
 
-    .controls button {
-      background: var(--accent);
-      color: #fff;
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .control-select {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      color: var(--text-primary);
+      font-size: 0.9rem;
       cursor: pointer;
-      font-weight: 600;
+      transition: var(--transition);
     }
 
-    .controls button:hover {
-      opacity: .9;
+    .control-select:focus {
+      outline: none;
+      border-color: var(--rose-medium);
     }
 
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--text-primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-rose {
+      background: var(--rose-soft);
+      color: var(--rose-text);
+    }
+
+    .btn-rose:hover {
+      background: var(--rose-medium);
+    }
+
+    .btn-success {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .btn-success:hover {
+      background: #d1fae5;
+    }
+
+    .btn-outline {
+      background: var(--card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+
+    /* ===== CONTENIDO ===== */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ===== GRID DE PRODUCTOS ===== */
     .cards-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 12px;
-      overflow: auto;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
     }
 
     .card {
-      background: #fafafa;
-      border-radius: var(--radius);
-      padding: 12px;
-      box-shadow: var(--shadow);
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-light);
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      transition: .3s;
+      gap: 12px;
+      transition: var(--transition);
       position: relative;
-      min-height: 200px;
       opacity: 0;
-      transform: translateY(10px);
-      animation: fadeIn .4s forwards;
-      font-size: 0.8rem;
+      transform: translateY(12px);
+      animation: fadeIn 0.4s forwards;
     }
 
     @keyframes fadeIn {
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card-image-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .card img {
       width: 100%;
-      height: 90px;
+      height: 100%;
       object-fit: contain;
-      border-radius: 6px;
+      padding: 12px;
       cursor: pointer;
-      margin-bottom: 6px;
-      border: 1px solid #eee;
+      transition: var(--transition);
+    }
+
+    .card img:hover {
+      transform: scale(1.05);
+    }
+
+    .card-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: var(--rose-soft);
+      color: var(--rose-text);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .card-checkbox {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      accent-color: var(--rose-text);
+      cursor: pointer;
+    }
+
+    .card-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .card-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      line-height: 1.2;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-barcode {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
     }
 
     .card-price {
-      font-size: 1rem;
+      font-size: 1.15rem;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--text-primary);
+      margin-top: 4px;
     }
 
-    .card-footer {
+    .card-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-top: auto;
-      font-size: 0.75rem;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .card-quantity {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .card-total {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--rose-text);
     }
 
     .card-delete {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card:hover .card-delete {
+      opacity: 1;
+    }
+
+    .card-delete:hover {
       background: var(--danger);
       color: #fff;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      cursor: pointer;
     }
 
-    .barcode-text {
-      font-size: 10px;
-      text-align: center;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    .new-badge {
-      position: absolute;
-      top: 6px;
-      left: 6px;
-      background: var(--accent);
-      color: #fff;
-      padding: 3px 6px;
-      border-radius: 10px;
-      font-size: 0.65rem;
-      font-weight: 700;
-    }
-
+    /* ===== PAGINACIÓN ===== */
     .pagination {
       display: flex;
       justify-content: center;
-      gap: 6px;
-      margin-top: 20px;
-      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 32px;
+      padding-bottom: 100px;
     }
 
     .pagination button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: var(--radius);
-      background: #f5f5f5;
-      color: var(--text);
-      box-shadow: var(--shadow);
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 0.8rem;
+      transition: var(--transition);
     }
 
     .pagination button:hover {
-      background: var(--accent);
-      color: #fff;
+      background: var(--rose-pale);
+      border-color: var(--rose-medium);
+      color: var(--rose-text);
     }
 
-    /* ---------- SPINNER ---------- */
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ===== SIN RESULTADOS ===== */
+    #noResults {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    #noResults i {
+      font-size: 4rem;
+      color: var(--border);
+      margin-bottom: 16px;
+    }
+
+    #noResults h3 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    /* ===== FAB ===== */
+    .fab-totals {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--rose-soft) 0%, var(--rose-medium) 100%);
+      color: var(--rose-text);
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .fab-totals:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 32px rgba(190, 24, 93, 0.2);
+    }
+
+    /* ===== SPINNER ===== */
     .spinner {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(255,255,255,.8);
+      background: rgba(255,255,255,0.9);
       z-index: 9999;
       place-items: center;
     }
-    .spinner::after {
-      content: '';
-      width: 32px;
-      height: 32px;
-      border: 4px solid #ddd;
-      border-top-color: var(--accent);
+    
+    .spinner-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .spinner-ring {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--rose-text);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ---------- FAB ---------- */
-    .fab-totals {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      font-size: 1.2rem;
-      font-weight: 700;
-      box-shadow: var(--shadow);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .spinner-text {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
     }
 
-    /* ---------- MODALES ---------- */
-    #totalesModal, #facturaModal, #imgModal, #cierreModal {
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== MODALES ===== */
+    .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.45);
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 999;
-    }
-
-    .totales-card, .factura-card, .cierre-card {
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
       padding: 20px;
-      width: 90vw;
-      max-width: 700px;
-      max-height: 90vh;
-      overflow-y: auto;
     }
 
-    .ticket-preview {
-      background: #fff;
-      color: #000;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.3;
-      padding: 10px 8px;
-      border: 1px dashed #999;
-      border-radius: 6px;
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-    }
-
-    .ticket-preview .total {
-      font-weight: 700;
-      font-size: 14px;
-      text-align: right;
-      margin-top: 6px;
-      padding-right: 6px;
-    }
-
-    .modal-buttons {
+    .modal-overlay.show {
       display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-      margin-top: 10px;
     }
 
-    .modal-buttons button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+    .modal-card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow: hidden;
+      animation: modalSlide 0.3s ease;
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-card.wide {
+      max-width: 720px;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
       font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      background: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(90vh - 140px);
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ===== MODAL TOTALES ===== */
+    .totales-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .total-box {
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .total-box.rosa {
+      background: var(--rose-pale);
+    }
+
+    .total-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .total-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .total-box.rosa .total-value {
+      color: var(--rose-text);
+    }
+
+    /* ===== TICKET / FACTURA ===== */
+    .ticket-container {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #000;
+    }
+
+    .ticket-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    .ticket-logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    .ticket-info {
+      color: #666;
+      font-size: 11px;
+    }
+
+    .ticket-divider {
+      border: none;
+      border-top: 1px dashed #ccc;
+      margin: 12px 0;
+    }
+
+    .ticket-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .ticket-row.label {
+      color: #666;
+      font-size: 11px;
+    }
+
+    .ticket-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+    }
+
+    .ticket-table th {
+      text-align: left;
+      padding: 6px 0;
+      border-bottom: 1px solid #ddd;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .ticket-table td {
+      padding: 6px 0;
+      vertical-align: top;
+    }
+
+    .ticket-table td:last-child {
+      text-align: right;
+    }
+
+    .ticket-product-name {
+      font-weight: 600;
+    }
+
+    .ticket-product-price {
+      font-size: 10px;
+      color: #666;
+    }
+
+    .ticket-total {
+      text-align: right;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 0;
+      border-top: 2px solid #000;
+      margin-top: 8px;
+    }
+
+    .ticket-footer {
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed #ccc;
+      font-size: 10px;
+      color: #666;
+    }
+
+    /* Formulario de factura */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--rose-medium);
+      box-shadow: 0 0 0 3px var(--rose-soft);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ===== CIERRE DE CAJA ===== */
+    .cierre-card {
+      max-width: 640px;
+    }
+
+    .cierre-warning {
+      background: var(--warning-soft);
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .cierre-warning i {
+      color: var(--warning);
+      font-size: 1.1rem;
+      margin-top: 2px;
+    }
+
+    .cierre-warning div {
+      font-size: 0.85rem;
+      color: #92400e;
+      line-height: 1.5;
+    }
+
+    .cierre-warning strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .year-selector {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .year-selector label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .month-item {
+      padding: 10px 8px;
+      background: var(--bg);
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .month-item:hover {
+      background: var(--rose-pale);
+      color: var(--rose-text);
+    }
+
+    .month-item.selected {
+      background: var(--rose-soft);
+      border-color: var(--rose-medium);
+      color: var(--rose-text);
+    }
+
+    .selected-period {
+      background: var(--rose-pale);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+    }
+
+    .selected-period strong {
+      color: var(--rose-text);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      border-left: 3px solid var(--border);
+    }
+
+    .stat-card.success { border-left-color: var(--success); }
+    .stat-card.warning { border-left-color: var(--warning); }
+    .stat-card.danger { border-left-color: var(--danger); }
+    .stat-card.rosa { border-left-color: var(--rose-medium); }
+
+    .stat-label {
       font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
     }
 
-    .btn-print {
-      background: var(--success);
-      color: #fff;
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
     }
 
-    .btn-close {
-      background: #6b7280;
-      color: #fff;
+    .cierre-table-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
     }
 
-    .btn-warning {
-      background: var(--warning);
+    .cierre-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .cierre-table th {
+      background: var(--bg);
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      position: sticky;
+      top: 0;
+    }
+
+    .cierre-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .cierre-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .cierre-table tfoot td {
+      background: var(--text-primary);
       color: #fff;
+      font-weight: 600;
+    }
+
+    /* ===== BOTONES FLOTANTES SCROLL ===== */
+    .scroll-btn {
+      position: fixed;
+      right: 24px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      z-index: 99;
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .scroll-btn.visible {
+      opacity: 1;
+    }
+
+    .scroll-btn:hover {
+      background: var(--rose-pale);
+      border-color: var(--rose-medium);
+      color: var(--rose-text);
+    }
+
+    #btnTop { bottom: 96px; }
+    #btnDown { bottom: 140px; }
+
+    /* ===== MODAL IMAGEN ===== */
+    #imgModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    #imgModal.show {
+      display: flex;
     }
 
     #imgModal img {
       max-width: 90vw;
       max-height: 90vh;
       object-fit: contain;
-      border-radius: 6px;
+      border-radius: var(--radius-md);
     }
 
-    /* ---------- FLECHAS ---------- */
-    #btnTop, #btnDown {
-      position: fixed;
-      right: 12px;
-      width: 32px;
-      height: 32px;
+    #imgModal .close-img {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      background: rgba(255,255,255,0.1);
+      border: none;
       border-radius: 50%;
-      background: var(--accent);
       color: #fff;
-      border: none;
+      font-size: 1.2rem;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--shadow);
-      z-index: 999;
-      transition: opacity .2s;
-      font-size: 0.8rem;
+      transition: var(--transition);
     }
 
-    #btnTop { bottom: 80px; }
-    #btnDown { bottom: 120px; }
-
-    #noResults {
-      display: none;
-      text-align: center;
-      padding: 30px;
-      color: var(--text);
+    #imgModal .close-img:hover {
+      background: rgba(255,255,255,0.2);
     }
 
-    #noResults svg {
-      width: 80px;
-      margin-bottom: 12px;
-      fill: var(--accent);
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .header-bar { padding: 12px 16px; }
+      .controls-bar { padding: 12px 16px; }
+      .container { padding: 16px; }
+      .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .month-grid { grid-template-columns: repeat(3, 1fr); }
+      .stats-grid { grid-template-columns: 1fr; }
+      .totales-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
     }
 
-    /* 🔍 BARRA DE BÚSQUEDA MÁS COMPACTA */
-    #unifiedSearch {
-      flex: 1;
-      max-width: 280px;
-      padding: 6px 10px;
-      font-size: 0.8rem;
-    }
-
-    /* ---------- ESTILOS CIERRE DE CAJA MEJORADOS ---------- */
-    .cierre-header {
-      text-align: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid var(--accent);
-    }
-
-    .cierre-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 5px;
-    }
-
-    .cierre-subtitle {
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .cierre-stats {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .stat-box {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: var(--radius);
-      text-align: center;
-      border-left: 4px solid var(--accent);
-    }
-
-    .stat-box.success { border-left-color: var(--success); }
-    .stat-box.warning { border-left-color: var(--warning); }
-    .stat-box.danger { border-left-color: var(--danger); }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: #666;
-      text-transform: uppercase;
-      margin-bottom: 5px;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .stat-comparison {
-      font-size: 0.75rem;
-      margin-top: 5px;
-    }
-
-    .positive { color: var(--success); }
-    .negative { color: var(--danger); }
-
-    .cierre-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      font-size: 0.85rem;
-    }
-
-    .cierre-table th,
-    .cierre-table td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-
-    .cierre-table th {
-      background: #f8f9fa;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    .cierre-table tr:hover {
-      background: #f8f9fa;
-    }
-
-    .cierre-total-row {
-      background: var(--accent) !important;
-      color: #fff;
-      font-weight: 700;
-    }
-
-    .cierre-total-row td {
-      border-bottom: none;
-    }
-
-    /* Selector de rango de meses - CORREGIDO */
-    .month-range-selector {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: var(--radius);
-      margin-bottom: 20px;
-    }
-
-    .month-range-header {
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .month-range-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-bottom: 15px;
-    }
-
-    .month-checkbox {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      padding: 10px 5px;
-      background: #fff;
-      border-radius: 6px;
-      border: 2px solid #e0e0e0;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.8rem;
-      user-select: none;
-    }
-
-    .month-checkbox:hover {
-      border-color: var(--accent);
-      background: #f0f0f0;
-    }
-
-    .month-checkbox.selected {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-
-    .month-checkbox input[type="checkbox"] {
-      display: none;
-    }
-
-    .year-selector {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 15px;
-    }
-
-    .year-selector select {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: var(--radius);
-      font-size: 0.9rem;
-      min-width: 100px;
-    }
-
-    .selected-periods {
-      background: #e8f4f8;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 0.85rem;
-    }
-
-    .selected-periods strong {
-      color: var(--accent);
-    }
-
-    .btn-cierre {
-      background: var(--success);
-      color: #fff;
-      padding: 12px 24px;
-      border: none;
-      border-radius: var(--radius);
-      font-weight: 700;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 20px;
-      font-size: 1rem;
-      transition: opacity 0.2s;
-    }
-
-    .btn-cierre:hover {
-      opacity: 0.9;
-    }
-
-    .btn-cierre:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .btn-cierre.danger {
-      background: var(--danger);
-    }
-
-    .warning-box {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      color: #856404;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 0.85rem;
-    }
-
-    .warning-box strong {
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    @media (max-width: 1200px) {
-      .cards-grid { grid-template-columns: repeat(5, 1fr); }
-    }
-
-    @media (max-width: 900px) {
-      .cards-grid { grid-template-columns: repeat(4, 1fr); }
-      .month-range-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    @media (max-width: 600px) {
-      .cards-grid { grid-template-columns: repeat(2, 1fr); }
-      .cierre-stats { grid-template-columns: 1fr; }
-      .month-range-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 480px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      .month-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media print {
-      .header, .controls, .pagination, .fab-totals, #kioskBtn, #btnTop, #btnDown, .card-delete, .factCheck, .sort-row, #menuToggle, #sideMenu, .spinner {
+      .header-bar, .controls-bar, .pagination, .fab-totals, 
+      .scroll-btn, .card-delete, .card-checkbox, #menuToggle, 
+      #sideMenu, .spinner, .menu-overlay {
         display: none !important;
       }
+      .container { padding: 0; }
     }
   </style>
 </head>
 <body>
 
-<div class="spinner" id="spinner"></div>
+<div class="spinner" id="spinner">
+  <div class="spinner-content">
+    <div class="spinner-ring"></div>
+    <span class="spinner-text">Cargando...</span>
+  </div>
+</div>
 
-<button id="menuToggle" onclick="toggleMenu()">☰</button>
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<header class="header-bar">
+  <div class="brand">
+    <div class="brand-icon">
+      <i class="fa-solid fa-cash-register"></i>
+    </div>
+    <div class="brand-text">
+      <h1>Ventas</h1>
+      <span>KLOHESV - Sistema de Punto de Venta</span>
+    </div>
+  </div>
+  <button id="menuToggle" onclick="toggleMenu()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+</header>
 
 <nav id="sideMenu">
-  <a href="compra.html" data-title="Compra"><i class="fa fa-shopping-cart"></i></a>
-  <a href="almacenamiento.html" data-title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
-  <a href="lista.html" data-title="Lista"><i class="fa fa-list"></i></a>
-  <a href="inventario.html" data-title="Inventario"><i class="fa fa-boxes"></i></a>
-  <a href="gastos.html" data-title="Gastos"><i class="fa fa-money-bill-wave"></i></a>
-  <a href="clientes.html" data-title="Clientes"><i class="fa fa-users"></i></a>
-  <a href="descuentos.html" data-title="Descuentos"><i class="fa fa-tags"></i></a>
-  <a href="facturas.html" data-title="Facturas"><i class="fa fa-file-invoice"></i></a>
-  <a href="traslados.html" data-title="Traslados"><i class="fa fa-truck"></i></a>
-  <a href="venta.html" data-title="Venta"><i class="fa fa-cash-register"></i></a>
-  <a id="kioskBtn" href="#" data-title="Pantalla completa" onclick="toggleKiosk();return false;"><i class="fa fa-expand"></i></a>
+  <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
+  <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
+  <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
+  <a href="inventario.html"><i class="fa fa-boxes"></i> Inventario</a>
+  <a href="gastos.html"><i class="fa fa-money-bill-wave"></i> Gastos</a>
+  <a href="clientes.html"><i class="fa fa-users"></i> Clientes</a>
+  <a href="descuentos.html"><i class="fa fa-tags"></i> Descuentos</a>
+  <a href="facturas.html"><i class="fa fa-file-invoice"></i> Facturas</a>
+  <a href="traslados.html"><i class="fa fa-truck"></i> Traslados</a>
+  <a href="venta.html" style="background: var(--rose-pale); color: var(--rose-text);"><i class="fa fa-cash-register"></i> Venta</a>
+  <a href="#" onclick="toggleKiosk(); return false;"><i class="fa fa-expand"></i> Pantalla completa</a>
 </nav>
 
-<div class="container">
-  <header class="header">
-    <h1>💰 VENTAS</h1>
-  </header>
-
-  <div class="controls">
-    <input type="text" id="unifiedSearch" placeholder="Buscar..." style="flex:1; max-width: 280px;">
-    <select id="rowsPerPage" onchange="loadSoldInventory()">
-      <option value="30" selected>30</option>
-      <option value="60">60</option>
-      <option value="90">90</option>
-      <option value="120">120</option>
-    </select>
-    <button onclick="abrirFactura()">🧾 Factura</button>
-    <button onclick="location.href='lista.html'">📊 Ingresos</button>
-    <button onclick="abrirCierreCaja()" style="background: var(--success);">🔒 Cierre de Caja</button>
+<div class="controls-bar">
+  <div class="search-box">
+    <i class="fa-solid fa-search"></i>
+    <input type="text" id="unifiedSearch" placeholder="Buscar producto o código...">
   </div>
+  
+  <select id="rowsPerPage" class="control-select" onchange="loadSoldInventory()">
+    <option value="30" selected>30 productos</option>
+    <option value="60">60 productos</option>
+    <option value="90">90 productos</option>
+    <option value="120">120 productos</option>
+  </select>
+  
+  <button class="btn btn-rose" onclick="abrirFactura()">
+    <i class="fa-solid fa-receipt"></i> Factura
+  </button>
+  <button class="btn btn-outline" onclick="location.href='lista.html'">
+    <i class="fa-solid fa-chart-line"></i> Ingresos
+  </button>
+  <button class="btn btn-success" onclick="abrirCierreCaja()">
+    <i class="fa-solid fa-lock"></i> Cierre de Caja
+  </button>
+</div>
 
+<div class="container">
   <section class="cards-grid" id="soldInventoryList"></section>
 
   <div id="noResults">
-    <svg viewBox="0 0 64 64"><path d="M32 4a24 24 0 1 0 0 48 24 24 0 0 0 0-48zm0 44a20 20 0 1 1 0-40 20 20 0 0 1 0 40zM28 20h8v14h-8zm0 18h8v4h-8z"/></svg>
-    <div>No se encontraron productos</div>
+    <i class="fa-solid fa-box-open"></i>
+    <h3>No se encontraron productos</h3>
+    <p>Intenta con otra búsqueda o verifica el inventario</p>
   </div>
 
   <div class="pagination">
-    <button onclick="prevPage()">← Anterior</button>
-    <button onclick="nextPage()">Siguiente →</button>
-  </div>
-</div>
-
-<button id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<button id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">↓</button>
-
-<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn"><span id="fabQty">0</span></button>
-
-<!-- Modal totales -->
-<div id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
-  <div class="totales-card" onclick="event.stopPropagation()">
-    <button class="close-btn" onclick="cerrarModalTotales()" style="float:right;background:none;border:none;font-size:1.2rem;cursor:pointer;">×</button>
-    <div class="card" style="margin:0 auto;text-align:center;background:#fafafa;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);">
-      <div style="font-size:1rem;font-weight:600;color:var(--text);">Unidades vendidas</div>
-      <div id="totalQtyModal" style="font-size:2rem;font-weight:700;color:var(--accent);margin-top:4px;">0</div>
-      <div style="font-size:1rem;font-weight:600;color:var(--text);margin-top:12px;">Total vendido</div>
-      <div id="totalUSDModal" style="font-size:2rem;font-weight:700;color:var(--accent);">$0.00</div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Cierre de Caja Mejorado -->
-<div id="cierreModal" onclick="if(event.target===this) cerrarCierreCaja()">
-  <div class="cierre-card" onclick="event.stopPropagation()">
-    <button class="close-btn" onclick="cerrarCierreCaja()" style="float:right;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--danger);">×</button>
-    
-    <div class="cierre-header">
-      <div class="cierre-title">🔒 Cierre de Caja</div>
-      <div class="cierre-subtitle">Consolidación de ventas por período</div>
-    </div>
-
-    <div class="warning-box">
-      <strong>⚠️ Atención:</strong>
-      Al realizar el cierre de caja, todas las ventas del período seleccionado serán eliminadas y reemplazadas por una única venta consolidada con el monto total.
-    </div>
-
-    <!-- Selector de Año -->
-    <div class="year-selector">
-      <label><strong>Año:</strong></label>
-      <select id="anioSelect" onchange="actualizarCierreCaja()">
-        <!-- Se llena dinámicamente -->
-      </select>
-    </div>
-
-    <!-- Selector de Meses (Múltiples) -->
-    <div class="month-range-selector">
-      <div class="month-range-header">
-        <i class="fa fa-calendar"></i> Selecciona los meses a cerrar (puedes elegir varios):
-      </div>
-      <div class="month-range-grid" id="monthGrid">
-        <!-- Se llena dinámicamente -->
-      </div>
-    </div>
-
-    <!-- Período seleccionado -->
-    <div class="selected-periods" id="selectedPeriods">
-      <strong>Período seleccionado:</strong> Ninguno
-    </div>
-
-    <!-- Estadísticas -->
-    <div class="cierre-stats">
-      <div class="stat-box">
-        <div class="stat-label">Total Ventas</div>
-        <div class="stat-value" id="cierreTotalVentas">$0.00</div>
-      </div>
-      
-      <div class="stat-box success">
-        <div class="stat-label">Unidades Vendidas</div>
-        <div class="stat-value" id="cierreTotalUnidades">0</div>
-      </div>
-      
-      <div class="stat-box warning">
-        <div class="stat-label">Transacciones</div>
-        <div class="stat-value" id="cierreTransacciones">0</div>
-      </div>
-      
-      <div class="stat-box danger">
-        <div class="stat-label">Ticket Promedio</div>
-        <div class="stat-value" id="cierreTicketPromedio">$0.00</div>
-      </div>
-    </div>
-
-    <h3 style="margin-top: 20px; margin-bottom: 10px; color: var(--accent);">📋 Detalle por Producto</h3>
-    <div style="max-height: 250px; overflow-y: auto;">
-      <table class="cierre-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Cant.</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody id="cierreTablaProductos">
-          <!-- Se llena dinámicamente -->
-        </tbody>
-        <tfoot>
-          <tr class="cierre-total-row">
-            <td>TOTAL CONSOLIDADO</td>
-            <td id="cierreTablaTotalCant">0</td>
-            <td id="cierreTablaTotalMonto">$0.00</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-
-    <button class="btn-cierre" onclick="imprimirCierreCaja()">
-      🖨️ Imprimir Resumen
+    <button onclick="prevPage()">
+      <i class="fa-solid fa-chevron-left"></i> Anterior
     </button>
-    
-    <button class="btn-cierre danger" onclick="ejecutarCierreCaja()" id="btnEjecutarCierre">
-      🔒 EJECUTAR CIERRE DE CAJA (CONSOLIDAR)
+    <button onclick="nextPage()">
+      Siguiente <i class="fa-solid fa-chevron-right"></i>
     </button>
   </div>
 </div>
 
-<!-- Modal factura -->
-<div id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
-  <div class="factura-card" onclick="event.stopPropagation()">
-    <h2>Factura – Ticket</h2>
-    <label>Factura N°</label><input id="fNum" value="00015" oninput="actualizarTablaTicket()">
-    <label>Fecha</label><input id="fFecha" readonly>
-    <label>Cliente</label><input id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+<button class="scroll-btn" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <i class="fa-solid fa-arrow-up"></i>
+</button>
+<button class="scroll-btn" id="btnDown" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">
+  <i class="fa-solid fa-arrow-down"></i>
+</button>
 
-    <div class="ticket-preview">
-      <header><div style="font-size:14px;font-weight:700">KLOHESV</div><div>San Salvador, El Salvador</div><div>industriastobias@gmail.com</div><div>Instagram: @Klohesv</div></header>
-      <div class="line"></div>
-      <div style="font-size:12px"><div>Factura N°: <span id="fNumTxt">0001</span></div><div>Fecha: <span id="fFechaTxt"></span></div><div>Cliente: <span id="fClienteTxt">Consumidor Final</span></div></div>
-      <div class="line"></div>
-      <table><thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead><tbody id="fBody"></tbody></table>
-      <div class="line"></div>
-      <div class="total">TOTAL: $<span id="fTotal">0.00</span></div>
-      <footer><div>¡Gracias por su compra!</div><div style="font-size:10px;margin-top:4px">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div></footer>
+<button class="fab-totals" onclick="abrirModalTotales()" id="fabBtn">
+  <i class="fa-solid fa-sack-dollar"></i>
+</button>
+
+<!-- Modal Totales -->
+<div class="modal-overlay" id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-chart-pie"></i> Resumen de Ventas</h2>
+      <button class="modal-close" onclick="cerrarModalTotales()">
+        <i class="fa-solid fa-times"></i>
+      </button>
     </div>
-
-    <div class="modal-buttons">
-      <button class="btn-close" onclick="cerrarFactura()">Cerrar</button>
-      <button class="btn-print" onclick="imprimirTicket()">Imprimir</button>
-      <button class="btn-print" style="background:#dc2626" onclick="descargarPDF()">PDF</button>
+    <div class="modal-body">
+      <div class="totales-grid">
+        <div class="total-box">
+          <div class="total-label">Unidades Vendidas</div>
+          <div class="total-value" id="totalQtyModal">0</div>
+        </div>
+        <div class="total-box rosa">
+          <div class="total-label">Total Vendido</div>
+          <div class="total-value" id="totalUSDModal">$0.00</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModalTotales()">Cerrar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal imagen -->
-<div id="imgModal" onclick="cerrarImgModal()"><img id="imgModalImg" src="" alt="Imagen ampliada"></div>
+<!-- Modal Cierre de Caja -->
+<div class="modal-overlay" id="cierreModal" onclick="if(event.target===this) cerrarCierreCaja()">
+  <div class="modal-card cierre-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-lock"></i> Cierre de Caja</h2>
+      <button class="modal-close" onclick="cerrarCierreCaja()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="cierre-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          <strong>Atención</strong>
+          Al realizar el cierre de caja, todas las ventas del período seleccionado serán eliminadas y reemplazadas por una única venta consolidada con el monto total.
+        </div>
+      </div>
+
+      <div class="year-selector">
+        <label>Año:</label>
+        <select id="anioSelect" class="control-select" onchange="actualizarCierreCaja()">
+        </select>
+      </div>
+
+      <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">
+        Selecciona los meses a cerrar:
+      </label>
+      <div class="month-grid" id="monthGrid"></div>
+
+      <div class="selected-period" id="selectedPeriods">
+        <strong>Período:</strong> Ninguno
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card rosa">
+          <div class="stat-label">Total Ventas</div>
+          <div class="stat-value" id="cierreTotalVentas">$0.00</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">Unidades</div>
+          <div class="stat-value" id="cierreTotalUnidades">0</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-label">Transacciones</div>
+          <div class="stat-value" id="cierreTransacciones">0</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-label">Ticket Promedio</div>
+          <div class="stat-value" id="cierreTicketPromedio">$0.00</div>
+        </div>
+      </div>
+
+      <label style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">
+        Detalle por Producto:
+      </label>
+      <div class="cierre-table-container">
+        <table class="cierre-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align: center;">Cant.</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody id="cierreTablaProductos"></tbody>
+          <tfoot>
+            <tr>
+              <td>TOTAL</td>
+              <td style="text-align: center;" id="cierreTablaTotalCant">0</td>
+              <td style="text-align: right;" id="cierreTablaTotalMonto">$0.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarCierreCaja()">Cancelar</button>
+      <button class="btn btn-primary" onclick="imprimirCierreCaja()">
+        <i class="fa-solid fa-print"></i> Imprimir
+      </button>
+      <button class="btn btn-rose" onclick="ejecutarCierreCaja()" id="btnEjecutarCierre" disabled>
+        <i class="fa-solid fa-lock"></i> Ejecutar Cierre
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Factura -->
+<div class="modal-overlay" id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+  <div class="modal-card wide" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-receipt"></i> Generar Factura</h2>
+      <button class="modal-close" onclick="cerrarFactura()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Factura N°</label>
+          <input type="text" id="fNum" value="00015" oninput="actualizarTablaTicket()">
+        </div>
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="text" id="fFecha" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Cliente</label>
+        <input type="text" id="fCliente" value="Consumidor Final" oninput="actualizarTablaTicket()">
+      </div>
+
+      <div class="ticket-container">
+        <div class="ticket-header">
+          <div class="ticket-logo">KLOHESV</div>
+          <div class="ticket-info">San Salvador, El Salvador</div>
+          <div class="ticket-info">industriastobias@gmail.com</div>
+          <div class="ticket-info">@Klohesv</div>
+        </div>
+
+        <hr class="ticket-divider">
+
+        <div class="ticket-row label">
+          <span>Factura N°:</span>
+          <span id="fNumTxt">00015</span>
+        </div>
+        <div class="ticket-row label">
+          <span>Fecha:</span>
+          <span id="fFechaTxt"></span>
+        </div>
+        <div class="ticket-row label">
+          <span>Cliente:</span>
+          <span id="fClienteTxt">Consumidor Final</span>
+        </div>
+
+        <hr class="ticket-divider">
+
+        <table class="ticket-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align: center;">Cant</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody id="fBody"></tbody>
+        </table>
+
+        <div class="ticket-total">
+          TOTAL: $<span id="fTotal">0.00</span>
+        </div>
+
+        <div class="ticket-footer">
+          <div style="font-weight: 600; margin-bottom: 4px;">¡Gracias por su compra!</div>
+          <div>No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarFactura()">Cerrar</button>
+      <button class="btn btn-primary" onclick="imprimirTicket()">
+        <i class="fa-solid fa-print"></i> Imprimir
+      </button>
+      <button class="btn btn-rose" onclick="descargarPDF()">
+        <i class="fa-solid fa-file-pdf"></i> PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Imagen -->
+<div id="imgModal" onclick="cerrarImgModal()">
+  <button class="close-img" onclick="cerrarImgModal()">
+    <i class="fa-solid fa-times"></i>
+  </button>
+  <img id="imgModalImg" src="" alt="Imagen ampliada">
+</div>
 
 <script>
   let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
@@ -860,6 +1408,7 @@
 
   function toggleMenu() {
     document.getElementById('sideMenu').classList.toggle('show');
+    document.getElementById('menuOverlay').classList.toggle('show');
   }
 
   function toggleKiosk() {
@@ -872,13 +1421,12 @@
 
   window.addEventListener('scroll', () => {
     const show = window.scrollY > 300;
-    document.getElementById('btnTop').style.opacity = show ? '1' : '0';
-    document.getElementById('btnDown').style.opacity = show ? '1' : '0';
+    document.getElementById('btnTop').classList.toggle('visible', show);
+    document.getElementById('btnDown').classList.toggle('visible', show);
   });
 
   // ========== CARGA Y FILTRADO ==========
   function cargarVentas() {
-    // Normalizar: si algún item tiene date pero no soldAt, copiamos date a soldAt para compatibilidad
     soldInventory.forEach(item => {
       if (item.date && !item.soldAt) {
         item.soldAt = item.date;
@@ -930,7 +1478,6 @@
 
     document.getElementById('totalQtyModal').textContent = totalUnits;
     document.getElementById('totalUSDModal').textContent = `$${totalUSD.toFixed(2)}`;
-    document.getElementById('fabQty').textContent = totalUnits;
 
     const start = (currentPage - 1) * rowsPerPage;
     const paginated = filtered.slice(start, start + rowsPerPage);
@@ -948,8 +1495,11 @@
       const card = document.createElement('div');
       card.className = 'card';
 
+      const imgWrapper = document.createElement('div');
+      imgWrapper.className = 'card-image-wrapper';
+
       const img = document.createElement('img');
-      img.alt = `${item.name}`;
+      img.alt = item.name;
 
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
@@ -958,34 +1508,40 @@
       } else {
         img.src = '';
         img.style.display = 'none';
+        imgWrapper.innerHTML = '<i class="fa-solid fa-image" style="font-size: 2rem; color: var(--border);"></i>';
       }
 
-      const barcodeText = document.createElement('div');
-      barcodeText.className = 'barcode-text';
-      barcodeText.textContent = item.barcode ? `📄 ${item.barcode}` : '';
+      if (blob) imgWrapper.appendChild(img);
 
       if (isToday(item.soldAt || item.date)) {
         const badge = document.createElement('div');
-        badge.className = 'new-badge';
+        badge.className = 'card-badge';
         badge.textContent = 'Nuevo';
-        card.appendChild(badge);
+        imgWrapper.appendChild(badge);
       }
 
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'card-checkbox factCheck';
+      checkbox.value = JSON.stringify(item);
+      imgWrapper.appendChild(checkbox);
+
       card.innerHTML = `
-        <div class="card-header">
+        <div class="card-content">
           <div class="card-title">${item.name}</div>
+          ${item.barcode ? `<div class="card-barcode">${item.barcode}</div>` : ''}
+          <div class="card-price">$${Number(item.price).toFixed(2)}</div>
         </div>
-        <div class="card-price">$${Number(item.price).toFixed(2)}</div>
-        <div>Cantidad: ${Number(item.quantity)}</div>
-        <div class="card-footer">
-          <div class="card-total">Total: $${Number(item.total).toFixed(2)}</div>
-          <button class="card-delete" onclick="confirmDelete('${item.idVenta}')">✖</button>
+        <div class="card-meta">
+          <span class="card-quantity">Cant: ${Number(item.quantity)}</span>
+          <span class="card-total">$${Number(item.total).toFixed(2)}</span>
         </div>
-        <input type="checkbox" class="factCheck" value='${JSON.stringify(item)}' style="position:absolute;top:6px;right:6px;width:14px;height:14px;">
+        <button class="card-delete" onclick="confirmDelete('${item.idVenta}')">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       `;
 
-      card.insertBefore(img, card.firstChild);
-      if (item.barcode) card.insertBefore(barcodeText, card.querySelector('.card-footer'));
+      card.insertBefore(imgWrapper, card.firstChild);
       container.appendChild(card);
     }
 
@@ -995,12 +1551,16 @@
   window.confirmDelete = function (idVenta) {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
-      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;">
-        <div style="background:#fff;padding:20px;border-radius:var(--radius);box-shadow:var(--shadow);width:240px;text-align:center;">
-          <p>¿Eliminar este producto?</p>
-          <div style="display:flex;gap:12px;justify-content:center;margin-top:12px;">
-            <button class="btn-close" onclick="this.closest('div[style*=&quot;position:fixed&quot;]').remove()">Cancelar</button>
-            <button class="btn-print" style="background:var(--danger)" onclick="deleteSoldItem('${idVenta}')">Eliminar</button>
+      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+        <div style="background:#fff;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:320px;text-align:center;">
+          <div style="width:56px;height:56px;background:var(--danger-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <i class="fa-solid fa-trash" style="color:var(--danger);font-size:1.3rem;"></i>
+          </div>
+          <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:8px;color:var(--text-primary);">¿Eliminar producto?</h3>
+          <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:20px;">Esta acción no se puede deshacer.</p>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-outline" onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="flex:1;">Cancelar</button>
+            <button class="btn btn-rose" onclick="deleteSoldItem('${idVenta}')" style="flex:1;background:var(--danger);color:#fff;">Eliminar</button>
           </div>
         </div>
       </div>
@@ -1027,13 +1587,18 @@
   // ========== FACTURACIÓN ==========
   function abrirFactura() {
     const seleccionados = [...document.querySelectorAll('.factCheck:checked')];
-    if (seleccionados.length === 0) { alert('Por favor selecciona al menos un producto para facturar.'); return; }
-    document.getElementById('facturaModal').style.display = 'flex';
+    if (seleccionados.length === 0) { 
+      alert('Por favor selecciona al menos un producto para facturar.'); 
+      return; 
+    }
+    document.getElementById('facturaModal').classList.add('show');
     document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
     actualizarTablaTicket();
   }
 
-  function cerrarFactura() { document.getElementById('facturaModal').style.display = 'none'; }
+  function cerrarFactura() { 
+    document.getElementById('facturaModal').classList.remove('show'); 
+  }
 
   function actualizarTablaTicket() {
     const checks = [...document.querySelectorAll('.factCheck:checked')];
@@ -1044,9 +1609,12 @@
       const p = JSON.parse(ch.value);
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${p.name}<br><span style="font-size:11px;">P/U: $${Number(p.price).toFixed(2)}</span></td>
-        <td>${Number(p.quantity)}</td>
-        <td>$${Number(p.total).toFixed(2)}</td>`;
+        <td>
+          <div class="ticket-product-name">${p.name}</div>
+          <div class="ticket-product-price">P/U: $${Number(p.price).toFixed(2)}</div>
+        </td>
+        <td style="text-align: center;">${Number(p.quantity)}</td>
+        <td style="text-align: right;">$${Number(p.total).toFixed(2)}</td>`;
       body.appendChild(tr);
       sum += Number(p.total);
     });
@@ -1057,17 +1625,24 @@
   }
 
   function imprimirTicket() {
-    const cont = document.querySelector('.ticket-preview').innerHTML;
+    const cont = document.querySelector('.ticket-container').innerHTML;
     const ventana = window.open('', '', 'width=420,height=700');
     ventana.document.write(`<html><head><title>Ticket</title><style>
-      body{margin:0;padding:8px;font:13px/1.3 'Courier New',monospace;width:420px;color:#000;background:#fff}
-      table{width:100%;border-collapse:collapse;table-layout:fixed}
-      th,td{padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      th:first-child,td:first-child{text-align:left;width:60%}
-      th:nth-child(2),td:nth-child(2){text-align:center;width:15%}
-      th:nth-child(3),td:nth-child(3){text-align:right;width:25%;padding-right:6px}
-      .total{font-weight:700;font-size:14px;text-align:right;padding-right:6px;margin-top:6px}
-      .line{border-top:1px dashed #000;margin:6px 0}
+      body{margin:0;padding:16px;font:12px/1.5 'Courier New',monospace;width:388px;color:#000;background:#fff}
+      .ticket-header{text-align:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px dashed #ccc}
+      .ticket-logo{font-size:18px;font-weight:700;letter-spacing:0.1em;margin-bottom:4px}
+      .ticket-info{color:#666;font-size:11px}
+      .ticket-divider{border:none;border-top:1px dashed #ccc;margin:12px 0}
+      .ticket-row{display:flex;justify-content:space-between;margin-bottom:4px}
+      .ticket-row.label{color:#666;font-size:11px}
+      .ticket-table{width:100%;border-collapse:collapse;margin:12px 0}
+      .ticket-table th{text-align:left;padding:6px 0;border-bottom:1px solid #ddd;font-weight:600;font-size:11px}
+      .ticket-table td{padding:6px 0;vertical-align:top}
+      .ticket-table td:last-child{text-align:right}
+      .ticket-product-name{font-weight:600}
+      .ticket-product-price{font-size:10px;color:#666}
+      .ticket-total{text-align:right;font-size:14px;font-weight:700;padding:12px 0;border-top:2px solid #000;margin-top:8px}
+      .ticket-footer{text-align:center;margin-top:16px;padding-top:16px;border-top:1px dashed #ccc;font-size:10px;color:#666}
       </style></head><body>${cont}</body></html>`);
     ventana.document.close();
     ventana.focus();
@@ -1104,7 +1679,7 @@
     const filas = document.querySelectorAll('#fBody tr');
     filas.forEach(fr => {
       const c = fr.cells;
-      const prod = doc.splitTextToSize(c[0].textContent, 30);
+      const prod = doc.splitTextToSize(c[0].querySelector('.ticket-product-name').textContent, 30);
       doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
       y += prod.length * 3 + 1;
     });
@@ -1121,27 +1696,31 @@
     doc.save(`ticket_${document.getElementById('fNum').value}.pdf`);
   }
 
-  function abrirModalTotales() { document.getElementById('totalesModal').style.display = 'flex'; }
-  function cerrarModalTotales() { document.getElementById('totalesModal').style.display = 'none'; }
+  function abrirModalTotales() { 
+    document.getElementById('totalesModal').classList.add('show'); 
+  }
+  function cerrarModalTotales() { 
+    document.getElementById('totalesModal').classList.remove('show'); 
+  }
   function abrirImgModal(src) {
     const modal = document.getElementById('imgModal');
     const img = document.getElementById('imgModalImg');
     img.src = src;
-    modal.style.display = 'flex';
+    modal.classList.add('show');
   }
-  function cerrarImgModal() { document.getElementById('imgModal').style.display = 'none'; }
+  function cerrarImgModal() { 
+    document.getElementById('imgModal').classList.remove('show'); 
+  }
 
-  // ========== CIERRE DE CAJA MEJORADO ==========
+  // ========== CIERRE DE CAJA ==========
   const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
   function inicializarSelectorFechas() {
     const anioSelect = document.getElementById('anioSelect');
     const monthGrid = document.getElementById('monthGrid');
     
-    // Limpiar selección previa
     mesesSeleccionados.clear();
     
-    // Llenar años
     anioSelect.innerHTML = '';
     const anioActual = new Date().getFullYear();
     for (let anio = 2024; anio <= anioActual + 1; anio++) {
@@ -1152,53 +1731,28 @@
       anioSelect.appendChild(option);
     }
     
-    // Crear grid de meses - CORREGIDO
     monthGrid.innerHTML = '';
     nombresMeses.forEach((mes, index) => {
-      const label = document.createElement('label');
-      label.className = 'month-checkbox';
-      label.dataset.mes = index;
-      
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = index;
-      checkbox.style.display = 'none';
-      checkbox.addEventListener('change', function() {
-        toggleMes(index);
-      });
-      
-      const span = document.createElement('span');
-      span.textContent = mes;
-      
-      label.appendChild(checkbox);
-      label.appendChild(span);
-      
-      // Click en el label alterna el checkbox
-      label.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        checkbox.checked = !checkbox.checked;
-        toggleMes(index);
-      });
-      
-      monthGrid.appendChild(label);
+      const div = document.createElement('div');
+      div.className = 'month-item';
+      div.dataset.mes = index;
+      div.textContent = mes;
+      div.onclick = () => toggleMes(index);
+      monthGrid.appendChild(div);
     });
     
     actualizarTextoPeriodo();
   }
 
   function toggleMes(mes) {
-    const checkbox = document.querySelector(`.month-checkbox[data-mes="${mes}"] input[type="checkbox"]`);
-    const label = document.querySelector(`.month-checkbox[data-mes="${mes}"]`);
+    const item = document.querySelector(`.month-item[data-mes="${mes}"]`);
     
     if (mesesSeleccionados.has(mes)) {
       mesesSeleccionados.delete(mes);
-      label.classList.remove('selected');
-      checkbox.checked = false;
+      item.classList.remove('selected');
     } else {
       mesesSeleccionados.add(mes);
-      label.classList.add('selected');
-      checkbox.checked = true;
+      item.classList.add('selected');
     }
     actualizarCierreCaja();
   }
@@ -1217,21 +1771,20 @@
       texto = `${nombres.join(', ')} ${anio}`;
     }
     
-    document.getElementById('selectedPeriods').innerHTML = `<strong>Período seleccionado:</strong> ${texto}`;
+    document.getElementById('selectedPeriods').innerHTML = `<strong>Período:</strong> ${texto}`;
     
-    // Habilitar/deshabilitar botón de cierre
     const btn = document.getElementById('btnEjecutarCierre');
     btn.disabled = mesesArray.length === 0 || ventasActuales.length === 0;
   }
 
   function abrirCierreCaja() {
-    document.getElementById('cierreModal').style.display = 'flex';
+    document.getElementById('cierreModal').classList.add('show');
     inicializarSelectorFechas();
     actualizarCierreCaja();
   }
 
   function cerrarCierreCaja() {
-    document.getElementById('cierreModal').style.display = 'none';
+    document.getElementById('cierreModal').classList.remove('show');
   }
 
   function obtenerVentasPorPeriodo(anio, meses) {
@@ -1287,14 +1840,14 @@
     tbody.innerHTML = '';
     
     if (stats.productos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999;">No hay ventas en el período seleccionado</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No hay ventas en el período seleccionado</td></tr>';
     } else {
       stats.productos.forEach(prod => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${prod.name}</td>
-          <td>${prod.quantity}</td>
-          <td>$${prod.total.toFixed(2)}</td>
+          <td style="text-align:center;">${prod.quantity}</td>
+          <td style="text-align:right;">$${prod.total.toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -1324,7 +1877,7 @@
     const nombresMesesSeleccionados = mesesArray.map(m => nombresMeses[m]).join(', ');
     
     const confirmacion = confirm(
-      `⚠️ ¿ESTÁS SEGURO DE EJECUTAR EL CIERRE DE CAJA?\n\n` +
+      `¿ESTÁS SEGURO DE EJECUTAR EL CIERRE DE CAJA?\n\n` +
       `Período: ${nombresMesesSeleccionados} ${anio}\n` +
       `Total Ventas: $${stats.totalVentas.toFixed(2)}\n` +
       `Unidades: ${stats.totalUnidades}\n` +
@@ -1335,7 +1888,6 @@
     
     if (!confirmacion) return;
     
-    // Crear la venta consolidada
     const ventaConsolidada = {
       idVenta: 'CIERRE_' + Date.now(),
       name: `CIERRE DE CAJA - ${nombresMesesSeleccionados} ${anio}`,
@@ -1355,26 +1907,18 @@
       }
     };
     
-    // Eliminar las ventas originales del período
     const idsAEliminar = new Set(ventasActuales.map(v => v.idVenta));
     soldInventory = soldInventory.filter(item => !idsAEliminar.has(item.idVenta));
-    
-    // Agregar la venta consolidada
     soldInventory.push(ventaConsolidada);
     
-    // Guardar en localStorage
     localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
     
-    // Mostrar mensaje de éxito
     alert(
       `✅ CIERRE DE CAJA EXITOSO\n\n` +
       `Se ha creado una venta consolidada por $${stats.totalVentas.toFixed(2)}\n` +
-      `Se eliminaron ${ventasActuales.length} ventas individuales\n\n` +
-      `La venta consolidada aparecerá en tu lista de ventas como:\n` +
-      `"${ventaConsolidada.name}"`
+      `Se eliminaron ${ventasActuales.length} ventas individuales`
     );
     
-    // Cerrar modal y recargar
     cerrarCierreCaja();
     loadSoldInventory();
   }
@@ -1390,9 +1934,9 @@
     stats.productos.forEach(prod => {
       productosHTML += `
         <tr>
-          <td style="padding:5px;border-bottom:1px solid #ddd;">${prod.name}</td>
-          <td style="padding:5px;border-bottom:1px solid #ddd;text-align:center;">${prod.quantity}</td>
-          <td style="padding:5px;border-bottom:1px solid #ddd;text-align:right;">$${prod.total.toFixed(2)}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;">${prod.name}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${prod.quantity}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">$${prod.total.toFixed(2)}</td>
         </tr>
       `;
     });
@@ -1403,25 +1947,26 @@
         <head>
           <title>Cierre de Caja - ${nombresMesesSeleccionados} ${anio}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
-            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; color: #333; }
-            .header p { margin: 5px 0; color: #666; }
-            .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-            .stat-box { background: #f5f5f5; padding: 15px; border-radius: 5px; text-align: center; }
-            .stat-label { font-size: 12px; color: #666; text-transform: uppercase; }
-            .stat-value { font-size: 24px; font-weight: bold; color: #333; margin-top: 5px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background: #333; color: white; padding: 10px; text-align: left; }
-            .total-row { background: #333; color: white; font-weight: bold; }
-            .warning { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 20px 0; font-size: 12px; }
+            body { font-family: 'Inter', sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9d5dc; }
+            .header h1 { margin: 0; font-size: 24px; color: #2d2d2d; letter-spacing: 0.1em; }
+            .header p { margin: 5px 0; color: #666; font-size: 13px; }
+            .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
+            .stat-box { background: #fafafa; padding: 20px; border-radius: 8px; text-align: center; border-left: 3px solid #f9d5dc; }
+            .stat-label { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+            .stat-value { font-size: 22px; font-weight: 700; color: #2d2d2d; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+            th { background: #fafafa; padding: 12px; text-align: left; font-weight: 600; color: #666; }
+            .total-row { background: #2d2d2d; color: #fff; font-weight: 600; }
+            .notice { background: #fffbeb; padding: 12px; border-radius: 6px; margin: 20px 0; font-size: 12px; color: #92400e; }
+            .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; }
             @media print { body { padding: 0; } }
           </style>
         </head>
         <body>
           <div class="header">
             <h1>KLOHESV</h1>
-            <p>Cierre de Caja</p>
+            <p style="font-size: 16px; font-weight: 600; color: #be185d; margin: 10px 0;">Cierre de Caja</p>
             <p><strong>${nombresMesesSeleccionados} ${anio}</strong></p>
             <p>San Salvador, El Salvador</p>
           </div>
@@ -1445,7 +1990,7 @@
             </div>
           </div>
           
-          <h3>Detalle por Producto</h3>
+          <h3 style="font-size: 14px; color: #666; margin-bottom: 10px;">Detalle por Producto</h3>
           <table>
             <thead>
               <tr>
@@ -1466,12 +2011,11 @@
             </tfoot>
           </table>
           
-          <div class="warning">
-            <strong>Documento de Cierre:</strong> Este resumen corresponde al cierre de caja del período indicado. 
-            Las ventas individuales han sido consolidadas.
+          <div class="notice">
+            <strong>Documento de Cierre:</strong> Este resumen corresponde al cierre de caja del período indicado. Las ventas individuales han sido consolidadas.
           </div>
           
-          <div style="margin-top: 30px; text-align: center; color: #999; font-size: 12px;">
+          <div class="footer">
             <p>Generado el ${new Date().toLocaleDateString('es-SV')}</p>
             <p>industriastobias@gmail.com | @Klohesv</p>
           </div>

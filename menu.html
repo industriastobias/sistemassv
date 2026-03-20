@@ -55,10 +55,12 @@
       color: var(--color-text);
       display: flex;
       min-height: 100vh;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Sidebar */
@@ -72,7 +74,9 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
     }
 
     .nav {
@@ -80,13 +84,11 @@
       flex-direction: column;
       gap: 0.25rem;
       flex-grow: 1;
-      overflow-y: auto;
+      overflow-y: visible;
       overflow-x: hidden;
       list-style: none;
       padding-right: 0.25rem;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
-      min-height: 0;
+      touch-action: pan-y;
     }
 
     .nav-link {
@@ -106,9 +108,10 @@
       cursor: pointer;
       width: 100%;
       position: relative;
-      touch-action: manipulation;
+      touch-action: pan-y;
       -webkit-user-select: none;
       user-select: none;
+      flex-shrink: 0;
     }
 
     .nav-link:hover {
@@ -457,6 +460,26 @@
       .sidebar { width: 240px; padding: 1.5rem 1rem; }
     }
 
+    /* Tablets - Scroll vertical habilitado */
+    @media (max-width: 1024px) and (min-height: 600px) {
+      .sidebar {
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+
+      .nav {
+        overflow-y: visible;
+        flex-shrink: 0;
+      }
+
+      .system-actions {
+        flex-shrink: 0;
+        margin-top: 1rem;
+      }
+    }
+
     @media (max-width: 768px) {
       body { flex-direction: column; overflow: auto; }
 
@@ -623,6 +646,44 @@
     log: (...args) => console.log('[Dashboard]', ...args),
     error: (...args) => console.error('[Dashboard]', ...args)
   };
+
+  // ============================================
+  // SCROLL TÁCTIL PARA TABLETS
+  // ============================================
+  (function() {
+    const sidebar = document.querySelector('.sidebar');
+    const nav = document.querySelector('.nav');
+
+    // Habilitar scroll táctil suave
+    if (sidebar) {
+      sidebar.style.webkitOverflowScrolling = 'touch';
+      sidebar.style.overflowY = 'auto';
+      sidebar.style.overscrollBehavior = 'contain';
+    }
+
+    if (nav) {
+      nav.style.touchAction = 'pan-y';
+    }
+
+    // Prevenir que los enlaces bloqueen el scroll
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('touchstart', function(e) {
+        this.style.touchAction = 'pan-y';
+      }, { passive: true });
+
+      link.addEventListener('touchmove', function(e) {
+        // Permitir que el scroll pase al contenedor padre
+        e.stopPropagation();
+      }, { passive: true });
+    });
+
+    // Detectar si es tablet/táctil y aplicar estilos adicionales
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouchDevice && sidebar) {
+      sidebar.style.overflowY = 'scroll';
+      sidebar.style.scrollbarWidth = 'thin';
+    }
+  })();
 
   // ============================================
   // RELOJ Y FECHA EN TIEMPO REAL

@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestión de Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
   
   <style>
     :root {
@@ -126,6 +126,8 @@
       display: none;
       flex-direction: column;
       gap: 0.25rem;
+      max-height: 70vh;
+      overflow-y: auto;
     }
     
     .menu-dropdown.show {
@@ -142,6 +144,7 @@
       align-items: center;
       gap: 0.75rem;
       transition: var(--transition);
+      flex-shrink: 0;
     }
     
     .menu-item:hover {
@@ -161,6 +164,7 @@
       height: 1px;
       background: var(--border);
       margin: 0.5rem 0;
+      flex-shrink: 0;
     }
     
     .main-container {
@@ -1552,6 +1556,7 @@
         <div class="menu-divider"></div>
         
         <a href="#" onclick="abrirPapelera()" class="menu-item"><i class="fa-solid fa-trash-can"></i> Papelera</a>
+        <a href="#" onclick="eliminarSinStock()" class="menu-item danger"><i class="fa-solid fa-eraser"></i> Eliminar Stock 0</a>
         <a href="#" onclick="mostrarAtajos()" class="menu-item"><i class="fa-solid fa-keyboard"></i> Atajos de Teclado</a>
         
         <div class="menu-divider"></div>
@@ -1579,7 +1584,7 @@
   <p style="color: var(--text-secondary); font-weight: 500;">Guardando en el sistema...</p>
 </div>
 
-<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
+<audio id="okSound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3 "></audio>
 
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
@@ -2311,6 +2316,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function toggleMenu() {
   document.getElementById('menuDropdown').classList.toggle('show');
+}
+
+// FUNCIÓN PARA ELIMINAR PRODUCTOS CON STOCK 0
+function eliminarSinStock() {
+  // Cerrar menú
+  document.getElementById('menuDropdown').classList.remove('show');
+  
+  // Filtrar productos con stock 0
+  const productosStockCero = inventory.filter(item => Number(item.quantity) === 0);
+  
+  if (productosStockCero.length === 0) {
+    showToast('No hay productos con stock 0 en el inventario', 'warning');
+    return;
+  }
+  
+  // Pedir contraseña
+  const password = prompt(`⚠️ ESTÁS POR ELIMINAR ${productosStockCero.length} PRODUCTOS CON STOCK 0\n\n` +
+    `Estos productos se moverán a la papelera.\n\n` +
+    `Ingresa la contraseña de confirmación:`);
+  
+  // Si cancela
+  if (password === null) return;
+  
+  // Verificar contraseña
+  if (password !== 'KLOHESV') {
+    showToast('❌ Contraseña incorrecta. Operación cancelada.', 'error');
+    return;
+  }
+  
+  // Proceder a eliminar (mover a papelera)
+  let contador = 0;
+  
+  // Recorrer de atrás hacia adelante para no afectar índices
+  for (let i = inventory.length - 1; i >= 0; i--) {
+    if (Number(inventory[i].quantity) === 0) {
+      const producto = inventory[i];
+      const itemPapelera = {
+        ...producto,
+        deletedAt: new Date().toISOString(),
+        originalIndex: i
+      };
+      trash.push(itemPapelera);
+      inventory.splice(i, 1);
+      contador++;
+    }
+  }
+  
+  // Guardar cambios
+  localStorage.setItem('inventory', JSON.stringify(inventory));
+  localStorage.setItem('trash', JSON.stringify(trash));
+  
+  // Actualizar UI
+  renderTable();
+  calculateTotal();
+  
+  showToast(`✅ ${contador} productos con stock 0 movidos a la papelera`, 'success');
 }
 
 document.addEventListener('click', (e) => {
@@ -3606,7 +3667,7 @@ function printLabels() {
     <html>
       <head>
         <title>Etiquetas</title>
-        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "><\/script>
         <style>
           body { font-family: Arial; margin: 20px; }
           .label { 

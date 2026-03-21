@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,62 +7,468 @@
   <title>CONTABILIDAD A FAMILY COMPANY</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --color-bg:#f4f6f8;
-      --color-primary:#1a73e8;
-      --color-secondary:#0d47a1;
-      --color-text:#2c3e50;
-      --color-card:#ffffff;
-      --radius:12px;
-      --shadow:0 3px 10px rgba(0,0,0,.05);
+    :root {
+      --bg-primary: #fafbfc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f5f6f8;
+      --text-primary: #1a1a2e;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --accent-primary: #6366f1;
+      --accent-secondary: #8b5cf6;
+      --accent-success: #10b981;
+      --accent-danger: #ef4444;
+      --accent-warning: #f59e0b;
+      --border-color: #e5e7eb;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.06), 0 4px 6px -2px rgba(0,0,0,0.03);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    body{font-family:"Inter",Arial,sans-serif;background:var(--color-bg);color:var(--color-text);margin:0;padding:0}
-    header{background:var(--color-primary);color:#fff;padding:1rem 2rem;text-align:center;font-size:1.5rem;font-weight:600;letter-spacing:.5px;box-shadow:var(--shadow)}
-    nav{display:flex;justify-content:center;background:#fff;border-bottom:1px solid #ddd;flex-wrap:wrap}
-    .tab{padding:1rem 1.5rem;cursor:pointer;font-weight:500;color:#666;transition:all .2s}
-    .tab.active{color:var(--color-primary);border-bottom:3px solid var(--color-primary);background:#f9fafc}
-    main{padding:2rem;max-width:1200px;margin:auto}
-    section{display:none;animation:fadeIn .3s ease-in-out}
-    section.active{display:block}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-bottom:2rem}
-    .card{background:var(--color-card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;transition:transform .2s}
-    .card:hover{transform:translateY(-3px)}
-    .card h3{font-size:1rem;color:#888;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:0.5rem}
-    .card p{font-size:1.4rem;font-weight:600;color:var(--color-secondary)}
-    .card.negative p{color:#e53935}
-    .card.inversion-total{background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:#fff}
-    .card.inversion-total h3{color:#e0e0e0}
-    .card.inversion-total p{color:#fff;font-size:1.6rem}
-    .card.deudas{background:linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);color:#fff}
-    .card.deudas h3{color:#ffe0e0}
-    .card.deudas p{color:#fff;font-size:1.6rem}
-    .icono{font-size:1.5rem}
-    canvas{display:block;margin:2rem auto;max-width:350px}
-    form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;background:#fff;padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem}
-    input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-family:inherit;font-size:.9rem}
-    textarea{resize:vertical;min-height:60px}
-    button{background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-weight:500;transition:background .2s}
-    button:hover{background:var(--color-secondary)}
-    table{width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow);border-radius:var(--radius);overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.9rem}
-    th{background:#f8f9fa;color:#555;font-weight:600}
-    tr:hover td{background:#f3f6fa}
-    .acciones button{background:none;border:none;cursor:pointer;font-size:1rem;margin:0 5px}
-    .acciones .editar{color:#1a73e8}
-    .acciones .eliminar{color:#e53935}
-    footer{text-align:center;padding:1rem;color:#999;font-size:.85rem}
-    .excel-bar{display:flex;gap:.5rem;margin-bottom:.5rem}
-    .excel-bar button{background:#388e3c}
-    .excel-bar button:hover{background:#2e7d32}
-    .error-msg{color:#e53935;font-size:0.85rem;margin-top:0.25rem}
-    input:invalid{border-color:#e53935}
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* Header minimalista */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.25rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+    }
+
+    /* Navegación elegante */
+    nav {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.5rem;
+      background: var(--bg-tertiary);
+      margin: 1.5rem 2rem;
+      border-radius: var(--radius-md);
+      width: fit-content;
+    }
+
+    .tab {
+      padding: 0.625rem 1.25rem;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+      background: rgba(255,255,255,0.6);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Layout principal */
+    main {
+      padding: 0 2rem 3rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    section {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Títulos de sección */
+    section h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* Dashboard cards refinadas */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card h3 {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card p {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .card.negative p {
+      color: var(--accent-danger);
+    }
+
+    .card.inversion-total::before,
+    .card.deudas::before {
+      opacity: 1;
+    }
+
+    .card.inversion-total::before {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .card.deudas::before {
+      background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+    }
+
+    .card.inversion-total p,
+    .card.deudas p {
+      font-size: 1.875rem;
+    }
+
+    .icono {
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+
+    /* Gráfico */
+    .chart-container {
+      background: var(--bg-secondary);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+    }
+
+    /* Formularios minimalistas */
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      background: var(--bg-secondary);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      transition: var(--transition);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button[type="submit"] {
+      background: var(--text-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0.625rem 1.5rem;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: var(--transition);
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--accent-primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Botones Excel */
+    .excel-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+
+    .excel-bar button,
+    .excel-bar label {
+      background: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: var(--radius-sm) !important;
+      padding: 0.5rem 1rem !important;
+      font-size: 0.8125rem !important;
+      font-weight: 500 !important;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .excel-bar button:hover,
+    .excel-bar label:hover {
+      background: var(--bg-tertiary) !important;
+      border-color: var(--text-muted) !important;
+    }
+
+    .excel-bar button::before {
+      content: '↓';
+      font-size: 0.875rem;
+    }
+
+    .excel-bar label::before {
+      content: '↑';
+      font-size: 0.875rem;
+    }
+
+    /* Tablas elegantes */
+    .table-wrapper {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    thead {
+      background: var(--bg-tertiary);
+    }
+
+    th {
+      padding: 0.875rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-size: 0.6875rem;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg-primary);
+    }
+
+    /* Acciones */
+    .acciones {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .acciones button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.375rem;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      font-size: 1rem;
+      opacity: 0.6;
+    }
+
+    .acciones button:hover {
+      opacity: 1;
+      background: var(--bg-tertiary);
+    }
+
+    .acciones .editar:hover {
+      color: var(--accent-primary);
+    }
+
+    .acciones .eliminar:hover {
+      color: var(--accent-danger);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: 3rem;
+    }
+
+    /* Estados */
+    .error-msg {
+      color: var(--accent-danger);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    input:invalid {
+      border-color: var(--accent-danger);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav {
+        margin: 1rem;
+        overflow-x: auto;
+        width: auto;
+      }
+
+      main {
+        padding: 0 1rem 2rem;
+      }
+
+      header {
+        padding: 1rem;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      form {
+        grid-template-columns: 1fr;
+      }
+
+      th, td {
+        padding: 0.75rem;
+      }
+    }
   </style>
 </head>
 <body>
 
-<header>📊 FINANZAS</header>
+<header>
+  <h1>FINANZAS</h1>
+</header>
 
 <nav>
   <div class="tab active" data-tab="dashboard">Dashboard</div>
@@ -106,20 +513,24 @@
         <p id="balance">$0.00</p>
       </div>
     </div>
-    <canvas id="chartResumen"></canvas>
+    <div class="chart-container">
+      <canvas id="chartResumen"></canvas>
+    </div>
   </section>
 
   <!-- INGRESOS -->
   <section id="ingresos">
     <h2>Ingresos</h2>
-    <table id="tablaIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="tablaIngresos">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- GASTOS -->
@@ -138,17 +549,19 @@
     </form>
     <div class="excel-bar">
       <button id="exportGastos">Exportar Excel</button>
-      <label for="importGastos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <label for="importGastos">Importar Excel</label>
       <input type="file" id="importGastos" accept=".xlsx,.xls" style="display:none">
     </div>
-    <table id="tablaGastos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="tablaGastos">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método Pago</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- GASTOS DESDE INGRESOS -->
@@ -165,17 +578,19 @@
     </form>
     <div class="excel-bar">
       <button id="exportGastosDesdeIngresos">Exportar Excel</button>
-      <label for="importGastosDesdeIngresos" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <label for="importGastosDesdeIngresos">Importar Excel</label>
       <input type="file" id="importGastosDesdeIngresos" accept=".xlsx,.xls" style="display:none">
     </div>
-    <table id="tablaGastosDesdeIngresos">
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="tablaGastosDesdeIngresos">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th><th>Responsable</th><th>Observaciones</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- PROVEEDORES -->
@@ -192,17 +607,19 @@
     </form>
     <div class="excel-bar">
       <button id="exportProveedores">Exportar Excel</button>
-      <label for="importProveedores" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <label for="importProveedores">Importar Excel</label>
       <input type="file" id="importProveedores" accept=".xlsx,.xls" style="display:none">
     </div>
-    <table id="tablaProveedores">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="tablaProveedores">
+        <thead>
+          <tr>
+            <th>Nombre</th><th>NIT</th><th>Teléfono</th><th>Email</th><th>Dirección</th><th>Observaciones</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- CUENTAS -->
@@ -220,17 +637,19 @@
     </form>
     <div class="excel-bar">
       <button id="exportCuentas">Exportar Excel</button>
-      <label for="importCuentas" style="display:inline-block;background:#388e3c;color:#fff;padding:10px 16px;border-radius:var(--radius);cursor:pointer">Importar Excel</label>
+      <label for="importCuentas">Importar Excel</label>
       <input type="file" id="importCuentas" accept=".xlsx,.xls" style="display:none">
     </div>
-    <table id="tablaCuentas">
-      <thead>
-        <tr>
-          <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-wrapper">
+      <table id="tablaCuentas">
+        <thead>
+          <tr>
+            <th>Tipo</th><th>Cliente/Proveedor</th><th>Concepto</th><th>Monto</th><th>Fecha Vencimiento</th><th>Estado</th><th>Observaciones</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 </main>
 
@@ -272,15 +691,33 @@ const chart = new Chart(ctx, {
     labels: ['Ingreso Neto', 'Gastos Operativos', 'Gastos Directos', 'Balance'], 
     datasets: [{ 
       data: [0, 0, 0, 0], 
-      backgroundColor: ['#1a73e8', '#e53935', '#ff9800', '#43a047'],
-      hoverOffset: 10 
+      backgroundColor: ['#6366f1', '#ef4444', '#f59e0b', '#10b981'],
+      borderWidth: 0,
+      hoverOffset: 8
     }] 
   },
   options: { 
-    responsive: true, 
+    responsive: true,
+    cutout: '65%',
     plugins: { 
-      legend: { position: 'bottom' },
+      legend: { 
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          font: {
+            family: 'Inter',
+            size: 12
+          }
+        }
+      },
       tooltip: {
+        backgroundColor: '#1a1a2e',
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: { family: 'Inter', size: 13 },
+        bodyFont: { family: 'Inter', size: 12 },
         callbacks: {
           label: function(context) {
             let label = context.label || '';
@@ -323,10 +760,10 @@ function actualizarDashboard() {
   
   if (balance < 0) {
     balanceCard.classList.add('negative');
-    balanceEl.style.color = '#e53935';
+    balanceEl.style.color = '#ef4444';
   } else {
     balanceCard.classList.remove('negative');
-    balanceEl.style.color = '#43a047';
+    balanceEl.style.color = '#10b981';
   }
 
   chart.data.datasets[0].data = [
@@ -337,10 +774,10 @@ function actualizarDashboard() {
   ];
   
   chart.data.datasets[0].backgroundColor = [
-    '#1a73e8',
-    '#e53935',
-    '#ff9800',
-    balance < 0 ? '#e53935' : '#43a047'
+    '#6366f1',
+    '#ef4444',
+    '#f59e0b',
+    balance < 0 ? '#ef4444' : '#10b981'
   ];
   
   chart.update();
@@ -377,7 +814,7 @@ function renderTable(id, arr, keys, keyName) {
   tbody.innerHTML = arr.map((it, i) => `
     <tr>
       ${keys.map(k => `<td>${it[k] !== undefined ? (k === 'monto' ? '$' + parseFloat(it[k]).toFixed(2) : it[k]) : ''}</td>`).join('')}
-      <td class="acciones">${keyName === 'ingresos' ? '<span style="color:#888;font-size:0.85rem;">Sistema</span>' : `
+      <td class="acciones">${keyName === 'ingresos' ? '<span style="color:#9ca3af;font-size:0.75rem;">Sistema</span>' : `
         <button class="editar" data-key="${keyName}" data-index="${i}" title="Editar">✏️</button>
         <button class="eliminar" data-key="${keyName}" data-index="${i}" title="Eliminar">🗑️</button>`}
       </td>

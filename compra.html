@@ -366,6 +366,11 @@
       color: white;
     }
     
+    .btn-info {
+      background: #3b82f6;
+      color: white;
+    }
+    
     .actions-bar {
       display: flex;
       gap: 0.75rem;
@@ -1359,6 +1364,73 @@
       font-weight: 600;
       border: 1px solid var(--border);
     }
+
+    /* Estilos para el campo de código de barras con botón */
+    .barcode-input-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .barcode-input-group input {
+      flex: 1;
+    }
+
+    .barcode-input-group .btn {
+      padding: 0.5rem 0.75rem;
+      white-space: nowrap;
+    }
+
+    /* Sección de regeneración de códigos */
+    .regenerate-section {
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      border: 2px solid #0ea5e9;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .regenerate-section h3 {
+      color: #0369a1;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .regenerate-section p {
+      color: #0c4a6e;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .barcode-length-selector {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .barcode-length-btn {
+      padding: 0.5rem 1rem;
+      border: 2px solid var(--border);
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .barcode-length-btn.active {
+      background: #0ea5e9;
+      color: white;
+      border-color: #0ea5e9;
+    }
+
+    .barcode-length-btn:hover:not(.active) {
+      border-color: #0ea5e9;
+      color: #0ea5e9;
+    }
   </style>
 </head>
 <body>
@@ -1503,6 +1575,29 @@
         </div>
       </div>
 
+      <!-- SECCIÓN: REGENERAR CÓDIGOS DE BARRAS EXISTENTES -->
+      <div class="regenerate-section">
+        <h3>
+          <i class="fa-solid fa-barcode"></i>
+          Regenerar Códigos de Barras
+        </h3>
+        <p>Genera nuevos códigos de barras automáticos para todos los productos existentes. Los códigos tendrán longitudes variadas entre 4 y 8 dígitos.</p>
+        
+        <div class="barcode-length-selector">
+          <button class="barcode-length-btn active" data-length="mixed" onclick="selectBarcodeLength('mixed')">Variado (4-8)</button>
+          <button class="barcode-length-btn" data-length="4" onclick="selectBarcodeLength(4)">4 dígitos</button>
+          <button class="barcode-length-btn" data-length="5" onclick="selectBarcodeLength(5)">5 dígitos</button>
+          <button class="barcode-length-btn" data-length="6" onclick="selectBarcodeLength(6)">6 dígitos</button>
+          <button class="barcode-length-btn" data-length="7" onclick="selectBarcodeLength(7)">7 dígitos</button>
+          <button class="barcode-length-btn" data-length="8" onclick="selectBarcodeLength(8)">8 dígitos</button>
+        </div>
+        
+        <button class="btn btn-info" onclick="regenerarCodigosBarrasExistentes()" style="width: 100%; padding: 0.75rem;">
+          <i class="fa-solid fa-rotate"></i>
+          Regenerar Códigos de Barras para Todos los Productos
+        </button>
+      </div>
+
       <!-- Carga por Imágenes -->
       <div class="bulk-section" id="cargaSection">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
@@ -1511,7 +1606,7 @@
               <i class="fa-solid fa-images" style="color: var(--accent); margin-right: 0.5rem;"></i>
               Carga por Imágenes
             </h3>
-            <p style="font-size: 0.875rem; color: var(--text-secondary);">Máximo 130 imágenes. Códigos cortos automáticos.</p>
+            <p style="font-size: 0.875rem; color: var(--text-secondary);">Máximo 130 imágenes. Códigos de barras automáticos variados (4-8 dígitos).</p>
           </div>
           <div class="form-group" style="margin: 0;">
             <label style="font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Prefijo (3-6 caracteres)</label>
@@ -1664,7 +1759,12 @@
         
         <div class="form-group">
           <label>Código de Barras *</label>
-          <input type="text" id="barcode" name="barcode" required placeholder="Escanea o ingresa el código">
+          <div class="barcode-input-group">
+            <input type="text" id="barcode" name="barcode" required placeholder="Escanea, ingresa o genera automático">
+            <button type="button" class="btn btn-secondary" onclick="generarBarcodeAutomatico()" title="Generar código automático">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
+            </button>
+          </div>
           <canvas id="barcodeCanvas"></canvas>
         </div>
         
@@ -1843,10 +1943,127 @@ let loteTemporal = [];
 let fechaActualGlobal = new Date().toISOString().split('T')[0];
 let autoguardadoInterval;
 let lastSearch = '';
+let barcodeLengthMode = 'mixed'; // 'mixed', 4, 5, 6, 7, 8
 
 // Constantes
 const DIAS_PAPELERA = 30;
 const LIMITE_STOCK_BAJO = 5;
+
+// ==================== FUNCIONES DE CÓDIGOS DE BARRAS ====================
+
+/**
+ * Genera un código de barras numérico aleatorio con longitud variable (4-8 dígitos)
+ * @returns {string} Código de barras generado
+ */
+function generarCodigoBarras() {
+  let longitud;
+  
+  if (barcodeLengthMode === 'mixed') {
+    // Longitud aleatoria entre 4 y 8
+    longitud = Math.floor(Math.random() * 5) + 4; // 4, 5, 6, 7, 8
+  } else {
+    longitud = parseInt(barcodeLengthMode);
+  }
+  
+  // Generar número aleatorio con la longitud especificada
+  const min = Math.pow(10, longitud - 1);
+  const max = Math.pow(10, longitud) - 1;
+  const codigo = Math.floor(Math.random() * (max - min + 1)) + min;
+  
+  return codigo.toString();
+}
+
+/**
+ * Genera un código de barras único (no repetido en el inventario)
+ * @returns {string} Código de barras único
+ */
+function generarCodigoBarrasUnico() {
+  let codigo;
+  let intentos = 0;
+  const maxIntentos = 100;
+  
+  do {
+    codigo = generarCodigoBarras();
+    intentos++;
+    // Verificar que no exista en el inventario
+    const existe = inventory.some(item => item.barcode === codigo);
+    if (!existe || intentos >= maxIntentos) break;
+  } while (true);
+  
+  return codigo;
+}
+
+/**
+ * Genera código de barras automático para el formulario de producto individual
+ */
+function generarBarcodeAutomatico() {
+  const codigo = generarCodigoBarrasUnico();
+  document.getElementById('barcode').value = codigo;
+  generarBarcode(codigo);
+  showToast(`Código de barras generado: ${codigo} (${codigo.length} dígitos)`, 'success');
+}
+
+/**
+ * Selecciona el modo de longitud de código de barras
+ */
+function selectBarcodeLength(length) {
+  barcodeLengthMode = length;
+  
+  // Actualizar UI
+  document.querySelectorAll('.barcode-length-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelector(`[data-length="${length}"]`).classList.add('active');
+  
+  const mensaje = length === 'mixed' ? 'Variado (4-8 dígitos)' : `${length} dígitos`;
+  showToast(`Modo de generación: ${mensaje}`, 'success');
+}
+
+/**
+ * Regenera los códigos de barras de todos los productos existentes
+ */
+function regenerarCodigosBarrasExistentes() {
+  if (inventory.length === 0) {
+    showToast('No hay productos en el inventario', 'warning');
+    return;
+  }
+  
+  const mensaje = barcodeLengthMode === 'mixed' 
+    ? '¿Regenerar códigos de barras para TODOS los productos con longitudes variadas (4-8 dígitos)?'
+    : `¿Regenerar códigos de barras para TODOS los productos con ${barcodeLengthMode} dígitos?`;
+  
+  if (!confirm(mensaje)) return;
+  
+  document.getElementById('loadingOverlay').classList.add('show');
+  
+  setTimeout(() => {
+    let contador = 0;
+    const codigosGenerados = new Set();
+    
+    inventory.forEach(item => {
+      let codigo;
+      let intentos = 0;
+      
+      // Generar código único
+      do {
+        codigo = generarCodigoBarras();
+        intentos++;
+      } while (codigosGenerados.has(codigo) && intentos < 100);
+      
+      codigosGenerados.add(codigo);
+      item.barcode = codigo;
+      contador++;
+    });
+    
+    localStorage.setItem('inventory', JSON.stringify(inventory));
+    
+    renderTable();
+    document.getElementById('loadingOverlay').classList.remove('show');
+    
+    const modoTexto = barcodeLengthMode === 'mixed' ? 'variadas (4-8)' : `de ${barcodeLengthMode}`;
+    showToast(`✅ ${contador} códigos de barras regenerados con longitudes ${modoTexto} dígitos`, 'success');
+  }, 500);
+}
 
 // Algoritmo de distancia de Levenshtein para búsqueda fuzzy
 function levenshteinDistance(str1, str2) {
@@ -2125,6 +2342,11 @@ function recuperarBorrador() {
   document.getElementById('quantity').value = borrador.quantity || '';
   document.getElementById('description').value = borrador.description || '';
   document.getElementById('category').value = borrador.category || '';
+  
+  // Generar barcode visual si existe
+  if (borrador.barcode) {
+    generarBarcode(borrador.barcode);
+  }
   
   calcularSugerencia();
   document.getElementById('recoveryBanner').style.display = 'none';
@@ -2685,6 +2907,8 @@ async function procesarLote() {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const codigo = generateShortCode(prefix, i);
+    // Generar código de barras automático con longitud variada (4-8 dígitos)
+    const barcode = generarCodigoBarras();
     
     await new Promise(res => {
       new Compressor(file, {
@@ -2697,13 +2921,23 @@ async function procesarLote() {
             mini.innerHTML = `
               <img src="${e.target.result}" alt="img">
               <div title="${codigo}">${codigo}</div>
+              <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600;">BC: ${barcode}</div>
             `;
             preview.appendChild(mini);
             localforage.setItem(`img_${codigo}`, result);
             loteTemporal.push({
-              name: '', code: codigo, barcode: '', price: 0, valorReal: 0, fechaCompra: fechaActualGlobal,
-              discount: 0, quantity: 0, description: '', category: '',
-              addedAt: new Date().toLocaleString('es-ES'), tipoCompra: 'lote'
+              name: '', 
+              code: codigo, 
+              barcode: barcode, // Código de barras automático generado
+              price: 0, 
+              valorReal: 0, 
+              fechaCompra: fechaActualGlobal,
+              discount: 0, 
+              quantity: 0, 
+              description: '', 
+              category: '',
+              addedAt: new Date().toLocaleString('es-ES'), 
+              tipoCompra: 'lote'
             });
             res();
           };
@@ -2714,7 +2948,7 @@ async function procesarLote() {
     });
   }
   
-  document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos.`;
+  document.getElementById('loteStatus').textContent = `${loteTemporal.length} productos listos. Códigos de barras generados automáticamente.`;
   
   // Limpiar datos previos de localStorage del lote
   localStorage.removeItem('loteTemporalData');
@@ -2853,7 +3087,12 @@ function mostrarEditorLote(datosPrevios = null) {
         
         <div class="lote-edit-field">
           <label>Código de Barras *</label>
-          <input type="text" id="loteBarcode${i}" placeholder="Código" value="${datos.barcode || ''}">
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="loteBarcode${i}" placeholder="Código" value="${datos.barcode || p.barcode || ''}" style="flex: 1;">
+            <button type="button" class="btn btn-secondary" onclick="regenerarBarcodeLote(${i})" title="Generar nuevo">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
         </div>
         
         <div class="lote-edit-field">
@@ -2926,6 +3165,13 @@ function mostrarEditorLote(datosPrevios = null) {
   editorBubble.classList.add('active');
 }
 
+// Función para regenerar código de barras individual en el editor de lote
+function regenerarBarcodeLote(index) {
+  const nuevoBarcode = generarCodigoBarras();
+  document.getElementById(`loteBarcode${index}`).value = nuevoBarcode;
+  showToast(`Nuevo código generado: ${nuevoBarcode}`, 'success');
+}
+
 function calcSugLote(i) {
   const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
   const porc = parseFloat(document.getElementById(`lotePorcentaje${i}`).value) || 60;
@@ -2955,7 +3201,7 @@ function guardarLoteCompleto() {
   setTimeout(() => {
     loteTemporal.forEach((p, i) => {
       p.name = document.getElementById(`loteName${i}`).value.trim() || p.code;
-      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+      p.barcode = document.getElementById(`loteBarcode${i}`).value.trim() || generarCodigoBarras();
       p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0;
       p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0;
       p.fechaCompra = document.getElementById(`loteFecha${i}`).value;

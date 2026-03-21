@@ -122,7 +122,7 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow-lg);
       padding: 0.5rem;
-      min-width: 220px;
+      min-width: 260px;
       display: none;
       flex-direction: column;
       gap: 0.25rem;
@@ -147,6 +147,20 @@
     .menu-item:hover {
       background: var(--bg);
       color: var(--accent);
+    }
+    
+    .menu-item.danger {
+      color: var(--danger);
+    }
+    
+    .menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0.5rem 0;
     }
     
     .main-container {
@@ -369,6 +383,10 @@
     .btn-info {
       background: #3b82f6;
       color: white;
+    }
+    
+    .btn-info:hover {
+      background: #2563eb;
     }
     
     .actions-bar {
@@ -1381,44 +1399,75 @@
       white-space: nowrap;
     }
 
-    /* Sección de regeneración de códigos */
-    .regenerate-section {
-      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-      border: 2px solid #0ea5e9;
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      margin-bottom: 2rem;
+    /* MODAL DE REGENERAR CÓDIGOS - DISIMULADO */
+    .regenerate-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
     }
 
-    .regenerate-section h3 {
-      color: #0369a1;
-      margin-bottom: 1rem;
+    .regenerate-modal.show {
+      display: flex;
+    }
+
+    .regenerate-content {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      border: 2px solid #0ea5e9;
+    }
+
+    .regenerate-header {
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+      color: white;
+      padding: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .regenerate-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      margin: 0;
     }
 
-    .regenerate-section p {
-      color: #0c4a6e;
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
+    .regenerate-body {
+      padding: 2rem;
+      overflow-y: auto;
     }
 
     .barcode-length-selector {
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
-      margin-bottom: 1rem;
+      margin: 1.5rem 0;
+      justify-content: center;
     }
 
     .barcode-length-btn {
-      padding: 0.5rem 1rem;
+      padding: 0.75rem 1.25rem;
       border: 2px solid var(--border);
       background: white;
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
       transition: var(--transition);
+      font-size: 0.875rem;
     }
 
     .barcode-length-btn.active {
@@ -1430,6 +1479,35 @@
     .barcode-length-btn:hover:not(.active) {
       border-color: #0ea5e9;
       color: #0ea5e9;
+    }
+
+    .regenerate-info {
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+      color: #0369a1;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .regenerate-info i {
+      font-size: 1.25rem;
+      margin-top: 0.125rem;
+    }
+
+    .regenerate-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .regenerate-actions .btn {
+      flex: 1;
+      padding: 0.875rem;
     }
   </style>
 </head>
@@ -1470,10 +1548,22 @@
         <a href="facturas.html" class="menu-item"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
         <a href="traslados.html" class="menu-item"><i class="fa-solid fa-truck-fast"></i> Traslados</a>
         <a href="venta.html" class="menu-item"><i class="fa-solid fa-cash-register"></i> Venta</a>
-        <div style="height: 1px; background: var(--border); margin: 0.5rem 0;"></div>
+        
+        <div class="menu-divider"></div>
+        
         <a href="#" onclick="abrirPapelera()" class="menu-item"><i class="fa-solid fa-trash-can"></i> Papelera</a>
         <a href="#" onclick="mostrarAtajos()" class="menu-item"><i class="fa-solid fa-keyboard"></i> Atajos de Teclado</a>
-        <a href="#" onclick="salirKiosco()" class="menu-item" style="color: var(--danger);"><i class="fa-solid fa-xmark"></i> Salir modo kiosco</a>
+        
+        <div class="menu-divider"></div>
+        
+        <!-- OPCIÓN DISIMULADA PARA REGENERAR CÓDIGOS -->
+        <a href="#" onclick="abrirModalRegenerar()" class="menu-item" style="color: #0ea5e9; font-weight: 600;">
+          <i class="fa-solid fa-barcode"></i> Regenerar Códigos de Barras
+        </a>
+        
+        <div class="menu-divider"></div>
+        
+        <a href="#" onclick="salirKiosco()" class="menu-item danger"><i class="fa-solid fa-xmark"></i> Salir modo kiosco</a>
       </div>
     </button>
   </div>
@@ -1545,7 +1635,7 @@
   <span class="fab-badge" id="fabBadge" style="display: none;">!</span>
 </button>
 
-<!-- MODAL FULLSCREEN -->
+<!-- MODAL FULLSCREEN DE CARGA MASIVA -->
 <div class="bulk-modal" id="bulkModal">
   <div class="bulk-modal-content">
     <div class="bulk-modal-header">
@@ -1573,29 +1663,6 @@
             <i class="fa-solid fa-play"></i> Continuar Edición
           </button>
         </div>
-      </div>
-
-      <!-- SECCIÓN: REGENERAR CÓDIGOS DE BARRAS EXISTENTES -->
-      <div class="regenerate-section">
-        <h3>
-          <i class="fa-solid fa-barcode"></i>
-          Regenerar Códigos de Barras
-        </h3>
-        <p>Genera nuevos códigos de barras automáticos para todos los productos existentes. Los códigos tendrán longitudes variadas entre 4 y 8 dígitos.</p>
-        
-        <div class="barcode-length-selector">
-          <button class="barcode-length-btn active" data-length="mixed" onclick="selectBarcodeLength('mixed')">Variado (4-8)</button>
-          <button class="barcode-length-btn" data-length="4" onclick="selectBarcodeLength(4)">4 dígitos</button>
-          <button class="barcode-length-btn" data-length="5" onclick="selectBarcodeLength(5)">5 dígitos</button>
-          <button class="barcode-length-btn" data-length="6" onclick="selectBarcodeLength(6)">6 dígitos</button>
-          <button class="barcode-length-btn" data-length="7" onclick="selectBarcodeLength(7)">7 dígitos</button>
-          <button class="barcode-length-btn" data-length="8" onclick="selectBarcodeLength(8)">8 dígitos</button>
-        </div>
-        
-        <button class="btn btn-info" onclick="regenerarCodigosBarrasExistentes()" style="width: 100%; padding: 0.75rem;">
-          <i class="fa-solid fa-rotate"></i>
-          Regenerar Códigos de Barras para Todos los Productos
-        </button>
       </div>
 
       <!-- Carga por Imágenes -->
@@ -1728,6 +1795,61 @@
       <button class="btn btn-danger" onclick="vaciarPapelera()">
         <i class="fa-solid fa-trash"></i> Vaciar Papelera
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DISIMULADO PARA REGENERAR CÓDIGOS DE BARRAS -->
+<div class="regenerate-modal" id="regenerateModal">
+  <div class="regenerate-content">
+    <div class="regenerate-header">
+      <h2>
+        <i class="fa-solid fa-barcode"></i>
+        Regenerar Códigos de Barras
+      </h2>
+      <button class="btn btn-secondary" onclick="cerrarModalRegenerar()" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3); width: 40px; height: 40px; padding: 0;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="regenerate-body">
+      <div class="regenerate-info">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <strong>¿Qué hace esta función?</strong><br>
+          Genera nuevos códigos de barras automáticos para todos los productos existentes en el inventario. 
+          Los códigos tendrán longitudes variadas entre 4 y 8 dígitos numéricos.
+        </div>
+      </div>
+      
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; text-align: center; color: var(--text-primary);">
+        Selecciona la longitud de los códigos:
+      </h3>
+      
+      <div class="barcode-length-selector">
+        <button class="barcode-length-btn active" data-length="mixed" onclick="selectBarcodeLength('mixed')">
+          <i class="fa-solid fa-shuffle"></i> Variado (4-8)
+        </button>
+        <button class="barcode-length-btn" data-length="4" onclick="selectBarcodeLength(4)">4 dígitos</button>
+        <button class="barcode-length-btn" data-length="5" onclick="selectBarcodeLength(5)">5 dígitos</button>
+        <button class="barcode-length-btn" data-length="6" onclick="selectBarcodeLength(6)">6 dígitos</button>
+        <button class="barcode-length-btn" data-length="7" onclick="selectBarcodeLength(7)">7 dígitos</button>
+        <button class="barcode-length-btn" data-length="8" onclick="selectBarcodeLength(8)">8 dígitos</button>
+      </div>
+      
+      <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 1rem; font-size: 0.875rem; color: #92400e; margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-triangle-exclamation" style="margin-right: 0.5rem;"></i>
+        <strong>Advertencia:</strong> Esta acción reemplazará todos los códigos de barras existentes. 
+        Asegúrate de haber exportado tu inventario antes si necesitas conservar los códigos anteriores.
+      </div>
+      
+      <div class="regenerate-actions">
+        <button class="btn btn-secondary" onclick="cerrarModalRegenerar()">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button class="btn btn-info" onclick="confirmarRegenerarCodigos()">
+          <i class="fa-solid fa-rotate"></i> Regenerar Códigos
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2004,6 +2126,21 @@ function generarBarcodeAutomatico() {
 }
 
 /**
+ * Abre el modal de regenerar códigos (desde el menú disimulado)
+ */
+function abrirModalRegenerar() {
+  document.getElementById('regenerateModal').classList.add('show');
+  document.getElementById('menuDropdown').classList.remove('show');
+}
+
+/**
+ * Cierra el modal de regenerar códigos
+ */
+function cerrarModalRegenerar() {
+  document.getElementById('regenerateModal').classList.remove('show');
+}
+
+/**
  * Selecciona el modo de longitud de código de barras
  */
 function selectBarcodeLength(length) {
@@ -2014,27 +2151,25 @@ function selectBarcodeLength(length) {
     btn.classList.remove('active');
   });
   document.querySelector(`[data-length="${length}"]`).classList.add('active');
-  
-  const mensaje = length === 'mixed' ? 'Variado (4-8 dígitos)' : `${length} dígitos`;
-  showToast(`Modo de generación: ${mensaje}`, 'success');
 }
 
 /**
- * Regenera los códigos de barras de todos los productos existentes
+ * Confirma y ejecuta la regeneración de códigos
  */
-function regenerarCodigosBarrasExistentes() {
+function confirmarRegenerarCodigos() {
   if (inventory.length === 0) {
     showToast('No hay productos en el inventario', 'warning');
     return;
   }
   
   const mensaje = barcodeLengthMode === 'mixed' 
-    ? '¿Regenerar códigos de barras para TODOS los productos con longitudes variadas (4-8 dígitos)?'
-    : `¿Regenerar códigos de barras para TODOS los productos con ${barcodeLengthMode} dígitos?`;
+    ? `¿Estás seguro de regenerar TODOS los códigos de barras con longitudes variadas (4-8 dígitos)?\n\nSe actualizarán ${inventory.length} productos.`
+    : `¿Estás seguro de regenerar TODOS los códigos de barras con ${barcodeLengthMode} dígitos?\n\nSe actualizarán ${inventory.length} productos.`;
   
   if (!confirm(mensaje)) return;
   
   document.getElementById('loadingOverlay').classList.add('show');
+  cerrarModalRegenerar();
   
   setTimeout(() => {
     let contador = 0;
@@ -2185,6 +2320,10 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#keyboardShortcuts') && !e.target.closest('[onclick="mostrarAtajos()"]')) {
     document.getElementById('keyboardShortcuts').classList.remove('show');
   }
+  // Cerrar modal de regenerar si se hace click fuera
+  if (e.target === document.getElementById('regenerateModal')) {
+    cerrarModalRegenerar();
+  }
 });
 
 function salirKiosco() {
@@ -2211,9 +2350,15 @@ function manejarAtajosTeclado(e) {
     const bulkModal = document.getElementById('bulkModal');
     const editor = document.getElementById('editLoteBubble');
     const shortcuts = document.getElementById('keyboardShortcuts');
+    const regenerateModal = document.getElementById('regenerateModal');
     
     if (shortcuts.classList.contains('show')) {
       shortcuts.classList.remove('show');
+      return;
+    }
+    
+    if (regenerateModal.classList.contains('show')) {
+      cerrarModalRegenerar();
       return;
     }
     

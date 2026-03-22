@@ -1,15 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VENTAS – KLOHESV</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap');
     
     :root {
       /* Paleta minimalista: blancos, grises, rosa pálido */
@@ -1069,6 +1068,68 @@
       background: rgba(255,255,255,0.2);
     }
 
+    /* ===== MODAL DE CONFIRMACIÓN ELIMINAR ===== */
+    .confirm-delete-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-delete-card {
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      width: 320px;
+      text-align: center;
+      animation: modalSlide 0.3s ease;
+    }
+
+    .confirm-delete-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--danger-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .confirm-delete-icon i {
+      color: var(--danger);
+      font-size: 1.3rem;
+    }
+
+    .confirm-delete-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .confirm-delete-text {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .confirm-delete-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .confirm-delete-buttons .btn {
+      flex: 1;
+    }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
       .header-bar { padding: 12px 16px; }
@@ -1095,6 +1156,7 @@
       .container { padding: 0; }
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1548,37 +1610,83 @@
     hideSpinner();
   }
 
+  // Variable global para almacenar la referencia al modal de confirmación
+  let confirmDeleteModal = null;
+
   window.confirmDelete = function (idVenta) {
+    // Cerrar modal anterior si existe
+    if (confirmDeleteModal) {
+      confirmDeleteModal.remove();
+      confirmDeleteModal = null;
+    }
+
+    // Crear el modal de confirmación con estructura correcta
     const wrapper = document.createElement('div');
+    wrapper.className = 'confirm-delete-overlay';
+    wrapper.id = 'confirmDeleteModal';
     wrapper.innerHTML = `
-      <div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-        <div style="background:#fff;padding:24px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:320px;text-align:center;">
-          <div style="width:56px;height:56px;background:var(--danger-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="fa-solid fa-trash" style="color:var(--danger);font-size:1.3rem;"></i>
-          </div>
-          <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:8px;color:var(--text-primary);">¿Eliminar producto?</h3>
-          <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:20px;">Esta acción no se puede deshacer.</p>
-          <div style="display:flex;gap:10px;justify-content:center;">
-            <button class="btn btn-outline" onclick="this.closest('div[style*=\"position:fixed\"]').remove()" style="flex:1;">Cancelar</button>
-            <button class="btn btn-rose" onclick="deleteSoldItem('${idVenta}')" style="flex:1;background:var(--danger);color:#fff;">Eliminar</button>
-          </div>
+      <div class="confirm-delete-card">
+        <div class="confirm-delete-icon">
+          <i class="fa-solid fa-trash"></i>
+        </div>
+        <h3 class="confirm-delete-title">¿Eliminar producto?</h3>
+        <p class="confirm-delete-text">Esta acción no se puede deshacer.</p>
+        <div class="confirm-delete-buttons">
+          <button class="btn btn-outline" id="btnCancelarEliminar">Cancelar</button>
+          <button class="btn btn-rose" id="btnConfirmarEliminar" style="background:var(--danger);color:#fff;">Eliminar</button>
         </div>
       </div>
     `;
+
     document.body.appendChild(wrapper);
+    confirmDeleteModal = wrapper;
+
+    // Agregar event listeners a los botones
+    document.getElementById('btnCancelarEliminar').addEventListener('click', cerrarConfirmDelete);
+    document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+      deleteSoldItem(idVenta);
+    });
+
+    // Cerrar al hacer clic fuera del modal
+    wrapper.addEventListener('click', function(e) {
+      if (e.target === wrapper) {
+        cerrarConfirmDelete();
+      }
+    });
+
+    // Cerrar con tecla Escape
+    document.addEventListener('keydown', handleEscapeKey);
   };
 
+  function handleEscapeKey(e) {
+    if (e.key === 'Escape' && confirmDeleteModal) {
+      cerrarConfirmDelete();
+    }
+  }
+
+  function cerrarConfirmDelete() {
+    if (confirmDeleteModal) {
+      confirmDeleteModal.remove();
+      confirmDeleteModal = null;
+    }
+    document.removeEventListener('keydown', handleEscapeKey);
+  }
+
   window.deleteSoldItem = function (idVenta) {
-    const index = soldInventory.findIndex(item => item.idVenta == idVenta);
+    const index = soldInventory.findIndex(item => String(item.idVenta) === String(idVenta));
     if (index !== -1) {
       soldInventory.splice(index, 1);
       localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
-      document.querySelector('div[style*="position:fixed"]').remove();
+      cerrarConfirmDelete();
       loadSoldInventory();
+    } else {
+      alert('No se encontró el producto a eliminar');
+      cerrarConfirmDelete();
     }
   };
 
   function isToday(dateStr) {
+    if (!dateStr) return false;
     const d = new Date(dateStr);
     const today = new Date();
     return d.toDateString() === today.toDateString();

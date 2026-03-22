@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1156,7 +1157,6 @@
       .container { padding: 0; }
     }
   </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -1253,7 +1253,7 @@
 </button>
 
 <!-- Modal Totales -->
-<div class="modal-overlay" id="totalesModal" onclick="if(event.target===this) cerrarModalTotales()">
+<div class="modal-overlay" id="totalesModal">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2><i class="fa-solid fa-chart-pie"></i> Resumen de Ventas</h2>
@@ -1280,7 +1280,7 @@
 </div>
 
 <!-- Modal Cierre de Caja -->
-<div class="modal-overlay" id="cierreModal" onclick="if(event.target===this) cerrarCierreCaja()">
+<div class="modal-overlay" id="cierreModal">
   <div class="modal-card cierre-card" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2><i class="fa-solid fa-lock"></i> Cierre de Caja</h2>
@@ -1367,7 +1367,7 @@
 </div>
 
 <!-- Modal Factura -->
-<div class="modal-overlay" id="facturaModal" onclick="if(event.target===this) cerrarFactura()">
+<div class="modal-overlay" id="facturaModal">
   <div class="modal-card wide" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2><i class="fa-solid fa-receipt"></i> Generar Factura</h2>
@@ -1451,14 +1451,36 @@
 
 <!-- Modal Imagen -->
 <div id="imgModal" onclick="cerrarImgModal()">
-  <button class="close-img" onclick="cerrarImgModal()">
+  <button class="close-img" onclick="event.stopPropagation(); cerrarImgModal()">
     <i class="fa-solid fa-times"></i>
   </button>
   <img id="imgModalImg" src="" alt="Imagen ampliada">
 </div>
 
 <script>
-  let soldInventory = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  // ========== FUNCIONES DE SEGURIDAD ==========
+  
+  // Función segura para parsear JSON
+  function safeJSONParse(str, defaultValue = []) {
+    try {
+      if (!str) return defaultValue;
+      return JSON.parse(str);
+    } catch (e) {
+      console.error('Error parseando JSON:', e);
+      return defaultValue;
+    }
+  }
+  
+  // Función para escapar HTML y prevenir XSS
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ========== VARIABLES GLOBALES ==========
+  let soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
   let currentPage = 1;
   let rowsPerPage = 30;
   let mesesSeleccionados = new Set();
@@ -1509,9 +1531,10 @@
 
   function prevPage() { if (currentPage > 1) { currentPage--; loadSoldInventory(); } }
   function nextPage() {
+    const searchValue = document.getElementById('unifiedSearch').value.toLowerCase();
     const filtered = soldInventory.filter(item =>
-      item.name.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()) ||
-      (item.barcode && item.barcode.toLowerCase().includes(document.getElementById('unifiedSearch').value.toLowerCase()))
+      item.name.toLowerCase().includes(searchValue) ||
+      (item.barcode && item.barcode.toLowerCase().includes(searchValue))
     );
     if (currentPage < Math.ceil(filtered.length / rowsPerPage)) { currentPage++; loadSoldInventory(); }
   }
@@ -1561,12 +1584,25 @@
       imgWrapper.className = 'card-image-wrapper';
 
       const img = document.createElement('img');
-      img.alt = item.name;
+      img.alt = escapeHTML(item.name);
 
-      const blob = await localforage.getItem(`img_${item.code}`);
+      let blob = null;
+      try {
+        blob = await localforage.getItem(`img_${item.code}`);
+      } catch (err) {
+        console.error('Error cargando imagen de localforage:', err);
+        blob = null;
+      }
+      
       if (blob) {
-        img.src = URL.createObjectURL(blob);
-        img.onclick = () => abrirImgModal(img.src);
+        try {
+          img.src = URL.createObjectURL(blob);
+          img.onclick = () => abrirImgModal(img.src);
+        } catch (err) {
+          console.error('Error creando URL de imagen:', err);
+          img.style.display = 'none';
+          imgWrapper.innerHTML = '<i class="fa-solid fa-image" style="font-size: 2rem; color: var(--border);"></i>';
+        }
       } else {
         img.src = '';
         img.style.display = 'none';
@@ -1588,22 +1624,50 @@
       checkbox.value = JSON.stringify(item);
       imgWrapper.appendChild(checkbox);
 
-      card.innerHTML = `
-        <div class="card-content">
-          <div class="card-title">${item.name}</div>
-          ${item.barcode ? `<div class="card-barcode">${item.barcode}</div>` : ''}
-          <div class="card-price">$${Number(item.price).toFixed(2)}</div>
-        </div>
-        <div class="card-meta">
-          <span class="card-quantity">Cant: ${Number(item.quantity)}</span>
-          <span class="card-total">$${Number(item.total).toFixed(2)}</span>
-        </div>
-        <button class="card-delete" onclick="confirmDelete('${item.idVenta}')">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      `;
+      // Usar createElement en lugar de innerHTML para evitar XSS
+      const cardContent = document.createElement('div');
+      cardContent.className = 'card-content';
+      
+      const cardTitle = document.createElement('div');
+      cardTitle.className = 'card-title';
+      cardTitle.textContent = item.name; // textContent escapa automáticamente
+      cardContent.appendChild(cardTitle);
+      
+      if (item.barcode) {
+        const cardBarcode = document.createElement('div');
+        cardBarcode.className = 'card-barcode';
+        cardBarcode.textContent = item.barcode;
+        cardContent.appendChild(cardBarcode);
+      }
+      
+      const cardPrice = document.createElement('div');
+      cardPrice.className = 'card-price';
+      cardPrice.textContent = `$${Number(item.price).toFixed(2)}`;
+      cardContent.appendChild(cardPrice);
 
-      card.insertBefore(imgWrapper, card.firstChild);
+      const cardMeta = document.createElement('div');
+      cardMeta.className = 'card-meta';
+      
+      const cardQuantity = document.createElement('span');
+      cardQuantity.className = 'card-quantity';
+      cardQuantity.textContent = `Cant: ${Number(item.quantity)}`;
+      cardMeta.appendChild(cardQuantity);
+      
+      const cardTotal = document.createElement('span');
+      cardTotal.className = 'card-total';
+      cardTotal.textContent = `$${Number(item.total).toFixed(2)}`;
+      cardMeta.appendChild(cardTotal);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'card-delete';
+      deleteBtn.onclick = () => confirmDelete(item.idVenta);
+      deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+
+      card.appendChild(imgWrapper);
+      card.appendChild(cardContent);
+      card.appendChild(cardMeta);
+      card.appendChild(deleteBtn);
+      
       container.appendChild(card);
     }
 
@@ -1624,26 +1688,51 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'confirm-delete-overlay';
     wrapper.id = 'confirmDeleteModal';
-    wrapper.innerHTML = `
-      <div class="confirm-delete-card">
-        <div class="confirm-delete-icon">
-          <i class="fa-solid fa-trash"></i>
-        </div>
-        <h3 class="confirm-delete-title">¿Eliminar producto?</h3>
-        <p class="confirm-delete-text">Esta acción no se puede deshacer.</p>
-        <div class="confirm-delete-buttons">
-          <button class="btn btn-outline" id="btnCancelarEliminar">Cancelar</button>
-          <button class="btn btn-rose" id="btnConfirmarEliminar" style="background:var(--danger);color:#fff;">Eliminar</button>
-        </div>
-      </div>
-    `;
+    
+    const card = document.createElement('div');
+    card.className = 'confirm-delete-card';
+    
+    const iconDiv = document.createElement('div');
+    iconDiv.className = 'confirm-delete-icon';
+    iconDiv.innerHTML = '<i class="fa-solid fa-trash"></i>';
+    
+    const title = document.createElement('h3');
+    title.className = 'confirm-delete-title';
+    title.textContent = '¿Eliminar producto?';
+    
+    const text = document.createElement('p');
+    text.className = 'confirm-delete-text';
+    text.textContent = 'Esta acción no se puede deshacer.';
+    
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'confirm-delete-buttons';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-outline';
+    cancelBtn.id = 'btnCancelarEliminar';
+    cancelBtn.textContent = 'Cancelar';
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-rose';
+    deleteBtn.id = 'btnConfirmarEliminar';
+    deleteBtn.style.cssText = 'background:var(--danger);color:#fff;';
+    deleteBtn.textContent = 'Eliminar';
+    
+    buttonsDiv.appendChild(cancelBtn);
+    buttonsDiv.appendChild(deleteBtn);
+    
+    card.appendChild(iconDiv);
+    card.appendChild(title);
+    card.appendChild(text);
+    card.appendChild(buttonsDiv);
+    wrapper.appendChild(card);
 
     document.body.appendChild(wrapper);
     confirmDeleteModal = wrapper;
 
     // Agregar event listeners a los botones
-    document.getElementById('btnCancelarEliminar').addEventListener('click', cerrarConfirmDelete);
-    document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+    cancelBtn.addEventListener('click', cerrarConfirmDelete);
+    deleteBtn.addEventListener('click', function() {
       deleteSoldItem(idVenta);
     });
 
@@ -1687,9 +1776,13 @@
 
   function isToday(dateStr) {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
+    try {
+      const d = new Date(dateStr);
+      const today = new Date();
+      return d.toDateString() === today.toDateString();
+    } catch (e) {
+      return false;
+    }
   }
 
   // ========== FACTURACIÓN ==========
@@ -1714,15 +1807,38 @@
     body.innerHTML = '';
     let sum = 0;
     checks.forEach(ch => {
-      const p = JSON.parse(ch.value);
+      let p;
+      try {
+        p = JSON.parse(ch.value);
+      } catch (e) {
+        console.error('Error parseando producto:', e);
+        return;
+      }
+      
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>
-          <div class="ticket-product-name">${p.name}</div>
-          <div class="ticket-product-price">P/U: $${Number(p.price).toFixed(2)}</div>
-        </td>
-        <td style="text-align: center;">${Number(p.quantity)}</td>
-        <td style="text-align: right;">$${Number(p.total).toFixed(2)}</td>`;
+      
+      const tdProducto = document.createElement('td');
+      const prodName = document.createElement('div');
+      prodName.className = 'ticket-product-name';
+      prodName.textContent = p.name;
+      const prodPrice = document.createElement('div');
+      prodPrice.className = 'ticket-product-price';
+      prodPrice.textContent = `P/U: $${Number(p.price).toFixed(2)}`;
+      tdProducto.appendChild(prodName);
+      tdProducto.appendChild(prodPrice);
+      
+      const tdCantidad = document.createElement('td');
+      tdCantidad.style.textAlign = 'center';
+      tdCantidad.textContent = Number(p.quantity);
+      
+      const tdTotal = document.createElement('td');
+      tdTotal.style.textAlign = 'right';
+      tdTotal.textContent = `$${Number(p.total).toFixed(2)}`;
+      
+      tr.appendChild(tdProducto);
+      tr.appendChild(tdCantidad);
+      tr.appendChild(tdTotal);
+      
       body.appendChild(tr);
       sum += Number(p.total);
     });
@@ -1787,7 +1903,9 @@
     const filas = document.querySelectorAll('#fBody tr');
     filas.forEach(fr => {
       const c = fr.cells;
-      const prod = doc.splitTextToSize(c[0].querySelector('.ticket-product-name').textContent, 30);
+      const prodNameEl = c[0].querySelector('.ticket-product-name');
+      if (!prodNameEl) return;
+      const prod = doc.splitTextToSize(prodNameEl.textContent, 30);
       doc.text(prod, margen, y); doc.text(c[1].textContent, margen + 38, y); doc.text(c[2].textContent, margen + 62, y, 'right');
       y += prod.length * 3 + 1;
     });
@@ -1879,7 +1997,7 @@
       texto = `${nombres.join(', ')} ${anio}`;
     }
     
-    document.getElementById('selectedPeriods').innerHTML = `<strong>Período:</strong> ${texto}`;
+    document.getElementById('selectedPeriods').innerHTML = `<strong>Período:</strong> ${escapeHTML(texto)}`;
     
     const btn = document.getElementById('btnEjecutarCierre');
     btn.disabled = mesesArray.length === 0 || ventasActuales.length === 0;
@@ -1899,8 +2017,12 @@
     return soldInventory.filter(item => {
       const fechaStr = item.date || item.soldAt;
       if (!fechaStr) return false;
-      const fechaVenta = new Date(fechaStr);
-      return fechaVenta.getFullYear() === anio && meses.includes(fechaVenta.getMonth());
+      try {
+        const fechaVenta = new Date(fechaStr);
+        return fechaVenta.getFullYear() === anio && meses.includes(fechaVenta.getMonth());
+      } catch (e) {
+        return false;
+      }
     });
   }
 
@@ -1952,11 +2074,22 @@
     } else {
       stats.productos.forEach(prod => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${prod.name}</td>
-          <td style="text-align:center;">${prod.quantity}</td>
-          <td style="text-align:right;">$${prod.total.toFixed(2)}</td>
-        `;
+        
+        const tdName = document.createElement('td');
+        tdName.textContent = prod.name;
+        
+        const tdQty = document.createElement('td');
+        tdQty.style.textAlign = 'center';
+        tdQty.textContent = prod.quantity;
+        
+        const tdTotal = document.createElement('td');
+        tdTotal.style.textAlign = 'right';
+        tdTotal.textContent = `$${prod.total.toFixed(2)}`;
+        
+        tr.appendChild(tdName);
+        tr.appendChild(tdQty);
+        tr.appendChild(tdTotal);
+        
         tbody.appendChild(tr);
       });
     }
@@ -2042,7 +2175,7 @@
     stats.productos.forEach(prod => {
       productosHTML += `
         <tr>
-          <td style="padding:8px;border-bottom:1px solid #eee;">${prod.name}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;">${escapeHTML(prod.name)}</td>
           <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">${prod.quantity}</td>
           <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">$${prod.total.toFixed(2)}</td>
         </tr>
@@ -2053,7 +2186,7 @@
     ventana.document.write(`
       <html>
         <head>
-          <title>Cierre de Caja - ${nombresMesesSeleccionados} ${anio}</title>
+          <title>Cierre de Caja - ${escapeHTML(nombresMesesSeleccionados)} ${anio}</title>
           <style>
             body { font-family: 'Inter', sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; color: #333; }
             .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9d5dc; }
@@ -2075,7 +2208,7 @@
           <div class="header">
             <h1>KLOHESV</h1>
             <p style="font-size: 16px; font-weight: 600; color: #be185d; margin: 10px 0;">Cierre de Caja</p>
-            <p><strong>${nombresMesesSeleccionados} ${anio}</strong></p>
+            <p><strong>${escapeHTML(nombresMesesSeleccionados)} ${anio}</strong></p>
             <p>San Salvador, El Salvador</p>
           </div>
           
@@ -2136,17 +2269,30 @@
     ventana.print();
   }
 
+  // ========== EVENT LISTENERS PARA CERRAR MODALES AL HACER CLICK FUERA ==========
+  document.getElementById('totalesModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalTotales();
+  });
+  
+  document.getElementById('cierreModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarCierreCaja();
+  });
+  
+  document.getElementById('facturaModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarFactura();
+  });
+
   // ========== ACTUALIZACIÓN EN TIEMPO REAL ==========
   window.addEventListener('storage', (e) => {
     if (e.key === 'soldInventory') {
-      soldInventory = JSON.parse(e.newValue || '[]');
+      soldInventory = safeJSONParse(e.newValue, []);
       cargarVentas();
       loadSoldInventory();
     }
   });
 
   window.addEventListener('focus', () => {
-    soldInventory = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
     cargarVentas();
     loadSoldInventory();
   });

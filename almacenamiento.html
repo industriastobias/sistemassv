@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -180,7 +179,6 @@
     .summary-item .amount { font-size: 1.125rem; font-weight: 700; }
     mark { background-color: #fef08a; color: #1f2937; padding: 2px 4px; border-radius: 3px; font-weight: 600; }
     
-    /* Tablet optimizations */
     @media (max-width: 1024px) { 
       .sale-layout { grid-template-columns: 1fr; } 
       .sale-product { flex-direction: row; align-items: flex-start; } 
@@ -283,6 +281,15 @@
     <div class="table-container" id="tableView"><table class="data-table"><thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Barcode</th><th>Precio</th><th>Desc.</th><th>Final</th><th>Fecha</th><th>Stock</th><th>Categoria</th><th>Acciones</th></tr></thead><tbody id="inventoryTable"></tbody></table><div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-box-open"></i><p>No se encontraron productos</p></div><div class="pagination" id="pagination"></div></div>
     <div class="cards-grid" id="cardsView" style="display:none;"></div>
   </main>
+
+  <!-- Modal de confirmación genérico -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+      <div class="modal-header"><h3 class="modal-title" id="confirmTitle">Confirmar acción</h3><button class="modal-close" onclick="closeConfirmModal()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="modal-body" id="confirmMessage"></div>
+      <div class="modal-footer"><button class="btn" id="confirmCancelBtn" onclick="closeConfirmModal()">Cancelar</button><button class="btn btn-danger" id="confirmActionBtn">Aceptar</button></div>
+    </div>
+  </div>
 
   <!-- Sale Modal -->
   <div class="modal-overlay" id="saleModal">
@@ -423,9 +430,7 @@ function playBeep() {
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.1);
-  } catch (e) {
-    console.log('Audio not available');
-  }
+  } catch (e) { console.log('Audio not available'); }
 }
 
 function playSuccessSound() {
@@ -453,9 +458,7 @@ function playSuccessSound() {
       osc2.start(audioContext.currentTime);
       osc2.stop(audioContext.currentTime + 0.15);
     }, 100);
-  } catch (e) {
-    console.log('Audio not available');
-  }
+  } catch (e) { console.log('Audio not available'); }
 }
 
 const CONFIG = { PASSWORD_EDIT: 'admin123', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DELAY: 150, PAGE_SIZE_DEFAULT: 5000 };
@@ -463,6 +466,7 @@ let inventory = [], filteredInventory = [], currentPage = 1, pageSize = parseInt
 let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentPriceIndex = -1, currentStockIndex = -1, currentEditPendingIndex = -1;
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), cashItems = [], cashViewMode = 'grid', isKioscoMode = false, currentBarcodeUrl = '';
+let pendingActionCallback = null; // Para el modal de confirmación
 
 function debounce(fn, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), delay); }; }
 function showNotification(message, type = 'success') { const container = document.getElementById('notificationContainer'); const notif = document.createElement('div'); notif.className = `notification ${type}`; notif.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check' : type === 'error' ? 'xmark' : 'exclamation'}"></i> ${message}`; container.appendChild(notif); setTimeout(() => notif.remove(), 3000); }
@@ -496,7 +500,6 @@ function loadInventory() {
     inventory.forEach(item => { if (!item.date) item.date = new Date().toISOString(); }); 
     updateCategories(); 
     updateStats(); 
-    // Cargar todos los productos desde el inicio
     filteredInventory = [...inventory];
     filteredInventory.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
     document.getElementById('filteredProducts').textContent = filteredInventory.length;
@@ -547,7 +550,6 @@ function clearAllFilters() {
   document.getElementById('lowStockFilter').checked = false; 
   document.getElementById('goToRow').value = ''; 
   currentPage = 1; 
-  // Restaurar todos los productos
   filteredInventory = [...inventory];
   filteredInventory.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
   document.getElementById('filteredProducts').textContent = filteredInventory.length;
@@ -557,7 +559,6 @@ function clearAllFilters() {
 function setView(view) { currentView = view; localStorage.setItem('preferredView', view); document.getElementById('btnTableView').classList.toggle('active', view === 'table'); document.getElementById('btnCardsView').classList.toggle('active', view === 'cards'); document.getElementById('tableView').style.display = view === 'table' ? 'block' : 'none'; document.getElementById('cardsView').style.display = view === 'cards' ? 'grid' : 'none'; renderInventory(); }
 async function renderInventory() { const start = (currentPage - 1) * pageSize, end = start + pageSize, pageItems = filteredInventory.slice(start, end), totalPages = Math.ceil(filteredInventory.length / pageSize); if (currentView === 'table') await renderTable(pageItems, start); else await renderCards(pageItems, start); renderPagination(totalPages); document.getElementById('emptyState').style.display = pageItems.length ? 'none' : 'block'; }
 
-// Tabla sin columna de código
 async function renderTable(items, startIdx) { 
   const tbody = document.getElementById('inventoryTable'), barcodes = {}, images = {}; 
   items.forEach(item => { if (item.barcode) barcodes[item.barcode] = generateBarcodeDataUrl(item.barcode); }); 
@@ -591,7 +592,6 @@ async function renderTable(items, startIdx) {
   }).join(''); 
 }
 
-// Cards sin mostrar código
 async function renderCards(items, startIdx) { 
   const container = document.getElementById('cardsView'), barcodes = {}, images = {}; 
   await Promise.all(items.map(async item => { 
@@ -642,7 +642,6 @@ function closeBarcodeLarge() { document.getElementById('barcodeLargeOverlay').cl
 function openBarcodeLargeFromModal() { if (currentBarcodeUrl) openBarcodeModal(currentBarcodeUrl, document.getElementById('saleBarcodeText').textContent); }
 function openBarcodeLargeFromEditModal() { const src = document.getElementById('editPendingBarcode').src; const barcode = document.getElementById('editPendingBarcodeText').textContent; if (src) openBarcodeModal(src, barcode); }
 
-// Password protection for price/stock editing
 function requestPassword(action, index) {
   document.getElementById('passwordAction').value = action;
   document.getElementById('passwordIndex').value = index;
@@ -650,29 +649,15 @@ function requestPassword(action, index) {
   document.getElementById('passwordModal').classList.add('active');
   setTimeout(() => document.getElementById('passwordInput').focus(), 100);
 }
-
-function closePasswordModal() {
-  document.getElementById('passwordModal').classList.remove('active');
-}
-
+function closePasswordModal() { document.getElementById('passwordModal').classList.remove('active'); }
 function verifyPassword() {
   const password = document.getElementById('passwordInput').value;
   const action = document.getElementById('passwordAction').value;
   const index = parseInt(document.getElementById('passwordIndex').value);
-  
-  if (password !== CONFIG.PASSWORD_EDIT) {
-    showNotification('Contraseña incorrecta', 'error');
-    document.getElementById('passwordInput').value = '';
-    return;
-  }
-  
+  if (password !== CONFIG.PASSWORD_EDIT) { showNotification('Contraseña incorrecta', 'error'); document.getElementById('passwordInput').value = ''; return; }
   closePasswordModal();
-  
-  if (action === 'price') {
-    openPriceModal(index);
-  } else if (action === 'stock') {
-    openStockModal(index);
-  }
+  if (action === 'price') openPriceModal(index);
+  else if (action === 'stock') openStockModal(index);
 }
 
 async function openSaleModal(index) { 
@@ -758,11 +743,8 @@ async function loadPendingList() {
     } 
     document.querySelector('.pending-summary').style.display = 'block'; 
     
-    // Preload images
     const images = {};
-    await Promise.all(pending.map(async (p) => {
-      images[p.code] = await getProductImage(p.code);
-    }));
+    await Promise.all(pending.map(async (p) => { images[p.code] = await getProductImage(p.code); }));
     
     let totalProducts = 0, totalShipping = 0, totalCommission = 0, grandTotal = 0; 
     pending.forEach(p => { 
@@ -781,13 +763,49 @@ async function loadPendingList() {
       const productTotal = (p.price || 0) * (p.quantity || 0); 
       const imgUrl = images[p.code];
       const barcodeUrl = p.barcode ? generateBarcodeDataUrl(p.barcode) : null;
-      return `<tr><td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}</div></div></td><td>${p.quantity}</td><td>${formatCurrency(p.price)}</td><td>${formatCurrency(p.codShipping || 0)}</td><td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td><td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td><td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="markPendingPaid(${idx})" ontouchstart="markPendingPaid(${idx})"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal(${idx})" ontouchstart="openEditPendingModal(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="deletePending(${idx})" ontouchstart="deletePending(${idx})"><i class="fa-solid fa-trash"></i></button></div></td></tr>`; 
+      return `<tr>
+        <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}</div></div></td>
+        <td>${p.quantity}</td>
+        <td>${formatCurrency(p.price)}</td>
+        <td>${formatCurrency(p.codShipping || 0)}</td>
+        <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
+        <td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
+        <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="confirmMarkPaid(${idx})" ontouchstart="confirmMarkPaid(${idx})"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal(${idx})" ontouchstart="openEditPendingModal(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="confirmDeletePending(${idx})" ontouchstart="confirmDeletePending(${idx})"><i class="fa-solid fa-trash"></i></button></div></td>
+      </tr>`; 
     })).then(html => html.join('')); 
   } catch (e) { console.error(e); } finally { showLoading(false); } 
 }
 
+// Funciones de confirmación con modal personalizado
+function confirmMarkPaid(index) {
+  showConfirmModal('Confirmar cobro', '¿Estás seguro de que deseas marcar este pedido como cobrado?', () => {
+    markPendingPaid(index);
+  });
+}
+function confirmDeletePending(index) {
+  showConfirmModal('Eliminar pedido', '¿Estás seguro? El producto será devuelto al stock.', () => {
+    deletePending(index);
+  });
+}
+function showConfirmModal(title, message, onConfirm) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').innerHTML = `<p style="margin:0;">${message}</p>`;
+  const confirmBtn = document.getElementById('confirmActionBtn');
+  // Remover eventos anteriores clonando el botón para evitar múltiples listeners
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  newConfirmBtn.id = 'confirmActionBtn';
+  newConfirmBtn.onclick = () => {
+    closeConfirmModal();
+    if (onConfirm) onConfirm();
+  };
+  document.getElementById('confirmModal').classList.add('active');
+}
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
 function markPendingPaid(index) { 
-  if (!confirm('Confirmar cobro de este pedido?')) return; 
   showLoading(true); 
   try { 
     let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'), item = pending[index]; 
@@ -803,7 +821,6 @@ function markPendingPaid(index) {
   } catch (e) { showNotification('Error al procesar el cobro', 'error'); } finally { showLoading(false); } 
 }
 function deletePending(index) { 
-  if (!confirm('Eliminar pedido? El stock sera devuelto.')) return; 
   showLoading(true); 
   try { 
     let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'), item = pending[index], invItem = inventory.find(i => i.code === item.code); 
@@ -857,14 +874,12 @@ async function openCashRegister() {
   document.getElementById('cashCategory').innerHTML = '<option value="">Todas</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join(''); 
   renderCashProducts(); 
 }
-
 function closeCashRegister() { 
   if (document.exitFullscreen) document.exitFullscreen().catch(() => {}); 
   document.getElementById('cashRegister').classList.remove('active'); 
   document.getElementById('cashFloat').classList.remove('active'); 
   cashItems = []; 
 }
-
 async function renderCashProducts() { 
   const container = document.getElementById('cashProducts'), 
         sorted = [...inventory].sort((a, b) => { 
@@ -872,7 +887,6 @@ async function renderCashProducts() {
           if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1; 
           return (a.name || '').localeCompare(b.name || ''); 
         }); 
-  
   if (cashViewMode === 'grid') {
     container.innerHTML = '<div class="cash-grid" id="cashGrid"></div>'; 
     const grid = document.getElementById('cashGrid'); 
@@ -896,7 +910,6 @@ async function renderCashProducts() {
       }, idx * 10); 
     }); 
   } else {
-    // List view for tablets
     container.innerHTML = '<div class="cash-list" id="cashList"></div>';
     const list = document.getElementById('cashList');
     sorted.forEach((item, idx) => { 
@@ -920,13 +933,11 @@ async function renderCashProducts() {
     });
   }
 }
-
 function toggleCashView() { 
   cashViewMode = cashViewMode === 'grid' ? 'list' : 'grid'; 
   document.getElementById('cashViewIcon').className = cashViewMode === 'grid' ? 'fa-solid fa-list' : 'fa-solid fa-grid'; 
   renderCashProducts(); 
 }
-
 function updateCashQty(index, delta) { 
   playBeep();
   const input = document.getElementById(`cashQty-${index}`), 
@@ -943,7 +954,6 @@ function updateCashQty(index, delta) {
   setTimeout(() => input.closest('.cash-card, .cash-list-item')?.classList.remove('flash'), 500); 
   updateCashList(); 
 }
-
 function updateCashList() { 
   cashItems = []; 
   inventory.forEach((item, idx) => { 
@@ -968,13 +978,11 @@ function updateCashList() {
   document.getElementById('cashChange').style.display = 'none'; 
   document.getElementById('btnConfirmCash').style.display = 'none'; 
 }
-
 function removeCashItem(index) { 
   const item = cashItems[index]; 
   document.getElementById(item.rowId).value = 0; 
   updateCashList(); 
 }
-
 function calculateChange() { 
   const total = parseFloat(document.getElementById('cashTotal').textContent), 
         payment = parseFloat(document.getElementById('cashPayment').value) || 0; 
@@ -987,7 +995,6 @@ function calculateChange() {
   document.getElementById('cashChange').style.display = 'block'; 
   document.getElementById('btnConfirmCash').style.display = 'inline-flex'; 
 }
-
 function confirmCashSale() { 
   playSuccessSound();
   showLoading(true); 
@@ -1008,7 +1015,6 @@ function confirmCashSale() {
     applyFilters(); 
   } catch (e) { showNotification('Error al confirmar venta', 'error'); } finally { showLoading(false); } 
 }
-
 function cancelCashSale() { 
   if (!cashItems.length) { 
     closeCashRegister(); 
@@ -1022,7 +1028,6 @@ function cancelCashSale() {
   }); 
   updateCashList(); 
 }
-
 function toggleKiosco() { 
   if (!document.fullscreenElement) { 
     document.documentElement.requestFullscreen().catch(() => {}); 
@@ -1030,7 +1035,6 @@ function toggleKiosco() {
     document.exitFullscreen().catch(() => {}); 
   } 
 }
-
 function toggleMenu() { document.getElementById('sideMenu').classList.toggle('active'); }
 
 document.addEventListener('DOMContentLoaded', () => { 
@@ -1038,7 +1042,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSearchHistory(); 
   document.getElementById('pageSize').value = pageSize; 
   setView(currentView); 
-  // Renderizar productos inmediatamente
   renderInventory();
   
   document.getElementById('searchInput').addEventListener('input', debouncedFilter); 
@@ -1049,60 +1052,40 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dateFilter').addEventListener('change', applyFilters); 
   document.getElementById('lowStockFilter').addEventListener('change', applyFilters); 
   
-  // Password input enter key
-  document.getElementById('passwordInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') verifyPassword();
-  });
+  document.getElementById('passwordInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyPassword(); });
   
   document.addEventListener('click', (e) => { 
-    const menu = document.getElementById('sideMenu'), 
-          btn = document.querySelector('.menu-toggle'); 
+    const menu = document.getElementById('sideMenu'), btn = document.querySelector('.menu-toggle'); 
     if (menu.classList.contains('active') && !menu.contains(e.target) && !btn.contains(e.target)) menu.classList.remove('active'); 
   }); 
   
   document.addEventListener('keydown', (e) => { 
-    if (e.ctrlKey && e.key === 'b') { 
-      e.preventDefault(); 
-      document.getElementById('barcodeFilter').focus(); 
-    } 
+    if (e.ctrlKey && e.key === 'b') { e.preventDefault(); document.getElementById('barcodeFilter').focus(); } 
     handleUSBKey(e); 
-    if (e.key === 'F12' && document.getElementById('cashRegister').classList.contains('active')) { 
-      e.preventDefault(); 
-      if (document.getElementById('btnConfirmCash').style.display !== 'none') confirmCashSale(); 
-    } 
-    if (e.key === 'Escape') { 
-      document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); 
-      if (html5QrCode) stopCameraScan(); 
-    } 
+    if (e.key === 'F12' && document.getElementById('cashRegister').classList.contains('active')) { e.preventDefault(); if (document.getElementById('btnConfirmCash').style.display !== 'none') confirmCashSale(); } 
+    if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active')); if (html5QrCode) stopCameraScan(); } 
   }); 
   
   document.getElementById('cashSearch')?.addEventListener('input', debounce((e) => { 
-    const kw = e.target.value.toLowerCase(), 
-          cat = document.getElementById('cashCategory').value; 
+    const kw = e.target.value.toLowerCase(), cat = document.getElementById('cashCategory').value; 
     document.querySelectorAll('.cash-card, .cash-list-item').forEach(card => { 
-      const matchSearch = !kw || card.dataset.search?.includes(kw), 
-            matchCat = !cat || card.dataset.category === cat; 
+      const matchSearch = !kw || card.dataset.search?.includes(kw), matchCat = !cat || card.dataset.category === cat; 
       card.style.display = matchSearch && matchCat ? '' : 'none'; 
     }); 
   }, 200)); 
   
   document.getElementById('cashCategory')?.addEventListener('change', (e) => { 
-    const cat = e.target.value, 
-          kw = document.getElementById('cashSearch').value.toLowerCase(); 
+    const cat = e.target.value, kw = document.getElementById('cashSearch').value.toLowerCase(); 
     document.querySelectorAll('.cash-card, .cash-list-item').forEach(card => { 
-      const matchSearch = !kw || card.dataset.search?.includes(kw), 
-            matchCat = !cat || card.dataset.category === cat; 
+      const matchSearch = !kw || card.dataset.search?.includes(kw), matchCat = !cat || card.dataset.category === cat; 
       card.style.display = matchSearch && matchCat ? '' : 'none'; 
     }); 
   }); 
   
-  // Prevent zoom on double tap for tablets
   let lastTouchEnd = 0;
   document.addEventListener('touchend', (e) => {
     const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
+    if (now - lastTouchEnd <= 300) { e.preventDefault(); }
     lastTouchEnd = now;
   }, false);
 });

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -179,7 +178,13 @@
       color:#fff;
       box-shadow:0 4px 14px rgba(245,158,11,.4);
     }
-    .btn-catalog i, .btn-barcode i{font-size:1.2rem}
+    .btn-category{
+      background:#8b5cf6;
+      color:#fff;
+      box-shadow:0 4px 14px rgba(139,92,246,.4);
+      white-space:nowrap;
+    }
+    .btn-catalog i, .btn-barcode i, .btn-category i{font-size:1.2rem}
 
     .table-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.5rem;width:100%;max-width:1200px;}
     @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
@@ -233,6 +238,30 @@
       letter-spacing: 1px;
       margin-top: 2px;
     }
+    
+    /* Selector de categoría estilizado */
+    .category-filter-container {
+      display: flex;
+      gap: .5rem;
+      align-items: stretch;
+      width: 100%;
+      min-width: 280px;
+    }
+    .category-filter-container select {
+      flex: 1;
+      padding: .75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #f9fafb;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .category-filter-container select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    }
   </style>
 </head>
 <body>
@@ -271,7 +300,7 @@
   <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
 </div>
 
-<!-- BOTONES DE DESCARGA -->
+<!-- BOTONES DE DESCARGA - CON NUEVA OPCIÓN POR CATEGORÍA -->
 <div class="pdf-buttons">
   <button onclick="downloadPDF()" class="btn-report">
     <i class="fa fa-file-pdf"></i> Descargar Reporte Completo PDF
@@ -282,6 +311,16 @@
   <button onclick="downloadBarcodeLabelsPDF()" class="btn-barcode">
     <i class="fa fa-barcode"></i> ETIQUETAS CÓDIGOS DE BARRA
   </button>
+  
+  <!-- NUEVO: Descargar por categoría específica -->
+  <div class="category-filter-container">
+    <select id="categorySelect">
+      <option value="">Seleccionar categoría...</option>
+    </select>
+    <button onclick="downloadBarcodeLabelsByCategory()" class="btn-category">
+      <i class="fa fa-filter"></i> Por Categoría
+    </button>
+  </div>
 </div>
 
 <div id="inventoryTable" class="table-grid"></div>
@@ -1002,6 +1041,191 @@ async function downloadBarcodeLabelsPDF() {
   pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
+// NUEVA FUNCIÓN: Descargar etiquetas filtradas por categoría seleccionada
+async function downloadBarcodeLabelsByCategory() {
+  const categorySelect = document.getElementById('categorySelect');
+  const selectedCategory = categorySelect.value;
+  
+  if (!selectedCategory) {
+    alert('Por favor selecciona una categoría del menú desplegable');
+    categorySelect.focus();
+    return;
+  }
+  
+  const { jsPDF } = window.jspdf;
+  
+  // Filtrar productos: por categoría seleccionada y que tengan código de barras
+  const productsByCategory = inventory.filter(item => {
+    const itemCategory = (item.category || 'Sin categoría').trim();
+    return itemCategory === selectedCategory && item.barcode && item.barcode.trim() !== '';
+  });
+  
+  if (productsByCategory.length === 0) {
+    alert(`No hay productos con código de barras en la categoría "${selectedCategory}"`);
+    return;
+  }
+  
+  // Confirmar descarga
+  if (!confirm(`Se generarán etiquetas para ${productsByCategory.length} productos de "${selectedCategory}". ¿Continuar?`)) {
+    return;
+  }
+  
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  
+  // Configuración: 3 columnas x 7 filas = 21 etiquetas por página
+  const cols = 3;
+  const rows = 7;
+  const labelWidth = 63;
+  const labelHeight = 37;
+  const marginX = 8;
+  const marginY = 10;
+  const gapX = 3;
+  const gapY = 2;
+  
+  let currentPage = 1;
+  let labelCount = 0;
+  
+  // Función para dividir texto en líneas
+  const wrapTextForLabel = (text, maxWidth, fontSize) => {
+    pdf.setFontSize(fontSize);
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    for (let word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      const width = pdf.getTextWidth(testLine);
+      
+      if (width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    
+    return lines;
+  };
+  
+  // Función para dibujar una etiqueta
+  const drawLabel = (item, x, y) => {
+    const rawPrice = parseFloat(item.price) || 0;
+    const finalPrice = item.discount > 0 
+      ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
+      : rawPrice.toFixed(2);
+    
+    // Borde de la etiqueta
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, y, labelWidth, labelHeight);
+    
+    // MARCA KLOHE vertical centrada
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(0, 0, 0);
+    const letterSpacing = 5.5;
+    const totalLettersHeight = 4 * letterSpacing;
+    const startY = y + (labelHeight - totalLettersHeight) / 2;
+    const letterX = x + 4;
+    
+    pdf.text('K', letterX, startY);
+    pdf.text('L', letterX, startY + letterSpacing);
+    pdf.text('O', letterX, startY + letterSpacing * 2);
+    pdf.text('H', letterX, startY + letterSpacing * 3);
+    pdf.text('E', letterX, startY + letterSpacing * 4);
+    
+    // Línea separadora
+    pdf.setDrawColor(150, 150, 150);
+    pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
+    
+    // Nombre del producto
+    const textX = x + 13;
+    const maxTextWidth = labelWidth - 16;
+    let fontSize = 8;
+    let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+    
+    if (lines.length > 2) {
+      fontSize = 7;
+      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+    }
+    if (lines.length > 3) {
+      fontSize = 6;
+      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+    }
+    
+    if (lines.length > 3) {
+      lines = lines.slice(0, 3);
+      if (lines[2].length > 18) {
+        lines[2] = lines[2].substring(0, 15) + '...';
+      }
+    }
+    
+    pdf.setFontSize(fontSize);
+    pdf.setFont(undefined, 'normal');
+    let textY = y + 6;
+    lines.forEach(line => {
+      pdf.text(line, textX, textY);
+      textY += fontSize * 0.4;
+    });
+    
+    // Precio
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`$${finalPrice}`, textX, y + 16);
+    
+    // Código de barras
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, item.barcode, {
+        format: "CODE128",
+        width: 1.2,
+        height: 10,
+        displayValue: false,
+        margin: 0
+      });
+      
+      const barcodeData = canvas.toDataURL('image/png');
+      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10);
+      
+      // Números del código de barras
+      pdf.setFontSize(6);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' });
+    } catch (e) {
+      console.error('Error generando código de barras para:', item.name);
+    }
+  };
+  
+  // Generar etiquetas para cada producto de la categoría
+  for (let i = 0; i < productsByCategory.length; i++) {
+    const item = productsByCategory[i];
+    
+    const col = labelCount % cols;
+    const row = Math.floor((labelCount % (cols * rows)) / cols);
+    
+    const x = marginX + col * (labelWidth + gapX);
+    const y = marginY + row * (labelHeight + gapY);
+    
+    drawLabel(item, x, y);
+    
+    labelCount++;
+    
+    // Nueva página si se llenó (21 etiquetas)
+    if (labelCount % (cols * rows) === 0 && i < productsByCategory.length - 1) {
+      pdf.addPage();
+      currentPage++;
+    }
+  }
+  
+  // Guardar archivo con nombre incluyendo la categoría
+  const safeCategoryName = selectedCategory.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  pdf.save(`etiquetas_${safeCategoryName}_${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
 function doFilter(){
   searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
   const minP = parseFloat(document.getElementById('minPrice').value) || 0;
@@ -1018,8 +1242,41 @@ function doFilter(){
     const matchPrice = price >= minP && price <= maxP;
     return matchText && matchPrice;
   });
+  
+  // Actualizar selector de categorías dinámicamente
+  updateCategorySelector();
+  
   renderTable();
 }
+
+// Función para actualizar el selector de categorías
+function updateCategorySelector() {
+  const categorySelect = document.getElementById('categorySelect');
+  if (!categorySelect) return;
+  
+  // Obtener categorías únicas del inventario completo
+  const categories = [...new Set(inventory.map(item => (item.category || 'Sin categoría').trim()))].sort();
+  
+  // Guardar selección actual
+  const currentSelection = categorySelect.value;
+  
+  // Reconstruir opciones
+  categorySelect.innerHTML = '<option value="">Seleccionar categoría...</option>';
+  
+  categories.forEach(cat => {
+    const count = inventory.filter(item => (item.category || 'Sin categoría').trim() === cat).length;
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = `${cat} (${count} prod.)`;
+    categorySelect.appendChild(option);
+  });
+  
+  // Restaurar selección si aún existe
+  if (currentSelection && categories.includes(currentSelection)) {
+    categorySelect.value = currentSelection;
+  }
+}
+
 document.getElementById('searchInput').addEventListener('input',doFilter);
 document.getElementById('minPrice').addEventListener('input',doFilter);
 document.getElementById('maxPrice').addEventListener('input',doFilter);
@@ -1711,7 +1968,11 @@ async function downloadCatalogPDF() {
   pdf.save(`catalogo_productos_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-window.addEventListener('DOMContentLoaded',()=> doFilter());
+window.addEventListener('DOMContentLoaded',()=> {
+  doFilter();
+  // Inicializar el selector de categorías al cargar
+  updateCategorySelector();
+});
 </script>
 </body>
 </html>

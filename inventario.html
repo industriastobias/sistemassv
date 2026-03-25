@@ -1,14 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inventario klohe</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;--info:#06b6d4;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
     body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
@@ -262,6 +263,22 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(59,130,246,.2);
     }
+
+    /* Info de cantidad de etiquetas */
+    .label-info {
+      background: var(--bg);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
+      width: 100%;
+      max-width: 960px;
+      text-align: center;
+    }
+    .label-info strong {
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -298,6 +315,11 @@
 
 <div class="search-bar">
   <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
+</div>
+
+<!-- Info sobre etiquetas -->
+<div class="label-info" id="labelInfo">
+  <i class="fa fa-info-circle"></i> Las etiquetas se generan según el stock: <strong>1 etiqueta = 1 unidad en inventario</strong>
 </div>
 
 <!-- BOTONES DE DESCARGA - CON NUEVA OPCIÓN POR CATEGORÍA -->
@@ -863,7 +885,7 @@ async function downloadSingleBarcodeLabel(index) {
   }
 }
 
-// FUNCIÓN MODIFICADA: Descargar etiquetas de códigos de barras en PDF - 3x7 filas
+// FUNCIÓN MODIFICADA: Descargar etiquetas de códigos de barras en PDF - GENERA N ETIQUETAS SEGÚN STOCK
 async function downloadBarcodeLabelsPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -872,27 +894,41 @@ async function downloadBarcodeLabelsPDF() {
     return;
   }
   
-  // Filtrar solo productos con código de barras
-  const productsWithBarcode = filtered.filter(item => item.barcode && item.barcode.trim() !== '');
+  // Filtrar solo productos con código de barras Y con stock > 0
+  const productsWithBarcode = filtered.filter(item => 
+    item.barcode && 
+    item.barcode.trim() !== '' && 
+    parseInt(item.quantity) > 0
+  );
   
   if (productsWithBarcode.length === 0) {
-    alert('No hay productos con código de barras');
+    alert('No hay productos con código de barras y stock disponible');
     return;
+  }
+  
+  // Calcular total de etiquetas a generar (suma de todas las cantidades)
+  const totalLabels = productsWithBarcode.reduce((sum, item) => sum + parseInt(item.quantity), 0);
+  
+  // Confirmar si es muchas etiquetas
+  if (totalLabels > 100) {
+    if (!confirm(`Se generarán ${totalLabels} etiquetas en total. ¿Deseas continuar?`)) {
+      return;
+    }
   }
   
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   
-  // ✅ CONFIGURACIÓN MODIFICADA: 3 columnas x 7 filas = 21 etiquetas por página
+  // Configuración: 3 columnas x 7 filas = 21 etiquetas por página
   const cols = 3;
-  const rows = 7;  // Cambiado de 5 a 7 filas
-  const labelWidth = 63;  // Ancho de etiqueta en mm
-  const labelHeight = 37; // Alto reducido para caber 7 filas (antes era 55)
-  const marginX = 8;      // Margen izquierdo
-  const marginY = 10;     // Margen superior
-  const gapX = 3;         // Espacio entre columnas
-  const gapY = 2;         // Espacio reducido entre filas
+  const rows = 7;
+  const labelWidth = 63;
+  const labelHeight = 37;
+  const marginX = 8;
+  const marginY = 10;
+  const gapX = 3;
+  const gapY = 2;
   
   let currentPage = 1;
   let labelCount = 0;
@@ -920,11 +956,12 @@ async function downloadBarcodeLabelsPDF() {
     return lines;
   };
   
-  // Función para dibujar una etiqueta - POSICIONES AJUSTADAS
+  // Función para dibujar una etiqueta
   const drawLabel = (item, x, y) => {
+    const rawPrice = parseFloat(item.price) || 0;
     const finalPrice = item.discount > 0 
-      ? (item.price * (1 - item.discount / 100)).toFixed(2)
-      : parseFloat(item.price).toFixed(2);
+      ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
+      : rawPrice.toFixed(2);
     
     // Borde de la etiqueta
     pdf.setDrawColor(200, 200, 200);
@@ -936,12 +973,10 @@ async function downloadBarcodeLabelsPDF() {
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(0, 0, 0);
     // Centrado vertical: distribuir 5 letras en el alto de la etiqueta
-    const letterSpacing = 5.5; // Espaciado entre letras
-    const totalLettersHeight = 4 * letterSpacing; // 4 espacios entre 5 letras
-    const startY = y + (labelHeight - totalLettersHeight) / 2; // Centrado vertical
-    // Centrado horizontal: entre borde (x) y línea divisoria (x + 10)
-    // El espacio es 10mm, centro = x + 5, ajustar por ancho de letra (~3mm)
-    const letterX = x + 4; // Centrado en el espacio de 10mm
+    const letterSpacing = 5.5;
+    const totalLettersHeight = 4 * letterSpacing;
+    const startY = y + (labelHeight - totalLettersHeight) / 2;
+    const letterX = x + 4;
     pdf.text('K', letterX, startY);
     pdf.text('L', letterX, startY + letterSpacing);
     pdf.text('O', letterX, startY + letterSpacing * 2);
@@ -952,10 +987,10 @@ async function downloadBarcodeLabelsPDF() {
     pdf.setDrawColor(150, 150, 150);
     pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
     
-    // Nombre del producto - MÁS ARRIBA
+    // Nombre del producto
     const textX = x + 13;
     const maxTextWidth = labelWidth - 16;
-    let fontSize = 8; // Reducido para ahorrar espacio
+    let fontSize = 8;
     let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
     
     // Ajustar si es muy largo
@@ -980,60 +1015,63 @@ async function downloadBarcodeLabelsPDF() {
     // Dibujar nombre
     pdf.setFontSize(fontSize);
     pdf.setFont(undefined, 'normal');
-    let textY = y + 6; // Más arriba (antes y + 10)
+    let textY = y + 6;
     lines.forEach(line => {
       pdf.text(line, textX, textY);
       textY += fontSize * 0.4;
     });
     
-    // Precio - POSICIÓN AJUSTADA
+    // Precio
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
-    pdf.text(`$${finalPrice}`, textX, y + 16); // Fijo en y + 16
+    pdf.text(`$${finalPrice}`, textX, y + 16);
     
-    // Código de barras - MÁS ARRIBA
+    // Código de barras
     const canvas = document.createElement('canvas');
     try {
       JsBarcode(canvas, item.barcode, {
         format: "CODE128",
-        width: 1.2, // Ligeramente más delgado
-        height: 10, // Altura reducida (antes 14)
+        width: 1.2,
+        height: 10,
         displayValue: false,
         margin: 0
       });
       
       const barcodeData = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10); // y + 19 (antes y + 32)
+      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10);
       
-      // Números del código de barras - AL FINAL
-      pdf.setFontSize(6); // Más pequeño
+      // Números del código de barras
+      pdf.setFontSize(6);
       pdf.setFont(undefined, 'normal');
       pdf.setTextColor(80, 80, 80);
-      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' }); // y + 34 (antes y + 50)
+      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' });
     } catch (e) {
       console.error('Error generando código de barras para:', item.name);
     }
   };
   
-  // Generar etiquetas
-  for (let i = 0; i < productsWithBarcode.length; i++) {
-    const item = productsWithBarcode[i];
+  // Generar etiquetas - UNA POR CADA UNIDAD EN STOCK
+  for (const item of productsWithBarcode) {
+    const stock = parseInt(item.quantity);
     
-    // Calcular posición
-    const col = labelCount % cols;
-    const row = Math.floor((labelCount % (cols * rows)) / cols);
-    
-    const x = marginX + col * (labelWidth + gapX);
-    const y = marginY + row * (labelHeight + gapY);
-    
-    drawLabel(item, x, y);
-    
-    labelCount++;
-    
-    // Nueva página si se llenó (21 etiquetas)
-    if (labelCount % (cols * rows) === 0 && i < productsWithBarcode.length - 1) {
-      pdf.addPage();
-      currentPage++;
+    // Generar N etiquetas según el stock del producto
+    for (let i = 0; i < stock; i++) {
+      // Calcular posición
+      const col = labelCount % cols;
+      const row = Math.floor((labelCount % (cols * rows)) / cols);
+      
+      const x = marginX + col * (labelWidth + gapX);
+      const y = marginY + row * (labelHeight + gapY);
+      
+      drawLabel(item, x, y);
+      
+      labelCount++;
+      
+      // Nueva página si se llenó (21 etiquetas)
+      if (labelCount % (cols * rows) === 0) {
+        pdf.addPage();
+        currentPage++;
+      }
     }
   }
   
@@ -1041,7 +1079,7 @@ async function downloadBarcodeLabelsPDF() {
   pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-// NUEVA FUNCIÓN: Descargar etiquetas filtradas por categoría seleccionada
+// NUEVA FUNCIÓN: Descargar etiquetas filtradas por categoría seleccionada - GENERA N ETIQUETAS SEGÚN STOCK
 async function downloadBarcodeLabelsByCategory() {
   const categorySelect = document.getElementById('categorySelect');
   const selectedCategory = categorySelect.value;
@@ -1054,19 +1092,25 @@ async function downloadBarcodeLabelsByCategory() {
   
   const { jsPDF } = window.jspdf;
   
-  // Filtrar productos: por categoría seleccionada y que tengan código de barras
+  // Filtrar productos: por categoría seleccionada, que tengan código de barras Y stock > 0
   const productsByCategory = inventory.filter(item => {
     const itemCategory = (item.category || 'Sin categoría').trim();
-    return itemCategory === selectedCategory && item.barcode && item.barcode.trim() !== '';
+    return itemCategory === selectedCategory && 
+           item.barcode && 
+           item.barcode.trim() !== '' &&
+           parseInt(item.quantity) > 0;
   });
   
   if (productsByCategory.length === 0) {
-    alert(`No hay productos con código de barras en la categoría "${selectedCategory}"`);
+    alert(`No hay productos con código de barras y stock disponible en la categoría "${selectedCategory}"`);
     return;
   }
   
+  // Calcular total de etiquetas
+  const totalLabels = productsByCategory.reduce((sum, item) => sum + parseInt(item.quantity), 0);
+  
   // Confirmar descarga
-  if (!confirm(`Se generarán etiquetas para ${productsByCategory.length} productos de "${selectedCategory}". ¿Continuar?`)) {
+  if (!confirm(`Se generarán ${totalLabels} etiquetas para ${productsByCategory.length} productos de "${selectedCategory}". ¿Continuar?`)) {
     return;
   }
   
@@ -1200,24 +1244,27 @@ async function downloadBarcodeLabelsByCategory() {
     }
   };
   
-  // Generar etiquetas para cada producto de la categoría
-  for (let i = 0; i < productsByCategory.length; i++) {
-    const item = productsByCategory[i];
+  // Generar etiquetas - UNA POR CADA UNIDAD EN STOCK
+  for (const item of productsByCategory) {
+    const stock = parseInt(item.quantity);
     
-    const col = labelCount % cols;
-    const row = Math.floor((labelCount % (cols * rows)) / cols);
-    
-    const x = marginX + col * (labelWidth + gapX);
-    const y = marginY + row * (labelHeight + gapY);
-    
-    drawLabel(item, x, y);
-    
-    labelCount++;
-    
-    // Nueva página si se llenó (21 etiquetas)
-    if (labelCount % (cols * rows) === 0 && i < productsByCategory.length - 1) {
-      pdf.addPage();
-      currentPage++;
+    // Generar N etiquetas según el stock del producto
+    for (let i = 0; i < stock; i++) {
+      const col = labelCount % cols;
+      const row = Math.floor((labelCount % (cols * rows)) / cols);
+      
+      const x = marginX + col * (labelWidth + gapX);
+      const y = marginY + row * (labelHeight + gapY);
+      
+      drawLabel(item, x, y);
+      
+      labelCount++;
+      
+      // Nueva página si se llenó (21 etiquetas)
+      if (labelCount % (cols * rows) === 0) {
+        pdf.addPage();
+        currentPage++;
+      }
     }
   }
   
@@ -1649,7 +1696,7 @@ async function downloadPDF() {
   pdf.save(`reporte_inventario_completo_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-// NUEVA FUNCIÓN: Catálogo de Productos (Base de Datos en PDF) - CORREGIDA CON PRECIO NEGRO
+// NUEVA FUNCIÓN: Catálogo de Productos (Base de Datos en PDF)
 async function downloadCatalogPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -1796,7 +1843,7 @@ async function downloadCatalogPDF() {
     
     checkNewPage(80);
     
-    // ✅ CORRECCIÓN: Asegurar que el precio sea número
+    // CORRECCIÓN: Asegurar que el precio sea número
     const rawPrice = parseFloat(item.price) || 0;
     const finalPrice = item.discount > 0 
       ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
@@ -1908,7 +1955,7 @@ async function downloadCatalogPDF() {
     }
     textY += 12;
     
-    // ✅ PRECIO EN NEGRO - NÚMEROS Y LETRAS
+    // PRECIO EN NEGRO - NÚMEROS Y LETRAS
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0); // NEGRO PURO
     pdf.setFont(undefined, 'bold');

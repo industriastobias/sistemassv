@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <title>Gestión de Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -2156,7 +2155,7 @@
     }
 
     /* ============================================
-       SISTEMA DE LOGIN - DISEÑO APP
+       SISTEMA DE LOGIN - DISEÑO APP (SIEMPRE PIDE CREDENCIALES)
        ============================================ */
     .login-overlay {
       position: fixed;
@@ -2405,12 +2404,24 @@
     .menu-item.logout:hover {
       background: rgba(220, 38, 38, 0.1);
     }
+
+    /* Estilo para el campo de creación de categoría */
+    .category-add {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .category-add button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
 
 <!-- ============================================
-     SISTEMA DE LOGIN - PANTALLA DE ACCESO
+     SISTEMA DE LOGIN - SIEMPRE PIDE CREDENCIALES
      ============================================ -->
 <div class="login-overlay" id="loginOverlay">
   <div class="login-container">
@@ -2435,7 +2446,7 @@
             id="loginUser" 
             class="login-input" 
             placeholder="Ingresa tu usuario"
-            autocomplete="username"
+            autocomplete="off"
             required
           >
         </div>
@@ -2453,7 +2464,7 @@
             id="loginPassword" 
             class="login-input" 
             placeholder="Ingresa tu contraseña"
-            autocomplete="current-password"
+            autocomplete="off"
             required
           >
           <button type="button" class="login-toggle" onclick="toggleLoginPassword()">
@@ -3022,6 +3033,11 @@
             <option value="Pulseras">Pulseras</option>
             <option value="Relojes">Relojes</option>
           </select>
+          <div class="category-add">
+            <button type="button" class="btn btn-secondary" onclick="crearNuevaCategoria()" style="font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Crear nueva categoría
+            </button>
+          </div>
         </div>
         
         <div class="form-group full-width">
@@ -3074,20 +3090,6 @@
           <label>Categoría</label>
           <select id="categoryFilter">
             <option value="">Todas las categorías</option>
-            <option value="Accesorios para el cabello">Accesorios para el cabello</option>
-            <option value="Anillos">Anillos</option>
-            <option value="Aritos">Aritos</option>
-            <option value="Billeteras">Billeteras</option>
-            <option value="Carteras">Carteras</option>
-            <option value="Case audífonos">Case audífonos</option>
-            <option value="Case teléfonos">Case teléfonos</option>
-            <option value="Chokers">Chokers</option>
-            <option value="Collares">Collares</option>
-            <option value="General">General</option>
-            <option value="Lentes de sol">Lentes de sol</option>
-            <option value="Otros">Otros</option>
-            <option value="Pulseras">Pulseras</option>
-            <option value="Relojes">Relojes</option>
           </select>
         </div>
         
@@ -3309,9 +3311,6 @@ function limpiarHistorial() {
   renderizarHistorial();
   showToast('Historial de búsquedas limpiado', 'success');
 }
-
-// La inicialización de la app ahora se maneja desde el sistema de login
-// function initApp() está definida en el script de login
 
 function toggleMenu() {
   document.getElementById('menuDropdown').classList.toggle('show');
@@ -4741,45 +4740,76 @@ function printLabels() {
   printWindow.document.close();
   printWindow.onload = () => printWindow.print();
 }
-</script>
 
-<!-- ============================================
-     JAVASCRIPT DEL SISTEMA DE LOGIN
-     ============================================ -->
-<script>
-// Credenciales del sistema
+// ===================== CATEGORÍAS MANUALES =====================
+// Guardar categorías personalizadas en localStorage
+let customCategories = JSON.parse(localStorage.getItem('customCategories')) || [];
+
+// Inicializar selects con categorías (predefinidas + personalizadas)
+function actualizarSelectoresCategorias() {
+  const predefinidas = [
+    "Accesorios para el cabello", "Anillos", "Aritos", "Billeteras", "Carteras",
+    "Case audífonos", "Case teléfonos", "Chokers", "Collares", "General",
+    "Lentes de sol", "Otros", "Pulseras", "Relojes"
+  ];
+  const todas = [...predefinidas, ...customCategories];
+  const unicas = [...new Map(todas.map(cat => [cat, cat])).values()];
+  
+  // Actualizar select del formulario
+  const categorySelect = document.getElementById('category');
+  const currentVal = categorySelect.value;
+  categorySelect.innerHTML = '<option value="">Seleccionar categoría...</option>';
+  unicas.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    categorySelect.appendChild(opt);
+  });
+  if (currentVal && unicas.includes(currentVal)) categorySelect.value = currentVal;
+  
+  // Actualizar filtro de categorías
+  const filterSelect = document.getElementById('categoryFilter');
+  const currentFilter = filterSelect.value;
+  filterSelect.innerHTML = '<option value="">Todas las categorías</option>';
+  unicas.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    filterSelect.appendChild(opt);
+  });
+  if (currentFilter && unicas.includes(currentFilter)) filterSelect.value = currentFilter;
+}
+
+function crearNuevaCategoria() {
+  const nueva = prompt("Ingrese el nombre de la nueva categoría:", "");
+  if (!nueva) return;
+  if (customCategories.includes(nueva)) {
+    alert("La categoría ya existe.");
+    return;
+  }
+  customCategories.push(nueva);
+  localStorage.setItem('customCategories', JSON.stringify(customCategories));
+  actualizarSelectoresCategorias();
+  showToast(`Categoría "${nueva}" creada exitosamente`, 'success');
+}
+
+// ===================== LOGIN SIEMPRE ACTIVO =====================
 const LOGIN_CREDENTIALS = {
   username: 'KLOHE',
   password: 'KLOHE2025'
 };
 
-// Verificar sesión al cargar la página
+// Al cargar la página, mostrar login siempre, sin recordar sesión
 document.addEventListener('DOMContentLoaded', () => {
-  checkLoginSession();
+  // Asegurar que el login esté visible y la app oculta
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('appContent').classList.remove('show');
+  // Inicializar selects de categorías (aunque aún no se vea la app, se prepara)
+  actualizarSelectoresCategorias();
+  // Focus en usuario
+  setTimeout(() => document.getElementById('loginUser')?.focus(), 100);
 });
 
-// Verificar si hay sesión activa
-function checkLoginSession() {
-  const isLoggedIn = localStorage.getItem('klohe_logged_in') === 'true';
-  const loginOverlay = document.getElementById('loginOverlay');
-  const appContent = document.getElementById('appContent');
-  
-  if (isLoggedIn) {
-    // Usuario logueado - mostrar app
-    loginOverlay.classList.add('hidden');
-    appContent.classList.add('show');
-    // Inicializar la app
-    initApp();
-  } else {
-    // No hay sesión - mostrar login
-    loginOverlay.classList.remove('hidden');
-    appContent.classList.remove('show');
-    // Focus en el campo de usuario
-    setTimeout(() => document.getElementById('loginUser')?.focus(), 100);
-  }
-}
-
-// Manejar el login
 function handleLogin(event) {
   event.preventDefault();
   
@@ -4791,42 +4821,30 @@ function handleLogin(event) {
   const loginIcon = document.getElementById('loginIcon');
   const loginBtnText = document.getElementById('loginBtnText');
   
-  // Ocultar error previo
   loginError.classList.remove('show');
-  
-  // Mostrar loading
   loginLoading.classList.add('show');
   loginIcon.style.display = 'none';
   loginBtnText.textContent = 'Verificando...';
   loginBtn.disabled = true;
   
-  // Simular delay de verificación (efecto profesional)
   setTimeout(() => {
     if (username === LOGIN_CREDENTIALS.username && password === LOGIN_CREDENTIALS.password) {
-      // Login exitoso
-      localStorage.setItem('klohe_logged_in', 'true');
-      localStorage.setItem('klohe_login_time', new Date().toISOString());
-      
-      // Animación de transición
+      // Login exitoso: mostrar app
       const loginOverlay = document.getElementById('loginOverlay');
       const appContent = document.getElementById('appContent');
-      
       loginOverlay.style.opacity = '0';
       loginOverlay.style.transition = 'opacity 0.5s ease';
-      
       setTimeout(() => {
         loginOverlay.classList.add('hidden');
         appContent.classList.add('show');
-        initApp();
+        initApp(); // Inicializar todo
         showToast('¡Bienvenido a KLOHE!', 'success');
       }, 500);
     } else {
-      // Login fallido
       loginLoading.classList.remove('show');
       loginIcon.style.display = 'inline-block';
       loginBtnText.textContent = 'Iniciar Sesión';
       loginBtn.disabled = false;
-      
       loginError.classList.add('show');
       document.getElementById('loginPassword').value = '';
       document.getElementById('loginPassword').focus();
@@ -4834,11 +4852,9 @@ function handleLogin(event) {
   }, 800);
 }
 
-// Toggle password visibility en login
 function toggleLoginPassword() {
   const input = document.getElementById('loginPassword');
   const icon = document.getElementById('loginToggleIcon');
-  
   if (input.type === 'password') {
     input.type = 'text';
     icon.classList.remove('fa-eye');
@@ -4850,18 +4866,15 @@ function toggleLoginPassword() {
   }
 }
 
-// Cerrar sesión
 function cerrarSesion() {
   if (confirm('¿Estás seguro de cerrar sesión?')) {
-    localStorage.removeItem('klohe_logged_in');
-    localStorage.removeItem('klohe_login_time');
+    // Simplemente recargamos la página para volver al login (sin persistencia)
     location.reload();
   }
 }
 
-// Inicializar la aplicación después del login
 function initApp() {
-  // Inicializar todo lo que necesite la app
+  // Inicializar todo lo que necesita la app
   document.getElementById('fechaCompra').value = fechaActualGlobal;
   renderTable();
   calculateTotal();
@@ -4871,20 +4884,9 @@ function initApp() {
   limpiarPapeleraVieja();
   iniciarAutoguardado();
   document.addEventListener('keydown', manejarAtajosTeclado);
+  // Asegurar que los selects de categorías estén actualizados
+  actualizarSelectoresCategorias();
 }
-
-// Enter key en login
-document.getElementById('loginUser')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    document.getElementById('loginPassword').focus();
-  }
-});
-
-document.getElementById('loginPassword')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    handleLogin(e);
-  }
-});
 </script>
 
 </div><!-- Fin de app-content -->

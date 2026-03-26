@@ -1502,7 +1502,7 @@ async function renderCashProducts() {
       card.className = 'cash-card'; 
       card.dataset.search = ((item.name || '') + ' ' + (item.barcode || '')).toLowerCase(); 
       card.dataset.category = item.category || ''; 
-      card.innerHTML = `<div style="width:100%;height:120px;background:var(--border-light);border-radius:6px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;" id="cashImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.625rem;">...</span></div><div class="name">${item.name || 'N/A'}</div><div class="price">$${finalPrice.toFixed(0)}</div><div class="stock ${isLowStock ? 'low' : ''}">Stock: ${item.quantity || 0}</div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button><input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly><button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button></div>`; 
+      card.innerHTML = `<div style="width:100%;height:120px;background:var(--border-light);border-radius:6px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;" id="cashImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.625rem;">...</span></div><div class="name">${item.name || 'N/A'}</div><div class="price">$${finalPrice.toFixed(0)}</div><div class="stock ${isLowStock ? 'low' : ''}">Stock: ${item.quantity || 0}</div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)">-</button><input type="text" id="cashQty-${realIdx}" value="0" readonly style="width:50px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:0.25rem;background:var(--bg);"><button onclick="updateCashQty(${realIdx}, 1)">+</button></div>`; 
       grid.appendChild(card); 
       setTimeout(async () => { 
         const imgUrl = await getProductImage(item.code), 
@@ -1524,7 +1524,7 @@ async function renderCashProducts() {
       row.className = 'cash-list-item'; 
       row.dataset.search = ((item.name || '') + ' ' + (item.barcode || '')).toLowerCase(); 
       row.dataset.category = item.category || ''; 
-      row.innerHTML = `<div style="width:60px;height:60px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;" id="cashListImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.5rem;">...</span></div><div class="info"><div class="name">${item.name || 'N/A'}</div><div class="meta">$${finalPrice.toFixed(0)} | Stock: <span class="${isLowStock ? 'low' : ''}">${item.quantity || 0}</span></div></div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button><input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly><button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button></div>`; 
+      row.innerHTML = `<div style="width:60px;height:60px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;" id="cashListImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.5rem;">...</span></div><div class="info"><div class="name">${item.name || 'N/A'}</div><div class="meta">$${finalPrice.toFixed(0)} | Stock: <span class="${isLowStock ? 'low' : ''}">${item.quantity || 0}</span></div></div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)">-</button><input type="text" id="cashQty-${realIdx}" value="0" readonly style="width:50px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:0.25rem;background:var(--bg);"><button onclick="updateCashQty(${realIdx}, 1)">+</button></div>`; 
       list.appendChild(row);
       setTimeout(async () => { 
         const imgUrl = await getProductImage(item.code), 
@@ -1544,10 +1544,20 @@ function toggleCashView() {
   renderCashProducts(); 
 }
 
+// Flag para prevenir doble ejecución en dispositivos táctiles
+let cashQtyUpdating = false;
+
 function updateCashQty(index, delta) { 
+  // Prevenir doble ejecución (touch + click en móviles)
+  if (cashQtyUpdating) return;
+  cashQtyUpdating = true;
+  setTimeout(() => { cashQtyUpdating = false; }, 50);
+
   playBeep();
   const input = document.getElementById(`cashQty-${index}`), 
         item = inventory[index]; 
+  if (!input || !item) return;
+
   let val = parseInt(input.value) || 0; 
   val += delta; 
   if (val < 0) val = 0; 
@@ -1666,6 +1676,9 @@ function setCashMode(mode) {
 }
 
 // Iniciar escaneo con camara en modo caja
+let lastCameraScan = '';
+let lastCameraScanTime = 0;
+
 function startCashCameraScan() {
   if (cashHtml5QrCode) return;
 
@@ -1682,8 +1695,16 @@ function startCashCameraScan() {
     { facingMode: 'environment' },
     { fps: 10, qrbox: { width: 250, height: 150 } },
     (decodedText) => {
+      const barcode = decodedText.trim();
+      const now = Date.now();
+
+      // Prevenir escaneos duplicados del mismo codigo
+      if (barcode === lastCameraScan && (now - lastCameraScanTime) < SCAN_COOLDOWN) {
+        return;
+      }
+
       // Buscar el producto por codigo de barras
-      const found = inventory.find(p => p.barcode && p.barcode.trim() === decodedText.trim());
+      const found = inventory.find(p => p.barcode && p.barcode.trim() === barcode);
 
       if (!found) {
         playScanErrorSound();
@@ -1692,6 +1713,10 @@ function startCashCameraScan() {
       }
 
       playScanSuccessSound();
+
+      // Registrar el escaneo
+      lastCameraScan = barcode;
+      lastCameraScanTime = now;
 
       // Agregar el producto a la venta
       const realIdx = inventory.indexOf(found);
@@ -1712,9 +1737,6 @@ function startCashCameraScan() {
           }
 
           showNotification(`Agregado: ${found.name}`, 'success');
-
-          // Detener el escaner despues de un exito (opcional, puedes quitar esto si quieres escanear continuo)
-          // stopCashCameraScan();
         } else {
           showNotification('Stock insuficiente', 'warning');
         }
@@ -1877,9 +1899,9 @@ async function renderCashProductsFiltered() {
         <div class="price">$${finalPrice.toFixed(0)}</div>
         <div class="stock ${isLowStock ? 'low' : ''}">Stock: ${item.quantity || 0}</div>
         <div class="qty-control">
-          <button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button>
-          <input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly>
-          <button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button>
+          <button onclick="updateCashQty(${realIdx}, -1)">-</button>
+          <input type="text" id="cashQty-${realIdx}" value="0" readonly style="width:50px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:0.25rem;background:var(--bg);">
+          <button onclick="updateCashQty(${realIdx}, 1)">+</button>
         </div>
       `;
       grid.appendChild(card);
@@ -1919,9 +1941,9 @@ async function renderCashProductsFiltered() {
           <div class="meta">$${finalPrice.toFixed(0)} | Stock: <span class="${isLowStock ? 'low' : ''}">${item.quantity || 0}</span></div>
         </div>
         <div class="qty-control">
-          <button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button>
-          <input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly>
-          <button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button>
+          <button onclick="updateCashQty(${realIdx}, -1)">-</button>
+          <input type="text" id="cashQty-${realIdx}" value="0" readonly style="width:50px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:0.25rem;background:var(--bg);">
+          <button onclick="updateCashQty(${realIdx}, 1)">+</button>
         </div>
       `;
       list.appendChild(row);
@@ -1961,16 +1983,30 @@ function goToCashRow() {
 }
 
 // Manejar escaneo constante en modo caja
+let lastScannedBarcode = '';
+let lastScanTime = 0;
+const SCAN_COOLDOWN = 1000; // 1 segundo de espera entre escaneos del mismo codigo
+
 function handleCashScan(e) {
   if (!document.getElementById('cashRegister').classList.contains('active')) return;
   if (cashUSBActive) return; // No escanear si USB esta activo
+  if (cashHtml5QrCode) return; // No escanear si la camara esta activa
 
   // Solo procesar si no estamos en un input de formulario (excepto el scan input oculto)
   if (e.target.tagName === 'INPUT' && e.target.id !== 'cashScanInput') return;
 
   if (e.key === 'Enter') {
     if (cashScanBuffer) {
-      const found = inventory.find(p => p.barcode && p.barcode.trim() === cashScanBuffer.trim());
+      const barcode = cashScanBuffer.trim();
+      const now = Date.now();
+
+      // Prevenir escaneos duplicados del mismo codigo
+      if (barcode === lastScannedBarcode && (now - lastScanTime) < SCAN_COOLDOWN) {
+        cashScanBuffer = '';
+        return;
+      }
+
+      const found = inventory.find(p => p.barcode && p.barcode.trim() === barcode);
       if (!found) {
         playScanErrorSound();
         showNotification('Producto no existente', 'error');
@@ -1979,6 +2015,10 @@ function handleCashScan(e) {
       }
 
       playScanSuccessSound();
+
+      // Registrar el escaneo
+      lastScannedBarcode = barcode;
+      lastScanTime = now;
 
       // Buscar el producto en la lista y agregarlo
       const realIdx = inventory.indexOf(found);
@@ -2103,6 +2143,60 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cashBarcodeFilter')?.addEventListener('input', debounce(applyCashFilters, CONFIG.DEBOUNCE_DELAY));
   document.getElementById('cashDateFilter')?.addEventListener('change', applyCashFilters);
   document.getElementById('cashStockFilter')?.addEventListener('change', applyCashFilters);
+
+  // Manejar Enter en el campo de barcode de caja (para lectores USB)
+  document.getElementById('cashBarcodeFilter')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && cashUSBActive) {
+      const barcode = e.target.value.trim();
+      if (!barcode) return;
+
+      const now = Date.now();
+
+      // Prevenir duplicados
+      if (barcode === lastScannedBarcode && (now - lastScanTime) < SCAN_COOLDOWN) {
+        e.target.value = '';
+        return;
+      }
+
+      const found = inventory.find(p => p.barcode && p.barcode.trim() === barcode);
+      if (!found) {
+        playScanErrorSound();
+        showNotification('Producto no existente', 'error');
+        e.target.value = '';
+        return;
+      }
+
+      playScanSuccessSound();
+
+      // Registrar el escaneo
+      lastScannedBarcode = barcode;
+      lastScanTime = now;
+
+      // Agregar el producto
+      const realIdx = inventory.indexOf(found);
+      const qtyInput = document.getElementById(`cashQty-${realIdx}`);
+      if (qtyInput) {
+        const currentQty = parseInt(qtyInput.value) || 0;
+        if (currentQty < found.quantity) {
+          qtyInput.value = currentQty + 1;
+          updateCashList();
+
+          const card = qtyInput.closest('.cash-card, .cash-list-item');
+          if (card) {
+            card.classList.add('flash');
+            setTimeout(() => card.classList.remove('flash'), 500);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          showNotification(`Agregado: ${found.name}`, 'success');
+        } else {
+          showNotification('Stock insuficiente', 'warning');
+        }
+      }
+
+      e.target.value = '';
+    }
+  });
 
   // Escaner constante en modo caja
   document.addEventListener('keydown', handleCashScan);

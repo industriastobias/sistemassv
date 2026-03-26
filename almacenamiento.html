@@ -311,7 +311,6 @@
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
-    /* Mejoras táctiles adicionales */
     @media (hover: none) and (pointer: coarse) {
       .btn:hover { transform: none; }
       .btn:active { transform: scale(0.95); }
@@ -1100,6 +1099,8 @@ function selectWhoPays(who) {
   document.getElementById('labelWePays').classList.toggle('selected', who === 'we'); 
   updateSaleCalculations(); 
 }
+
+// ===== FUNCION CORREGIDA: updateSaleCalculations =====
 function updateSaleCalculations() { 
   const item = inventory[currentSaleIndex]; 
   if (!item) return; 
@@ -1107,17 +1108,28 @@ function updateSaleCalculations() {
         price = parseFloat(document.getElementById('salePrice').value) || 0, 
         isCOD = document.getElementById('isCOD').checked, 
         subtotal = price * qty; 
+  
   if (isCOD) { 
     const shipping = parseFloat(document.getElementById('codShipping').value) || 0, 
           commissionType = document.getElementById('codCommissionType').value, 
           commissionValue = parseFloat(document.getElementById('codCommission').value) || 0, 
           insurance = parseFloat(document.getElementById('codInsurance').value) || 0; 
+    
     document.getElementById('commissionLabel').textContent = commissionType === 'percentage' ? 'Comision (%)' : 'Comision ($)'; 
+    
     let commission = 0; 
     if (commissionType === 'percentage') commission = (subtotal * commissionValue) / 100; 
     else commission = commissionValue; 
-    const total = whoPays === 'client' ? subtotal + shipping + commission + insurance : subtotal + shipping + insurance, 
-          net = whoPays === 'client' ? subtotal : subtotal - commission; 
+    
+    // CORRECCION: Calcular total segun quien paga
+    const total = whoPays === 'client' 
+      ? subtotal + shipping + commission + insurance 
+      : (subtotal - commission) + shipping + insurance; // RESTAR comision si pagamos nosotros
+    
+    const net = whoPays === 'client' 
+      ? subtotal  // Ganamos el subtotal si el cliente paga la comision
+      : (subtotal - commission); // Ganamos subtotal menos comision si pagamos nosotros
+    
     document.getElementById('calcSubtotal').textContent = formatCurrency(subtotal); 
     document.getElementById('calcShipping').textContent = formatCurrency(shipping); 
     document.getElementById('calcCommission').textContent = formatCurrency(commission); 
@@ -1132,7 +1144,7 @@ function updateSaleCalculations() {
   } 
 }
 
-// ===== FUNCION CORREGIDA: processSale con COD correcto =====
+// ===== FUNCION CORREGIDA: processSale =====
 function processSale() { 
   playSuccessSound();
   const item = inventory[currentSaleIndex], 
@@ -1157,15 +1169,21 @@ function processSale() {
     if (commissionType === 'percentage') commission = (subtotal * commissionValue) / 100; 
     else commission = commissionValue; 
     
-    // Calcular el total a cobrar segun quien paga la comision
+    // CORRECCION: Si pagamos nosotros, restamos la comision del total a cobrar
     const totalToCollect = whoPays === 'client' 
       ? subtotal + shipping + commission + insurance 
-      : subtotal + shipping + insurance;
+      : (subtotal - commission) + shipping + insurance; // AQUI ESTA EL CAMBIO
     
-    // Calcular nuestra ganancia neta
+    // Validar que no sea negativo
+    if (totalToCollect < 0) {
+      showNotification('Error: La comision no puede ser mayor que el precio', 'error');
+      return;
+    }
+    
+    // La ganancia neta es el total cobrado menos lo que nosotros pagamos de comision (si aplica)
     const netEarnings = whoPays === 'client' 
-      ? subtotal  // Si el cliente paga, nosotros recibimos el subtotal completo
-      : subtotal - commission;  // Si pagamos nosotros, restamos la comision
+      ? subtotal  // Si cliente paga comision, ganamos el subtotal completo
+      : (subtotal - commission); // Si pagamos nosotros, ganamos subtotal menos comision
     
     const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); 
     pending.push({ 
@@ -1174,7 +1192,7 @@ function processSale() {
       barcode: item.barcode, 
       price: price, 
       quantity: qty, 
-      total: subtotal,  // El total del producto (sin extras)
+      total: subtotal,  // El valor base del producto
       date: new Date().toISOString(), 
       seller: 'Sistema',
       isCOD: true, 
@@ -1184,11 +1202,11 @@ function processSale() {
       codCommissionAmount: commission, 
       codInsurance: insurance, 
       whoPaysCommission: whoPays, 
-      totalToCollect: totalToCollect,  // Este es el monto que realmente se cobra
-      netEarnings: netEarnings  // Esta es nuestra ganancia real
+      totalToCollect: totalToCollect,  // Este es el monto REAL que se cobra al cliente
+      netEarnings: netEarnings  
     }); 
     localStorage.setItem('pendingInventory', JSON.stringify(pending)); 
-    showNotification('Pedido COD guardado', 'success'); 
+    showNotification('Pedido COD guardado. Total a cobrar: ' + formatCurrency(totalToCollect), 'success'); 
   } else { 
     const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
     sales.push({ 
@@ -1312,7 +1330,6 @@ async function loadPendingList() {
   } catch (e) { console.error(e); } finally { showLoading(false); } 
 }
 
-// ===== FUNCION CORREGIDA: Modal de confirmar cobro =====
 async function openPaymentConfirmModal(index) {
   pendingPaymentIndex = index;
   const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
@@ -1345,7 +1362,6 @@ function closePaymentConfirmModal() {
   pendingPaymentIndex = -1;
 }
 
-// ===== FUNCION CORREGIDA: confirmPaymentPending con monto correcto =====
 function confirmPaymentPending() {
   if (pendingPaymentIndex === -1) return;
   showLoading(true); 
@@ -1468,6 +1484,8 @@ function editSelectWhoPays(who) {
   document.querySelector('input[name="editWhoPays"][value="' + who + '"]').checked = true; 
   editCalculateCOD(); 
 }
+
+// ===== FUNCION CORREGIDA: editCalculateCOD =====
 function editCalculateCOD() { 
   const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'), p = pending[currentEditPendingIndex]; 
   if (!p) return; 
@@ -1481,8 +1499,16 @@ function editCalculateCOD() {
   let commission = 0; 
   if (commissionType === 'percentage') commission = (productTotal * commissionValue) / 100; 
   else commission = commissionValue; 
-  const total = whoPaysVal === 'client' ? productTotal + shipping + commission + insurance : productTotal + shipping + insurance, 
-        net = whoPaysVal === 'client' ? productTotal : productTotal - commission; 
+  
+  // CORRECCION: Restar comision del total si pagamos nosotros
+  const total = whoPaysVal === 'client' 
+    ? productTotal + shipping + commission + insurance 
+    : (productTotal - commission) + shipping + insurance;
+  
+  const net = whoPaysVal === 'client' 
+    ? productTotal 
+    : (productTotal - commission); 
+  
   document.getElementById('editCalcProduct').textContent = formatCurrency(productTotal); 
   document.getElementById('editCalcShipping').textContent = formatCurrency(shipping); 
   document.getElementById('editCalcCommission').textContent = formatCurrency(commission); 
@@ -1490,7 +1516,7 @@ function editCalculateCOD() {
   document.getElementById('editCalcNet').textContent = formatCurrency(net); 
 }
 
-// ===== FUNCION CORREGIDA: saveEditPending con calculo correcto =====
+// ===== FUNCION CORREGIDA: saveEditPending =====
 function saveEditPending() { 
   let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'), 
       p = pending[currentEditPendingIndex], 
@@ -1505,13 +1531,20 @@ function saveEditPending() {
   if (commissionType === 'percentage') commission = (productTotal * commissionValue) / 100; 
   else commission = commissionValue; 
   
+  // CORRECCION: Restar comision si pagamos nosotros
   const totalToCollect = whoPaysVal === 'client' 
     ? productTotal + shipping + commission + insurance 
-    : productTotal + shipping + insurance;
+    : (productTotal - commission) + shipping + insurance;
+  
+  // Validar no negativo
+  if (totalToCollect < 0) {
+    showNotification('Error: La comision no puede ser mayor que el precio del producto', 'error');
+    return;
+  }
   
   const netEarnings = whoPaysVal === 'client' 
     ? productTotal 
-    : productTotal - commission;
+    : (productTotal - commission);
   
   pending[currentEditPendingIndex] = { 
     ...p, 
@@ -1527,7 +1560,7 @@ function saveEditPending() {
   localStorage.setItem('pendingInventory', JSON.stringify(pending)); 
   closeEditPendingModal(); 
   loadPendingList(); 
-  showNotification('Pedido actualizado', 'success'); 
+  showNotification('Pedido actualizado. Nuevo total a cobrar: ' + formatCurrency(totalToCollect), 'success'); 
 }
 
 function startCameraScan() { 
@@ -1553,7 +1586,6 @@ function startCameraScan() {
   }, () => {}); 
 }
 
-// Nueva función: Escanear desde la caja
 function startCameraScanCash() {
   if (html5QrCode) return;
   const reader = document.createElement('div'); 
@@ -1572,7 +1604,6 @@ function startCameraScanCash() {
     playScanSuccessSound();
     stopCameraScan();
     
-    // Agregar directamente al carrito de la caja
     const realIdx = inventory.indexOf(found);
     const qtyInput = document.getElementById(`cashQty-${realIdx}`);
     if (qtyInput) {
@@ -1721,7 +1752,6 @@ async function renderCashProducts() {
       card.className = 'cash-card'; 
       card.dataset.search = ((item.name || '') + ' ' + (item.barcode || '')).toLowerCase(); 
       card.dataset.category = item.category || ''; 
-      // ELIMINADO ontouchstart para evitar doble incremento
       card.innerHTML = `<div style="width:100%;height:120px;background:var(--border-light);border-radius:6px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;" id="cashImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.625rem;">...</span></div><div class="name">${item.name || 'N/A'}</div><div class="price">$${finalPrice.toFixed(0)}</div><div class="stock ${isLowStock ? 'low' : ''}">Stock: ${item.quantity || 0}</div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)">-</button><input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly><button onclick="updateCashQty(${realIdx}, 1)">+</button></div>`; 
       grid.appendChild(card); 
       setTimeout(async () => { 
@@ -1742,7 +1772,6 @@ async function renderCashProducts() {
             isLowStock = (item.quantity || 0) <= (item.stockMin || 0); 
       const row = document.createElement('div'); 
       row.className = 'cash-list-item'; 
-      // ELIMINADO ontouchstart para evitar doble incremento
       row.innerHTML = `<div style="width:60px;height:60px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;" id="cashListImg-${realIdx}"><span style="color:var(--text-secondary);font-size:0.5rem;">...</span></div><div class="info"><div class="name">${item.name || 'N/A'}</div><div class="meta">$${finalPrice.toFixed(0)} | Stock: <span class="${isLowStock ? 'low' : ''}">${item.quantity || 0}</span></div></div><div class="qty-control"><button onclick="updateCashQty(${realIdx}, -1)">-</button><input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly><button onclick="updateCashQty(${realIdx}, 1)">+</button></div>`; 
       list.appendChild(row);
       setTimeout(async () => { 
@@ -2006,7 +2035,6 @@ async function renderCashProductsFiltered() {
       card.className = 'cash-card';
       card.id = `cashCard-${idx + 1}`;
       card.dataset.index = realIdx;
-      // ELIMINADO ontouchstart para evitar doble incremento
       card.innerHTML = `
         <div style="width:100%;height:120px;background:var(--border-light);border-radius:6px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;" id="cashImg-${realIdx}">
           <span style="color:var(--text-secondary);font-size:0.625rem;">...</span>
@@ -2047,7 +2075,6 @@ async function renderCashProductsFiltered() {
       row.className = 'cash-list-item';
       row.id = `cashListItem-${idx + 1}`;
       row.dataset.index = realIdx;
-      // ELIMINADO ontouchstart para evitar doble incremento
       row.innerHTML = `
         <div style="width:60px;height:60px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;" id="cashListImg-${realIdx}">
           <span style="color:var(--text-secondary);font-size:0.5rem;">...</span>

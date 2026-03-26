@@ -192,6 +192,14 @@
       height: 1px;
     }
 
+    /* Escaner de camara en caja */
+    #cashCameraScanner {
+      animation: modalIn 0.2s ease;
+    }
+    #cashCameraScanner video {
+      border-radius: 8px;
+    }
+
     /* Indicador de escaneo activo */
     .scan-indicator {
       display: inline-flex;
@@ -641,6 +649,7 @@
       <!-- Botones de modo -->
       <div class="cash-mode-buttons">
         <button class="btn active" id="cashBtnScan" onclick="setCashMode('scan')" title="Escanear"><i class="fa-solid fa-barcode"></i> Escanear</button>
+        <button class="btn" id="cashBtnCamera" onclick="startCashCameraScan()"><i class="fa-solid fa-camera"></i> Camara</button>
         <button class="btn" id="cashBtnUSB" onclick="toggleCashUSB()"><i class="fa-solid fa-plug"></i> USB</button>
         <button class="btn" onclick="downloadLabelsPDF()"><i class="fa-solid fa-tags"></i> Etiquetas</button>
         <button class="btn btn-primary" onclick="toggleKiosco()"><i class="fa-solid fa-expand"></i> Kiosco</button>
@@ -704,6 +713,18 @@
 
     <!-- Input oculto para escaneo constante -->
     <input type="text" class="cash-scan-input" id="cashScanInput" autocomplete="off">
+
+    <!-- Contenedor del escaner de camara en caja -->
+    <div id="cashCameraScanner" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:1rem;border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);z-index:2000;max-width:90vw;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <strong><i class="fa-solid fa-camera"></i> Escanear codigo</strong>
+        <button onclick="stopCashCameraScan()" class="btn btn-sm btn-danger"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="cashCameraContainer" style="width:300px;height:250px;max-width:80vw;"></div>
+      <div style="margin-top:0.5rem;text-align:center;font-size:0.75rem;color:var(--text-secondary);">
+        Apunta la camara al codigo de barras
+      </div>
+    </div>
 
     <!-- Productos de caja -->
     <div class="cash-products" id="cashProducts"></div>
@@ -883,6 +904,7 @@ let cashUSBBuffer = '';
 let cashFilteredProducts = [];
 let cashScanBuffer = '';
 let cashScanTimeout = null;
+let cashHtml5QrCode = null;
 
 function debounce(fn, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), delay); }; }
 function showNotification(message, type = 'success') { const container = document.getElementById('notificationContainer'); const notif = document.createElement('div'); notif.className = `notification ${type}`; notif.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check' : type === 'error' ? 'xmark' : 'exclamation'}"></i> ${message}`; container.appendChild(notif); setTimeout(() => notif.remove(), 3000); }
@@ -1448,6 +1470,11 @@ function closeCashRegister() {
   cashItems = []; 
   cashUSBActive = false;
   document.getElementById('cashBtnUSB')?.classList.remove('active');
+
+  // Detener camara si esta activa
+  if (cashHtml5QrCode) {
+    stopCashCameraScan();
+  }
 }
 
 async function renderCashProducts() { 
@@ -1627,9 +1654,100 @@ function setCashMode(mode) {
     indicator.style.display = mode === 'scan' ? 'inline-flex' : 'none';
   }
 
+  // Detener camara si esta activa
+  if (cashHtml5QrCode) {
+    stopCashCameraScan();
+  }
+
   // Enfocar input de escaneo
   if (mode === 'scan') {
     focusCashScanInput();
+  }
+}
+
+// Iniciar escaneo con camara en modo caja
+function startCashCameraScan() {
+  if (cashHtml5QrCode) return;
+
+  // Actualizar botones
+  document.querySelectorAll('.cash-mode-buttons .btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('cashBtnCamera')?.classList.add('active');
+
+  // Mostrar el contenedor de la camara
+  document.getElementById('cashCameraScanner').style.display = 'block';
+
+  // Iniciar el escaner
+  cashHtml5QrCode = new Html5Qrcode('cashCameraContainer');
+  cashHtml5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 250, height: 150 } },
+    (decodedText) => {
+      // Buscar el producto por codigo de barras
+      const found = inventory.find(p => p.barcode && p.barcode.trim() === decodedText.trim());
+
+      if (!found) {
+        playScanErrorSound();
+        showNotification('Producto no existente', 'error');
+        return;
+      }
+
+      playScanSuccessSound();
+
+      // Agregar el producto a la venta
+      const realIdx = inventory.indexOf(found);
+      const qtyInput = document.getElementById(`cashQty-${realIdx}`);
+
+      if (qtyInput) {
+        const currentQty = parseInt(qtyInput.value) || 0;
+        if (currentQty < found.quantity) {
+          qtyInput.value = currentQty + 1;
+          updateCashList();
+
+          // Hacer flash en el elemento
+          const card = qtyInput.closest('.cash-card, .cash-list-item');
+          if (card) {
+            card.classList.add('flash');
+            setTimeout(() => card.classList.remove('flash'), 500);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          showNotification(`Agregado: ${found.name}`, 'success');
+
+          // Detener el escaner despues de un exito (opcional, puedes quitar esto si quieres escanear continuo)
+          // stopCashCameraScan();
+        } else {
+          showNotification('Stock insuficiente', 'warning');
+        }
+      } else {
+        // El producto no esta en la vista actual, mostrar notificacion
+        showNotification(`Producto encontrado: ${found.name}. Agregalo manualmente.`, 'success');
+      }
+    },
+    () => {
+      // Error de escaneo (ignorar, es normal cuando no hay codigo)
+    }
+  ).catch(err => {
+    console.error('Error iniciando camara:', err);
+    showNotification('Error al iniciar la camara', 'error');
+    stopCashCameraScan();
+  });
+}
+
+// Detener escaneo con camara en modo caja
+function stopCashCameraScan() {
+  if (cashHtml5QrCode) {
+    cashHtml5QrCode.stop().then(() => {
+      cashHtml5QrCode = null;
+      document.getElementById('cashCameraScanner').style.display = 'none';
+
+      // Restaurar boton activo
+      document.querySelectorAll('.cash-mode-buttons .btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('cashBtnScan')?.classList.add('active');
+    }).catch(err => {
+      console.error('Error deteniendo camara:', err);
+      cashHtml5QrCode = null;
+      document.getElementById('cashCameraScanner').style.display = 'none';
+    });
   }
 }
 

@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27,6 +29,7 @@
     .btn-success { background: var(--success); color: white; border-color: var(--success); }
     .btn-icon { padding: 0.5rem; width: 36px; height: 36px; }
     .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.75rem; }
+    .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
     .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     .badge-danger { background: #fee2e2; color: #dc2626; }
     .badge-warning { background: #fef3c7; color: #d97706; cursor: pointer; }
@@ -142,9 +145,87 @@
     .side-menu h3 { margin-bottom: 1rem; font-size: 1.125rem; }
     .side-menu a { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; color: var(--text); text-decoration: none; border-radius: var(--radius-sm); transition: var(--transition); margin-bottom: 0.25rem; }
     .side-menu a:hover { background: var(--bg); }
+    /* ===== MODO CAJA MEJORADO ===== */
     .cash-register { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 900; flex-direction: column; }
     .cash-register.active { display: flex; }
     .cash-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+
+    /* Panel de controles del modo caja */
+    .cash-controls-panel { 
+      background: var(--surface); 
+      border-bottom: 1px solid var(--border); 
+      padding: 1rem 1.5rem;
+    }
+    .cash-controls-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+      gap: 0.75rem; 
+      align-items: end;
+    }
+    .cash-controls-grid .form-group { margin-bottom: 0; }
+
+    /* Botones de modo en caja */
+    .cash-mode-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .cash-mode-buttons .btn {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+    .cash-mode-buttons .btn.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Input de escaneo constante */
+    .cash-scan-input {
+      position: fixed;
+      top: -1000px;
+      left: -1000px;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+    }
+
+    /* Indicador de escaneo activo */
+    .scan-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      background: #ecfdf5;
+      border: 1px solid var(--success);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      color: var(--success);
+      font-weight: 500;
+    }
+    .scan-indicator.active {
+      animation: pulse-scan 1s infinite;
+    }
+    @keyframes pulse-scan {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Stats bar en caja */
+    .cash-stats-bar {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      padding: 0.75rem 1.5rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .cash-stats-bar .stat-item {
+      font-size: 0.875rem;
+    }
+
     .cash-products { flex: 1; overflow-y: auto; padding: 1.5rem; }
     .cash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
     .cash-list { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -236,6 +317,7 @@
       .btn-icon { width: 32px; height: 32px; }
       .confirm-product-layout { grid-template-columns: 150px 1fr; }
       .confirm-product-image { height: 120px; }
+      .cash-controls-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 768px) { 
       .header-content { flex-wrap: wrap; } 
@@ -257,6 +339,9 @@
       .confirm-product-layout { grid-template-columns: 1fr; }
       .confirm-product-image { height: 150px; }
       .confirm-product-details { grid-template-columns: repeat(2, 1fr); }
+      .cash-controls-grid { grid-template-columns: 1fr; }
+      .cash-mode-buttons { justify-content: center; }
+      .cash-stats-bar { justify-content: center; }
     }
     @media (max-width: 480px) { 
       .cards-grid { grid-template-columns: 1fr; } 
@@ -536,13 +621,113 @@
     </div>
   </div>
 
-  <!-- Cash Register -->
+  <!-- ===== MODO CAJA MEJORADO ===== -->
   <div class="cash-register" id="cashRegister">
-    <div class="cash-header"><h2><i class="fa-solid fa-cash-register"></i> Caja Registradora</h2><div style="display:flex;gap:0.5rem;"><button class="btn" onclick="toggleCashView()"><i class="fa-solid fa-list" id="cashViewIcon"></i></button><button class="btn btn-danger" onclick="closeCashRegister()"><i class="fa-solid fa-xmark"></i> Cerrar</button></div></div>
-    <div style="padding:1rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);"><div style="display:flex;gap:1rem;flex-wrap:wrap;"><input type="text" class="form-input" id="cashSearch" placeholder="Buscar producto..." style="flex:1;min-width:200px;"><select class="form-select" id="cashCategory" style="width:auto;"><option value="">Todas</option></select></div></div>
+    <!-- Header de Caja -->
+    <div class="cash-header">
+      <h2><i class="fa-solid fa-cash-register"></i> Caja Registradora</h2>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <!-- Indicador de escaneo activo -->
+        <span class="scan-indicator active" id="cashScanIndicator" style="display:none;">
+          <i class="fa-solid fa-barcode"></i> Escaneo activo
+        </span>
+        <button class="btn" onclick="toggleCashView()"><i class="fa-solid fa-list" id="cashViewIcon"></i></button>
+        <button class="btn btn-danger" onclick="closeCashRegister()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
+      </div>
+    </div>
+
+    <!-- Panel de controles del modo caja -->
+    <div class="cash-controls-panel">
+      <!-- Botones de modo -->
+      <div class="cash-mode-buttons">
+        <button class="btn active" id="cashBtnScan" onclick="setCashMode('scan')" title="Escanear"><i class="fa-solid fa-barcode"></i> Escanear</button>
+        <button class="btn" id="cashBtnUSB" onclick="toggleCashUSB()"><i class="fa-solid fa-plug"></i> USB</button>
+        <button class="btn" onclick="downloadLabelsPDF()"><i class="fa-solid fa-tags"></i> Etiquetas</button>
+        <button class="btn btn-primary" onclick="toggleKiosco()"><i class="fa-solid fa-expand"></i> Kiosco</button>
+      </div>
+
+      <!-- Filtros de caja -->
+      <div class="cash-controls-grid">
+        <div class="form-group">
+          <label class="form-label">Buscar producto</label>
+          <input type="text" class="form-input" id="cashSearchInput" placeholder="Nombre, codigo o descripcion..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select class="form-select" id="cashCategoryFilter">
+            <option value="">Todas las categorias</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio minimo</label>
+          <input type="number" class="form-input" id="cashMinPrice" placeholder="$0" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio maximo</label>
+          <input type="number" class="form-input" id="cashMaxPrice" placeholder="Sin limite" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Codigo de barras</label>
+          <input type="text" class="form-input" id="cashBarcodeFilter" placeholder="Escanear..." autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha</label>
+          <input type="date" class="form-input" id="cashDateFilter">
+        </div>
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+              <input type="checkbox" id="cashStockFilter">
+              <span>Solo stock</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn" onclick="clearCashFilters()" style="width:100%;"><i class="fa-solid fa-broom"></i> Limpiar filtros</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats bar en caja -->
+    <div class="cash-stats-bar">
+      <div class="stat-item"><i class="fa-solid fa-box"></i><span>Productos: <span class="stat-value" id="cashTotalProducts">0</span></span></div>
+      <div class="stat-item"><i class="fa-solid fa-filter"></i><span>Filtrados: <span class="stat-value" id="cashFilteredProducts">0</span></span></div>
+      <div class="stat-item"><i class="fa-solid fa-dollar-sign"></i><span>Valor total: <span class="stat-value" id="cashTotalValue">$0</span></span></div>
+      <div class="stat-item" style="margin-left:auto;">
+        <label>Ir a fila:</label>
+        <input type="number" class="form-input" id="cashGoToRow" min="1" placeholder="#" style="width:60px;margin:0 0.5rem;">
+        <button class="btn btn-sm" onclick="goToCashRow()">Ir</button>
+      </div>
+    </div>
+
+    <!-- Input oculto para escaneo constante -->
+    <input type="text" class="cash-scan-input" id="cashScanInput" autocomplete="off">
+
+    <!-- Productos de caja -->
     <div class="cash-products" id="cashProducts"></div>
-    <div class="cash-float" id="cashFloat"><h4><i class="fa-solid fa-receipt"></i> Venta actual</h4><ul id="cashList"></ul></div>
-    <div class="cash-total"><div class="cash-total-amount">Total: $<span id="cashTotal">0.00</span></div><div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;"><label>Paga con:</label><input type="number" class="form-input" id="cashPayment" placeholder="0.00" style="width:150px;"><button class="btn" onclick="calculateChange()">Calcular vuelto</button></div><div id="cashChange" style="display:none;padding:1rem;background:var(--success);color:white;border-radius:var(--radius-sm);text-align:center;font-size:1.25rem;font-weight:700;margin-bottom:1rem;"></div><div style="display:flex;gap:0.5rem;"><button class="btn btn-success" onclick="confirmCashSale()" id="btnConfirmCash" style="display:none;"><i class="fa-solid fa-check"></i> Confirmar (F12)</button><button class="btn btn-danger" onclick="cancelCashSale()">Cancelar</button></div></div>
+
+    <!-- Panel flotante de venta actual -->
+    <div class="cash-float" id="cashFloat">
+      <h4><i class="fa-solid fa-receipt"></i> Venta actual</h4>
+      <ul id="cashList"></ul>
+    </div>
+
+    <!-- Total de caja -->
+    <div class="cash-total">
+      <div class="cash-total-amount">Total: $<span id="cashTotal">0.00</span></div>
+      <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">
+        <label>Paga con:</label>
+        <input type="number" class="form-input" id="cashPayment" placeholder="0.00" style="width:150px;">
+        <button class="btn" onclick="calculateChange()">Calcular vuelto</button>
+      </div>
+      <div id="cashChange" style="display:none;padding:1rem;background:var(--success);color:white;border-radius:var(--radius-sm);text-align:center;font-size:1.25rem;font-weight:700;margin-bottom:1rem;"></div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn btn-success" onclick="confirmCashSale()" id="btnConfirmCash" style="display:none;"><i class="fa-solid fa-check"></i> Confirmar (F12)</button>
+        <button class="btn btn-danger" onclick="cancelCashSale()">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <button class="menu-toggle" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button>
@@ -691,6 +876,13 @@ let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), c
 // Variables para los nuevos modales
 let pendingDeleteIndex = -1;
 let pendingPaymentIndex = -1;
+
+// ===== VARIABLES DEL MODO CAJA =====
+let cashUSBActive = false;
+let cashUSBBuffer = '';
+let cashFilteredProducts = [];
+let cashScanBuffer = '';
+let cashScanTimeout = null;
 
 function debounce(fn, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), delay); }; }
 function showNotification(message, type = 'success') { const container = document.getElementById('notificationContainer'); const notif = document.createElement('div'); notif.className = `notification ${type}`; notif.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check' : type === 'error' ? 'xmark' : 'exclamation'}"></i> ${message}`; container.appendChild(notif); setTimeout(() => notif.remove(), 3000); }
@@ -1231,9 +1423,22 @@ async function downloadLabelsPDF() { showLoading(true); try { const { jsPDF } = 
 async function openCashRegister() { 
   if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); 
   document.getElementById('cashRegister').classList.add('active'); 
+
+  // Actualizar categorias en el filtro de caja
   const categories = [...new Set(inventory.map(i => i.category).filter(Boolean))].sort(); 
-  document.getElementById('cashCategory').innerHTML = '<option value="">Todas</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join(''); 
+  document.getElementById('cashCategoryFilter').innerHTML = '<option value="">Todas las categorias</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join(''); 
+
+  // Inicializar modo escaneo por defecto
+  setCashMode('scan');
+
+  // Actualizar stats
+  updateCashStats();
+
+  // Renderizar productos
   renderCashProducts(); 
+
+  // Enfocar el input de escaneo constante
+  focusCashScanInput();
 }
 
 function closeCashRegister() { 
@@ -1241,11 +1446,19 @@ function closeCashRegister() {
   document.getElementById('cashRegister').classList.remove('active'); 
   document.getElementById('cashFloat').classList.remove('active'); 
   cashItems = []; 
+  cashUSBActive = false;
+  document.getElementById('cashBtnUSB')?.classList.remove('active');
 }
 
 async function renderCashProducts() { 
+  // Inicializar productos filtrados si esta vacio
+  if (cashFilteredProducts.length === 0) {
+    cashFilteredProducts = [...inventory];
+    document.getElementById('cashFilteredProducts').textContent = cashFilteredProducts.length;
+  }
+
   const container = document.getElementById('cashProducts'), 
-        sorted = [...inventory].sort((a, b) => { 
+        sorted = [...cashFilteredProducts].sort((a, b) => { 
           if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1; 
           if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1; 
           return (a.name || '').localeCompare(b.name || ''); 
@@ -1400,6 +1613,289 @@ function cancelCashSale() {
   updateCashList(); 
 }
 
+// ===== FUNCIONES DEL MODO CAJA MEJORADO =====
+
+// Cambiar modo de la caja (escanear, usb, etc.)
+function setCashMode(mode) {
+  // Actualizar botones
+  document.querySelectorAll('.cash-mode-buttons .btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('cashBtnScan')?.classList.add('active');
+
+  // Mostrar/ocultar indicador de escaneo
+  const indicator = document.getElementById('cashScanIndicator');
+  if (indicator) {
+    indicator.style.display = mode === 'scan' ? 'inline-flex' : 'none';
+  }
+
+  // Enfocar input de escaneo
+  if (mode === 'scan') {
+    focusCashScanInput();
+  }
+}
+
+// Enfocar el input de escaneo constante
+function focusCashScanInput() {
+  const scanInput = document.getElementById('cashScanInput');
+  if (scanInput && document.getElementById('cashRegister').classList.contains('active')) {
+    scanInput.focus();
+  }
+}
+
+// Toggle USB en modo caja
+function toggleCashUSB() {
+  cashUSBActive = !cashUSBActive;
+  const btn = document.getElementById('cashBtnUSB');
+  if (cashUSBActive) {
+    btn.classList.add('active');
+    document.getElementById('cashBarcodeFilter').focus();
+    showNotification('Lector USB activado en caja', 'success');
+  } else {
+    btn.classList.remove('active');
+    showNotification('Lector USB desactivado en caja', 'warning');
+    focusCashScanInput();
+  }
+}
+
+// Actualizar estadisticas de caja
+function updateCashStats() {
+  const total = inventory.length;
+  const totalValue = inventory.reduce((sum, i) => sum + ((i.price || 0) * (i.quantity || 0)), 0);
+  document.getElementById('cashTotalProducts').textContent = total;
+  document.getElementById('cashTotalValue').textContent = formatCurrency(totalValue);
+}
+
+// Aplicar filtros en modo caja
+function applyCashFilters() {
+  const query = document.getElementById('cashSearchInput').value.trim().toLowerCase();
+  const category = document.getElementById('cashCategoryFilter').value;
+  const minPrice = parseFloat(document.getElementById('cashMinPrice').value) || 0;
+  const maxPrice = parseFloat(document.getElementById('cashMaxPrice').value) || Infinity;
+  const barcode = document.getElementById('cashBarcodeFilter').value.trim().toLowerCase();
+  const searchDate = document.getElementById('cashDateFilter').value;
+  const stockOnly = document.getElementById('cashStockFilter').checked;
+
+  cashFilteredProducts = inventory.filter(item => {
+    const nameMatch = !query || fuzzyMatch(item.name, query);
+    const catMatch = !category || item.category === category;
+    const finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100);
+    const priceMatch = finalPrice >= minPrice && finalPrice <= maxPrice;
+    const barcodeMatch = !barcode || (item.barcode || '').toLowerCase().includes(barcode);
+    const stockMatch = !stockOnly || (item.quantity || 0) > 0;
+
+    let dateMatch = true;
+    if (searchDate && item.date) {
+      try { 
+        const itemDate = new Date(item.date).toISOString().split('T')[0]; 
+        dateMatch = itemDate === searchDate; 
+      } catch (e) { dateMatch = false; }
+    }
+
+    return nameMatch && catMatch && priceMatch && barcodeMatch && stockMatch && dateMatch;
+  });
+
+  // Ordenar: primero con stock, luego por nombre
+  cashFilteredProducts.sort((a, b) => {
+    if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
+    if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  document.getElementById('cashFilteredProducts').textContent = cashFilteredProducts.length;
+  renderCashProductsFiltered();
+}
+
+// Limpiar filtros de caja
+function clearCashFilters() {
+  document.getElementById('cashSearchInput').value = '';
+  document.getElementById('cashCategoryFilter').value = '';
+  document.getElementById('cashMinPrice').value = '';
+  document.getElementById('cashMaxPrice').value = '';
+  document.getElementById('cashBarcodeFilter').value = '';
+  document.getElementById('cashDateFilter').value = '';
+  document.getElementById('cashStockFilter').checked = false;
+  document.getElementById('cashGoToRow').value = '';
+
+  cashFilteredProducts = [...inventory];
+  cashFilteredProducts.sort((a, b) => {
+    if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
+    if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  document.getElementById('cashFilteredProducts').textContent = cashFilteredProducts.length;
+  renderCashProductsFiltered();
+}
+
+// Renderizar productos filtrados en caja
+async function renderCashProductsFiltered() {
+  const container = document.getElementById('cashProducts');
+  const productsToShow = cashFilteredProducts.length > 0 ? cashFilteredProducts : inventory;
+
+  // Ordenar: primero con stock, luego por nombre
+  const sorted = [...productsToShow].sort((a, b) => {
+    if ((a.quantity || 0) === 0 && (b.quantity || 0) > 0) return 1;
+    if ((a.quantity || 0) > 0 && (b.quantity || 0) === 0) return -1;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  if (cashViewMode === 'grid') {
+    container.innerHTML = '<div class="cash-grid" id="cashGrid"></div>';
+    const grid = document.getElementById('cashGrid');
+
+    sorted.forEach((item, idx) => {
+      const realIdx = inventory.indexOf(item);
+      const finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100);
+      const isLowStock = (item.quantity || 0) <= (item.stockMin || 0);
+
+      const card = document.createElement('div');
+      card.className = 'cash-card';
+      card.id = `cashCard-${idx + 1}`;
+      card.dataset.index = realIdx;
+      card.innerHTML = `
+        <div style="width:100%;height:120px;background:var(--border-light);border-radius:6px;margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;" id="cashImg-${realIdx}">
+          <span style="color:var(--text-secondary);font-size:0.625rem;">...</span>
+        </div>
+        <div class="name">${item.name || 'N/A'}</div>
+        <div class="price">$${finalPrice.toFixed(0)}</div>
+        <div class="stock ${isLowStock ? 'low' : ''}">Stock: ${item.quantity || 0}</div>
+        <div class="qty-control">
+          <button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button>
+          <input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly>
+          <button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button>
+        </div>
+      `;
+      grid.appendChild(card);
+
+      // Cargar imagen asincronicamente
+      setTimeout(async () => {
+        const imgUrl = await getProductImage(item.code);
+        const imgDiv = document.getElementById(`cashImg-${realIdx}`);
+        if (imgDiv) {
+          if (imgUrl) {
+            imgDiv.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">`;
+          } else {
+            imgDiv.innerHTML = '<span style="color:var(--text-secondary);font-size:0.625rem;">Sin img</span>';
+          }
+        }
+      }, idx * 10);
+    });
+  } else {
+    container.innerHTML = '<div class="cash-list" id="cashListView"></div>';
+    const list = document.getElementById('cashListView');
+
+    sorted.forEach((item, idx) => {
+      const realIdx = inventory.indexOf(item);
+      const finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100);
+      const isLowStock = (item.quantity || 0) <= (item.stockMin || 0);
+
+      const row = document.createElement('div');
+      row.className = 'cash-list-item';
+      row.id = `cashListItem-${idx + 1}`;
+      row.dataset.index = realIdx;
+      row.innerHTML = `
+        <div style="width:60px;height:60px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;" id="cashListImg-${realIdx}">
+          <span style="color:var(--text-secondary);font-size:0.5rem;">...</span>
+        </div>
+        <div class="info">
+          <div class="name">${item.name || 'N/A'}</div>
+          <div class="meta">$${finalPrice.toFixed(0)} | Stock: <span class="${isLowStock ? 'low' : ''}">${item.quantity || 0}</span></div>
+        </div>
+        <div class="qty-control">
+          <button onclick="updateCashQty(${realIdx}, -1)" ontouchstart="updateCashQty(${realIdx}, -1)">-</button>
+          <input type="number" id="cashQty-${realIdx}" value="0" min="0" max="${item.quantity || 0}" readonly>
+          <button onclick="updateCashQty(${realIdx}, 1)" ontouchstart="updateCashQty(${realIdx}, 1)">+</button>
+        </div>
+      `;
+      list.appendChild(row);
+
+      // Cargar imagen asincronicamente
+      setTimeout(async () => {
+        const imgUrl = await getProductImage(item.code);
+        const imgDiv = document.getElementById(`cashListImg-${realIdx}`);
+        if (imgDiv) {
+          if (imgUrl) {
+            imgDiv.innerHTML = `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">`;
+          } else {
+            imgDiv.innerHTML = '<span style="color:var(--text-secondary);font-size:0.5rem;">Sin img</span>';
+          }
+        }
+      }, idx * 10);
+    });
+  }
+}
+
+// Ir a fila especifica en caja
+function goToCashRow() {
+  const row = parseInt(document.getElementById('cashGoToRow').value);
+  if (!row || row < 1) {
+    showNotification('Numero de fila invalido', 'warning');
+    return;
+  }
+
+  const target = document.getElementById(`cashCard-${row}`) || document.getElementById(`cashListItem-${row}`);
+  if (target) {
+    document.querySelectorAll('.cash-card, .cash-list-item').forEach(el => el.classList.remove('highlight'));
+    target.classList.add('highlight');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    showNotification('Fila fuera de rango', 'warning');
+  }
+}
+
+// Manejar escaneo constante en modo caja
+function handleCashScan(e) {
+  if (!document.getElementById('cashRegister').classList.contains('active')) return;
+  if (cashUSBActive) return; // No escanear si USB esta activo
+
+  // Solo procesar si no estamos en un input de formulario (excepto el scan input oculto)
+  if (e.target.tagName === 'INPUT' && e.target.id !== 'cashScanInput') return;
+
+  if (e.key === 'Enter') {
+    if (cashScanBuffer) {
+      const found = inventory.find(p => p.barcode && p.barcode.trim() === cashScanBuffer.trim());
+      if (!found) {
+        playScanErrorSound();
+        showNotification('Producto no existente', 'error');
+        cashScanBuffer = '';
+        return;
+      }
+
+      playScanSuccessSound();
+
+      // Buscar el producto en la lista y agregarlo
+      const realIdx = inventory.indexOf(found);
+      const qtyInput = document.getElementById(`cashQty-${realIdx}`);
+      if (qtyInput) {
+        const currentQty = parseInt(qtyInput.value) || 0;
+        if (currentQty < found.quantity) {
+          qtyInput.value = currentQty + 1;
+          updateCashList();
+
+          // Hacer flash en el elemento
+          const card = qtyInput.closest('.cash-card, .cash-list-item');
+          if (card) {
+            card.classList.add('flash');
+            setTimeout(() => card.classList.remove('flash'), 500);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          showNotification(`Agregado: ${found.name}`, 'success');
+        } else {
+          showNotification('Stock insuficiente', 'warning');
+        }
+      }
+
+      cashScanBuffer = '';
+    }
+  } else if (e.key.length === 1) {
+    cashScanBuffer += e.key;
+    clearTimeout(cashScanTimeout);
+    cashScanTimeout = setTimeout(() => {
+      cashScanBuffer = '';
+    }, 100);
+  }
+}
+
 function toggleKiosco() { 
   if (!document.fullscreenElement) { 
     document.documentElement.requestFullscreen().catch(() => {}); 
@@ -1479,6 +1975,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lastTouchEnd = now;
   }, false);
+
+  // ===== EVENT LISTENERS DEL MODO CAJA =====
+  // Filtros de caja
+  document.getElementById('cashSearchInput')?.addEventListener('input', debounce(applyCashFilters, CONFIG.DEBOUNCE_DELAY));
+  document.getElementById('cashCategoryFilter')?.addEventListener('change', applyCashFilters);
+  document.getElementById('cashMinPrice')?.addEventListener('input', debounce(applyCashFilters, CONFIG.DEBOUNCE_DELAY));
+  document.getElementById('cashMaxPrice')?.addEventListener('input', debounce(applyCashFilters, CONFIG.DEBOUNCE_DELAY));
+  document.getElementById('cashBarcodeFilter')?.addEventListener('input', debounce(applyCashFilters, CONFIG.DEBOUNCE_DELAY));
+  document.getElementById('cashDateFilter')?.addEventListener('change', applyCashFilters);
+  document.getElementById('cashStockFilter')?.addEventListener('change', applyCashFilters);
+
+  // Escaner constante en modo caja
+  document.addEventListener('keydown', handleCashScan);
+
+  // Mantener foco en el input de escaneo cuando se hace click en la caja
+  document.getElementById('cashRegister')?.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+      focusCashScanInput();
+    }
+  });
 });
 </script>
 </body>

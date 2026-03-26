@@ -1362,6 +1362,7 @@ function closePaymentConfirmModal() {
   pendingPaymentIndex = -1;
 }
 
+// ===== FUNCION CORREGIDA: confirmPaymentPending con precio ajustado para venta.html =====
 function confirmPaymentPending() {
   if (pendingPaymentIndex === -1) return;
   showLoading(true); 
@@ -1372,17 +1373,33 @@ function confirmPaymentPending() {
     
     let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
     
-    // Usar totalToCollect como el total de la venta (lo que realmente se cobró)
+    // Calcular el total real a cobrar
     const finalTotal = item.totalToCollect || (item.price * item.quantity);
+    
+    // CORRECCION: Calcular el precio unitario efectivo (lo que realmente se cobra por unidad)
+    // Esto es importante para que en venta.html se muestre el precio correcto
+    const effectivePrice = finalTotal / item.quantity;
+    
     const netEarnings = item.netEarnings || (item.whoPaysCommission === 'client' ? item.price * item.quantity : (item.price * item.quantity) - (item.codCommissionAmount || 0));
     
     sales.push({ 
       ...item, 
-      total: finalTotal,  // Actualizar el total al monto real cobrado
-      netEarnings: netEarnings,  // Guardar la ganancia neta
+      price: effectivePrice,  // PRECIO AJUSTADO: el precio efectivo por unidad
+      originalPrice: item.price, // Guardamos el precio original por si se necesita referencia
+      total: finalTotal,  // Total real cobrado
+      netEarnings: netEarnings,
+      isCOD: true,
+      codDetails: {
+        shipping: item.codShipping,
+        commission: item.codCommissionAmount,
+        insurance: item.codInsurance,
+        whoPaysCommission: item.whoPaysCommission,
+        originalTotal: item.price * item.quantity
+      },
       status: 'paid', 
       paidDate: new Date().toISOString() 
     }); 
+    
     localStorage.setItem('soldInventory', JSON.stringify(sales)); 
     pending.splice(pendingPaymentIndex, 1); 
     localStorage.setItem('pendingInventory', JSON.stringify(pending)); 

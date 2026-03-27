@@ -2155,113 +2155,137 @@
 
   function descargarPDF() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit:'mm', format:[80, 250] });
+    
+    // Calcular altura dinámica según cantidad de productos
+    const alturaBase = 140;
+    const alturaPorProducto = 8;
+    const alturaTotal = alturaBase + (productosFactura.length * alturaPorProducto);
+    
+    const doc = new jsPDF({ unit:'mm', format:[80, alturaTotal] });
     let y = 10;
     const margen = 5;
     const ancho = 80 - margen * 2;
+    const centro = 40;
 
-    // Header
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    const logoText = 'KLOHESV';
-    doc.text(logoText, 40, y, { align: 'center' });
-    y += 8;
-    
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text('San Salvador, El Salvador', 40, y, { align: 'center' });
-    y += 5;
-    doc.text('Correo: industriastobias@gmail.com', 40, y, { align: 'center' });
-    y += 5;
-    doc.text('Instagram: @Klohesv', 40, y, { align: 'center' });
-    y += 8;
-    doc.line(margen, y, 80 - margen, y);
-    y += 6;
-
-    // Datos
-    doc.setFont(undefined, 'bold');
-    doc.text('Factura N°:', margen, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(document.getElementById('fNum').value, margen + 25, y);
-    y += 5;
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('Fecha:', margen, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(document.getElementById('fFecha').value, margen + 25, y);
-    y += 5;
-    
-    doc.setFont(undefined, 'bold');
-    doc.text('Cliente:', margen, y);
-    doc.setFont(undefined, 'normal');
-    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 25);
-    cliente.forEach(l => { doc.text(l, margen + 25, y); y += 4; });
-    y += 4;
-    doc.line(margen, y, 80 - margen, y);
-    y += 6;
-
-    // Tabla header
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'bold');
-    doc.text('Producto', margen, y);
-    doc.text('Cant', margen + 30, y);
-    doc.text('Precio', margen + 40, y);
-    doc.text('Desc', margen + 52, y);
-    doc.text('Total', 75, y, { align: 'right' });
-    y += 4;
-    doc.line(margen, y, 80 - margen, y);
-    y += 4;
-
-    // Productos
-    doc.setFont(undefined, 'normal');
-    productosFactura.forEach(p => {
-      const prod = doc.splitTextToSize(p.name, 28);
-      doc.text(prod, margen, y);
-      doc.text(String(p.quantity), margen + 32, y);
-      doc.text(`$${p.price.toFixed(2)}`, margen + 40, y);
-      doc.text(p.discount > 0 ? `${p.discount}%` : '0', margen + 54, y);
-      doc.text(`$${p.total.toFixed(2)}`, 75, y, { align: 'right' });
-      y += prod.length * 3 + 2;
-    });
-
-    // Envío
-    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
-    if (envio > 0) {
-      doc.text('Envío', margen, y);
-      doc.text('1', margen + 32, y);
-      doc.text(`$${envio.toFixed(2)}`, margen + 40, y);
-      doc.text('0', margen + 54, y);
-      doc.text(`$${envio.toFixed(2)}`, 75, y, { align: 'right' });
-      y += 5;
+    // Función para dibujar línea punteada
+    function dibujarLineaPunteada(yPos) {
+      const segmento = 2;
+      const espacio = 1.5;
+      let x = margen;
+      while (x < 80 - margen) {
+        doc.line(x, yPos, Math.min(x + segmento, 80 - margen), yPos);
+        x += segmento + espacio;
+      }
     }
 
-    y += 4;
-    doc.line(margen, y, 80 - margen, y);
+    // ===== HEADER =====
+    doc.setFontSize(18);
+    doc.setFont('courier', 'bold');
+    doc.text('KLOHESV', centro, y, { align: 'center' });
+    y += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('courier', 'normal');
+    doc.text('San Salvador, El Salvador', centro, y, { align: 'center' });
+    y += 5;
+    doc.text('Correo: industriastobias@gmail.com', centro, y, { align: 'center' });
+    y += 5;
+    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
+    y += 6;
+    
+    // Línea punteada
+    dibujarLineaPunteada(y);
     y += 6;
 
-    // Total
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    // ===== DATOS DE FACTURA =====
+    doc.setFont('courier', 'bold');
+    doc.text('Factura N°:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(document.getElementById('fNum').value, margen + 28, y);
+    y += 6;
+    
+    doc.setFont('courier', 'bold');
+    doc.text('Fecha:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(document.getElementById('fFecha').value, margen + 28, y);
+    y += 6;
+    
+    doc.setFont('courier', 'bold');
+    doc.text('Cliente:', margen, y);
+    doc.setFont('courier', 'normal');
+    const cliente = doc.splitTextToSize(document.getElementById('fCliente').value, ancho - 28);
+    cliente.forEach(l => { doc.text(l, margen + 28, y); y += 5; });
+    y += 2;
+
+    // ===== TABLA DE PRODUCTOS =====
+    // Headers
+    doc.setFontSize(9);
+    doc.setFont('courier', 'bold');
+    doc.text('Producto', margen, y);
+    doc.text('Cant', margen + 32, y);
+    doc.text('Precio', margen + 42, y);
+    doc.text('Desc(%)', margen + 54, y);
+    doc.text('Total', 75, y, { align: 'right' });
+    y += 4;
+    
+    // Línea bajo headers
+    dibujarLineaPunteada(y);
+    y += 5;
+
+    // Filas de productos
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(9);
+    
+    productosFactura.forEach(p => {
+      const nombreCorto = p.name.length > 12 ? p.name.substring(0, 12) + '...' : p.name;
+      doc.text(nombreCorto, margen, y);
+      doc.text(String(p.quantity), margen + 35, y);
+      doc.text(p.price.toFixed(2), margen + 42, y);
+      doc.text(p.discount > 0 ? String(p.discount) : '0', margen + 58, y);
+      doc.text(p.total.toFixed(2), 75, y, { align: 'right' });
+      y += 6;
+    });
+
+    // Envío (si existe)
+    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
+    if (envio > 0) {
+      doc.text('Envio', margen, y);
+      doc.text('1', margen + 35, y);
+      doc.text(envio.toFixed(2), margen + 42, y);
+      doc.text('0', margen + 58, y);
+      doc.text(envio.toFixed(2), 75, y, { align: 'right' });
+      y += 6;
+    }
+
+    y += 2;
+    dibujarLineaPunteada(y);
+    y += 6;
+
+    // ===== TOTAL =====
     const total = parseFloat(document.getElementById('fTotal').textContent);
-    doc.text('TOTAL:', margen, y);
-    doc.text(`$${total.toFixed(2)}`, 75, y, { align: 'right' });
+    doc.setFontSize(11);
+    doc.setFont('courier', 'bold');
+    doc.text('TOTAL:', 50, y);
+    doc.text('$' + total.toFixed(2), 75, y, { align: 'right' });
+    y += 6;
+    
+    dibujarLineaPunteada(y);
     y += 8;
 
-    // Footer
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    y += 4;
-    doc.line(margen, y, 80 - margen, y);
+    // ===== FOOTER =====
+    doc.setFontSize(10);
+    doc.setFont('courier', 'bold');
+    doc.text('¡Gracias por su compra!', centro, y, { align: 'center' });
     y += 6;
     
-    doc.setFont(undefined, 'bold');
-    doc.text('¡Gracias por su compra!', 40, y, { align: 'center' });
-    y += 5;
-    
-    doc.setFont(undefined, 'normal');
-    const msg = 'No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.';
-    const split = doc.splitTextToSize(msg, ancho);
-    split.forEach(l => { doc.text(l, 40, y, { align: 'center' }); y += 3; });
+    doc.setFontSize(8);
+    doc.setFont('courier', 'normal');
+    const msg = 'No se aceptan cambios ni devoluciones, a menos que el producto este danado. Se aceptara dentro de los 5 dias posteriores a la fecha de compra.';
+    const lineas = doc.splitTextToSize(msg, ancho);
+    lineas.forEach(l => {
+      doc.text(l, centro, y, { align: 'center' });
+      y += 4;
+    });
 
     doc.save(`factura_${document.getElementById('fNum').value}.pdf`);
   }

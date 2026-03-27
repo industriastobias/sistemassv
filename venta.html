@@ -5,11 +5,11 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VENTAS – KLOHESV</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap');
     
     :root {
       --bg: #fafafa;
@@ -2153,19 +2153,23 @@
     ventana.close();
   }
 
+  // ========== FUNCIÓN DESCARGAR PDF CORREGIDA ==========
   function descargarPDF() {
     const { jsPDF } = window.jspdf;
     
     // Calcular altura dinámica según cantidad de productos
-    const alturaBase = 130;
-    const alturaPorProducto = 6;
-    const alturaTotal = alturaBase + (productosFactura.length * alturaPorProducto) + (parseFloat(document.getElementById('fEnvio').value) > 0 ? 6 : 0);
+    // Aumentamos el espaciado entre líneas para evitar superposición
+    const alturaBase = 140;
+    const alturaPorProducto = 7; // Aumentado de 6 a 7
+    const alturaTotal = alturaBase + (productosFactura.length * alturaPorProducto) + (parseFloat(document.getElementById('fEnvio').value) > 0 ? 7 : 0);
     
     const doc = new jsPDF({ unit:'mm', format:[80, alturaTotal] });
-    let y = 8;
+    
+    // Configuración de márgenes y posiciones
     const margen = 4;
     const ancho = 80 - margen * 2;
     const centro = 40;
+    let y = 10; // Empezamos un poco más abajo
 
     // Función para dibujar línea punteada
     function dibujarLineaPunteada(yPos) {
@@ -2180,129 +2184,135 @@
 
     // ===== HEADER =====
     doc.setFontSize(16);
-    doc.setFont('courier', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('KLOHESV', centro, y, { align: 'center' });
-    y += 7;
+    y += 8; // Aumentado de 7 a 8
     
     doc.setFontSize(9);
-    doc.setFont('courier', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text('San Salvador, El Salvador', centro, y, { align: 'center' });
-    y += 4.5;
+    y += 5; // Aumentado de 4.5 a 5
     doc.text('Correo: industriastobias@gmail.com', centro, y, { align: 'center' });
-    y += 4.5;
-    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
     y += 5;
+    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
+    y += 6; // Aumentado de 5 a 6
     
     // Línea punteada
     dibujarLineaPunteada(y);
-    y += 5;
+    y += 6;
 
     // ===== DATOS DE FACTURA =====
-    doc.setFont('courier', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('Factura N°:', margen, y);
-    doc.setFont('courier', 'normal');
-    doc.text(document.getElementById('fNum').value, margen + 26, y);
-    y += 5;
+    doc.text('Factura N:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('fNum').value, margen + 22, y);
+    y += 6; // Aumentado de 5 a 6
     
-    doc.setFont('courier', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Fecha:', margen, y);
-    doc.setFont('courier', 'normal');
-    doc.text(document.getElementById('fFecha').value, margen + 26, y);
-    y += 5;
-    
-    doc.setFont('courier', 'bold');
-    doc.text('Cliente:', margen, y);
-    doc.setFont('courier', 'normal');
-    const clienteTexto = document.getElementById('fCliente').value;
-    doc.text(clienteTexto, margen + 26, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('fFecha').value, margen + 22, y);
     y += 6;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cliente:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    const clienteTexto = document.getElementById('fCliente').value;
+    // Truncar nombre de cliente si es muy largo
+    if (clienteTexto.length > 18) {
+      doc.text(clienteTexto.substring(0, 17) + '...', margen + 22, y);
+    } else {
+      doc.text(clienteTexto, margen + 22, y);
+    }
+    y += 8; // Aumentado de 6 a 8
 
     // ===== TABLA DE PRODUCTOS =====
     // Línea antes de headers
     dibujarLineaPunteada(y);
-    y += 4;
+    y += 5;
     
     // Headers - posiciones fijas para cada columna
-    doc.setFontSize(8);
-    doc.setFont('courier', 'bold');
+    doc.setFontSize(7.5); // Ligeramente más pequeño para que quepan bien
+    doc.setFont('helvetica', 'bold');
     
     // Columna Producto (izquierda)
     doc.text('Producto', margen, y);
     // Columna Cant (centrada)
-    doc.text('Cant', 43, y, { align: 'center' });
+    doc.text('Cant', 40, y, { align: 'center' });
     // Columna Precio
-    doc.text('Precio', 51, y);
+    doc.text('Precio', 48, y);
     // Columna Desc(%)
-    doc.text('Desc(%)', 62, y);
+    doc.text('Desc', 60, y);
     // Columna Total (derecha)
     doc.text('Total', 76, y, { align: 'right' });
     
-    y += 3;
+    y += 4;
     // Línea bajo headers
     dibujarLineaPunteada(y);
-    y += 4;
+    y += 5;
 
     // Filas de productos
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
     
     productosFactura.forEach(p => {
       // Nombre del producto (truncado si es muy largo)
-      const nombre = p.name.length > 14 ? p.name.substring(0, 13) : p.name;
+      const nombre = p.name.length > 12 ? p.name.substring(0, 11) + '.' : p.name;
       doc.text(nombre, margen, y);
       
       // Cantidad (centrada)
-      doc.text(String(p.quantity), 43, y, { align: 'center' });
+      doc.text(String(p.quantity), 40, y, { align: 'center' });
       
-      // Precio
-      doc.text(p.price.toFixed(2), 51, y);
+      // Precio - formateado para que quepa
+      const precioStr = p.price.toFixed(2);
+      doc.text(precioStr, 48, y);
       
       // Descuento
-      doc.text(p.discount > 0 ? String(p.discount) : '0', 64, y);
+      doc.text(p.discount > 0 ? String(Math.round(p.discount)) : '0', 62, y);
       
       // Total (alineado derecha)
       doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
       
-      y += 5;
+      y += 6; // Aumentado de 5 a 6 para más espacio entre filas
     });
 
     // Envío (si existe)
     const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
     if (envio > 0) {
       doc.text('Envio', margen, y);
-      doc.text('1', 43, y, { align: 'center' });
-      doc.text(envio.toFixed(2), 51, y);
-      doc.text('0', 64, y);
+      doc.text('1', 40, y, { align: 'center' });
+      doc.text(envio.toFixed(2), 48, y);
+      doc.text('0', 62, y);
       doc.text(envio.toFixed(2), 76, y, { align: 'right' });
-      y += 5;
+      y += 6;
     }
 
-    y += 1;
-    dibujarLineaPunteada(y);
-    y += 5;
-
-    // ===== TOTAL =====
-    const total = parseFloat(document.getElementById('fTotal').textContent);
-    doc.setFontSize(10);
-    doc.setFont('courier', 'bold');
-    doc.text('TOTAL:', 52, y);
-    doc.text('$' + total.toFixed(2), 76, y, { align: 'right' });
-    y += 5;
-    
+    y += 2;
     dibujarLineaPunteada(y);
     y += 6;
 
+    // ===== TOTAL =====
+    const total = parseFloat(document.getElementById('fTotal').textContent);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL:', 50, y);
+    doc.text('$' + total.toFixed(2), 76, y, { align: 'right' });
+    y += 6;
+    
+    dibujarLineaPunteada(y);
+    y += 8;
+
     // ===== FOOTER =====
     doc.setFontSize(10);
-    doc.setFont('courier', 'bold');
-    doc.text('¡Gracias por su compra!', centro, y, { align: 'center' });
-    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Gracias por su compra!', centro, y, { align: 'center' });
+    y += 6;
     
-    doc.setFontSize(8);
-    doc.setFont('courier', 'normal');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
     const msg = 'No se aceptan cambios ni devoluciones, a menos que el producto este danado. Se aceptara dentro de los 5 dias posteriores a la fecha de compra.';
-    const lineas = doc.splitTextToSize(msg, ancho);
+    const lineas = doc.splitTextToSize(msg, ancho - 4);
     lineas.forEach(l => {
       doc.text(l, centro, y, { align: 'center' });
       y += 3.5;

@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -58,9 +59,11 @@
     .form-label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.025em; }
     .form-input, .form-select { padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; background: var(--surface); color: var(--text); transition: var(--transition); width: 100%; touch-action: manipulation; }
     .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08); }
-    .search-history { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light); align-items: center; }
-    .history-chip { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; background: var(--border-light); border-radius: 9999px; font-size: 0.75rem; cursor: pointer; transition: var(--transition); touch-action: manipulation; }
-    .history-chip:hover { background: var(--border); }
+    .search-history { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light); align-items: flex-start; }
+    .history-chip { display: inline-flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.5rem; background: var(--border-light); border-radius: var(--radius-sm); font-size: 0.75rem; cursor: pointer; transition: var(--transition); touch-action: manipulation; min-width: 80px; }
+    .history-chip:hover { background: var(--border); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .history-chip .history-img { width: 60px; height: 60px; border-radius: var(--radius-sm); object-fit: cover; }
+    .history-chip .history-barcode { height: 25px; max-width: 70px; object-fit: contain; }
     .clear-history-btn { padding: 0.375rem 0.625rem; font-size: 0.75rem; background: var(--danger); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; touch-action: manipulation; }
     .stats-bar { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .stat-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-secondary); }
@@ -1194,23 +1197,73 @@ function fuzzyMatch(text, query) {
   })); 
 }
 
-function addToSearchHistory(query) { 
+function addToSearchHistory(query, productCode, productBarcode) { 
   if (!query || query.length < 2) return; 
-  searchHistory = searchHistory.filter(h => h !== query); 
-  searchHistory.unshift(query); 
+  // Buscar el producto si se proporciona código, o buscar por nombre
+  let product = null;
+  if (productCode) {
+    product = inventory.find(i => i.code === productCode);
+  } else if (productBarcode) {
+    product = inventory.find(i => i.barcode === productBarcode);
+  }
+
+  // Crear objeto de historial con información del producto
+  const historyItem = {
+    query: query,
+    code: product ? product.code : null,
+    barcode: product ? product.barcode : null,
+    name: product ? product.name : query
+  };
+
+  // Evitar duplicados basados en el código de producto o query
+  searchHistory = searchHistory.filter(h => h.code !== historyItem.code || h.query !== historyItem.query); 
+  searchHistory.unshift(historyItem); 
   if (searchHistory.length > 8) searchHistory.pop(); 
   localStorage.setItem('searchHistory', JSON.stringify(searchHistory)); 
   renderSearchHistory(); 
 }
 function clearSearchHistory() { searchHistory = []; localStorage.removeItem('searchHistory'); renderSearchHistory(); showNotification('Historial eliminado', 'success'); }
-function renderSearchHistory() { 
+async function renderSearchHistory() { 
   const container = document.getElementById('searchHistory'); 
   if (!searchHistory.length) { container.innerHTML = ''; return; } 
-  container.innerHTML = '<span style="color:var(--text-secondary);font-size:0.75rem;">Historial:</span> ' + 
-    searchHistory.map(h => `<span class="history-chip" onclick="applyHistorySearch('${h}')"><i class="fa-solid fa-clock-rotate-left"></i> ${h}</span>`).join('') + 
-    ' <button class="clear-history-btn" onclick="clearSearchHistory()">Limpiar</button>'; 
+
+  let html = '<span style="color:var(--text-secondary);font-size:0.75rem;align-self:center;">Historial:</span> ';
+
+  for (let i = 0; i < searchHistory.length; i++) {
+    const h = searchHistory[i];
+    const imgUrl = h.code ? await getProductImage(h.code) : null;
+    const barcodeUrl = h.barcode ? generateBarcodeDataUrl(h.barcode) : null;
+
+    html += `<span class="history-chip" onclick="applyHistorySearch(${i})">`;
+    if (imgUrl) {
+      html += `<img src="${imgUrl}" class="history-img" alt="">`;
+    } else {
+      html += `<div class="history-img" style="background:var(--border-light);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:0.625rem;">Sin img</div>`;
+    }
+    if (barcodeUrl) {
+      html += `<img src="${barcodeUrl}" class="history-barcode" alt="">`;
+    }
+    html += `</span>`;
+  }
+
+  html += ' <button class="clear-history-btn" onclick="clearSearchHistory()">Limpiar</button>';
+  container.innerHTML = html;
 }
-function applyHistorySearch(query) { document.getElementById('searchInput').value = query; applyFilters(); }
+function applyHistorySearch(index) { 
+  const historyItem = searchHistory[index];
+  if (!historyItem) return;
+
+  // Si tiene código de barras, usar el filtro de barcode
+  if (historyItem.barcode) {
+    document.getElementById('barcodeFilter').value = historyItem.barcode;
+    document.getElementById('searchInput').value = '';
+  } else {
+    // Si no, usar el nombre/query
+    document.getElementById('searchInput').value = historyItem.query || historyItem.name || '';
+    document.getElementById('barcodeFilter').value = '';
+  }
+  applyFilters(); 
+}
 
 function getCachedBarcode(barcode) { if (!barcode) return null; return barcodeCache.get(barcode) || null; }
 function setCachedBarcode(barcode, dataUrl) { 
@@ -1311,7 +1364,11 @@ function applyFilters() {
         barcode = document.getElementById('barcodeFilter').value.trim().toLowerCase(), 
         searchDate = document.getElementById('dateFilter').value, 
         lowStockOnly = document.getElementById('lowStockFilter').checked; 
-  if (query) addToSearchHistory(query); 
+  if (query) {
+    // Si hay un solo producto filtrado, guardar su código
+    const matchedProduct = filteredInventory.length === 1 ? filteredInventory[0] : null;
+    addToSearchHistory(query, matchedProduct ? matchedProduct.code : null, null);
+  } 
   filteredInventory = inventory.filter(item => { 
     const nameMatch = !query || fuzzyMatch(item.name, query), 
           catMatch = !category || item.category === category, 

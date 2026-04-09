@@ -1,16 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=no">
   <title>SISTEMA DE VENTAS KLOHE</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css       ">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js       "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js       "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js       "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js       "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css        ">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js        "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js        "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js        "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js        "></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300       ;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300        ;400;500;600;700&display=swap');
     :root { --bg: #fafafa; --surface: #ffffff; --text: #1a1a1a; --text-secondary: #6b7280; --border: #e5e7eb; --border-light: #f3f4f6; --accent: #111827; --accent-hover: #374151; --danger: #ef4444; --warning: #f59e0b; --success: #10b981; --info: #3b82f6; --purple: #8b5cf6; --shadow-sm: 0 1px 2px rgba(0,0,0,0.04); --shadow: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08); --radius: 12px; --radius-sm: 8px; --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     
     /* MODO OSCURO */
@@ -641,8 +642,12 @@
             <option value="transfer">Transferencia</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn" onclick="clearSalesHistoryFilters()" style="width:100%;"><i class="fa-solid fa-broom"></i> Limpiar Filtros</button>
+        </div>
       </div>
-      
+
       <div class="sales-history-summary" id="salesHistorySummary">
         <div class="sales-history-card total">
           <h4><i class="fa-solid fa-sack-dollar"></i> Total Ventas</h4>
@@ -665,15 +670,15 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Fecha/Hora</th>
-              <th>Producto</th>
+              <th>Fecha y Hora</th>
               <th>Imagen</th>
+              <th>Producto</th>
               <th>Código de Barras</th>
-              <th>Cantidad</th>
-              <th>Tipo</th>
-              <th>Método Pago</th>
+              <th>Precio Unit.</th>
+              <th>Cant.</th>
               <th>Total</th>
-              <th>Vendedor</th>
+              <th>Método Pago</th>
+              <th>Tipo</th>
             </tr>
           </thead>
           <tbody id="salesHistoryList"></tbody>
@@ -3882,19 +3887,38 @@ function applySalesHistoryFilter() {
   renderSalesHistoryTable(filteredSales);
 }
 
+// Función para limpiar filtros del historial de ventas
+function clearSalesHistoryFilters() {
+  document.getElementById('historyQuickFilter').value = 'all';
+  document.getElementById('historyTypeFilter').value = 'all';
+  document.getElementById('historyPaymentFilter').value = 'all';
+
+  // Restablecer fechas al último mes
+  const today = new Date();
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+  document.getElementById('historyDateEnd').value = today.toISOString().split('T')[0];
+  document.getElementById('historyDateStart').value = lastMonth.toISOString().split('T')[0];
+
+  applySalesHistoryFilter();
+  showNotification('Filtros limpiados', 'success');
+}
+
 async function renderSalesHistoryTable(filteredSales) {
   const tbody = document.getElementById('salesHistoryList');
   if (!filteredSales.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">No hay ventas en el período seleccionado</td></tr>';
     return;
   }
-  
+
   // Obtener imágenes y códigos de barras para todas las ventas
   const salesWithMedia = await Promise.all(filteredSales.map(async (s) => {
     const date = new Date(s.date);
     const dateStr = date.toLocaleDateString('es-ES');
-    const timeStr = date.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-    
+    const timeStr = date.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+    const fullDateTime = `${dateStr} ${timeStr}`;
+
     let typeText = 'Inmediata';
     let typeBadge = '<span class="badge badge-success">Inmediata</span>';
     if (s.saleType === 'pending_delivery') {
@@ -3907,43 +3931,47 @@ async function renderSalesHistoryTable(filteredSales) {
       typeText = 'Pend. Cobro';
       typeBadge = '<span class="badge badge-orange">Pend. Cobro</span>';
     }
-    
+
     const methodText = s.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo';
-    const methodBadge = s.paymentMethod === 'transfer' ? 
-      '<span class="badge badge-purple">Transferencia</span>' : 
-      '<span class="badge badge-success">Efectivo</span>';
-    
+    const methodBadge = s.paymentMethod === 'transfer' ?
+      '<span class="badge badge-purple"><i class="fa-solid fa-money-check"></i> Transferencia</span>' :
+      '<span class="badge badge-success"><i class="fa-solid fa-money-bill-wave"></i> Efectivo</span>';
+
     // Obtener imagen y código de barras
     const imgUrl = await getProductImage(s.code);
     const barcodeUrl = s.barcode ? generateBarcodeDataUrl(s.barcode) : null;
-    
+
+    // Calcular precio unitario
+    const unitPrice = s.price || (s.total / (s.quantity || 1));
+
     return {
-      dateStr, timeStr, typeBadge, methodBadge, imgUrl, barcodeUrl, barcode: s.barcode,
-      name: s.name, quantity: s.quantity, total: s.total, seller: s.seller, code: s.code
+      fullDateTime, dateStr, timeStr, typeBadge, methodBadge, imgUrl, barcodeUrl, barcode: s.barcode,
+      name: s.name, quantity: s.quantity, total: s.total, unitPrice: unitPrice,
+      seller: s.seller, code: s.code
     };
   }));
-  
+
   tbody.innerHTML = salesWithMedia.map(s => `
     <tr>
-      <td><strong>${s.dateStr}</strong><br><small style="color:var(--text-secondary);">${s.timeStr}</small></td>
-      <td><strong>${s.name}</strong><br><small style="color:var(--text-secondary);">${s.code}</small></td>
+      <td><strong><i class="fa-solid fa-calendar"></i> ${s.dateStr}</strong><br><small style="color:var(--text-secondary);"><i class="fa-solid fa-clock"></i> ${s.timeStr}</small></td>
       <td>
-        ${s.imgUrl ? 
-          `<img src="${s.imgUrl}" style="width:48px;height:48px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;" onclick="openImage('${s.imgUrl}')">` : 
-          '<div style="width:48px;height:48px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'
+        ${s.imgUrl ?
+          `<img src="${s.imgUrl}" style="width:60px;height:60px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;" onclick="openImage('${s.imgUrl}')">` :
+          '<div style="width:60px;height:60px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'
         }
       </td>
+      <td><strong>${s.name}</strong><br><small style="color:var(--text-secondary);">${s.code}</small></td>
       <td>
-        ${s.barcodeUrl ? 
-          `<img src="${s.barcodeUrl}" style="height:40px;cursor:pointer;" onclick="openBarcodeModal('${s.barcodeUrl}', '${s.barcode}')">` : 
+        ${s.barcodeUrl ?
+          `<img src="${s.barcodeUrl}" style="height:50px;cursor:pointer;" onclick="openBarcodeModal('${s.barcodeUrl}', '${s.barcode}')">` :
           '<span style="color:var(--text-secondary);">N/A</span>'
         }
       </td>
-      <td>${s.quantity}</td>
-      <td>${s.typeBadge}</td>
+      <td><strong style="color:var(--success);">${formatCurrency(s.unitPrice)}</strong></td>
+      <td><span class="badge badge-warning">${s.quantity}</span></td>
+      <td><strong style="color:var(--success);font-size:1.1rem;">${formatCurrency(s.total)}</strong></td>
       <td>${s.methodBadge}</td>
-      <td><strong style="color:var(--success);">${formatCurrency(s.total)}</strong></td>
-      <td>${s.seller || 'Sistema'}</td>
+      <td>${s.typeBadge}</td>
     </tr>
   `).join('');
 }

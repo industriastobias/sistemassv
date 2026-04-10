@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,6 +7,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap');
@@ -320,67 +320,122 @@
       box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
     }
 
-    /* ===== TABLA DE VENTAS ===== */
-    .ventas-table-container {
-      max-height: 400px;
+    /* ===== GRID DE VENTAS ===== */
+    .ventas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      max-height: 500px;
       overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .venta-card {
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      position: relative;
+      transition: all 0.2s ease;
+      cursor: pointer;
     }
 
-    .ventas-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
+    .venta-card:hover {
+      border-color: var(--border-dark);
+      box-shadow: var(--shadow-sm);
     }
 
-    .ventas-table th {
+    .venta-card.selected {
+      border-color: var(--accent);
       background: #f9fafb;
-      padding: 12px 14px;
-      text-align: left;
-      font-weight: 600;
-      color: var(--text-secondary);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .ventas-table td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border-light);
-      color: var(--text-primary);
-    }
-
-    .ventas-table tr:hover td {
-      background: #f9fafb;
-    }
-
-    .ventas-table tr.selected td {
-      background: #eff6ff;
+      box-shadow: 0 0 0 2px rgba(75, 85, 99, 0.2);
     }
 
     .venta-checkbox {
-      width: 18px;
-      height: 18px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
       accent-color: var(--accent);
       cursor: pointer;
+      z-index: 10;
+    }
+
+    .venta-imagen {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f9fafb;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .venta-imagen img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 8px;
+    }
+
+    .venta-imagen i {
+      font-size: 2.5rem;
+      color: var(--border);
+    }
+
+    .venta-nombre {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .venta-barcode {
+      font-family: 'Courier Prime', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .venta-precio {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .venta-cantidad {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
     }
 
     .venta-fecha {
       font-size: 0.75rem;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .venta-total {
-      font-weight: 600;
-      color: var(--text-primary);
+    .venta-fecha i {
+      font-size: 0.7rem;
     }
 
     .no-results {
       text-align: center;
       padding: 40px 20px;
       color: var(--text-secondary);
+      grid-column: 1 / -1;
     }
 
     .no-results i {
@@ -550,6 +605,27 @@
       margin-top: 8px;
       padding-top: 8px;
       border-top: 1px solid #000;
+    }
+
+    .ticket-iva-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #f9fafb;
+      border-radius: var(--radius-sm);
+    }
+
+    .ticket-iva-toggle input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .ticket-iva-toggle label {
+      font-size: 11px;
+      cursor: pointer;
     }
 
     /* ===== QR CODE ===== */
@@ -746,6 +822,11 @@
       .main-container { padding: 16px; }
       .form-row { grid-template-columns: 1fr; }
       .ticket-actions .btn { flex: 1 1 100%; }
+      .ventas-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      .ventas-grid { grid-template-columns: 1fr; }
     }
 
     /* ===== STATS ===== */
@@ -793,7 +874,34 @@
       margin-bottom: 12px;
       text-transform: uppercase;
     }
+
+    /* Badge de fecha */
+    .fecha-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+
+    .fecha-badge.hoy {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .fecha-badge.ayer {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .fecha-badge.semana {
+      background: #dbeafe;
+      color: #1e40af;
+    }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -856,7 +964,7 @@
       <div class="panel-body">
         <div class="search-box">
           <i class="fa-solid fa-search"></i>
-          <input type="text" id="buscarVenta" placeholder="Buscar por producto, fecha o código..." oninput="filtrarVentas()">
+          <input type="text" id="buscarVenta" placeholder="Buscar por producto, código de barras o fecha..." oninput="filtrarVentas()">
         </div>
         
         <div class="stats-bar">
@@ -870,27 +978,12 @@
           </div>
         </div>
 
-        <div class="ventas-table-container">
-          <table class="ventas-table">
-            <thead>
-              <tr>
-                <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                <th>Producto</th>
-                <th style="text-align: center;">Cant.</th>
-                <th style="text-align: right;">Total</th>
-                <th style="text-align: center;">Fecha</th>
-              </tr>
-            </thead>
-            <tbody id="ventasTableBody">
-              <tr>
-                <td colspan="5" class="no-results">
-                  <i class="fa-solid fa-box-open"></i>
-                  <p>No hay ventas disponibles</p>
-                  <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="ventas-grid" id="ventasGrid">
+          <div class="no-results">
+            <i class="fa-solid fa-box-open"></i>
+            <p>No hay ventas disponibles</p>
+            <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1022,8 +1115,15 @@
               <span>SUBTOTAL (Base Imponible):</span>
               <span id="subtotal">$10.00</span>
             </div>
-            <div class="ticket-total-line">
-              <span>IVA (13%):</span>
+            
+            <!-- Toggle IVA -->
+            <div class="ticket-iva-toggle no-print">
+              <input type="checkbox" id="aplicarIva" checked onchange="calcularTotales()">
+              <label for="aplicarIva">Aplicar IVA (<span id="tasaIvaDisplay">13</span>%)</label>
+            </div>
+            
+            <div class="ticket-total-line" id="ivaLinea">
+              <span>IVA (<span id="tasaIvaTexto">13</span>%):</span>
               <span id="iva">$1.30</span>
             </div>
             <div class="ticket-total-line">
@@ -1171,6 +1271,7 @@
   let ventas = [];
   let ventasFiltradas = [];
   let productosFactura = [];
+  let imagenesCache = {};
   let config = {
     nombre: 'KLOHESV',
     razon: 'Industrias Tobias S.A. de C.V.',
@@ -1214,6 +1315,8 @@
     document.getElementById('emisorDireccion').textContent = config.direccion;
     document.getElementById('facturaSerie').textContent = config.serie;
     document.getElementById('facturaNumero').textContent = String(config.ultimoNumero).padStart(5, '0');
+    document.getElementById('tasaIvaDisplay').textContent = config.tasaIva;
+    document.getElementById('tasaIvaTexto').textContent = config.tasaIva;
   }
 
   function abrirConfiguracion() {
@@ -1250,58 +1353,183 @@
     cerrarConfiguracion();
   }
 
+  // ========== FUNCIONES DE FECHA ==========
+  function getToday() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }
+
+  function getYesterday() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    return yesterday;
+  }
+
+  function isSameDay(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  }
+
+  function isToday(dateStr) {
+    if (!dateStr) return false;
+    try {
+      const d = new Date(dateStr);
+      return isSameDay(d, getToday());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isYesterday(dateStr) {
+    if (!dateStr) return false;
+    try {
+      const d = new Date(dateStr);
+      return isSameDay(d, getYesterday());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getFechaBadge(dateStr) {
+    if (isToday(dateStr)) return { text: 'Hoy', class: 'hoy' };
+    if (isYesterday(dateStr)) return { text: 'Ayer', class: 'ayer' };
+    return null;
+  }
+
+  function formatFecha(dateStr) {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('es-SV', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '-';
+    }
+  }
+
+  function formatFechaCorta(dateStr) {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('es-SV', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric'
+      });
+    } catch (e) {
+      return '-';
+    }
+  }
+
   // ========== VENTAS ==========
-  function cargarVentas() {
+  async function cargarVentas() {
     const saved = localStorage.getItem('soldInventory');
     if (saved) {
       try {
         ventas = JSON.parse(saved);
         // Filtrar solo ventas que no son cierres de caja
         ventas = ventas.filter(v => !v.isCierreCaja);
+        
+        // Ordenar por fecha más reciente primero
+        ventas.sort((a, b) => {
+          const fechaA = new Date(a.soldAt || a.date || 0);
+          const fechaB = new Date(b.soldAt || b.date || 0);
+          return fechaB - fechaA;
+        });
+        
         ventasFiltradas = [...ventas];
-        renderizarVentas();
+        await renderizarVentas();
       } catch (e) {
         console.error('Error cargando ventas:', e);
       }
     }
   }
 
-  function renderizarVentas() {
-    const tbody = document.getElementById('ventasTableBody');
+  async function cargarImagenProducto(code) {
+    if (imagenesCache[code]) {
+      return imagenesCache[code];
+    }
+    
+    try {
+      const blob = await localforage.getItem(`img_${code}`);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        imagenesCache[code] = url;
+        return url;
+      }
+    } catch (err) {
+      console.error('Error cargando imagen:', err);
+    }
+    return null;
+  }
+
+  async function renderizarVentas() {
+    const grid = document.getElementById('ventasGrid');
     const contador = document.getElementById('contadorVentas');
     
     contador.textContent = `${ventasFiltradas.length} venta${ventasFiltradas.length !== 1 ? 's' : ''}`;
     
     if (ventasFiltradas.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" class="no-results">
-            <i class="fa-solid fa-box-open"></i>
-            <p>No hay ventas disponibles</p>
-            <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
-          </td>
-        </tr>
+      grid.innerHTML = `
+        <div class="no-results">
+          <i class="fa-solid fa-box-open"></i>
+          <p>No hay ventas disponibles</p>
+          <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
+        </div>
       `;
       return;
     }
 
-    tbody.innerHTML = ventasFiltradas.map((v, index) => {
-      const fecha = v.soldAt || v.date ? new Date(v.soldAt || v.date).toLocaleDateString('es-SV') : '-';
-      return `
-        <tr data-index="${index}">
-          <td><input type="checkbox" class="venta-checkbox" value='${JSON.stringify(v).replace(/'/g, "&#39;")}' onchange="actualizarStats()"></td>
-          <td>
-            <div>${v.name || 'Sin nombre'}</div>
-            ${v.barcode ? `<div style="font-size: 0.75rem; color: var(--text-muted);">${v.barcode}</div>` : ''}
-          </td>
-          <td style="text-align: center;">${v.quantity || 1}</td>
-          <td style="text-align: right;" class="venta-total">$${parseFloat(v.total || 0).toFixed(2)}</td>
-          <td style="text-align: center;" class="venta-fecha">${fecha}</td>
-        </tr>
+    grid.innerHTML = '';
+    
+    for (let i = 0; i < ventasFiltradas.length; i++) {
+      const v = ventasFiltradas[i];
+      const fechaStr = v.soldAt || v.date;
+      const fechaFormateada = formatFechaCorta(fechaStr);
+      const fechaCompleta = formatFecha(fechaStr);
+      const badge = getFechaBadge(fechaStr);
+      
+      const card = document.createElement('div');
+      card.className = 'venta-card';
+      card.dataset.index = i;
+      card.onclick = (e) => {
+        if (e.target.type !== 'checkbox') {
+          const cb = card.querySelector('.venta-checkbox');
+          cb.checked = !cb.checked;
+          actualizarStats();
+          card.classList.toggle('selected', cb.checked);
+        }
+      };
+      
+      // Cargar imagen
+      const imgUrl = await cargarImagenProducto(v.code);
+      
+      card.innerHTML = `
+        <input type="checkbox" class="venta-checkbox" value='${JSON.stringify(v).replace(/'/g, "&#39;")}' onchange="actualizarStats(); this.closest('.venta-card').classList.toggle('selected', this.checked);">
+        <div class="venta-imagen">
+          ${imgUrl ? `<img src="${imgUrl}" alt="${v.name}">` : '<i class="fa-solid fa-image"></i>'}
+        </div>
+        <div class="venta-nombre">${v.name || 'Sin nombre'}</div>
+        ${v.barcode ? `<div class="venta-barcode">${v.barcode}</div>` : ''}
+        <div class="venta-precio">$${parseFloat(v.total || 0).toFixed(2)}</div>
+        <div class="venta-cantidad">Cantidad: ${v.quantity || 1} x $${parseFloat(v.price || v.total || 0).toFixed(2)}</div>
+        <div class="venta-fecha">
+          <i class="fa-regular fa-calendar"></i>
+          ${fechaCompleta}
+          ${badge ? `<span class="fecha-badge ${badge.class}">${badge.text}</span>` : ''}
+        </div>
       `;
-    }).join('');
-
-    actualizarStats();
+      
+      grid.appendChild(card);
+    }
   }
 
   function filtrarVentas() {
@@ -1313,12 +1541,6 @@
       (v.date && v.date.includes(busqueda))
     );
     renderizarVentas();
-  }
-
-  function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll').checked;
-    document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = selectAll);
-    actualizarStats();
   }
 
   function actualizarStats() {
@@ -1464,7 +1686,8 @@
       }
     });
     
-    const iva = subtotal * (config.tasaIva / 100);
+    const aplicarIva = document.getElementById('aplicarIva').checked;
+    const iva = aplicarIva ? subtotal * (config.tasaIva / 100) : 0;
     const descuentoGlobal = parseFloat(document.getElementById('descuentoGlobal').textContent.replace('$', '').replace(',', '')) || 0;
     const anticipo = parseFloat(document.getElementById('anticipo').textContent.replace('$', '').replace(',', '')) || 0;
     
@@ -1473,6 +1696,14 @@
     document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
     document.getElementById('iva').textContent = `$${iva.toFixed(2)}`;
     document.getElementById('totalPagar').textContent = `$${Math.max(0, total).toFixed(2)}`;
+    
+    // Mostrar/ocultar línea de IVA según el toggle
+    const ivaLinea = document.getElementById('ivaLinea');
+    if (aplicarIva) {
+      ivaLinea.style.display = 'flex';
+    } else {
+      ivaLinea.style.display = 'none';
+    }
   }
 
   // ========== FECHA ==========
@@ -1499,6 +1730,7 @@
       document.getElementById('receptorDireccion').textContent = '-';
       document.getElementById('descuentoGlobal').textContent = '$0.00';
       document.getElementById('anticipo').textContent = '$0.00';
+      document.getElementById('aplicarIva').checked = true;
       document.getElementById('ticketProductos').innerHTML = '';
       establecerFechaActual();
       calcularTotales();
@@ -1506,7 +1738,7 @@
       
       // Desmarcar ventas
       document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = false);
-      document.getElementById('selectAll').checked = false;
+      document.querySelectorAll('.venta-card').forEach(c => c.classList.remove('selected'));
       actualizarStats();
     }
   }
@@ -1539,211 +1771,49 @@
     window.print();
   }
 
-  // ========== PDF ==========
-  function descargarPDF() {
-    const { jsPDF } = window.jspdf;
+  // ========== PDF CON HTML2CANVAS ==========
+  async function descargarPDF() {
+    const ticket = document.getElementById('ticket');
     
-    // Calcular altura dinámica
-    const numProductos = document.querySelectorAll('#ticketProductos tr').length;
-    const alturaBase = 180;
-    const alturaPorProducto = 6;
-    const alturaTotal = alturaBase + (numProductos * alturaPorProducto);
+    // Ocultar elementos no-print temporalmente
+    const noPrintElements = ticket.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => el.style.display = 'none');
     
-    const doc = new jsPDF({
-      unit: 'mm',
-      format: [80, alturaTotal]
-    });
-    
-    let y = 10;
-    const centro = 40;
-    const margen = 4;
-    
-    // Función para línea punteada
-    function lineaPunteada(yPos) {
-      const segmento = 2;
-      const espacio = 1.5;
-      let x = margen;
-      while (x < 76) {
-        doc.line(x, yPos, Math.min(x + segmento, 76), yPos);
-        x += segmento + espacio;
-      }
+    try {
+      const canvas = await html2canvas(ticket, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      const { jsPDF } = window.jspdf;
+      
+      // Calcular dimensiones para formato ticket (80mm de ancho)
+      const imgWidth = 80;
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: [imgWidth, Math.max(imgHeight + 10, 100)]
+      });
+      
+      doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      const numFactura = document.getElementById('facturaNumero').textContent;
+      doc.save(`factura_klohesv_${numFactura}.pdf`);
+      
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('Error al generar el PDF. Intenta de nuevo.');
+    } finally {
+      // Restaurar elementos no-print
+      noPrintElements.forEach(el => el.style.display = '');
     }
-    
-    // Encabezado
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(document.querySelector('.ticket-logo').textContent, centro, y, { align: 'center' });
-    y += 7;
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.querySelectorAll('.ticket-info')[0].textContent, centro, y, { align: 'center' });
-    y += 4;
-    doc.text(document.querySelectorAll('.ticket-info')[1].textContent, centro, y, { align: 'center' });
-    y += 4;
-    doc.text(document.querySelectorAll('.ticket-info')[2].textContent, centro, y, { align: 'center' });
-    y += 6;
-    lineaPunteada(y);
-    y += 5;
-    
-    // Datos de factura
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('FACTURA N:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('facturaNumero').textContent, margen + 25, y);
-    y += 5;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('SERIE:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('facturaSerie').textContent, margen + 25, y);
-    y += 5;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('FECHA:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('facturaFecha').textContent, margen + 25, y);
-    y += 6;
-    lineaPunteada(y);
-    y += 5;
-    
-    // Emisor
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('EMISOR', margen, y);
-    y += 4;
-    doc.setFontSize(9);
-    doc.text('Nombre:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('emisorNombre').textContent.substring(0, 20), margen + 22, y);
-    y += 5;
-    doc.setFont('helvetica', 'bold');
-    doc.text('NIT:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('emisorNit').textContent, margen + 22, y);
-    y += 6;
-    lineaPunteada(y);
-    y += 5;
-    
-    // Receptor
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('RECEPTOR', margen, y);
-    y += 4;
-    doc.setFontSize(9);
-    doc.text('Nombre:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    const receptorNom = document.getElementById('receptorNombre').textContent;
-    doc.text(receptorNom.substring(0, 20), margen + 22, y);
-    y += 5;
-    doc.setFont('helvetica', 'bold');
-    doc.text('NIT:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('receptorNit').textContent, margen + 22, y);
-    y += 6;
-    lineaPunteada(y);
-    y += 5;
-    
-    // Tabla de productos
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Prod.', margen, y);
-    doc.text('Cant', 36, y, { align: 'center' });
-    doc.text('P.U.', 46, y);
-    doc.text('Desc', 56, y);
-    doc.text('Total', 76, y, { align: 'right' });
-    y += 3;
-    lineaPunteada(y);
-    y += 4;
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    
-    document.querySelectorAll('#ticketProductos tr').forEach(tr => {
-      const celdas = tr.querySelectorAll('td');
-      if (celdas.length >= 5) {
-        const nombre = celdas[0].textContent.substring(0, 12);
-        const cantidad = celdas[1].textContent;
-        const precio = celdas[2].textContent;
-        const descuento = celdas[3].textContent;
-        const total = celdas[4].textContent;
-        
-        doc.text(nombre, margen, y);
-        doc.text(cantidad, 36, y, { align: 'center' });
-        doc.text(precio, 46, y);
-        doc.text(descuento > 0 ? desc + '%' : '0', 58, y);
-        doc.text(total, 76, y, { align: 'right' });
-        y += 5;
-      }
-    });
-    
-    y += 1;
-    lineaPunteada(y);
-    y += 5;
-    
-    // Totales
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Subtotal:', 35, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('subtotal').textContent, 76, y, { align: 'right' });
-    y += 5;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text(`IVA (${config.tasaIva}%):`, 35, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('iva').textContent, 76, y, { align: 'right' });
-    y += 5;
-    
-    const descGlobal = document.getElementById('descuentoGlobal').textContent;
-    if (descGlobal !== '$0.00') {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Descuento:', 35, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(descGlobal, 76, y, { align: 'right' });
-      y += 5;
-    }
-    
-    const anticipo = document.getElementById('anticipo').textContent;
-    if (anticipo !== '$0.00') {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Anticipo:', 35, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(anticipo, 76, y, { align: 'right' });
-      y += 5;
-    }
-    
-    y += 2;
-    lineaPunteada(y);
-    y += 5;
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', 35, y);
-    doc.text(document.getElementById('totalPagar').textContent, 76, y, { align: 'right' });
-    y += 8;
-    
-    lineaPunteada(y);
-    y += 6;
-    
-    // Footer
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Gracias por su compra!', centro, y, { align: 'center' });
-    y += 5;
-    
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    const msg = 'Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.';
-    const lineas = doc.splitTextToSize(msg, 70);
-    lineas.forEach(l => {
-      doc.text(l, centro, y, { align: 'center' });
-      y += 3;
-    });
-    
-    const numFactura = document.getElementById('facturaNumero').textContent;
-    doc.save(`factura_klohesv_${numFactura}.pdf`);
   }
 
   // ========== EVENT LISTENERS ==========

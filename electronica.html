@@ -4,12 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>FACTURA ELECTRÓNICA – KLOHESV</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css "/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     :root {
       --bg: #fafafa;
@@ -134,6 +134,7 @@
       gap: 4px;
       transition: right 0.3s ease;
       z-index: 999;
+      overflow-y: auto;
     }
 
     #sideMenu.show { right: 0; }
@@ -1196,7 +1197,6 @@
     }
   </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -1225,6 +1225,7 @@
 </header>
 
 <nav id="sideMenu">
+  <a href="menu.html"><i class="fa fa-home"></i> Menú</a>
   <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
   <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
   <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
@@ -1744,7 +1745,6 @@
           updateFullscreenButton();
         }).catch(err => {
           console.log('Error al activar pantalla completa:', err);
-          // Mostrar mensaje al usuario si es necesario
           mostrarNotificacion('Toca el botón nuevamente para activar pantalla completa', 'warning');
         });
       }
@@ -1962,6 +1962,14 @@
     setTimeout(() => div.remove(), 4000);
   }
 
+  // ========== GENERAR ID CONSISTENTE ==========
+  function generarIdProducto(item) {
+    // Generar un ID consistente basado en propiedades del producto
+    return item.idVenta || item.id || item.code || item.barcode || item.codigo || 
+           (item.name ? 'prod_' + item.name.replace(/\s+/g, '_').toLowerCase().substring(0, 20) : null) ||
+           'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
   // ========== RENDERIZAR PRODUCTOS DISPONIBLES ==========
   function renderizarProductos() {
     const container = document.getElementById('productsList');
@@ -1996,14 +2004,23 @@
     productosMostrar.forEach((item, index) => {
       const div = document.createElement('div');
       div.className = 'product-item';
-      div.dataset.index = index;
       
-      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + index + '_' + Date.now();
+      // Generar ID consistente
+      const id = generarIdProducto(item);
       div.dataset.id = id;
       
+      // Verificar si está seleccionado o ya está en la factura
       const isSelected = productosSeleccionados.some(p => p.id === id);
+      const isInFactura = productosFactura.some(p => p.id === id);
+      
       if (isSelected) {
         div.classList.add('selected');
+      }
+      
+      // Si ya está en factura, deshabilitar visualmente
+      if (isInFactura) {
+        div.style.opacity = '0.5';
+        div.style.pointerEvents = 'none';
       }
       
       const nombre = item.name || item.nombre || 'Producto sin nombre';
@@ -2030,14 +2047,14 @@
       });
       
       div.innerHTML = `
-        <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''}>
+        <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} ${isInFactura ? 'disabled' : ''}>
         ${tieneImagenValida ? 
           `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
           `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
           `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
         }
         <div class="product-info">
-          <div class="product-name">${escapeHTML(nombre)}</div>
+          <div class="product-name">${escapeHTML(nombre)} ${isInFactura ? '<span style="color: var(--success); font-size: 0.7rem;">(En factura)</span>' : ''}</div>
           <div class="product-barcode">${escapeHTML(barcode.toString())}</div>
           <div class="product-meta">Cant: ${cantidad} | ${fecha}</div>
         </div>
@@ -2047,11 +2064,14 @@
         </div>
       `;
       
-      div.addEventListener('click', function(e) {
-        const checkbox = div.querySelector('.product-checkbox');
-        checkbox.checked = !checkbox.checked;
-        toggleSeleccion(id);
-      });
+      if (!isInFactura) {
+        div.addEventListener('click', function(e) {
+          if (e.target.classList.contains('product-checkbox')) return;
+          const checkbox = div.querySelector('.product-checkbox');
+          checkbox.checked = !checkbox.checked;
+          toggleSeleccion(id);
+        });
+      }
       
       container.appendChild(div);
     });
@@ -2061,12 +2081,16 @@
 
   // ========== TOGGLE SELECCIÓN ==========
   function toggleSeleccion(id) {
+    // Buscar el producto en productosFiltrados usando el mismo método de ID
     const item = productosFiltrados.find(p => {
-      const pid = p.idVenta || p.id || p.code || p.barcode || p.codigo;
+      const pid = generarIdProducto(p);
       return pid === id;
     });
     
-    if (!item) return;
+    if (!item) {
+      console.error('No se encontró el producto con ID:', id);
+      return;
+    }
     
     const index = productosSeleccionados.findIndex(p => p.id === id);
     
@@ -2128,19 +2152,31 @@
 
   // ========== ACTUALIZAR A FACTURA ==========
   function actualizarAFactura() {
+    console.log('Actualizando factura...');
+    console.log('Productos seleccionados:', productosSeleccionados);
+    
     if (productosSeleccionados.length === 0) {
       mostrarNotificacion('No hay productos seleccionados', 'warning');
       return;
     }
     
+    let agregados = 0;
+    
     productosSeleccionados.forEach(producto => {
-      if (!productosFactura.some(p => p.id === producto.id)) {
+      // Verificar si ya existe en la factura
+      const existe = productosFactura.some(p => p.id === producto.id);
+      if (!existe) {
         productosFactura.push({ ...producto });
+        agregados++;
       }
     });
     
+    console.log('Productos en factura después de actualizar:', productosFactura);
+    
+    // Limpiar seleccionados
     productosSeleccionados = [];
     
+    // Actualizar UI
     renderizarProductos();
     actualizarVistaSeleccionados();
     renderizarProductosEnFactura();
@@ -2149,12 +2185,18 @@
     
     document.getElementById('tabCountFactura').textContent = productosFactura.length;
     
-    mostrarNotificacion(`${productosFactura.length} producto(s) agregado(s) a la factura`, 'success');
+    if (agregados > 0) {
+      mostrarNotificacion(`${agregados} producto(s) agregado(s) a la factura`, 'success');
+    } else {
+      mostrarNotificacion('Los productos seleccionados ya están en la factura', 'info');
+    }
     
+    // Cambiar a la pestaña de factura
     document.querySelectorAll('.products-section .tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.products-section .tab')[1].classList.add('active');
     document.getElementById('tab-factura').classList.add('active');
+    
     renderizarProductosEnFactura();
   }
 
@@ -2162,6 +2204,8 @@
   function renderizarProductosEnFactura() {
     const container = document.getElementById('facturaProductsList');
     document.getElementById('tabCountFactura').textContent = productosFactura.length;
+    
+    console.log('Renderizando productos en factura:', productosFactura.length);
     
     if (productosFactura.length === 0) {
       container.innerHTML = `
@@ -2179,6 +2223,7 @@
     productosFactura.forEach((item, index) => {
       const div = document.createElement('div');
       div.className = 'product-item selected';
+      div.style.cursor = 'default';
       
       let imagen = item.image || item.imagen || item.img || '';
       const tieneImagenValida = imagen && (
@@ -2188,21 +2233,20 @@
         imagen.startsWith('blob:')
       );
       
-      // Crear el botón de eliminar con addEventListener (más confiable que onclick inline)
+      // Botón eliminar
       const btnEliminar = document.createElement('button');
       btnEliminar.className = 'modal-close';
-      btnEliminar.style.cssText = 'position:static; flex-shrink:0;';
+      btnEliminar.style.cssText = 'position:static; flex-shrink:0; width:28px; height:28px;';
       btnEliminar.innerHTML = '<i class="fa-solid fa-times"></i>';
       btnEliminar.title = 'Eliminar producto';
-      btnEliminar.addEventListener('click', function(e) {
+      btnEliminar.onclick = function(e) {
         e.stopPropagation();
-        e.preventDefault();
         eliminarProductoFactura(item.id);
-      });
+      };
       
       div.appendChild(btnEliminar);
       
-      // Agregar imagen
+      // Imagen
       if (tieneImagenValida) {
         const img = document.createElement('img');
         img.src = imagen;
@@ -2210,10 +2254,6 @@
         img.alt = item.name;
         img.onerror = function() {
           this.style.display = 'none';
-          const placeholder = document.createElement('div');
-          placeholder.className = 'product-image-placeholder';
-          placeholder.innerHTML = '<i class="fa-solid fa-box"></i>';
-          div.insertBefore(placeholder, this.nextSibling);
         };
         div.appendChild(img);
       } else {
@@ -2223,20 +2263,20 @@
         div.appendChild(placeholder);
       }
       
-      // Info del producto
+      // Info
       const infoDiv = document.createElement('div');
       infoDiv.className = 'product-info';
       infoDiv.innerHTML = `
         <div class="product-name">${escapeHTML(item.name)}</div>
         <div class="product-barcode">${escapeHTML(item.barcode || 'N/A')}</div>
-        <div class="product-meta">Cant: ${item.quantity} | $${item.price.toFixed(2)} c/u</div>
+        <div class="product-meta">Cant: ${item.quantity} | $${Number(item.price).toFixed(2)} c/u</div>
       `;
       div.appendChild(infoDiv);
       
       // Precio
       const priceDiv = document.createElement('div');
       priceDiv.className = 'product-price';
-      priceDiv.textContent = '$' + item.total.toFixed(2);
+      priceDiv.textContent = '$' + Number(item.total).toFixed(2);
       div.appendChild(priceDiv);
       
       container.appendChild(div);
@@ -2244,11 +2284,13 @@
   }
 
   function eliminarProductoFactura(id) {
+    console.log('Eliminando producto de factura:', id);
     productosFactura = productosFactura.filter(p => p.id !== id);
     renderizarProductosEnFactura();
     actualizarResumen();
     actualizarCalculos();
     document.getElementById('tabCountFactura').textContent = productosFactura.length;
+    renderizarProductos(); // Actualizar para quitar el "En factura"
   }
 
   function filtrarProductos() {
@@ -2257,9 +2299,16 @@
 
   // ========== SELECCIONAR TODOS ==========
   function seleccionarTodos() {
+    let seleccionadosNuevos = 0;
+    
     productosFiltrados.forEach(item => {
-      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + Date.now();
-      if (!productosSeleccionados.some(p => p.id === id) && !productosFactura.some(p => p.id === id)) {
+      const id = generarIdProducto(item);
+      
+      // No agregar si ya está seleccionado o ya está en la factura
+      const yaSeleccionado = productosSeleccionados.some(p => p.id === id);
+      const yaEnFactura = productosFactura.some(p => p.id === id);
+      
+      if (!yaSeleccionado && !yaEnFactura) {
         const cantidad = Number(item.quantity || item.cantidad || 1);
         const precio = Number(item.price || item.precio || item.total || 0);
         const descuento = Number(item.discount || item.descuento || 0);
@@ -2277,10 +2326,18 @@
           image: item.image || item.imagen || item.img || '',
           isManual: false
         });
+        seleccionadosNuevos++;
       }
     });
+    
     renderizarProductos();
     actualizarVistaSeleccionados();
+    
+    if (seleccionadosNuevos > 0) {
+      mostrarNotificacion(`${seleccionadosNuevos} producto(s) seleccionado(s)`, 'success');
+    } else {
+      mostrarNotificacion('Todos los productos ya están seleccionados o en la factura', 'info');
+    }
   }
 
   function deseleccionarTodos() {
@@ -2290,9 +2347,9 @@
   }
 
   function actualizarResumen() {
-    const totalProductos = productosFactura.reduce((sum, p) => sum + p.quantity, 0);
-    const subtotal = productosFactura.reduce((sum, p) => sum + (p.quantity * p.price), 0);
-    const total = productosFactura.reduce((sum, p) => sum + p.total, 0);
+    const totalProductos = productosFactura.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+    const subtotal = productosFactura.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.price) || 0)), 0);
+    const total = productosFactura.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
     
     document.getElementById('resumenProductos').textContent = totalProductos;
     document.getElementById('resumenSubtotal').textContent = '$' + subtotal.toFixed(2);
@@ -2364,7 +2421,7 @@
   }
 
   function actualizarCalculos() {
-    const subtotalProductos = productosFactura.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+    const subtotalProductos = productosFactura.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.price) || 0)), 0);
     const descuentoGlobal = parseFloat(document.getElementById('fDescuentoGlobal').value) || 0;
     const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
     const sinIVA = document.getElementById('fSinIVA').checked;
@@ -2420,49 +2477,6 @@
       cambioInput.style.color = 'var(--danger)';
       mensajeDiv.textContent = '⚠ Faltan: $' + Math.abs(cambio).toFixed(2);
       mensajeDiv.style.cssText = 'margin-top: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; display: block; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);';
-    }
-    
-    // Actualizar vista previa del ticket con el cambio
-    actualizarVistaPreviaCambio(efectivoRecibido, cambio);
-  }
-
-  function actualizarVistaPreviaCambio(efectivo, cambio) {
-    // Buscar o crear el elemento de cambio en el ticket
-    let cambioRow = document.getElementById('ticketCambioRow');
-    let efectivoRow = document.getElementById('ticketEfectivoRow');
-    
-    if (!efectivoRow && efectivo > 0) {
-      // Crear fila de efectivo recibido
-      const desglose = document.querySelector('.factura-desglose');
-      efectivoRow = document.createElement('div');
-      efectivoRow.id = 'ticketEfectivoRow';
-      efectivoRow.className = 'factura-desglose-row';
-      efectivoRow.innerHTML = `
-        <span class="factura-desglose-label">Efectivo:</span>
-        <span class="factura-desglose-value" id="ticketEfectivo">$${efectivo.toFixed(2)}</span>
-      `;
-      desglose.appendChild(efectivoRow);
-      
-      // Crear fila de cambio
-      cambioRow = document.createElement('div');
-      cambioRow.id = 'ticketCambioRow';
-      cambioRow.className = 'factura-desglose-row';
-      cambioRow.innerHTML = `
-        <span class="factura-desglose-label">Cambio:</span>
-        <span class="factura-desglose-value" id="ticketCambio">$${Math.max(0, cambio).toFixed(2)}</span>
-      `;
-      desglose.appendChild(cambioRow);
-    } else if (efectivoRow) {
-      // Actualizar valores existentes
-      if (efectivo > 0) {
-        document.getElementById('ticketEfectivo').textContent = '$' + efectivo.toFixed(2);
-        document.getElementById('ticketCambio').textContent = '$' + Math.max(0, cambio).toFixed(2);
-        efectivoRow.style.display = 'flex';
-        cambioRow.style.display = 'flex';
-      } else {
-        efectivoRow.style.display = 'none';
-        cambioRow.style.display = 'none';
-      }
     }
   }
 
@@ -2527,8 +2541,8 @@
         tr.innerHTML = `
           <td>${escapeHTML(nombreCorto)}</td>
           <td>${p.quantity}</td>
-          <td>$${p.price.toFixed(2)}</td>
-          <td>$${p.total.toFixed(2)}</td>
+          <td>$${Number(p.price).toFixed(2)}</td>
+          <td>$${Number(p.total).toFixed(2)}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -2851,7 +2865,7 @@
     ventana.document.close();
   }
 
-  // ========== DESCARGAR PDF - CORREGIDO ==========
+  // ========== DESCARGAR PDF ==========
   function descargarPDF() {
     actualizarVistaPrevia();
     
@@ -2998,8 +3012,8 @@
         const nombre = p.name.length > 16 ? p.name.substring(0, 15) + '.' : p.name;
         doc.text(nombre, margen, y);
         doc.text(String(p.quantity), 36, y, { align: 'center' });
-        doc.text(p.price.toFixed(2), 52, y);
-        doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
+        doc.text(Number(p.price).toFixed(2), 52, y);
+        doc.text(Number(p.total).toFixed(2), 76, y, { align: 'right' });
         y += 4;
       });
     }
@@ -3119,22 +3133,19 @@
     y += 2.5;
     doc.text('KLOHESV - Facturación POS v1.0', centro, y, { align: 'center' });
 
-    // Guardar el PDF - usar output en lugar de save para mejor control
+    // Guardar el PDF
     const pdfOutput = doc.output('blob');
     const url = URL.createObjectURL(pdfOutput);
     const link = document.createElement('a');
     link.href = url;
     link.download = `factura_${document.getElementById('fSerie').value}_${document.getElementById('fNum').value}.pdf`;
     
-    // Usar click programático en lugar de save directo
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    // Limpiar el objeto URL después de un tiempo
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     
-    // Intentar restaurar pantalla completa después de la descarga
     requestFullscreenWithDelay(500);
   }
 

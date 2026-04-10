@@ -573,6 +573,7 @@
     <a class="nav-link" href="traslados.html" data-page="traslados"><span class="material-icons">local_shipping</span><span>Cotización</span></a>
     <a class="nav-link" href="venta.html" data-page="venta"><span class="material-icons">point_of_sale</span><span>Venta</span></a>
     <a class="nav-link" href="Verificasion.html" data-page="Verificasion"><span class="material-icons">event_available</span><span>Reservas</span></a>
+    <a class="nav-link" href="electronica.html" data-page="electronica"><span class="material-icons">memory</span><span>Electrónica</span></a>
   </nav>
 
   <div class="system-actions">
@@ -766,40 +767,65 @@
   }
 
   // ============================================
-  // AUTH MANAGER - CORREGIDO PARA 10 HORAS
+  // AUTH MANAGER - CORREGIDO CON COMPATIBILIDAD
   // ============================================
   const AuthManager = {
-    // Verificar sesión activa
+    // Verificar sesión activa (ahora con compatibilidad hacia atrás)
     check: () => {
+      // 1. Primero verificar localStorage (nuevo sistema de 10 horas)
       const sessionData = localStorage.getItem('sessionData');
       
-      if (!sessionData) {
-        location.replace(CONFIG.REDIRECT_PAGE);
-        return false;
-      }
+      if (sessionData) {
+        try {
+          const session = JSON.parse(sessionData);
+          const now = new Date().getTime();
+          
+          // Verificar si expiró (10 horas)
+          if (now > session.expiresAt) {
+            Logger.log('Sesión expirada (10 horas)');
+            localStorage.removeItem('sessionData');
+            sessionStorage.clear();
+            location.replace(CONFIG.REDIRECT_PAGE);
+            return false;
+          }
 
-      try {
-        const session = JSON.parse(sessionData);
-        const now = new Date().getTime();
-        
-        // Verificar si expiró (10 horas)
-        if (now > session.expiresAt) {
+          // Sesión válida - renovar tiempo
+          session.expiresAt = now + CONFIG.SESSION_DURATION;
+          localStorage.setItem('sessionData', JSON.stringify(session));
+          Logger.log('Sesión válida renovada por 10 horas');
+          return true;
+        } catch (e) {
+          Logger.error('Error en sesión:', e);
           localStorage.removeItem('sessionData');
           location.replace(CONFIG.REDIRECT_PAGE);
           return false;
         }
-
-        // Renovar tiempo si está vigente (opcional - reinicia las 10 horas)
-        // Si no quieres que se renueve automáticamente, comenta estas 2 líneas:
-        session.expiresAt = now + CONFIG.SESSION_DURATION;
-        localStorage.setItem('sessionData', JSON.stringify(session));
-
-        return true;
-      } catch (e) {
-        localStorage.removeItem('sessionData');
-        location.replace(CONFIG.REDIRECT_PAGE);
-        return false;
       }
+      
+      // 2. COMPATIBILIDAD: Si no hay en localStorage, verificar sessionStorage (código antiguo)
+      if (sessionStorage.getItem('loggedIn') === 'true') {
+        Logger.log('Migrando sesión antigua a nuevo sistema...');
+        const nombre = sessionStorage.getItem('nombre') || CONFIG.DEFAULT_USER;
+        const foto = sessionStorage.getItem('foto') || CONFIG.DEFAULT_AVATAR;
+        
+        // Migrar a nuevo sistema con 10 horas
+        const session = {
+          loggedIn: true,
+          nombre: nombre,
+          foto: foto,
+          startedAt: new Date().getTime(),
+          expiresAt: new Date().getTime() + CONFIG.SESSION_DURATION
+        };
+        
+        localStorage.setItem('sessionData', JSON.stringify(session));
+        Logger.log('Sesión migrada exitosamente');
+        return true;
+      }
+      
+      // 3. No hay sesión en ningún lado
+      Logger.warn('No se encontró sesión activa');
+      location.replace(CONFIG.REDIRECT_PAGE);
+      return false;
     },
 
     // Iniciar sesión (guardar datos) - USAR ESTO EN INDEX.HTML AL LOGUEAR
@@ -813,18 +839,21 @@
       };
       
       localStorage.setItem('sessionData', JSON.stringify(session));
-      // Mantener compatibilidad con sessionStorage si lo usas en otras partes
+      // Mantener compatibilidad con sessionStorage para otras páginas
       sessionStorage.setItem('loggedIn', 'true');
       sessionStorage.setItem('nombre', session.nombre);
       sessionStorage.setItem('foto', session.foto);
+      
+      Logger.log('Sesión iniciada por 10 horas');
     },
 
     // Cerrar sesión - SOLO ESTO DEBE CERRAR LA SESIÓN
     logout: async () => {
       await StorageManager.getInstance().clear();
-      // Limpiar TODO el localStorage relacionado con sesión
       localStorage.removeItem('sessionData');
+      localStorage.removeItem('kioskActivo'); // También limpiar modo kiosko
       sessionStorage.clear();
+      Logger.log('Sesión cerrada');
       location.replace(CONFIG.REDIRECT_PAGE);
     }
   };
@@ -834,7 +863,7 @@
   // ============================================
   const UIManager = {
     async init() {
-      // Primero intentar obtener de localStorage (persistente 10 horas)
+      // Intentar obtener de localStorage primero
       const sessionData = localStorage.getItem('sessionData');
       
       if (sessionData) {
@@ -851,7 +880,7 @@
         }
       }
 
-      // Fallback a sessionStorage si existe
+      // Fallback a sessionStorage si existe (código antiguo)
       const foto = sessionStorage.getItem('foto');
       const nombre = sessionStorage.getItem('nombre');
 
@@ -1709,7 +1738,7 @@
     'use strict';
 
     async function init() {
-      // Verificar sesión de 10 horas
+      // Verificar sesión de 10 horas (ahora con compatibilidad)
       if (!AuthManager.check()) return;
 
       try {

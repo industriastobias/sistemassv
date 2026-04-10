@@ -1062,7 +1062,7 @@
           <hr class="ticket-divider">
 
           <!-- RECEPTOR -->
-          <div class="ticket-section">
+          <div class="ticket-section" id="receptorSection">
             <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">RECEPTOR</div>
             <div class="ticket-line">
               <span class="ticket-label">Nombre:</span>
@@ -1082,7 +1082,7 @@
             </div>
           </div>
 
-          <hr class="ticket-divider">
+          <hr class="ticket-divider" id="receptorDivider">
 
           <!-- PRODUCTOS -->
           <div class="ticket-section">
@@ -1291,6 +1291,12 @@
     establecerFechaActual();
     generarQR();
     calcularTotales();
+    actualizarVisibilidadReceptor();
+    
+    // Escuchar cambios en los campos del receptor para actualizar visibilidad
+    ['receptorNombre', 'receptorRazon', 'receptorNit', 'receptorDireccion'].forEach(id => {
+      document.getElementById(id).addEventListener('blur', actualizarVisibilidadReceptor);
+    });
   });
 
   // ========== MENÚ ==========
@@ -1735,6 +1741,7 @@
       establecerFechaActual();
       calcularTotales();
       generarQR();
+      actualizarVisibilidadReceptor();
       
       // Desmarcar ventas
       document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = false);
@@ -1766,18 +1773,72 @@
     });
   }
 
+  // ========== VERIFICAR DATOS DEL RECEPTOR ==========
+  function tieneDatosReceptor() {
+    const nombre = document.getElementById('receptorNombre').textContent.trim();
+    const razon = document.getElementById('receptorRazon').textContent.trim();
+    const nit = document.getElementById('receptorNit').textContent.trim();
+    const direccion = document.getElementById('receptorDireccion').textContent.trim();
+    
+    // Si es "Consumidor Final" y los demás campos están vacíos o con guión, no hay datos
+    const esConsumidorFinal = nombre === 'Consumidor Final' || nombre === '';
+    const razonVacia = razon === '' || razon === '-';
+    const nitVacio = nit === '' || nit === '-';
+    const direccionVacia = direccion === '' || direccion === '-';
+    
+    return !(esConsumidorFinal && razonVacia && nitVacio && direccionVacia);
+  }
+
+  function actualizarVisibilidadReceptor() {
+    const receptorSection = document.getElementById('receptorSection');
+    const receptorDivider = document.getElementById('receptorDivider');
+    
+    if (tieneDatosReceptor()) {
+      receptorSection.style.display = 'block';
+      receptorDivider.style.display = 'block';
+    } else {
+      receptorSection.style.display = 'none';
+      receptorDivider.style.display = 'none';
+    }
+  }
+
   // ========== IMPRESIÓN ==========
   function imprimirTicket() {
+    // Verificar si hay datos del receptor y ocultar si es necesario
+    const receptorSection = document.getElementById('receptorSection');
+    const receptorDivider = document.getElementById('receptorDivider');
+    const tieneDatos = tieneDatosReceptor();
+    
+    if (!tieneDatos) {
+      receptorSection.style.display = 'none';
+      receptorDivider.style.display = 'none';
+    }
+    
     window.print();
+    
+    // Restaurar visibilidad después de imprimir
+    setTimeout(() => {
+      receptorSection.style.display = 'block';
+      receptorDivider.style.display = 'block';
+    }, 100);
   }
 
   // ========== PDF CON HTML2CANVAS ==========
   async function descargarPDF() {
     const ticket = document.getElementById('ticket');
+    const receptorSection = document.getElementById('receptorSection');
+    const receptorDivider = document.getElementById('receptorDivider');
     
     // Ocultar elementos no-print temporalmente
     const noPrintElements = ticket.querySelectorAll('.no-print');
     noPrintElements.forEach(el => el.style.display = 'none');
+    
+    // Ocultar sección del receptor si no hay datos
+    const tieneDatos = tieneDatosReceptor();
+    if (!tieneDatos) {
+      receptorSection.style.display = 'none';
+      receptorDivider.style.display = 'none';
+    }
     
     try {
       const canvas = await html2canvas(ticket, {
@@ -1813,6 +1874,9 @@
     } finally {
       // Restaurar elementos no-print
       noPrintElements.forEach(el => el.style.display = '');
+      // Restaurar sección del receptor
+      receptorSection.style.display = 'block';
+      receptorDivider.style.display = 'block';
     }
   }
 

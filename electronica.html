@@ -1471,6 +1471,24 @@
           <label for="fIncluirQR">Incluir código QR</label>
         </div>
       </div>
+
+      <!-- CÁLCULO DE CAMBIO -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-money-bill-wave"></i> Pago en Efectivo
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Efectivo Recibido ($)</label>
+            <input type="number" id="fEfectivoRecibido" value="0" min="0" step="0.01" onchange="calcularCambio()" oninput="calcularCambio()">
+          </div>
+          <div class="form-group">
+            <label>Cambio a Devolver ($)</label>
+            <input type="text" id="fCambio" value="$0.00" readonly style="background: var(--success-soft); color: var(--success); font-weight: 600;">
+          </div>
+        </div>
+        <div id="cambioMensaje" style="margin-top: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; display: none;"></div>
+      </div>
     </div>
 
     <!-- TAB VISTA PREVIA -->
@@ -2360,6 +2378,9 @@
     document.getElementById('resumenSubtotal').textContent = '$' + subtotalProductos.toFixed(2);
     document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
     
+    // Actualizar cambio si hay efectivo recibido
+    calcularCambio();
+    
     return {
       subtotal: subtotalProductos,
       descuento: descuentoMonto,
@@ -2369,6 +2390,80 @@
       total: total,
       ivaPorcentaje: ivaPorcentaje
     };
+  }
+
+  // ========== CÁLCULO DE CAMBIO ==========
+  function calcularCambio() {
+    const calculos = actualizarCalculos();
+    const efectivoRecibido = parseFloat(document.getElementById('fEfectivoRecibido').value) || 0;
+    const cambio = efectivoRecibido - calculos.total;
+    const cambioInput = document.getElementById('fCambio');
+    const mensajeDiv = document.getElementById('cambioMensaje');
+    
+    if (efectivoRecibido <= 0) {
+      cambioInput.value = '$0.00';
+      cambioInput.style.background = 'var(--success-soft)';
+      cambioInput.style.color = 'var(--success)';
+      mensajeDiv.style.display = 'none';
+      return;
+    }
+    
+    if (cambio >= 0) {
+      cambioInput.value = '$' + cambio.toFixed(2);
+      cambioInput.style.background = '#d1fae5';
+      cambioInput.style.color = '#059669';
+      mensajeDiv.textContent = '✓ Cambio correcto: $' + cambio.toFixed(2);
+      mensajeDiv.style.cssText = 'margin-top: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; display: block; background: #d1fae5; color: #059669; border: 1px solid #10b981;';
+    } else {
+      cambioInput.value = '-$' + Math.abs(cambio).toFixed(2);
+      cambioInput.style.background = 'var(--danger-soft)';
+      cambioInput.style.color = 'var(--danger)';
+      mensajeDiv.textContent = '⚠ Faltan: $' + Math.abs(cambio).toFixed(2);
+      mensajeDiv.style.cssText = 'margin-top: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; display: block; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);';
+    }
+    
+    // Actualizar vista previa del ticket con el cambio
+    actualizarVistaPreviaCambio(efectivoRecibido, cambio);
+  }
+
+  function actualizarVistaPreviaCambio(efectivo, cambio) {
+    // Buscar o crear el elemento de cambio en el ticket
+    let cambioRow = document.getElementById('ticketCambioRow');
+    let efectivoRow = document.getElementById('ticketEfectivoRow');
+    
+    if (!efectivoRow && efectivo > 0) {
+      // Crear fila de efectivo recibido
+      const desglose = document.querySelector('.factura-desglose');
+      efectivoRow = document.createElement('div');
+      efectivoRow.id = 'ticketEfectivoRow';
+      efectivoRow.className = 'factura-desglose-row';
+      efectivoRow.innerHTML = `
+        <span class="factura-desglose-label">Efectivo:</span>
+        <span class="factura-desglose-value" id="ticketEfectivo">$${efectivo.toFixed(2)}</span>
+      `;
+      desglose.appendChild(efectivoRow);
+      
+      // Crear fila de cambio
+      cambioRow = document.createElement('div');
+      cambioRow.id = 'ticketCambioRow';
+      cambioRow.className = 'factura-desglose-row';
+      cambioRow.innerHTML = `
+        <span class="factura-desglose-label">Cambio:</span>
+        <span class="factura-desglose-value" id="ticketCambio">$${Math.max(0, cambio).toFixed(2)}</span>
+      `;
+      desglose.appendChild(cambioRow);
+    } else if (efectivoRow) {
+      // Actualizar valores existentes
+      if (efectivo > 0) {
+        document.getElementById('ticketEfectivo').textContent = '$' + efectivo.toFixed(2);
+        document.getElementById('ticketCambio').textContent = '$' + Math.max(0, cambio).toFixed(2);
+        efectivoRow.style.display = 'flex';
+        cambioRow.style.display = 'flex';
+      } else {
+        efectivoRow.style.display = 'none';
+        cambioRow.style.display = 'none';
+      }
+    }
   }
 
   // ========== GENERAR CÓDIGO DE VALIDACIÓN ==========
@@ -2469,6 +2564,45 @@
     
     document.getElementById('ticketTotal').textContent = '$' + calculos.total.toFixed(2);
     
+    // Mostrar efectivo y cambio en el ticket
+    const efectivoRecibido = parseFloat(document.getElementById('fEfectivoRecibido').value) || 0;
+    const cambio = efectivoRecibido - calculos.total;
+    
+    // Buscar o crear filas de efectivo y cambio
+    let ticketEfectivoRow = document.getElementById('ticketEfectivoRow');
+    let ticketCambioRow = document.getElementById('ticketCambioRow');
+    const desglose = document.querySelector('.factura-desglose');
+    
+    if (efectivoRecibido > 0) {
+      if (!ticketEfectivoRow) {
+        ticketEfectivoRow = document.createElement('div');
+        ticketEfectivoRow.id = 'ticketEfectivoRow';
+        ticketEfectivoRow.className = 'factura-desglose-row';
+        ticketEfectivoRow.innerHTML = `
+          <span class="factura-desglose-label">Efectivo Recibido:</span>
+          <span class="factura-desglose-value" id="ticketEfectivo"></span>
+        `;
+        desglose.appendChild(ticketEfectivoRow);
+        
+        ticketCambioRow = document.createElement('div');
+        ticketCambioRow.id = 'ticketCambioRow';
+        ticketCambioRow.className = 'factura-desglose-row';
+        ticketCambioRow.style.fontWeight = 'bold';
+        ticketCambioRow.innerHTML = `
+          <span class="factura-desglose-label">CAMBIO:</span>
+          <span class="factura-desglose-value" id="ticketCambio"></span>
+        `;
+        desglose.appendChild(ticketCambioRow);
+      }
+      document.getElementById('ticketEfectivo').textContent = '$' + efectivoRecibido.toFixed(2);
+      document.getElementById('ticketCambio').textContent = '$' + Math.max(0, cambio).toFixed(2);
+      ticketEfectivoRow.style.display = 'flex';
+      ticketCambioRow.style.display = 'flex';
+    } else {
+      if (ticketEfectivoRow) ticketEfectivoRow.style.display = 'none';
+      if (ticketCambioRow) ticketCambioRow.style.display = 'none';
+    }
+    
     generarQR(calculos.total, serie + '-' + num);
     
     const codigoValidacion = generarCodigoValidacion(serie, num, calculos.total, fecha);
@@ -2522,6 +2656,11 @@
     document.getElementById('fIVAPorcentaje').value = '13';
     document.getElementById('fSinIVA').checked = true;
     document.getElementById('fIVAPorcentaje').disabled = true;
+    document.getElementById('fEfectivoRecibido').value = '0';
+    document.getElementById('fCambio').value = '$0.00';
+    document.getElementById('fCambio').style.background = 'var(--success-soft)';
+    document.getElementById('fCambio').style.color = 'var(--success)';
+    document.getElementById('cambioMensaje').style.display = 'none';
     
     renderizarProductos();
     actualizarVistaSeleccionados();
@@ -2908,7 +3047,29 @@
     y += 6;
     
     dibujarLineaPunteada(y);
-    y += 8;
+    y += 5;
+    
+    // Efectivo y cambio
+    const efectivoRecibido = parseFloat(document.getElementById('fEfectivoRecibido').value) || 0;
+    if (efectivoRecibido > 0) {
+      const cambio = efectivoRecibido - calculos.total;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Efectivo Recibido:', margen, y);
+      doc.text('$' + efectivoRecibido.toFixed(2), 76, y, { align: 'right' });
+      y += 4;
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CAMBIO:', margen, y);
+      doc.text('$' + Math.max(0, cambio).toFixed(2), 76, y, { align: 'right' });
+      y += 5;
+      
+      dibujarLineaPunteada(y);
+      y += 5;
+    } else {
+      y += 3;
+    }
 
     if (document.getElementById('fIncluirQR').checked) {
       const qrCanvas = document.querySelector('#qrcode canvas');

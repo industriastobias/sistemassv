@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
 <head>
@@ -9,16 +8,16 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.googleapis.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' *.googleapis.com; font-src 'self' *.gstatic.com; img-src 'self' data: blob:;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="DENY">
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons" as="style" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com " crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com " crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/icon?family=Material+Icons " as="style" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap" as="style" crossorigin>
   <title>Dashboard – KLOHE JEWELRY</title>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons " rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js "></script>
 
   <style>
     :root {
@@ -638,7 +637,8 @@
     STORE_SESSION: 'userSession',
     DEFAULT_AVATAR: 'user2005.jpg',
     DEFAULT_USER: 'Usuario',
-    REDIRECT_PAGE: 'index.html'
+    REDIRECT_PAGE: 'index.html',
+    SESSION_DURATION: 10 * 60 * 60 * 1000 // 10 horas en milisegundos
   };
 
   const Logger = {
@@ -766,44 +766,111 @@
   }
 
   // ============================================
-  // AUTH MANAGER
+  // AUTH MANAGER - CORREGIDO PARA 10 HORAS
   // ============================================
   const AuthManager = {
+    // Verificar sesión activa
     check: () => {
-      if (sessionStorage.getItem('loggedIn') !== 'true') {
+      const sessionData = localStorage.getItem('sessionData');
+      
+      if (!sessionData) {
         location.replace(CONFIG.REDIRECT_PAGE);
         return false;
       }
-      return true;
+
+      try {
+        const session = JSON.parse(sessionData);
+        const now = new Date().getTime();
+        
+        // Verificar si expiró (10 horas)
+        if (now > session.expiresAt) {
+          localStorage.removeItem('sessionData');
+          location.replace(CONFIG.REDIRECT_PAGE);
+          return false;
+        }
+
+        // Renovar tiempo si está vigente (opcional - reinicia las 10 horas)
+        // Si no quieres que se renueve automáticamente, comenta estas 2 líneas:
+        session.expiresAt = now + CONFIG.SESSION_DURATION;
+        localStorage.setItem('sessionData', JSON.stringify(session));
+
+        return true;
+      } catch (e) {
+        localStorage.removeItem('sessionData');
+        location.replace(CONFIG.REDIRECT_PAGE);
+        return false;
+      }
     },
+
+    // Iniciar sesión (guardar datos) - USAR ESTO EN INDEX.HTML AL LOGUEAR
+    login: (userData) => {
+      const session = {
+        loggedIn: true,
+        nombre: userData.nombre || CONFIG.DEFAULT_USER,
+        foto: userData.foto || CONFIG.DEFAULT_AVATAR,
+        startedAt: new Date().getTime(),
+        expiresAt: new Date().getTime() + CONFIG.SESSION_DURATION
+      };
+      
+      localStorage.setItem('sessionData', JSON.stringify(session));
+      // Mantener compatibilidad con sessionStorage si lo usas en otras partes
+      sessionStorage.setItem('loggedIn', 'true');
+      sessionStorage.setItem('nombre', session.nombre);
+      sessionStorage.setItem('foto', session.foto);
+    },
+
+    // Cerrar sesión - SOLO ESTO DEBE CERRAR LA SESIÓN
     logout: async () => {
       await StorageManager.getInstance().clear();
+      // Limpiar TODO el localStorage relacionado con sesión
+      localStorage.removeItem('sessionData');
       sessionStorage.clear();
       location.replace(CONFIG.REDIRECT_PAGE);
     }
   };
 
   // ============================================
-  // UI MANAGER
+  // UI MANAGER - CORREGIDO
   // ============================================
   const UIManager = {
     async init() {
+      // Primero intentar obtener de localStorage (persistente 10 horas)
+      const sessionData = localStorage.getItem('sessionData');
+      
+      if (sessionData) {
+        try {
+          const session = JSON.parse(sessionData);
+          this.update(session.foto, session.nombre);
+          // Sincronizar con sessionStorage para otras páginas que lo usen
+          sessionStorage.setItem('foto', session.foto);
+          sessionStorage.setItem('nombre', session.nombre);
+          sessionStorage.setItem('loggedIn', 'true');
+          return;
+        } catch (e) {
+          Logger.error('Error parsing session:', e);
+        }
+      }
+
+      // Fallback a sessionStorage si existe
       const foto = sessionStorage.getItem('foto');
       const nombre = sessionStorage.getItem('nombre');
 
       if (foto && nombre) {
         this.update(foto, nombre);
+        // Restaurar en localStorage si falta
+        AuthManager.login({ nombre, foto });
       } else {
+        // Intentar recuperar de IndexedDB
         const session = await StorageManager.getInstance().getLastSession();
         if (session?.foto && session?.nombre) {
-          sessionStorage.setItem('foto', session.foto);
-          sessionStorage.setItem('nombre', session.nombre);
           this.update(session.foto, session.nombre);
+          AuthManager.login({ nombre: session.nombre, foto: session.foto });
         } else {
           this.update(CONFIG.DEFAULT_AVATAR, CONFIG.DEFAULT_USER);
         }
       }
     },
+    
     update(foto, nombre) {
       const imgEl = document.getElementById('userPhoto');
       const nameEl = document.getElementById('userName');
@@ -891,6 +958,8 @@
       Logger.log('1. Exportando localStorage...');
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
+        // NO exportar datos de sesión por seguridad
+        if (key === 'sessionData' || key === 'kioskActivo') continue;
         const value = localStorage.getItem(key);
         zip.file(`localStorage/${key}.txt`, value);
         stats.localStorage++;
@@ -1138,6 +1207,8 @@
 
       for (const path of lsFiles) {
         const key = path.replace('localStorage/', '').replace('.txt', '');
+        // No sobreescribir sesión actual por seguridad
+        if (key === 'sessionData') continue;
         const content = await zip.files[path].async('string');
         localStorage.setItem(key, content);
         stats.localStorage++;
@@ -1477,6 +1548,8 @@
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
+        // NO permitir borrar la sesión desde aquí por seguridad
+        if (key === 'sessionData') continue;
         opts.push({ type: 'ls', name: key, display: `💾 ${key}` });
       }
 
@@ -1636,6 +1709,7 @@
     'use strict';
 
     async function init() {
+      // Verificar sesión de 10 horas
       if (!AuthManager.check()) return;
 
       try {
@@ -1646,6 +1720,7 @@
 
       NavManager.init();
 
+      // CERRAR SESIÓN SOLO AL HACER CLICK EN EL AVATAR
       document.getElementById('logoutBtn').addEventListener('click', (e) => {
         e.preventDefault();
         AuthManager.logout();

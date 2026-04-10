@@ -267,6 +267,11 @@
       background: #fef3c7;
     }
 
+    .btn-lg {
+      padding: 14px 24px;
+      font-size: 1rem;
+    }
+
     /* ===== CONTENIDO PRINCIPAL ===== */
     .main-container {
       max-width: 1400px;
@@ -344,7 +349,7 @@
 
     /* ===== LISTA DE PRODUCTOS ===== */
     .products-list {
-      max-height: 600px;
+      max-height: 400px;
       overflow-y: auto;
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md);
@@ -382,7 +387,6 @@
       accent-color: var(--rose-text);
       cursor: pointer;
       flex-shrink: 0;
-      pointer-events: none;
     }
 
     .product-image {
@@ -452,6 +456,104 @@
     .product-date {
       font-size: 0.7rem;
       color: var(--text-muted);
+    }
+
+    /* ===== SECCIÓN SELECCIONADOS ===== */
+    .seleccionados-section {
+      background: linear-gradient(135deg, var(--rose-pale) 0%, var(--rose-soft) 100%);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-top: 16px;
+      border: 2px dashed var(--rose-medium);
+    }
+
+    .seleccionados-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .seleccionados-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--rose-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .seleccionados-count {
+      background: var(--rose-text);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .seleccionados-lista {
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    .seleccionado-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.85rem;
+    }
+
+    .seleccionado-item:last-child {
+      border-bottom: none;
+    }
+
+    .seleccionado-nombre {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .seleccionado-precio {
+      font-weight: 600;
+      color: var(--rose-text);
+    }
+
+    .btn-actualizar-factura {
+      width: 100%;
+      padding: 14px;
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: var(--transition);
+      touch-action: manipulation;
+    }
+
+    .btn-actualizar-factura:hover {
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-actualizar-factura:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+      transform: none;
     }
 
     /* ===== SECCIÓN DE FACTURA ===== */
@@ -1026,6 +1128,7 @@
       .factura-container { padding: 16px; max-width: 100%; }
       .product-item { padding: 10px 12px; }
       .product-image, .product-image-placeholder { width: 45px; height: 45px; }
+      .seleccionados-section { padding: 12px; }
     }
 
     @media (max-width: 480px) {
@@ -1158,7 +1261,7 @@
   <div class="products-section">
     <div class="tabs">
       <button class="tab active" onclick="cambiarTab('vendidos')">Productos Vendidos</button>
-      <button class="tab" onclick="cambiarTab('seleccionados')">Seleccionados (<span id="tabCount">0</span>)</button>
+      <button class="tab" onclick="cambiarTab('factura')">En Factura (<span id="tabCountFactura">0</span>)</button>
     </div>
     
     <div id="tab-vendidos" class="tab-content active">
@@ -1177,16 +1280,34 @@
       <div class="products-list" id="productsList">
         <!-- Los productos se cargan dinámicamente -->
       </div>
+
+      <!-- SECCIÓN DE SELECCIONADOS -->
+      <div class="seleccionados-section" id="seleccionadosSection" style="display: none;">
+        <div class="seleccionados-header">
+          <div class="seleccionados-title">
+            <i class="fa-solid fa-check-circle"></i>
+            Productos Seleccionados
+          </div>
+          <span class="seleccionados-count" id="seleccionadosCount">0</span>
+        </div>
+        <div class="seleccionados-lista" id="seleccionadosLista">
+          <!-- Productos seleccionados aparecen aquí -->
+        </div>
+        <button class="btn-actualizar-factura" id="btnActualizarFactura" onclick="actualizarAFactura()">
+          <i class="fa-solid fa-arrow-right"></i>
+          Actualizar a Factura
+        </button>
+      </div>
     </div>
 
-    <div id="tab-seleccionados" class="tab-content">
+    <div id="tab-factura" class="tab-content">
       <div class="section-header">
         <h2 class="section-title">
-          <i class="fa-solid fa-check-circle"></i> Productos Seleccionados para Facturar
+          <i class="fa-solid fa-file-invoice"></i> Productos en la Factura
         </h2>
       </div>
-      <div class="products-list" id="selectedProductsList">
-        <!-- Productos seleccionados -->
+      <div class="products-list" id="facturaProductsList">
+        <!-- Productos en factura -->
       </div>
     </div>
   </div>
@@ -1554,10 +1675,10 @@
 
   // ========== VARIABLES GLOBALES ==========
   let soldInventory = [];
-  let productosFactura = [];
+  let productosSeleccionados = []; // Productos marcados con check
+  let productosFactura = []; // Productos ya en la factura
   let productosFiltrados = [];
   let qrCodeInstance = null;
-  let isProcessingClick = false;
 
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
@@ -1592,9 +1713,7 @@
     }
   }
 
-  // Activar pantalla completa automáticamente al cargar
   function activarPantallaCompletaAuto() {
-    // Intentar activar pantalla completa después de un breve delay
     setTimeout(() => {
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         toggleKiosk();
@@ -1602,11 +1721,9 @@
     }, 500);
   }
 
-  // Mantener pantalla completa - reactivar si se sale
   function mantenerPantallaCompleta() {
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement) {
-        // El usuario salió de pantalla completa, reactivar después de un momento
         setTimeout(() => {
           if (!document.fullscreenElement) {
             toggleKiosk();
@@ -1615,7 +1732,6 @@
       }
     });
 
-    // También para webkit (Safari/Chrome en iOS)
     document.addEventListener('webkitfullscreenchange', () => {
       if (!document.webkitFullscreenElement) {
         setTimeout(() => {
@@ -1626,15 +1742,12 @@
       }
     });
 
-    // Prevenir salida accidental con tecla ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && document.fullscreenElement) {
         e.preventDefault();
-        // No hacer nada, mantener pantalla completa
       }
     });
 
-    // Reactivar pantalla completa al volver a la pestaña
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && !document.fullscreenElement) {
         setTimeout(() => {
@@ -1649,8 +1762,8 @@
     document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
-    if (tab === 'seleccionados') {
-      renderizarSeleccionados();
+    if (tab === 'factura') {
+      renderizarProductosEnFactura();
     }
   }
 
@@ -1671,9 +1784,7 @@
     const fechaEmision = document.getElementById('fFecha').value;
     if (fechaEmision) {
       const fecha = new Date(fechaEmision);
-      // Sumar exactamente 1 mes
       fecha.setMonth(fecha.getMonth() + 1);
-      // Formatear como YYYY-MM-DD para input type="date"
       const year = fecha.getFullYear();
       const month = String(fecha.getMonth() + 1).padStart(2, '0');
       const day = String(fecha.getDate()).padStart(2, '0');
@@ -1684,8 +1795,6 @@
   // ========== CARGAR IMÁGENES DESDE LOCALFORAGE ==========
   async function cargarImagenesLocalForage() {
     if (!productosFiltrados || productosFiltrados.length === 0) return;
-    
-    console.log('Cargando imágenes para', productosFiltrados.length, 'productos');
     
     for (let i = 0; i < productosFiltrados.length; i++) {
       const item = productosFiltrados[i];
@@ -1821,11 +1930,7 @@
     setTimeout(() => div.remove(), 4000);
   }
 
-  // ========== CARGAR PRODUCTOS ==========
-  function cargarProductos() {
-    sincronizarConVenta();
-  }
-
+  // ========== RENDERIZAR PRODUCTOS DISPONIBLES ==========
   function renderizarProductos() {
     const container = document.getElementById('productsList');
     const searchValue = (document.getElementById('searchProducts').value || '').toLowerCase();
@@ -1864,7 +1969,8 @@
       const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + index + '_' + Date.now();
       div.dataset.id = id;
       
-      const isSelected = productosFactura.some(p => p.id === id);
+      // Verificar si está en seleccionados (no en factura)
+      const isSelected = productosSeleccionados.some(p => p.id === id);
       if (isSelected) {
         div.classList.add('selected');
       }
@@ -1910,35 +2016,137 @@
         </div>
       `;
       
-      // Manejar click en el item completo (excepto en elementos interactivos)
+      // Click en el item completo
       div.addEventListener('click', function(e) {
-        // Prevenir múltiples clicks rápidos
-        if (isProcessingClick) return;
-        isProcessingClick = true;
-        
-        setTimeout(() => {
-          isProcessingClick = false;
-        }, 100);
-        
         const checkbox = div.querySelector('.product-checkbox');
         checkbox.checked = !checkbox.checked;
-        toggleProducto(id);
+        toggleSeleccion(id);
       });
       
       container.appendChild(div);
     });
+    
+    actualizarVistaSeleccionados();
   }
 
-  function renderizarSeleccionados() {
-    const container = document.getElementById('selectedProductsList');
-    document.getElementById('tabCount').textContent = productosFactura.length;
+  // ========== TOGGLE SELECCIÓN ==========
+  function toggleSeleccion(id) {
+    const item = productosFiltrados.find(p => {
+      const pid = p.idVenta || p.id || p.code || p.barcode || p.codigo;
+      return pid === id;
+    });
+    
+    if (!item) return;
+    
+    const index = productosSeleccionados.findIndex(p => p.id === id);
+    
+    if (index === -1) {
+      // Agregar a seleccionados
+      const cantidad = Number(item.quantity || item.cantidad || 1);
+      const precio = Number(item.price || item.precio || item.total || 0);
+      const descuento = Number(item.discount || item.descuento || 0);
+      const subtotal = cantidad * precio;
+      const descuentoMonto = subtotal * (descuento / 100);
+      
+      productosSeleccionados.push({
+        id: id,
+        name: item.name || item.nombre || 'Producto',
+        barcode: item.barcode || item.code || item.codigo || 'N/A',
+        quantity: cantidad,
+        price: precio,
+        discount: descuento,
+        total: subtotal - descuentoMonto,
+        image: item.image || item.imagen || item.img || '',
+        isManual: false
+      });
+    } else {
+      // Quitar de seleccionados
+      productosSeleccionados.splice(index, 1);
+    }
+    
+    renderizarProductos();
+    actualizarVistaSeleccionados();
+  }
+
+  // ========== ACTUALIZAR VISTA DE SELECCIONADOS ==========
+  function actualizarVistaSeleccionados() {
+    const section = document.getElementById('seleccionadosSection');
+    const lista = document.getElementById('seleccionadosLista');
+    const count = document.getElementById('seleccionadosCount');
+    const btn = document.getElementById('btnActualizarFactura');
+    
+    count.textContent = productosSeleccionados.length;
+    
+    if (productosSeleccionados.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    
+    section.style.display = 'block';
+    btn.disabled = productosSeleccionados.length === 0;
+    
+    lista.innerHTML = '';
+    productosSeleccionados.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'seleccionado-item';
+      div.innerHTML = `
+        <i class="fa-solid fa-check" style="color: var(--success);"></i>
+        <span class="seleccionado-nombre">${escapeHTML(p.name)}</span>
+        <span class="seleccionado-precio">$${p.total.toFixed(2)}</span>
+      `;
+      lista.appendChild(div);
+    });
+  }
+
+  // ========== ACTUALIZAR A FACTURA ==========
+  function actualizarAFactura() {
+    if (productosSeleccionados.length === 0) {
+      mostrarNotificacion('No hay productos seleccionados', 'warning');
+      return;
+    }
+    
+    // Agregar todos los seleccionados a la factura
+    productosSeleccionados.forEach(producto => {
+      // Verificar que no esté duplicado
+      if (!productosFactura.some(p => p.id === producto.id)) {
+        productosFactura.push({ ...producto });
+      }
+    });
+    
+    // Limpiar seleccionados
+    productosSeleccionados = [];
+    
+    // Actualizar vistas
+    renderizarProductos();
+    actualizarVistaSeleccionados();
+    renderizarProductosEnFactura();
+    actualizarResumen();
+    actualizarCalculos();
+    
+    // Actualizar contador de pestaña
+    document.getElementById('tabCountFactura').textContent = productosFactura.length;
+    
+    mostrarNotificacion(`${productosFactura.length} producto(s) agregado(s) a la factura`, 'success');
+    
+    // Cambiar a la pestaña de factura
+    document.querySelectorAll('.products-section .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.products-section .tab')[1].classList.add('active');
+    document.getElementById('tab-factura').classList.add('active');
+    renderizarProductosEnFactura();
+  }
+
+  // ========== RENDERIZAR PRODUCTOS EN FACTURA ==========
+  function renderizarProductosEnFactura() {
+    const container = document.getElementById('facturaProductsList');
+    document.getElementById('tabCountFactura').textContent = productosFactura.length;
     
     if (productosFactura.length === 0) {
       container.innerHTML = `
         <div class="no-products">
-          <i class="fa-solid fa-cart-arrow-down"></i>
-          <h3>No hay productos seleccionados</h3>
-          <p>Selecciona productos de la lista para facturar</p>
+          <i class="fa-solid fa-file-invoice" style="color: var(--rose-medium);"></i>
+          <h3>No hay productos en la factura</h3>
+          <p>Selecciona productos y presiona "Actualizar a Factura"</p>
         </div>
       `;
       return;
@@ -1981,70 +2189,28 @@
 
   function eliminarProductoFactura(id) {
     productosFactura = productosFactura.filter(p => p.id !== id);
-    renderizarProductos();
-    renderizarSeleccionados();
+    renderizarProductosEnFactura();
     actualizarResumen();
     actualizarCalculos();
+    document.getElementById('tabCountFactura').textContent = productosFactura.length;
   }
 
   function filtrarProductos() {
     renderizarProductos();
   }
 
-  // ========== SELECCIÓN DE PRODUCTOS ==========
-  function toggleProducto(id) {
-    // Prevenir procesamiento múltiple
-    if (isProcessingClick) return;
-    
-    const item = productosFiltrados.find(p => {
-      const pid = p.idVenta || p.id || p.code || p.barcode || p.codigo;
-      return pid === id;
-    });
-    
-    if (!item) return;
-    
-    const index = productosFactura.findIndex(p => p.id === id);
-    
-    if (index === -1) {
-      // Agregar
-      const cantidad = Number(item.quantity || item.cantidad || 1);
-      const precio = Number(item.price || item.precio || item.total || 0);
-      const descuento = Number(item.discount || item.descuento || 0);
-      const subtotal = cantidad * precio;
-      const descuentoMonto = subtotal * (descuento / 100);
-      
-      productosFactura.push({
-        id: id,
-        name: item.name || item.nombre || 'Producto',
-        barcode: item.barcode || item.code || item.codigo || 'N/A',
-        quantity: cantidad,
-        price: precio,
-        discount: descuento,
-        total: subtotal - descuentoMonto,
-        image: item.image || item.imagen || item.img || '',
-        isManual: false
-      });
-    } else {
-      // Quitar
-      productosFactura.splice(index, 1);
-    }
-    
-    renderizarProductos();
-    actualizarResumen();
-    actualizarCalculos();
-  }
-
+  // ========== SELECCIONAR TODOS ==========
   function seleccionarTodos() {
     productosFiltrados.forEach(item => {
       const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + Date.now();
-      if (!productosFactura.some(p => p.id === id)) {
+      if (!productosSeleccionados.some(p => p.id === id) && !productosFactura.some(p => p.id === id)) {
         const cantidad = Number(item.quantity || item.cantidad || 1);
         const precio = Number(item.price || item.precio || item.total || 0);
         const descuento = Number(item.discount || item.descuento || 0);
         const subtotal = cantidad * precio;
         const descuentoMonto = subtotal * (descuento / 100);
         
-        productosFactura.push({
+        productosSeleccionados.push({
           id: id,
           name: item.name || item.nombre || 'Producto',
           barcode: item.barcode || item.code || item.codigo || 'N/A',
@@ -2058,15 +2224,13 @@
       }
     });
     renderizarProductos();
-    actualizarResumen();
-    actualizarCalculos();
+    actualizarVistaSeleccionados();
   }
 
   function deseleccionarTodos() {
-    productosFactura = [];
+    productosSeleccionados = [];
     renderizarProductos();
-    actualizarResumen();
-    actualizarCalculos();
+    actualizarVistaSeleccionados();
   }
 
   function actualizarResumen() {
@@ -2077,7 +2241,6 @@
     document.getElementById('resumenProductos').textContent = totalProductos;
     document.getElementById('resumenSubtotal').textContent = '$' + subtotal.toFixed(2);
     document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
-    document.getElementById('tabCount').textContent = productosFactura.length;
   }
 
   // ========== PRODUCTO MANUAL ==========
@@ -2111,6 +2274,7 @@
     const descuentoMonto = subtotal * (descuento / 100);
     const total = subtotal - descuentoMonto;
     
+    // Agregar directamente a la factura
     productosFactura.push({
       id: 'MANUAL_' + Date.now(),
       name: nombre,
@@ -2126,7 +2290,9 @@
     cerrarProductoManual();
     actualizarResumen();
     actualizarCalculos();
-    mostrarNotificacion('Producto agregado manualmente', 'success');
+    renderizarProductosEnFactura();
+    document.getElementById('tabCountFactura').textContent = productosFactura.length;
+    mostrarNotificacion('Producto agregado a la factura', 'success');
   }
 
   // ========== CÁLCULOS DE FACTURA ==========
@@ -2307,6 +2473,7 @@
     if (!confirm('¿Estás seguro de limpiar todos los datos de la factura?')) return;
     
     productosFactura = [];
+    productosSeleccionados = [];
     document.getElementById('fNum').value = '000001';
     document.getElementById('fCliente').value = 'Consumidor Final';
     document.getElementById('fClienteNIF').value = '';
@@ -2320,8 +2487,11 @@
     document.getElementById('fIVAPorcentaje').disabled = true;
     
     renderizarProductos();
+    actualizarVistaSeleccionados();
+    renderizarProductosEnFactura();
     actualizarResumen();
     actualizarVistaPrevia();
+    document.getElementById('tabCountFactura').textContent = '0';
     
     mostrarNotificacion('Factura limpiada correctamente', 'success');
   }
@@ -2758,7 +2928,6 @@
     if (e.target === this) cerrarProductoManual();
   });
 
-  // Sincronización en tiempo real con venta.html
   window.addEventListener('storage', async (e) => {
     if (e.key === 'soldInventory' || e.key === 'ventaProductos') {
       await sincronizarConVenta();
@@ -2769,7 +2938,6 @@
     await sincronizarConVenta();
   });
 
-  // Actualizar vista previa al cambiar campos
   ['fSerie', 'fNum', 'fFecha', 'fVencimiento', 'fCaja', 'fCajero', 'fEmisorNombre', 'fEmisorGiro', 'fEmisorNIF', 'fEmisorDireccion', 
    'fEmisorEmail', 'fEmisorTelefono', 'fCliente', 'fClienteNIF', 'fClienteDireccion', 
    'fClienteTelefono', 'fClienteEmail'].forEach(id => {
@@ -2782,12 +2950,10 @@
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   document.getElementById('fFecha').value = now.toISOString().slice(0, 16);
   
-  // Fecha de vencimiento: 1 mes después
   const venc = new Date(now);
   venc.setMonth(venc.getMonth() + 1);
   document.getElementById('fVencimiento').value = venc.toISOString().slice(0, 10);
   
-  // Cargar número de factura secuencial
   const lastNum = localStorage.getItem('lastFacturaNum');
   if (lastNum) {
     const nextNum = parseInt(lastNum) + 1;
@@ -2796,15 +2962,10 @@
     document.getElementById('fNum').value = '000000001';
   }
   
-  // Inicializar con await
   (async function() {
     await sincronizarConVenta();
     actualizarVistaPrevia();
-    
-    // Activar pantalla completa automáticamente
     activarPantallaCompletaAuto();
-    
-    // Configurar mantenimiento de pantalla completa
     mantenerPantallaCompleta();
   })();
 </script>

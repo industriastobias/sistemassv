@@ -1,233 +1,1771 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Facturas – KLOHESV & CASEUP</title>
+  <title>Facturas – KLOHESV</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
-    body {
-      font-family: "Courier New", monospace;
-      background-color: #f9f9f9;
-      margin: 0;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap');
+    
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text-primary: #2d2d2d;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --border-dark: #d1d5db;
+      --accent: #4b5563;
+      --accent-hover: #374151;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: var(--bg); 
+      color: var(--text-primary); 
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ===== HEADER ===== */
+    .header-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 1.2rem;
+      border: 1px solid var(--border);
+    }
+
+    .brand-text h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* ===== MENÚ ===== */
+    #menuToggle {
+      width: 40px;
+      height: 40px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #menuToggle:hover {
+      background: #f3f4f6;
+      border-color: var(--border-dark);
+      color: var(--text-primary);
+    }
+
+    #sideMenu {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100vh;
+      background: var(--card);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      padding: 80px 16px 24px;
+      gap: 4px;
+      transition: right 0.3s ease;
+      z-index: 999;
+    }
+
+    #sideMenu.show { right: 0; }
+
+    #sideMenu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    #sideMenu a:hover {
+      background: #f3f4f6;
+      color: var(--text-primary);
+    }
+
+    #sideMenu a i {
+      width: 20px;
+      text-align: center;
+    }
+
+    #sideMenu a.active {
+      background: #f3f4f6;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .menu-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 998;
+    }
+
+    .menu-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ===== CONTROLES ===== */
+    .controls-bar {
+      background: var(--card);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--text-primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-outline {
+      background: var(--card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: #f3f4f6;
+      border-color: var(--border-dark);
+      color: var(--text-primary);
+    }
+
+    .btn-success {
+      background: #ecfdf5;
+      color: var(--success);
+      border: 1px solid #a7f3d0;
+    }
+
+    .btn-success:hover {
+      background: #d1fae5;
+    }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .btn-danger:hover {
+      background: #fee2e2;
+    }
+
+    /* ===== CONTENIDO PRINCIPAL ===== */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== PANEL DE VENTAS ===== */
+    .panel {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-body {
       padding: 20px;
     }
-    .facturas-container {
-      display: flex;
-      gap: 40px;
-      justify-content: center;
-      flex-wrap: wrap;
+
+    .search-box {
+      position: relative;
+      margin-bottom: 16px;
     }
-    .ticket {
-      width: 360px;
-      background: #fff;
-      padding: 15px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
-      border-radius: 8px;
+
+    .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.9rem;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 5px;
-      letter-spacing: 1px;
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
     }
-    .center { text-align: center; }
-    .info, .footer {
-      font-size: 13px;
-      margin-top: 10px;
-      border-top: 1px dashed #999;
-      padding-top: 5px;
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--border-dark);
+      background: var(--card);
+      box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
     }
-    table {
+
+    /* ===== TABLA DE VENTAS ===== */
+    .ventas-table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .ventas-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
-      margin-top: 10px;
+      font-size: 0.85rem;
     }
-    th, td {
-      text-align: center;
-      padding: 4px 2px;
+
+    .ventas-table th {
+      background: #f9fafb;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
-    th { border-bottom: 1px dashed #999; }
-    .total {
-      border-top: 1px dashed #999;
-      text-align: right;
-      font-weight: bold;
-      margin-top: 10px;
-      padding-top: 5px;
+
+    .ventas-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
     }
-    button {
-      margin-top: 10px;
-      width: 100%;
-      background: black;
-      color: white;
-      border: none;
-      padding: 8px;
+
+    .ventas-table tr:hover td {
+      background: #f9fafb;
+    }
+
+    .ventas-table tr.selected td {
+      background: #eff6ff;
+    }
+
+    .venta-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
       cursor: pointer;
-      border-radius: 5px;
     }
-    button:hover { background: #333; }
-    .social { font-size: 12px; margin-top: 5px; text-align: center; color: #555; }
-    .policy { font-size: 11px; margin-top: 8px; color: #444; text-align: center; }
-    input[type="number"] { width: 50px; padding: 3px; }
+
+    .venta-fecha {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .venta-total {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .no-results i {
+      font-size: 3rem;
+      color: var(--border);
+      margin-bottom: 12px;
+    }
+
+    /* ===== PANEL DE FACTURA ===== */
+    .factura-panel {
+      position: sticky;
+      top: 80px;
+    }
+
+    .ticket-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .ticket-actions .btn {
+      flex: 1;
+      min-width: 100px;
+      justify-content: center;
+    }
+
+    /* ===== TICKET POS ===== */
+    .ticket-container {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 24px 20px;
+      font-family: 'Courier Prime', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #000;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .ticket-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #bbb;
+    }
+
+    .ticket-logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+      color: #000;
+    }
+
+    .ticket-info {
+      color: #444;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .ticket-divider {
+      border: none;
+      border-top: 1px dashed #bbb;
+      margin: 12px 0;
+    }
+
+    .ticket-section {
+      margin-bottom: 12px;
+    }
+
+    .ticket-label {
+      font-weight: 700;
+      display: inline-block;
+      min-width: 80px;
+    }
+
+    .ticket-line {
+      display: flex;
+      margin-bottom: 4px;
+      align-items: baseline;
+    }
+
+    .ticket-line span[contenteditable="true"] {
+      border-bottom: 1px dotted #999;
+      min-width: 60px;
+      padding: 0 4px;
+      outline: none;
+    }
+
+    .ticket-line span[contenteditable="true"]:focus {
+      border-bottom: 1px solid #000;
+      background: #f9fafb;
+    }
+
+    /* ===== TABLA DE PRODUCTOS ===== */
+    .ticket-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 11px;
+    }
+
+    .ticket-table th {
+      text-align: left;
+      padding: 8px 4px;
+      border-bottom: 1px solid #000;
+      font-weight: 700;
+    }
+
+    .ticket-table th:nth-child(2),
+    .ticket-table th:nth-child(3),
+    .ticket-table th:nth-child(4) {
+      text-align: center;
+    }
+
+    .ticket-table th:last-child {
+      text-align: right;
+    }
+
+    .ticket-table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    .ticket-table td:nth-child(2),
+    .ticket-table td:nth-child(3),
+    .ticket-table td:nth-child(4) {
+      text-align: center;
+    }
+
+    .ticket-table td:last-child {
+      text-align: right;
+    }
+
+    .ticket-table td[contenteditable="true"] {
+      border-bottom: 1px dotted #999;
+      outline: none;
+    }
+
+    .ticket-table td[contenteditable="true"]:focus {
+      border-bottom: 1px solid #000;
+      background: #f9fafb;
+    }
+
+    .ticket-table tbody tr:last-child td {
+      border-bottom: 1px solid #000;
+    }
+
+    /* ===== TOTALES ===== */
+    .ticket-totals {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px dashed #bbb;
+    }
+
+    .ticket-total-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .ticket-total-line.grande {
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #000;
+    }
+
+    /* ===== QR CODE ===== */
+    .ticket-qr {
+      text-align: center;
+      margin: 16px 0;
+      padding: 12px;
+      background: #fafafa;
+      border-radius: var(--radius-sm);
+    }
+
+    #qrcode {
+      display: inline-block;
+    }
+
+    .ticket-qr-label {
+      font-size: 9px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    /* ===== FOOTER ===== */
+    .ticket-footer {
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 12px;
+      font-size: 10px;
+      color: #555;
+      border-top: 1px dashed #bbb;
+    }
+
+    .ticket-footer strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    /* ===== MODALES ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: hidden;
+      animation: modalSlide 0.3s ease;
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      background: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      max-height: calc(90vh - 140px);
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ===== FORMULARIOS ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--border-dark);
+      box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ===== IMPRESIÓN ===== */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .ticket-container,
+      .ticket-container * {
+        visibility: visible;
+      }
+      .ticket-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        box-shadow: none;
+        border: none;
+        padding: 10px;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .header-bar { padding: 12px 16px; }
+      .controls-bar { padding: 12px 16px; }
+      .main-container { padding: 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .ticket-actions .btn { flex: 1 1 100%; }
+    }
+
+    /* ===== STATS ===== */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      background: #f9fafb;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* ===== CONFIGURACIÓN ===== */
+    .config-section {
+      background: #f9fafb;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .config-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
-  <div class="facturas-container">
-    <!-- ========== KLOHE ========== -->
-    <div class="ticket" id="invoice-klohe">
-      <h2>KLOHESV</h2>
-      <div class="center">
-        <p>San Salvador, El Salvador</p>
-        <p>Correo: industriastobias@gmail.com</p>
-      </div>
-      <div class="social"><p>Instagram: @Klohesv</p></div>
-      <div class="info">
-        <p><strong>Factura N°:</strong> <span contenteditable="true">00015</span></p>
-        <p><strong>Fecha:</strong> <span class="fecha-klohe"></span></p>
-        <p><strong>Cliente:</strong> <span contenteditable="true">Consumidor Final</span></p>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Cant</th>
-            <th>Precio</th>
-            <th>Desc(%)</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody id="productos-klohe">
-          <tr>
-            <td contenteditable="true">Collar</td>
-            <td contenteditable="true" class="cantidad-klohe">1</td>
-            <td contenteditable="true" class="precio-klohe">10.00</td>
-            <td contenteditable="true" class="desc-klohe">0</td>
-            <td class="subtotal-klohe">10.00</td>
-          </tr>
-        </tbody>
-      </table>
-      <button onclick="agregarFila('klohe')">Agregar producto</button>
-      <button onclick="calcularTotal('klohe')">Actualizar total</button>
-      <div class="total">TOTAL: $<span id="total-klohe">10.00</span></div>
-      <div class="footer center">
-        <p>¡Gracias por su compra!</p>
-        <p class="policy">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</p>
-      </div>
-      <button onclick="descargarPDF('klohe')">Descargar PDF</button>
-      <button onclick="imprimirFactura('klohe')">Imprimir Factura</button>
-    </div>
 
-    <!-- ========== CASEUP ========== -->
-    <div class="ticket" id="invoice-caseup">
-      <h2>CASEUP</h2>
-      <div class="center">
-        <p>San Salvador, El Salvador</p>
-        <p>Correo: industriastobias@gmail.com</p>
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<header class="header-bar">
+  <div class="brand">
+    <div class="brand-icon">
+      <i class="fa-solid fa-file-invoice"></i>
+    </div>
+    <div class="brand-text">
+      <h1>Sistema de Facturación</h1>
+      <span>KLOHESV - Facturas y Tickets</span>
+    </div>
+  </div>
+  <button id="menuToggle" onclick="toggleMenu()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+</header>
+
+<nav id="sideMenu">
+  <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
+  <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
+  <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
+  <a href="inventario.html"><i class="fa fa-boxes"></i> Inventario</a>
+  <a href="gastos.html"><i class="fa fa-money-bill-wave"></i> Gastos</a>
+  <a href="clientes.html"><i class="fa fa-users"></i> Clientes</a>
+  <a href="descuentos.html"><i class="fa fa-tags"></i> Descuentos</a>
+  <a href="facturas.html" class="active"><i class="fa fa-file-invoice"></i> Facturas</a>
+  <a href="traslados.html"><i class="fa fa-truck"></i> Traslados</a>
+  <a href="venta.html"><i class="fa fa-cash-register"></i> Venta</a>
+</nav>
+
+<div class="controls-bar">
+  <button class="btn btn-primary" onclick="cargarVentasSeleccionadas()">
+    <i class="fa-solid fa-rotate"></i> Cargar Ventas Seleccionadas
+  </button>
+  <button class="btn btn-outline" onclick="abrirConfiguracion()">
+    <i class="fa-solid fa-cog"></i> Configurar Emisor
+  </button>
+  <button class="btn btn-outline" onclick="nuevaFactura()">
+    <i class="fa-solid fa-plus"></i> Nueva Factura
+  </button>
+  <button class="btn btn-success" onclick="generarSiguienteNumero()">
+    <i class="fa-solid fa-hashtag"></i> Siguiente N°
+  </button>
+</div>
+
+<div class="main-container">
+  <!-- PANEL IZQUIERDO: VENTAS -->
+  <div class="left-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i class="fa-solid fa-shopping-bag"></i>
+          Ventas Disponibles
+        </div>
+        <span id="contadorVentas" style="font-size: 0.85rem; color: var(--text-muted);">0 ventas</span>
       </div>
-      <div class="social"><p>Instagram: <span contenteditable="true">@caseupsv</span></p></div>
-      <div class="info">
-        <p><strong>Factura N°:</strong> <span contenteditable="true">00016</span></p>
-        <p><strong>Fecha:</strong> <span class="fecha-caseup"></span></p>
-        <p><strong>Cliente:</strong> <span contenteditable="true">Consumidor Final</span></p>
+      <div class="panel-body">
+        <div class="search-box">
+          <i class="fa-solid fa-search"></i>
+          <input type="text" id="buscarVenta" placeholder="Buscar por producto, fecha o código..." oninput="filtrarVentas()">
+        </div>
+        
+        <div class="stats-bar">
+          <div class="stat-item">
+            <div class="stat-label">Seleccionadas</div>
+            <div class="stat-value" id="statsSeleccionadas">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Total</div>
+            <div class="stat-value" id="statsTotal">$0.00</div>
+          </div>
+        </div>
+
+        <div class="ventas-table-container">
+          <table class="ventas-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                <th>Producto</th>
+                <th style="text-align: center;">Cant.</th>
+                <th style="text-align: right;">Total</th>
+                <th style="text-align: center;">Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="ventasTableBody">
+              <tr>
+                <td colspan="5" class="no-results">
+                  <i class="fa-solid fa-box-open"></i>
+                  <p>No hay ventas disponibles</p>
+                  <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Cant</th>
-            <th>Precio</th>
-            <th>Desc(%)</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody id="productos-caseup">
-          <tr>
-            <td contenteditable="true">Pulsera</td>
-            <td contenteditable="true" class="cantidad-caseup">1</td>
-            <td contenteditable="true" class="precio-caseup">5.00</td>
-            <td contenteditable="true" class="desc-caseup">0</td>
-            <td class="subtotal-caseup">5.00</td>
-          </tr>
-        </tbody>
-      </table>
-      <button onclick="agregarFila('caseup')">Agregar producto</button>
-      <button onclick="calcularTotal('caseup')">Actualizar total</button>
-      <div class="total">TOTAL: $<span id="total-caseup">5.00</span></div>
-      <div class="footer center">
-        <p>¡Gracias por su compra!</p>
-        <p class="policy">No se aceptan cambios ni devoluciones, a menos que el producto esté dañado. Se aceptará dentro de los 5 días posteriores a la fecha de compra.</p>
-      </div>
-      <button onclick="descargarPDF('caseup')">Descargar PDF</button>
-      <button onclick="imprimirFactura('caseup')">Imprimir Factura</button>
     </div>
   </div>
 
-  <script>
-    function obtenerFechaActual() {
-      const f = new Date();
-      return `${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
-    }
-    document.querySelectorAll(".fecha-klohe").forEach(el => el.textContent = obtenerFechaActual());
-    document.querySelectorAll(".fecha-caseup").forEach(el => el.textContent = obtenerFechaActual());
+  <!-- PANEL DERECHO: FACTURA -->
+  <div class="factura-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i class="fa-solid fa-receipt"></i>
+          Factura / Ticket
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="ticket-actions no-print">
+          <button class="btn btn-primary" onclick="imprimirTicket()">
+            <i class="fa-solid fa-print"></i> Imprimir
+          </button>
+          <button class="btn btn-outline" onclick="descargarPDF()">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+          </button>
+          <button class="btn btn-success" onclick="agregarProductoManual()">
+            <i class="fa-solid fa-plus"></i> Producto
+          </button>
+        </div>
 
-    function agregarFila(marca) {
-      const suffix = marca;
-      const tbody = document.getElementById(`productos-${suffix}`);
-      const fila = document.createElement("tr");
-      fila.innerHTML = `
-        <td contenteditable="true">Nuevo producto</td>
-        <td contenteditable="true" class="cantidad-${suffix}">1</td>
-        <td contenteditable="true" class="precio-${suffix}">0.00</td>
-        <td contenteditable="true" class="desc-${suffix}">0</td>
-        <td class="subtotal-${suffix}">0.00</td>
+        <div class="ticket-container" id="ticket">
+          <!-- ENCABEZADO -->
+          <div class="ticket-header">
+            <div class="ticket-logo" contenteditable="true">KLOHESV</div>
+            <div class="ticket-info" contenteditable="true">San Salvador, El Salvador</div>
+            <div class="ticket-info" contenteditable="true">industriastobias@gmail.com</div>
+            <div class="ticket-info" contenteditable="true">Instagram: @Klohesv</div>
+          </div>
+
+          <!-- DATOS DE FACTURA -->
+          <div class="ticket-section">
+            <div class="ticket-line">
+              <span class="ticket-label">FACTURA N°:</span>
+              <span contenteditable="true" id="facturaNumero">00001</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">SERIE:</span>
+              <span contenteditable="true" id="facturaSerie">A</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">FECHA:</span>
+              <span contenteditable="true" id="facturaFecha"></span>
+            </div>
+          </div>
+
+          <hr class="ticket-divider">
+
+          <!-- EMISOR -->
+          <div class="ticket-section">
+            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">EMISOR</div>
+            <div class="ticket-line">
+              <span class="ticket-label">Nombre:</span>
+              <span contenteditable="true" id="emisorNombre">KLOHESV</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">Razón Soc:</span>
+              <span contenteditable="true" id="emisorRazon">Industrias Tobias S.A. de C.V.</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">NIT:</span>
+              <span contenteditable="true" id="emisorNit">0614-010570-001-0</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">Dirección:</span>
+              <span contenteditable="true" id="emisorDireccion">San Salvador, El Salvador</span>
+            </div>
+          </div>
+
+          <hr class="ticket-divider">
+
+          <!-- RECEPTOR -->
+          <div class="ticket-section">
+            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">RECEPTOR</div>
+            <div class="ticket-line">
+              <span class="ticket-label">Nombre:</span>
+              <span contenteditable="true" id="receptorNombre">Consumidor Final</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">Razón Soc:</span>
+              <span contenteditable="true" id="receptorRazon">-</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">NIT/DUI:</span>
+              <span contenteditable="true" id="receptorNit">-</span>
+            </div>
+            <div class="ticket-line">
+              <span class="ticket-label">Dirección:</span>
+              <span contenteditable="true" id="receptorDireccion">-</span>
+            </div>
+          </div>
+
+          <hr class="ticket-divider">
+
+          <!-- PRODUCTOS -->
+          <div class="ticket-section">
+            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">DETALLE</div>
+            <table class="ticket-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cant</th>
+                  <th>P.U.</th>
+                  <th>Desc</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="ticketProductos">
+                <tr>
+                  <td contenteditable="true">Producto de ejemplo</td>
+                  <td contenteditable="true" onblur="calcularTotales()">1</td>
+                  <td contenteditable="true" onblur="calcularTotales()">10.00</td>
+                  <td contenteditable="true" onblur="calcularTotales()">0</td>
+                  <td class="producto-total">10.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TOTALES -->
+          <div class="ticket-totals">
+            <div class="ticket-total-line">
+              <span>SUBTOTAL (Base Imponible):</span>
+              <span id="subtotal">$10.00</span>
+            </div>
+            <div class="ticket-total-line">
+              <span>IVA (13%):</span>
+              <span id="iva">$1.30</span>
+            </div>
+            <div class="ticket-total-line">
+              <span>Descuento:</span>
+              <span contenteditable="true" id="descuentoGlobal" onblur="calcularTotales()">$0.00</span>
+            </div>
+            <div class="ticket-total-line">
+              <span>Anticipo:</span>
+              <span contenteditable="true" id="anticipo" onblur="calcularTotales()">$0.00</span>
+            </div>
+            <div class="ticket-total-line grande">
+              <span>TOTAL A PAGAR:</span>
+              <span id="totalPagar">$11.30</span>
+            </div>
+          </div>
+
+          <!-- QR CODE -->
+          <div class="ticket-qr">
+            <div id="qrcode"></div>
+            <div class="ticket-qr-label">Escanea para verificar factura</div>
+          </div>
+
+          <!-- FOOTER -->
+          <div class="ticket-footer">
+            <strong>¡Gracias por su compra!</strong>
+            <p>Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.</p>
+            <p style="margin-top: 8px; font-size: 9px; color: #888;">
+              Documento generado electrónicamente<br>
+              KLOHESV - Sistema de Facturación
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURACIÓN EMISOR -->
+<div class="modal-overlay" id="configModal">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-cog"></i> Configuración del Emisor</h2>
+      <button class="modal-close" onclick="cerrarConfiguracion()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="config-section">
+        <div class="config-title">Datos de la Empresa</div>
+        <div class="form-group">
+          <label>Nombre Comercial</label>
+          <input type="text" id="configNombre" value="KLOHESV">
+        </div>
+        <div class="form-group">
+          <label>Razón Social</label>
+          <input type="text" id="configRazon" value="Industrias Tobias S.A. de C.V.">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>NIT</label>
+            <input type="text" id="configNit" value="0614-010570-001-0">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="configTelefono" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="configEmail" value="industriastobias@gmail.com">
+        </div>
+        <div class="form-group">
+          <label>Dirección Fiscal</label>
+          <textarea id="configDireccion" rows="2">San Salvador, El Salvador</textarea>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-title">Configuración de Factura</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Serie</label>
+            <input type="text" id="configSerie" value="A">
+          </div>
+          <div class="form-group">
+            <label>Último Número</label>
+            <input type="number" id="configUltimoNumero" value="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tasa IVA (%)</label>
+          <input type="number" id="configIva" value="13" step="0.01">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarConfiguracion()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarConfiguracion()">
+        <i class="fa-solid fa-check"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR PRODUCTO -->
+<div class="modal-overlay" id="productoModal">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-plus"></i> Agregar Producto</h2>
+      <button class="modal-close" onclick="cerrarProductoModal()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre del Producto</label>
+        <input type="text" id="prodNombre" placeholder="Ej: Collar de perlas">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cantidad</label>
+          <input type="number" id="prodCantidad" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Precio Unitario ($)</label>
+          <input type="number" id="prodPrecio" value="0" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descuento (%)</label>
+        <input type="number" id="prodDescuento" value="0" min="0" max="100" step="0.01">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarProductoModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProductoManual()">
+        <i class="fa-solid fa-check"></i> Agregar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== VARIABLES GLOBALES ==========
+  let ventas = [];
+  let ventasFiltradas = [];
+  let productosFactura = [];
+  let config = {
+    nombre: 'KLOHESV',
+    razon: 'Industrias Tobias S.A. de C.V.',
+    nit: '0614-010570-001-0',
+    telefono: '',
+    email: 'industriastobias@gmail.com',
+    direccion: 'San Salvador, El Salvador',
+    serie: 'A',
+    ultimoNumero: 1,
+    tasaIva: 13
+  };
+
+  // ========== INICIALIZACIÓN ==========
+  document.addEventListener('DOMContentLoaded', function() {
+    cargarConfiguracion();
+    cargarVentas();
+    establecerFechaActual();
+    generarQR();
+    calcularTotales();
+  });
+
+  // ========== MENÚ ==========
+  function toggleMenu() {
+    document.getElementById('sideMenu').classList.toggle('show');
+    document.getElementById('menuOverlay').classList.toggle('show');
+  }
+
+  // ========== CONFIGURACIÓN ==========
+  function cargarConfiguracion() {
+    const saved = localStorage.getItem('klohesv_config');
+    if (saved) {
+      config = { ...config, ...JSON.parse(saved) };
+    }
+    aplicarConfiguracion();
+  }
+
+  function aplicarConfiguracion() {
+    document.getElementById('emisorNombre').textContent = config.nombre;
+    document.getElementById('emisorRazon').textContent = config.razon;
+    document.getElementById('emisorNit').textContent = config.nit;
+    document.getElementById('emisorDireccion').textContent = config.direccion;
+    document.getElementById('facturaSerie').textContent = config.serie;
+    document.getElementById('facturaNumero').textContent = String(config.ultimoNumero).padStart(5, '0');
+  }
+
+  function abrirConfiguracion() {
+    document.getElementById('configNombre').value = config.nombre;
+    document.getElementById('configRazon').value = config.razon;
+    document.getElementById('configNit').value = config.nit;
+    document.getElementById('configTelefono').value = config.telefono;
+    document.getElementById('configEmail').value = config.email;
+    document.getElementById('configDireccion').value = config.direccion;
+    document.getElementById('configSerie').value = config.serie;
+    document.getElementById('configUltimoNumero').value = config.ultimoNumero;
+    document.getElementById('configIva').value = config.tasaIva;
+    document.getElementById('configModal').classList.add('show');
+  }
+
+  function cerrarConfiguracion() {
+    document.getElementById('configModal').classList.remove('show');
+  }
+
+  function guardarConfiguracion() {
+    config.nombre = document.getElementById('configNombre').value;
+    config.razon = document.getElementById('configRazon').value;
+    config.nit = document.getElementById('configNit').value;
+    config.telefono = document.getElementById('configTelefono').value;
+    config.email = document.getElementById('configEmail').value;
+    config.direccion = document.getElementById('configDireccion').value;
+    config.serie = document.getElementById('configSerie').value;
+    config.ultimoNumero = parseInt(document.getElementById('configUltimoNumero').value) || 1;
+    config.tasaIva = parseFloat(document.getElementById('configIva').value) || 13;
+    
+    localStorage.setItem('klohesv_config', JSON.stringify(config));
+    aplicarConfiguracion();
+    calcularTotales();
+    cerrarConfiguracion();
+  }
+
+  // ========== VENTAS ==========
+  function cargarVentas() {
+    const saved = localStorage.getItem('soldInventory');
+    if (saved) {
+      try {
+        ventas = JSON.parse(saved);
+        // Filtrar solo ventas que no son cierres de caja
+        ventas = ventas.filter(v => !v.isCierreCaja);
+        ventasFiltradas = [...ventas];
+        renderizarVentas();
+      } catch (e) {
+        console.error('Error cargando ventas:', e);
+      }
+    }
+  }
+
+  function renderizarVentas() {
+    const tbody = document.getElementById('ventasTableBody');
+    const contador = document.getElementById('contadorVentas');
+    
+    contador.textContent = `${ventasFiltradas.length} venta${ventasFiltradas.length !== 1 ? 's' : ''}`;
+    
+    if (ventasFiltradas.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="no-results">
+            <i class="fa-solid fa-box-open"></i>
+            <p>No hay ventas disponibles</p>
+            <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
+          </td>
+        </tr>
       `;
-      tbody.appendChild(fila);
+      return;
     }
 
-    function calcularTotal(marca) {
-      const suffix = marca;
-      let total = 0;
-      document.querySelectorAll(`#productos-${suffix} tr`).forEach(tr => {
-        const cant = parseFloat(tr.querySelector(`.cantidad-${suffix}`).textContent) || 0;
-        const precio = parseFloat(tr.querySelector(`.precio-${suffix}`).textContent) || 0;
-        const desc = parseFloat(tr.querySelector(`.desc-${suffix}`).textContent) || 0;
-        const sub = cant * precio * (1 - desc / 100);
-        tr.querySelector(`.subtotal-${suffix}`).textContent = sub.toFixed(2);
-        total += sub;
-      });
-      document.getElementById(`total-${suffix}`).textContent = total.toFixed(2);
+    tbody.innerHTML = ventasFiltradas.map((v, index) => {
+      const fecha = v.soldAt || v.date ? new Date(v.soldAt || v.date).toLocaleDateString('es-SV') : '-';
+      return `
+        <tr data-index="${index}">
+          <td><input type="checkbox" class="venta-checkbox" value='${JSON.stringify(v).replace(/'/g, "&#39;")}' onchange="actualizarStats()"></td>
+          <td>
+            <div>${v.name || 'Sin nombre'}</div>
+            ${v.barcode ? `<div style="font-size: 0.75rem; color: var(--text-muted);">${v.barcode}</div>` : ''}
+          </td>
+          <td style="text-align: center;">${v.quantity || 1}</td>
+          <td style="text-align: right;" class="venta-total">$${parseFloat(v.total || 0).toFixed(2)}</td>
+          <td style="text-align: center;" class="venta-fecha">${fecha}</td>
+        </tr>
+      `;
+    }).join('');
+
+    actualizarStats();
+  }
+
+  function filtrarVentas() {
+    const busqueda = document.getElementById('buscarVenta').value.toLowerCase();
+    ventasFiltradas = ventas.filter(v => 
+      (v.name && v.name.toLowerCase().includes(busqueda)) ||
+      (v.barcode && v.barcode.toLowerCase().includes(busqueda)) ||
+      (v.soldAt && v.soldAt.includes(busqueda)) ||
+      (v.date && v.date.includes(busqueda))
+    );
+    renderizarVentas();
+  }
+
+  function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = selectAll);
+    actualizarStats();
+  }
+
+  function actualizarStats() {
+    const seleccionadas = [...document.querySelectorAll('.venta-checkbox:checked')];
+    const total = seleccionadas.reduce((sum, cb) => {
+      try {
+        const v = JSON.parse(cb.value);
+        return sum + parseFloat(v.total || 0);
+      } catch (e) {
+        return sum;
+      }
+    }, 0);
+    
+    document.getElementById('statsSeleccionadas').textContent = seleccionadas.length;
+    document.getElementById('statsTotal').textContent = `$${total.toFixed(2)}`;
+  }
+
+  // ========== CARGAR VENTAS A FACTURA ==========
+  function cargarVentasSeleccionadas() {
+    const seleccionadas = [...document.querySelectorAll('.venta-checkbox:checked')];
+    
+    if (seleccionadas.length === 0) {
+      alert('Por favor selecciona al menos una venta');
+      return;
     }
 
-    function descargarPDF(marca) {
-      const id = `invoice-${marca}`;
-      const ticket = document.getElementById(id);
-      const botones = ticket.querySelectorAll("button");
-      botones.forEach(b => b.style.display = "none");
-      html2canvas(ticket).then(canvas => {
-        const imgData = canvas.toDataURL("image/png");
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF("p", "mm", [140, 200]);
-        const imgWidth = 130;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, "PNG", 5, 5, imgWidth, imgHeight);
-        pdf.save(`factura_${marca.toUpperCase()}.pdf`);
-        botones.forEach(b => b.style.display = "block");
-      });
+    productosFactura = [];
+    seleccionadas.forEach(cb => {
+      try {
+        const v = JSON.parse(cb.value);
+        productosFactura.push({
+          nombre: v.name || 'Producto',
+          cantidad: parseInt(v.quantity) || 1,
+          precio: parseFloat(v.price) || parseFloat(v.total) || 0,
+          descuento: 0,
+          total: parseFloat(v.total) || 0
+        });
+      } catch (e) {
+        console.error('Error parseando venta:', e);
+      }
+    });
+
+    renderizarProductosFactura();
+    calcularTotales();
+    generarQR();
+    
+    // Scroll al ticket
+    document.querySelector('.factura-panel').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderizarProductosFactura() {
+    const tbody = document.getElementById('ticketProductos');
+    
+    if (productosFactura.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td contenteditable="true">Producto de ejemplo</td>
+          <td contenteditable="true" onblur="calcularTotales()">1</td>
+          <td contenteditable="true" onblur="calcularTotales()">10.00</td>
+          <td contenteditable="true" onblur="calcularTotales()">0</td>
+          <td class="producto-total">10.00</td>
+        </tr>
+      `;
+      return;
     }
 
-    function imprimirFactura(marca) {
-      const id = `invoice-${marca}`;
-      const ticket = document.getElementById(id);
-      const botones = ticket.querySelectorAll("button");
-      botones.forEach(b => b.style.display = "none");
-      window.print();
-      botones.forEach(b => b.style.display = "block");
-    }
+    tbody.innerHTML = productosFactura.map((p, i) => `
+      <tr data-index="${i}">
+        <td contenteditable="true">${p.nombre}</td>
+        <td contenteditable="true" onblur="calcularTotales()">${p.cantidad}</td>
+        <td contenteditable="true" onblur="calcularTotales()">${p.precio.toFixed(2)}</td>
+        <td contenteditable="true" onblur="calcularTotales()">${p.descuento}</td>
+        <td class="producto-total">${p.total.toFixed(2)}</td>
+      </tr>
+    `).join('');
+  }
 
-    // inits
-    calcularTotal('klohe');
-    calcularTotal('caseup');
-  </script>
+  // ========== PRODUCTOS MANUALES ==========
+  function agregarProductoManual() {
+    document.getElementById('productoModal').classList.add('show');
+    document.getElementById('prodNombre').focus();
+  }
+
+  function cerrarProductoModal() {
+    document.getElementById('productoModal').classList.remove('show');
+    document.getElementById('prodNombre').value = '';
+    document.getElementById('prodCantidad').value = '1';
+    document.getElementById('prodPrecio').value = '0';
+    document.getElementById('prodDescuento').value = '0';
+  }
+
+  function guardarProductoManual() {
+    const nombre = document.getElementById('prodNombre').value.trim();
+    const cantidad = parseInt(document.getElementById('prodCantidad').value) || 1;
+    const precio = parseFloat(document.getElementById('prodPrecio').value) || 0;
+    const descuento = parseFloat(document.getElementById('prodDescuento').value) || 0;
+    
+    if (!nombre) {
+      alert('Por favor ingresa el nombre del producto');
+      return;
+    }
+    
+    const subtotal = cantidad * precio;
+    const descuentoMonto = subtotal * (descuento / 100);
+    const total = subtotal - descuentoMonto;
+    
+    const tbody = document.getElementById('ticketProductos');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td contenteditable="true">${nombre}</td>
+      <td contenteditable="true" onblur="calcularTotales()">${cantidad}</td>
+      <td contenteditable="true" onblur="calcularTotales()">${precio.toFixed(2)}</td>
+      <td contenteditable="true" onblur="calcularTotales()">${descuento}</td>
+      <td class="producto-total">${total.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+    
+    cerrarProductoModal();
+    calcularTotales();
+    generarQR();
+  }
+
+  // ========== CÁLCULOS ==========
+  function calcularTotales() {
+    let subtotal = 0;
+    let totalDescuentos = 0;
+    
+    document.querySelectorAll('#ticketProductos tr').forEach(tr => {
+      const celdas = tr.querySelectorAll('td');
+      if (celdas.length >= 5) {
+        const cantidad = parseFloat(celdas[1].textContent) || 0;
+        const precio = parseFloat(celdas[2].textContent) || 0;
+        const descuento = parseFloat(celdas[3].textContent) || 0;
+        
+        const subtotalLinea = cantidad * precio;
+        const descuentoLinea = subtotalLinea * (descuento / 100);
+        const totalLinea = subtotalLinea - descuentoLinea;
+        
+        celdas[4].textContent = totalLinea.toFixed(2);
+        
+        subtotal += subtotalLinea;
+        totalDescuentos += descuentoLinea;
+      }
+    });
+    
+    const iva = subtotal * (config.tasaIva / 100);
+    const descuentoGlobal = parseFloat(document.getElementById('descuentoGlobal').textContent.replace('$', '').replace(',', '')) || 0;
+    const anticipo = parseFloat(document.getElementById('anticipo').textContent.replace('$', '').replace(',', '')) || 0;
+    
+    const total = subtotal + iva - descuentoGlobal - anticipo;
+    
+    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('iva').textContent = `$${iva.toFixed(2)}`;
+    document.getElementById('totalPagar').textContent = `$${Math.max(0, total).toFixed(2)}`;
+  }
+
+  // ========== FECHA ==========
+  function establecerFechaActual() {
+    const hoy = new Date();
+    const fechaFormateada = `${String(hoy.getDate()).padStart(2, '0')}/${String(hoy.getMonth() + 1).padStart(2, '0')}/${hoy.getFullYear()} ${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`;
+    document.getElementById('facturaFecha').textContent = fechaFormateada;
+  }
+
+  // ========== NÚMERO DE FACTURA ==========
+  function generarSiguienteNumero() {
+    config.ultimoNumero++;
+    localStorage.setItem('klohesv_config', JSON.stringify(config));
+    document.getElementById('facturaNumero').textContent = String(config.ultimoNumero).padStart(5, '0');
+    generarQR();
+  }
+
+  function nuevaFactura() {
+    if (confirm('¿Deseas crear una nueva factura? Se generará un nuevo número.')) {
+      generarSiguienteNumero();
+      document.getElementById('receptorNombre').textContent = 'Consumidor Final';
+      document.getElementById('receptorRazon').textContent = '-';
+      document.getElementById('receptorNit').textContent = '-';
+      document.getElementById('receptorDireccion').textContent = '-';
+      document.getElementById('descuentoGlobal').textContent = '$0.00';
+      document.getElementById('anticipo').textContent = '$0.00';
+      document.getElementById('ticketProductos').innerHTML = '';
+      establecerFechaActual();
+      calcularTotales();
+      generarQR();
+      
+      // Desmarcar ventas
+      document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('selectAll').checked = false;
+      actualizarStats();
+    }
+  }
+
+  // ========== QR CODE ==========
+  function generarQR() {
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = '';
+    
+    const numero = document.getElementById('facturaNumero').textContent;
+    const serie = document.getElementById('facturaSerie').textContent;
+    const fecha = document.getElementById('facturaFecha').textContent;
+    const total = document.getElementById('totalPagar').textContent;
+    const emisor = document.getElementById('emisorNit').textContent;
+    
+    const qrData = `KLOHESV|FACTURA:${serie}-${numero}|FECHA:${fecha}|TOTAL:${total}|NIT:${emisor}`;
+    
+    new QRCode(qrContainer, {
+      text: qrData,
+      width: 80,
+      height: 80,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  // ========== IMPRESIÓN ==========
+  function imprimirTicket() {
+    window.print();
+  }
+
+  // ========== PDF ==========
+  function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    
+    // Calcular altura dinámica
+    const numProductos = document.querySelectorAll('#ticketProductos tr').length;
+    const alturaBase = 180;
+    const alturaPorProducto = 6;
+    const alturaTotal = alturaBase + (numProductos * alturaPorProducto);
+    
+    const doc = new jsPDF({
+      unit: 'mm',
+      format: [80, alturaTotal]
+    });
+    
+    let y = 10;
+    const centro = 40;
+    const margen = 4;
+    
+    // Función para línea punteada
+    function lineaPunteada(yPos) {
+      const segmento = 2;
+      const espacio = 1.5;
+      let x = margen;
+      while (x < 76) {
+        doc.line(x, yPos, Math.min(x + segmento, 76), yPos);
+        x += segmento + espacio;
+      }
+    }
+    
+    // Encabezado
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(document.querySelector('.ticket-logo').textContent, centro, y, { align: 'center' });
+    y += 7;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.querySelectorAll('.ticket-info')[0].textContent, centro, y, { align: 'center' });
+    y += 4;
+    doc.text(document.querySelectorAll('.ticket-info')[1].textContent, centro, y, { align: 'center' });
+    y += 4;
+    doc.text(document.querySelectorAll('.ticket-info')[2].textContent, centro, y, { align: 'center' });
+    y += 6;
+    lineaPunteada(y);
+    y += 5;
+    
+    // Datos de factura
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('FACTURA N:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('facturaNumero').textContent, margen + 25, y);
+    y += 5;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('SERIE:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('facturaSerie').textContent, margen + 25, y);
+    y += 5;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('FECHA:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('facturaFecha').textContent, margen + 25, y);
+    y += 6;
+    lineaPunteada(y);
+    y += 5;
+    
+    // Emisor
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('EMISOR', margen, y);
+    y += 4;
+    doc.setFontSize(9);
+    doc.text('Nombre:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('emisorNombre').textContent.substring(0, 20), margen + 22, y);
+    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('NIT:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('emisorNit').textContent, margen + 22, y);
+    y += 6;
+    lineaPunteada(y);
+    y += 5;
+    
+    // Receptor
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('RECEPTOR', margen, y);
+    y += 4;
+    doc.setFontSize(9);
+    doc.text('Nombre:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    const receptorNom = document.getElementById('receptorNombre').textContent;
+    doc.text(receptorNom.substring(0, 20), margen + 22, y);
+    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('NIT:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('receptorNit').textContent, margen + 22, y);
+    y += 6;
+    lineaPunteada(y);
+    y += 5;
+    
+    // Tabla de productos
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Prod.', margen, y);
+    doc.text('Cant', 36, y, { align: 'center' });
+    doc.text('P.U.', 46, y);
+    doc.text('Desc', 56, y);
+    doc.text('Total', 76, y, { align: 'right' });
+    y += 3;
+    lineaPunteada(y);
+    y += 4;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    
+    document.querySelectorAll('#ticketProductos tr').forEach(tr => {
+      const celdas = tr.querySelectorAll('td');
+      if (celdas.length >= 5) {
+        const nombre = celdas[0].textContent.substring(0, 12);
+        const cantidad = celdas[1].textContent;
+        const precio = celdas[2].textContent;
+        const descuento = celdas[3].textContent;
+        const total = celdas[4].textContent;
+        
+        doc.text(nombre, margen, y);
+        doc.text(cantidad, 36, y, { align: 'center' });
+        doc.text(precio, 46, y);
+        doc.text(descuento > 0 ? desc + '%' : '0', 58, y);
+        doc.text(total, 76, y, { align: 'right' });
+        y += 5;
+      }
+    });
+    
+    y += 1;
+    lineaPunteada(y);
+    y += 5;
+    
+    // Totales
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Subtotal:', 35, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('subtotal').textContent, 76, y, { align: 'right' });
+    y += 5;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`IVA (${config.tasaIva}%):`, 35, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('iva').textContent, 76, y, { align: 'right' });
+    y += 5;
+    
+    const descGlobal = document.getElementById('descuentoGlobal').textContent;
+    if (descGlobal !== '$0.00') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Descuento:', 35, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(descGlobal, 76, y, { align: 'right' });
+      y += 5;
+    }
+    
+    const anticipo = document.getElementById('anticipo').textContent;
+    if (anticipo !== '$0.00') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Anticipo:', 35, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(anticipo, 76, y, { align: 'right' });
+      y += 5;
+    }
+    
+    y += 2;
+    lineaPunteada(y);
+    y += 5;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL:', 35, y);
+    doc.text(document.getElementById('totalPagar').textContent, 76, y, { align: 'right' });
+    y += 8;
+    
+    lineaPunteada(y);
+    y += 6;
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Gracias por su compra!', centro, y, { align: 'center' });
+    y += 5;
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    const msg = 'Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.';
+    const lineas = doc.splitTextToSize(msg, 70);
+    lineas.forEach(l => {
+      doc.text(l, centro, y, { align: 'center' });
+      y += 3;
+    });
+    
+    const numFactura = document.getElementById('facturaNumero').textContent;
+    doc.save(`factura_klohesv_${numFactura}.pdf`);
+  }
+
+  // ========== EVENT LISTENERS ==========
+  document.getElementById('configModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarConfiguracion();
+  });
+
+  document.getElementById('productoModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarProductoModal();
+  });
+
+  // Escuchar cambios en localStorage desde otras pestañas
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'soldInventory') {
+      cargarVentas();
+    }
+  });
+
+  // Actualizar ventas al volver a la página
+  window.addEventListener('focus', function() {
+    cargarVentas();
+  });
+</script>
 </body>
 </html>

@@ -1208,7 +1208,7 @@
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="text" id="fEmisorTelefono" value="+503 0000-0000">
+            <input type="text" id="fEmisorTelefono" value="6671-1569">
           </div>
         </div>
         <div class="form-group">
@@ -1525,11 +1525,7 @@
   async function cargarImagenesLocalForage() {
     if (!productosFiltrados || productosFiltrados.length === 0) return;
     
-    // Configurar LocalForage
-    localforage.config({
-      name: 'KLOHESV',
-      storeName: 'images'
-    });
+    console.log('Cargando imágenes para', productosFiltrados.length, 'productos');
     
     // Intentar cargar imagen para cada producto
     for (let i = 0; i < productosFiltrados.length; i++) {
@@ -1543,73 +1539,40 @@
         imagenActual.startsWith('https://') ||
         imagenActual.startsWith('blob:')
       )) {
+        console.log('Producto', item.name, 'ya tiene imagen');
         continue;
       }
       
-      // Buscar por diferentes posibles claves de almacenamiento
-      const posiblesClaves = [];
+      // Intentar obtener la imagen usando el code (SKU) del producto
+      // Esto es igual a como funciona en venta.html
+      let blob = null;
+      const productCode = item.code || item.barcode;
       
-      // Buscar por code (SKU) - la clave principal en inventario.html
-      if (item.code) {
-        posiblesClaves.push(`img_${item.code}`);
-        posiblesClaves.push(`img_thumb_${item.code}`);
-      }
+      console.log('Buscando imagen para:', item.name, 'con code:', productCode);
       
-      // Claves basadas en barcode
-      if (item.barcode) {
-        posiblesClaves.push(`img_${item.barcode}`);
-        posiblesClaves.push(`image_${item.barcode}`);
-        posiblesClaves.push(`img_thumb_${item.barcode}`);
-      }
-      if (item.code && item.code !== item.barcode) {
-        posiblesClaves.push(`img_${item.code}`);
-        posiblesClaves.push(`image_${item.code}`);
-      }
-      if (item.codigo) {
-        posiblesClaves.push(`img_${item.codigo}`);
-        posiblesClaves.push(`image_${item.codigo}`);
-      }
-      
-      // Claves basadas en ID
-      if (item.id) posiblesClaves.push(`img_${item.id}`);
-      if (item.idVenta) posiblesClaves.push(`img_${item.idVenta}`);
-      
-      // También buscar en el inventario original por barcode
-      if (item.barcode && !item.code) {
+      if (productCode) {
         try {
-          const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
-          const productoOriginal = inventory.find(p => p.barcode === item.barcode);
-          if (productoOriginal && productoOriginal.code) {
-            posiblesClaves.push(`img_${productoOriginal.code}`);
-            posiblesClaves.push(`img_thumb_${productoOriginal.code}`);
-          }
-        } catch (e) {}
+          blob = await localforage.getItem(`img_${productCode}`);
+          console.log('Resultado para img_' + productCode + ':', blob ? 'encontrado' : 'no encontrado');
+        } catch (err) {
+          console.error('Error cargando imagen de localforage:', err);
+          blob = null;
+        }
+      } else {
+        console.log('Producto sin code ni barcode:', item.name);
       }
       
-      // Intentar recuperar de LocalForage con cada clave posible
-      for (const clave of posiblesClaves) {
+      // Si encontramos el blob, crear URL de objeto
+      if (blob) {
         try {
-          const imagenData = await localforage.getItem(clave);
-          if (imagenData) {
-            let imagenUrl = null;
-            
-            // Si es string (data URL)
-            if (typeof imagenData === 'string' && imagenData.startsWith('data:image')) {
-              imagenUrl = imagenData;
-            }
-            // Si es Blob
-            else if (imagenData instanceof Blob) {
-              imagenUrl = URL.createObjectURL(imagenData);
-            }
-            
-            if (imagenUrl) {
-              productosFiltrados[i].image = imagenUrl;
-              productosFiltrados[i].imagen = imagenUrl;
-              productosFiltrados[i].img = imagenUrl;
-              break;
-            }
-          }
-        } catch (e) {}
+          const imagenUrl = URL.createObjectURL(blob);
+          productosFiltrados[i].image = imagenUrl;
+          productosFiltrados[i].imagen = imagenUrl;
+          productosFiltrados[i].img = imagenUrl;
+          console.log('Imagen cargada exitosamente para:', item.name);
+        } catch (err) {
+          console.error('Error creando URL de imagen:', err);
+        }
       }
     }
   }
@@ -1657,10 +1620,21 @@
     // Enriquecer productos con datos del inventario original
     const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
     productosFiltrados = productosFiltrados.map(item => {
-      if (!item.code && item.barcode) {
-        const original = inventory.find(p => p.barcode === item.barcode);
-        if (original) {
-          return { ...item, code: original.code };
+      // Si el item no tiene code, intentar encontrarlo en el inventario
+      if (!item.code) {
+        // Buscar por barcode
+        if (item.barcode) {
+          const original = inventory.find(p => p.barcode === item.barcode);
+          if (original && original.code) {
+            return { ...item, code: original.code };
+          }
+        }
+        // Buscar por nombre si no se encontró por barcode
+        if (item.name) {
+          const original = inventory.find(p => p.name === item.name);
+          if (original && original.code) {
+            return { ...item, code: original.code };
+          }
         }
       }
       return item;

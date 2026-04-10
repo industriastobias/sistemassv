@@ -376,6 +376,7 @@
       object-fit: cover;
       border: 1px solid var(--border);
       background: var(--bg);
+      flex-shrink: 0;
     }
 
     .product-image-placeholder {
@@ -388,6 +389,7 @@
       justify-content: center;
       color: var(--text-muted);
       font-size: 1.2rem;
+      flex-shrink: 0;
     }
 
     .product-info {
@@ -1468,8 +1470,71 @@
     }
   }
 
+  // ========== CARGAR IMÁGENES DESDE LOCALFORAGE ==========
+  async function cargarImagenesLocalForage() {
+    if (!productosFiltrados || productosFiltrados.length === 0) return;
+    
+    // Configurar LocalForage
+    localforage.config({
+      name: 'KLOHESV',
+      storeName: 'images'
+    });
+    
+    // Intentar cargar imagen para cada producto
+    for (let i = 0; i < productosFiltrados.length; i++) {
+      const item = productosFiltrados[i];
+      
+      // Si ya tiene imagen válida en el objeto, no hacer nada
+      const imagenActual = item.image || item.imagen || item.img || '';
+      if (imagenActual && (
+        imagenActual.startsWith('data:image') || 
+        imagenActual.startsWith('http://') || 
+        imagenActual.startsWith('https://') ||
+        imagenActual.startsWith('blob:')
+      )) {
+        continue;
+      }
+      
+      // Buscar por diferentes posibles claves de almacenamiento
+      const posiblesClaves = [];
+      
+      // Claves basadas en barcode
+      if (item.barcode) {
+        posiblesClaves.push(`img_${item.barcode}`);
+        posiblesClaves.push(`image_${item.barcode}`);
+      }
+      if (item.code) {
+        posiblesClaves.push(`img_${item.code}`);
+        posiblesClaves.push(`image_${item.code}`);
+      }
+      if (item.codigo) {
+        posiblesClaves.push(`img_${item.codigo}`);
+        posiblesClaves.push(`image_${item.codigo}`);
+      }
+      
+      // Claves basadas en ID
+      if (item.id) posiblesClaves.push(`img_${item.id}`);
+      if (item.idVenta) posiblesClaves.push(`img_${item.idVenta}`);
+      
+      // Intentar recuperar de LocalForage con cada clave posible
+      for (const clave of posiblesClaves) {
+        try {
+          const imagenData = await localforage.getItem(clave);
+          if (imagenData && typeof imagenData === 'string' && imagenData.startsWith('data:image')) {
+            productosFiltrados[i].image = imagenData;
+            productosFiltrados[i].imagen = imagenData;
+            productosFiltrados[i].img = imagenData;
+            break; // Imagen encontrada, salir del loop
+          }
+        } catch (e) {
+          // Continuar con la siguiente clave
+        }
+      }
+    }
+  }
+
   // ========== SINCRONIZACIÓN CON VENTA.HTML ==========
-  function sincronizarConVenta() {
+  async function sincronizarConVenta() {
     showSpinner();
     
     // Intentar obtener de múltiples fuentes
@@ -1507,6 +1572,9 @@
       if (item.type === 'cierre') return false;
       return true;
     });
+    
+    // Cargar imágenes desde LocalForage/IndexedDB
+    await cargarImagenesLocalForage();
     
     // Ordenar por fecha más reciente
     productosFiltrados.sort((a, b) => {
@@ -1599,7 +1667,17 @@
       const barcode = item.barcode || item.code || item.codigo || 'N/A';
       const precio = Number(item.price || item.precio || item.total || 0);
       const cantidad = Number(item.quantity || item.cantidad || 1);
-      const imagen = item.image || item.imagen || item.img || '';
+      
+      // Obtener imagen de múltiples posibles propiedades
+      let imagen = item.image || item.imagen || item.img || '';
+      
+      // Verificar si es una data URL válida
+      const tieneImagenValida = imagen && (
+        imagen.startsWith('data:image') || 
+        imagen.startsWith('http://') || 
+        imagen.startsWith('https://') ||
+        imagen.startsWith('blob:')
+      );
       
       const fechaRaw = item.soldAt || item.date || item.fecha || new Date();
       const fecha = new Date(fechaRaw).toLocaleDateString('es-SV', {
@@ -1613,8 +1691,9 @@
       div.innerHTML = `
         <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} 
           onchange="toggleProducto('${id}')">
-        ${imagen ? 
-          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}">` :
+        ${tieneImagenValida ? 
+          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
+          `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
           `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
         }
         <div class="product-info">
@@ -1661,14 +1740,22 @@
       const div = document.createElement('div');
       div.className = 'product-item selected';
       
-      const imagen = item.image || '';
+      // Obtener imagen de múltiples posibles propiedades
+      let imagen = item.image || item.imagen || item.img || '';
+      const tieneImagenValida = imagen && (
+        imagen.startsWith('data:image') || 
+        imagen.startsWith('http://') || 
+        imagen.startsWith('https://') ||
+        imagen.startsWith('blob:')
+      );
       
       div.innerHTML = `
         <button class="modal-close" onclick="eliminarProductoFactura('${item.id}')" style="position:static;">
           <i class="fa-solid fa-times"></i>
         </button>
-        ${imagen ? 
-          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(item.name)}">` :
+        ${tieneImagenValida ? 
+          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(item.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
+          `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
           `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
         }
         <div class="product-info">
@@ -2399,14 +2486,14 @@
   });
 
   // Sincronización en tiempo real con venta.html
-  window.addEventListener('storage', (e) => {
+  window.addEventListener('storage', async (e) => {
     if (e.key === 'soldInventory' || e.key === 'ventaProductos') {
-      sincronizarConVenta();
+      await sincronizarConVenta();
     }
   });
 
-  window.addEventListener('focus', () => {
-    sincronizarConVenta();
+  window.addEventListener('focus', async () => {
+    await sincronizarConVenta();
   });
 
   // Actualizar vista previa al cambiar campos
@@ -2433,7 +2520,10 @@
     document.getElementById('fNum').value = nextNum.toString().padStart(6, '0');
   }
   
-  sincronizarConVenta();
+  // Inicializar con await
+  (async function() {
+    await sincronizarConVenta();
+  })();
 </script>
 </body>
 </html>

@@ -562,6 +562,13 @@
       color: #000;
     }
 
+    .factura-giro {
+      font-size: 10px;
+      color: #333;
+      margin-bottom: 4px;
+      font-style: italic;
+    }
+
     .factura-info {
       color: #333;
       font-size: 9px;
@@ -699,6 +706,16 @@
       margin-top: 4px;
     }
 
+    .factura-codigo-validacion {
+      font-size: 7px;
+      color: #666;
+      text-align: center;
+      margin-top: 4px;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      padding: 0 10px;
+    }
+
     .factura-footer {
       text-align: center;
       margin-top: 12px;
@@ -716,6 +733,17 @@
 
     .factura-footer-texto {
       line-height: 1.3;
+    }
+
+    .factura-footer-instagram {
+      margin-top: 6px;
+      font-size: 9px;
+    }
+
+    .factura-footer-version {
+      margin-top: 8px;
+      font-size: 7px;
+      color: #888;
     }
 
     /* ===== BOTONES DE FACTURA ===== */
@@ -993,6 +1021,7 @@
     }
   </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -1147,6 +1176,16 @@
             <input type="date" id="fVencimiento">
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Número de Caja</label>
+            <input type="text" id="fCaja" value="001">
+          </div>
+          <div class="form-group">
+            <label>Nombre del Cajero</label>
+            <input type="text" id="fCajero" value="ADMIN">
+          </div>
+        </div>
       </div>
 
       <!-- DATOS DEL EMISOR -->
@@ -1158,14 +1197,18 @@
           <label>Nombre / Razón Social</label>
           <input type="text" id="fEmisorNombre" value="KLOHESV">
         </div>
+        <div class="form-group">
+          <label>Giro / Actividad del Negocio</label>
+          <input type="text" id="fEmisorGiro" value="Joyería y Accesorios">
+        </div>
         <div class="form-row">
           <div class="form-group">
-            <label>NIF/CIF/CUIT/RFC</label>
-            <input type="text" id="fEmisorNIF" value="">
+            <label>NIF/CIF/CUIT/RFC (NIT)</label>
+            <input type="text" id="fEmisorNIF" value="0000-000000-000-0">
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="text" id="fEmisorTelefono" value="">
+            <input type="text" id="fEmisorTelefono" value="+503 0000-0000">
           </div>
         </div>
         <div class="form-group">
@@ -1243,9 +1286,12 @@
       <div class="factura-container" id="facturaTicket">
         <div class="factura-header">
           <div class="factura-logo" id="ticketLogo">KLOHESV</div>
+          <div class="factura-giro" id="ticketGiro">Joyería y Accesorios</div>
           <div class="factura-info" id="ticketEmisorDir">San Salvador, El Salvador</div>
           <div class="factura-info" id="ticketEmisorEmail">industriastobias@gmail.com</div>
-          <div class="factura-info" id="ticketEmisorTel"></div>
+          <div class="factura-info" id="ticketEmisorTel">+503 0000-0000</div>
+          <div class="factura-info" id="ticketEmisorNIFDisplay">NIT: 0000-000000-000-0</div>
+          <div class="factura-info" id="ticketEmisorGiroDisplay">Giro: Venta de Joyería y Accesorios</div>
         </div>
 
         <div class="factura-section-title">FACTURA</div>
@@ -1262,21 +1308,17 @@
             <span class="factura-dato-label">Vence:</span>
             <span class="factura-dato-valor" id="ticketVencimiento"></span>
           </div>
-        </div>
-
-        <div class="factura-section-title">EMISOR</div>
-        <div class="factura-datos">
           <div class="factura-dato">
-            <span class="factura-dato-label">Nombre:</span>
-            <span class="factura-dato-valor" id="ticketEmisorNombre">KLOHESV</span>
+            <span class="factura-dato-label">Caja:</span>
+            <span class="factura-dato-valor" id="ticketCaja">001</span>
           </div>
           <div class="factura-dato">
-            <span class="factura-dato-label">NIF/CIF:</span>
-            <span class="factura-dato-valor" id="ticketEmisorNIF"></span>
+            <span class="factura-dato-label">Cajero:</span>
+            <span class="factura-dato-valor" id="ticketCajero">ADMIN</span>
           </div>
         </div>
 
-        <div class="factura-section-title">RECEPTOR</div>
+        <div class="factura-section-title">CLIENTE</div>
         <div class="factura-datos">
           <div class="factura-dato">
             <span class="factura-dato-label">Nombre:</span>
@@ -1307,8 +1349,8 @@
 
         <div class="factura-desglose">
           <div class="factura-desglose-row">
-            <span class="factura-desglose-label">Base Imponible:</span>
-            <span class="factura-desglose-value" id="ticketBase">$0.00</span>
+            <span class="factura-desglose-label">Subtotal:</span>
+            <span class="factura-desglose-value" id="ticketSubtotal">$0.00</span>
           </div>
           <div class="factura-desglose-row" id="rowDescuento" style="display:none;">
             <span class="factura-desglose-label">Descuento:</span>
@@ -1322,6 +1364,10 @@
             <span class="factura-desglose-label">IVA (<span id="ticketIVAPorc">13</span>%):</span>
             <span class="factura-desglose-value" id="ticketIVA">$0.00</span>
           </div>
+          <div class="factura-desglose-row">
+            <span class="factura-desglose-label">Base Imponible:</span>
+            <span class="factura-desglose-value" id="ticketBase">$0.00</span>
+          </div>
         </div>
 
         <div class="factura-total-row">
@@ -1331,15 +1377,20 @@
 
         <div class="factura-qr" id="ticketQRContainer">
           <div id="qrcode"></div>
-          <div class="factura-qr-label">Escanea para verificar</div>
+          <div class="factura-qr-label">Escanea para verificar factura</div>
+          <div class="factura-codigo-validacion" id="ticketCodigoValidacion"></div>
         </div>
 
         <div class="factura-footer">
-          <div class="factura-footer-titulo">¡Gracias por su compra!</div>
+          <div class="factura-footer-titulo">¡GRACIAS POR SU COMPRA!</div>
+          <div class="factura-footer-instagram">Instagram: @Klohesv</div>
           <div class="factura-footer-texto">
-            Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.
+            NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES, A MENOS QUE EL PRODUCTO ESTÉ DAÑADO. PLAZO: 5 DÍAS POSTERIORES A LA COMPRA.
           </div>
-          <div class="factura-info" style="margin-top:8px;">@Klohesv</div>
+          <div class="factura-footer-version">
+            Documento generado electrónicamente<br>
+            KLOHESV - Facturación POS v1.0
+          </div>
         </div>
       </div>
 
@@ -1498,7 +1549,7 @@
       // Buscar por diferentes posibles claves de almacenamiento
       const posiblesClaves = [];
       
-      // 🔧 CORRECCIÓN: Buscar por code (SKU) - la clave principal en inventario.html
+      // Buscar por code (SKU) - la clave principal en inventario.html
       if (item.code) {
         posiblesClaves.push(`img_${item.code}`);
         posiblesClaves.push(`img_thumb_${item.code}`);
@@ -1523,8 +1574,7 @@
       if (item.id) posiblesClaves.push(`img_${item.id}`);
       if (item.idVenta) posiblesClaves.push(`img_${item.idVenta}`);
       
-      // 🔧 CORRECCIÓN: También buscar en el inventario original por barcode
-      // para obtener el código SKU (code) si el producto vendido solo tiene barcode
+      // También buscar en el inventario original por barcode
       if (item.barcode && !item.code) {
         try {
           const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
@@ -1556,12 +1606,10 @@
               productosFiltrados[i].image = imagenUrl;
               productosFiltrados[i].imagen = imagenUrl;
               productosFiltrados[i].img = imagenUrl;
-              break; // Imagen encontrada, salir del loop
+              break;
             }
           }
-        } catch (e) {
-          // Continuar con la siguiente clave
-        }
+        } catch (e) {}
       }
     }
   }
@@ -1606,11 +1654,9 @@
       return true;
     });
     
-    // 🔧 CORRECCIÓN: Enriquecer productos con datos del inventario original
-    // para obtener el código SKU (code) si no lo tienen
+    // Enriquecer productos con datos del inventario original
     const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
     productosFiltrados = productosFiltrados.map(item => {
-      // Si el item no tiene code pero tiene barcode, buscar en inventario
       if (!item.code && item.barcode) {
         const original = inventory.find(p => p.barcode === item.barcode);
         if (original) {
@@ -1973,7 +2019,7 @@
 
   function formatearNumeroFactura() {
     let num = document.getElementById('fNum').value.replace(/\D/g, '');
-    num = num.padStart(6, '0');
+    num = num.padStart(9, '0');
     document.getElementById('fNum').value = num;
   }
 
@@ -2004,6 +2050,23 @@
     };
   }
 
+  // ========== GENERAR CÓDIGO DE VALIDACIÓN ==========
+  function generarCodigoValidacion(serie, num, total, fecha) {
+    const emisor = document.getElementById('fEmisorNombre').value || 'KLOHESV';
+    const nit = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
+    const fechaStr = fecha ? new Date(fecha).toISOString().slice(0, 16).replace('T', '') : new Date().toISOString().slice(0, 16).replace('T', '');
+    const totalStr = total.toFixed(2);
+    
+    // Generar código aleatorio de 8 caracteres
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let randomCode = '';
+    for (let i = 0; i < 8; i++) {
+      randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    return `${emisor.toUpperCase()}|${serie}|${num}|${nit}|${fechaStr}|${totalStr}|${randomCode}`;
+  }
+
   // ========== VISTA PREVIA DE FACTURA ==========
   function actualizarVistaPrevia() {
     const calculos = actualizarCalculos();
@@ -2013,18 +2076,25 @@
     const num = document.getElementById('fNum').value || '000001';
     const fecha = document.getElementById('fFecha').value;
     const vencimiento = document.getElementById('fVencimiento').value;
+    const caja = document.getElementById('fCaja').value || '001';
+    const cajero = document.getElementById('fCajero').value || 'ADMIN';
     
     document.getElementById('ticketLogo').textContent = document.getElementById('fEmisorNombre').value || 'KLOHESV';
+    document.getElementById('ticketGiro').textContent = document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios';
     document.getElementById('ticketNum').textContent = `${serie}-${num}`;
     document.getElementById('ticketFecha').textContent = fecha ? new Date(fecha).toLocaleString('es-SV') : new Date().toLocaleString('es-SV');
     document.getElementById('ticketVencimiento').textContent = vencimiento ? new Date(vencimiento).toLocaleDateString('es-SV') : 'N/A';
+    document.getElementById('ticketCaja').textContent = caja;
+    document.getElementById('ticketCajero').textContent = cajero;
     
     // Emisor
-    document.getElementById('ticketEmisorNombre').textContent = document.getElementById('fEmisorNombre').value || 'KLOHESV';
-    document.getElementById('ticketEmisorNIF').textContent = document.getElementById('fEmisorNIF').value || '-';
+    const emisorNIF = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
+    const emisorGiro = document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios';
     document.getElementById('ticketEmisorDir').textContent = document.getElementById('fEmisorDireccion').value || 'San Salvador, El Salvador';
     document.getElementById('ticketEmisorEmail').textContent = document.getElementById('fEmisorEmail').value || '';
     document.getElementById('ticketEmisorTel').textContent = document.getElementById('fEmisorTelefono').value || '';
+    document.getElementById('ticketEmisorNIFDisplay').textContent = `NIT: ${emisorNIF}`;
+    document.getElementById('ticketEmisorGiroDisplay').textContent = `Giro: Venta de ${emisorGiro}`;
     
     // Cliente
     document.getElementById('ticketCliente').textContent = document.getElementById('fCliente').value || 'Consumidor Final';
@@ -2035,20 +2105,27 @@
     const tbody = document.getElementById('ticketBody');
     tbody.innerHTML = '';
     
-    productosFactura.forEach(p => {
+    if (productosFactura.length === 0) {
       const tr = document.createElement('tr');
-      const nombreCorto = p.name.length > 18 ? p.name.substring(0, 17) + '...' : p.name;
-      tr.innerHTML = `
-        <td>${escapeHTML(nombreCorto)}</td>
-        <td>${p.quantity}</td>
-        <td>$${p.price.toFixed(2)}</td>
-        <td>$${p.total.toFixed(2)}</td>
-      `;
+      tr.innerHTML = `<td colspan="4" style="text-align:center; padding: 10px;">No hay productos</td>`;
       tbody.appendChild(tr);
-    });
+    } else {
+      productosFactura.forEach(p => {
+        const tr = document.createElement('tr');
+        const nombreCorto = p.name.length > 18 ? p.name.substring(0, 17) + '...' : p.name;
+        tr.innerHTML = `
+          <td>${escapeHTML(nombreCorto)}</td>
+          <td>${p.quantity}</td>
+          <td>$${p.price.toFixed(2)}</td>
+          <td>$${p.total.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
     
     // Desglose
-    document.getElementById('ticketBase').textContent = '$' + calculos.subtotal.toFixed(2);
+    document.getElementById('ticketSubtotal').textContent = '$' + calculos.subtotal.toFixed(2);
+    document.getElementById('ticketBase').textContent = '$' + calculos.baseImponible.toFixed(2);
     
     const rowDescuento = document.getElementById('rowDescuento');
     if (calculos.descuento > 0) {
@@ -2077,8 +2154,12 @@
     
     document.getElementById('ticketTotal').textContent = '$' + calculos.total.toFixed(2);
     
-    // QR
+    // QR y código de validación
     generarQR(calculos.total, serie + '-' + num);
+    
+    // Generar código de validación
+    const codigoValidacion = generarCodigoValidacion(serie, num, calculos.total, fecha);
+    document.getElementById('ticketCodigoValidacion').textContent = codigoValidacion;
   }
 
   function generarQR(total, facturaNum) {
@@ -2178,6 +2259,11 @@
       letter-spacing: 0.1em;
       margin-bottom: 4px;
     }
+    .factura-giro {
+      font-size: 9px;
+      font-style: italic;
+      margin-bottom: 4px;
+    }
     .factura-info {
       color: #333;
       font-size: 8px;
@@ -2203,10 +2289,6 @@
       font-weight: 600;
       min-width: 60px;
       flex-shrink: 0;
-    }
-    .factura-dato-valor {
-      flex: 1;
-      word-break: break-word;
     }
     .factura-tabla {
       width: 100%;
@@ -2266,6 +2348,14 @@
       color: #666;
       margin-top: 2px;
     }
+    .factura-codigo-validacion {
+      font-size: 6px;
+      color: #666;
+      text-align: center;
+      margin-top: 2px;
+      word-break: break-all;
+      padding: 0 5px;
+    }
     .factura-footer {
       text-align: center;
       margin-top: 10px;
@@ -2278,6 +2368,15 @@
       font-weight: 700;
       margin-bottom: 3px;
       font-size: 9px;
+    }
+    .factura-footer-instagram {
+      margin-top: 4px;
+      font-size: 8px;
+    }
+    .factura-footer-version {
+      margin-top: 6px;
+      font-size: 6px;
+      color: #888;
     }
   </style>
 </head>
@@ -2302,7 +2401,7 @@
     const { jsPDF } = window.jspdf;
     
     // Calcular altura dinámica
-    const alturaBase = 160;
+    const alturaBase = 180;
     const alturaPorProducto = 5;
     const alturaProductos = productosFactura.length * alturaPorProducto;
     const alturaExtras = (parseFloat(document.getElementById('fEnvio').value) > 0 ? 5 : 0) + 
@@ -2311,7 +2410,7 @@
     
     const doc = new jsPDF({ 
       unit: 'mm', 
-      format: [80, Math.max(200, alturaTotal)],
+      format: [80, Math.max(220, alturaTotal)],
       orientation: 'portrait'
     });
     
@@ -2332,11 +2431,16 @@
       }
     }
 
-    // Logo
+    // Logo y giro
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text((document.getElementById('fEmisorNombre').value || 'KLOHESV').toUpperCase(), centro, y, { align: 'center' });
-    y += 6;
+    y += 5;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.text(document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios', centro, y, { align: 'center' });
+    y += 4;
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -2351,11 +2455,17 @@
     
     const tel = document.getElementById('fEmisorTelefono').value;
     if (tel) {
-      doc.text('Tel: ' + tel, centro, y, { align: 'center' });
+      doc.text(tel, centro, y, { align: 'center' });
       y += 4;
     }
     
-    y += 2;
+    // NIT y Giro
+    const nit = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
+    doc.text('NIT: ' + nit, centro, y, { align: 'center' });
+    y += 4;
+    doc.text('Giro: Venta de ' + (document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios'), centro, y, { align: 'center' });
+    y += 5;
+    
     dibujarLineaPunteada(y);
     y += 5;
 
@@ -2366,7 +2476,10 @@
     y += 5;
     
     doc.setFontSize(8);
-    doc.text('Serie-N°: ' + document.getElementById('fSerie').value + '-' + document.getElementById('fNum').value, margen, y);
+    doc.setFont('helvetica', 'normal');
+    const serie = document.getElementById('fSerie').value;
+    const num = document.getElementById('fNum').value;
+    doc.text('Serie-N°: ' + serie + '-' + num, margen, y);
     y += 4;
     doc.text('Fecha: ' + new Date(document.getElementById('fFecha').value || new Date()).toLocaleString('es-SV'), margen, y);
     y += 4;
@@ -2377,30 +2490,19 @@
       y += 4;
     }
     
-    y += 1;
-    dibujarLineaPunteada(y);
+    // Caja y Cajero
+    doc.text('Caja: ' + (document.getElementById('fCaja').value || '001'), margen, y);
     y += 4;
-
-    // Emisor
-    doc.setFont('helvetica', 'bold');
-    doc.text('EMISOR', margen, y);
+    doc.text('Cajero: ' + (document.getElementById('fCajero').value || 'ADMIN'), margen, y);
     y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('fEmisorNombre').value || 'KLOHESV', margen, y);
-    y += 4;
-    const emisorNIF = document.getElementById('fEmisorNIF').value;
-    if (emisorNIF) {
-      doc.text('NIF: ' + emisorNIF, margen, y);
-      y += 4;
-    }
     
     y += 1;
     dibujarLineaPunteada(y);
-    y += 4;
+    y += 5;
 
-    // Receptor
+    // Cliente
     doc.setFont('helvetica', 'bold');
-    doc.text('RECEPTOR', margen, y);
+    doc.text('CLIENTE', margen, y);
     y += 4;
     doc.setFont('helvetica', 'normal');
     const cliente = document.getElementById('fCliente').value || 'Consumidor Final';
@@ -2438,16 +2540,19 @@
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     
-    let suma = 0;
-    productosFactura.forEach(p => {
-      const nombre = p.name.length > 16 ? p.name.substring(0, 15) + '.' : p.name;
-      doc.text(nombre, margen, y);
-      doc.text(String(p.quantity), 36, y, { align: 'center' });
-      doc.text(p.price.toFixed(2), 52, y);
-      doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
-      y += 4;
-      suma += p.total;
-    });
+    if (productosFactura.length === 0) {
+      doc.text('No hay productos', centro, y, { align: 'center' });
+      y += 5;
+    } else {
+      productosFactura.forEach(p => {
+        const nombre = p.name.length > 16 ? p.name.substring(0, 15) + '.' : p.name;
+        doc.text(nombre, margen, y);
+        doc.text(String(p.quantity), 36, y, { align: 'center' });
+        doc.text(p.price.toFixed(2), 52, y);
+        doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
+        y += 4;
+      });
+    }
 
     doc.line(margen, y, 76, y);
     y += 5;
@@ -2456,7 +2561,7 @@
     const calculos = actualizarCalculos();
     
     doc.setFontSize(8);
-    doc.text('Base Imponible:', margen, y);
+    doc.text('Subtotal:', margen, y);
     doc.text('$' + calculos.subtotal.toFixed(2), 76, y, { align: 'right' });
     y += 4;
     
@@ -2478,6 +2583,10 @@
       y += 4;
     }
     
+    doc.text('Base Imponible:', margen, y);
+    doc.text('$' + calculos.baseImponible.toFixed(2), 76, y, { align: 'right' });
+    y += 4;
+    
     y += 2;
     dibujarLineaPunteada(y);
     y += 5;
@@ -2485,7 +2594,7 @@
     // Total
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', margen, y);
+    doc.text('TOTAL A PAGAR:', margen, y);
     doc.text('$' + calculos.total.toFixed(2), 76, y, { align: 'right' });
     y += 6;
     
@@ -2501,28 +2610,47 @@
         y += 24;
         doc.setFontSize(6);
         doc.setFont('helvetica', 'normal');
-        doc.text('Escanea para verificar', centro, y, { align: 'center' });
-        y += 6;
+        doc.text('Escanea para verificar factura', centro, y, { align: 'center' });
+        y += 4;
+        
+        // Código de validación
+        const codigoValidacion = document.getElementById('ticketCodigoValidacion').textContent;
+        if (codigoValidacion) {
+          doc.setFontSize(5);
+          const codigoLineas = doc.splitTextToSize(codigoValidacion, ancho - 4);
+          codigoLineas.forEach(linea => {
+            doc.text(linea, centro, y, { align: 'center' });
+            y += 2;
+          });
+        }
+        y += 4;
       }
     }
 
     // Footer
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('¡Gracias por su compra!', centro, y, { align: 'center' });
+    doc.text('¡GRACIAS POR SU COMPRA!', centro, y, { align: 'center' });
+    y += 5;
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
     y += 5;
     
     doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    const msg = 'Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.';
+    const msg = 'NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES, A MENOS QUE EL PRODUCTO ESTE DAÑADO. PLAZO: 5 DIAS POSTERIORES A LA COMPRA.';
     const lineas = doc.splitTextToSize(msg, ancho - 4);
     lineas.forEach(l => {
       doc.text(l, centro, y, { align: 'center' });
       y += 2.5;
     });
     
-    y += 2;
-    doc.text('@Klohesv', centro, y, { align: 'center' });
+    y += 3;
+    doc.setFontSize(5);
+    doc.text('Documento generado electrónicamente', centro, y, { align: 'center' });
+    y += 2.5;
+    doc.text('KLOHESV - Facturación POS v1.0', centro, y, { align: 'center' });
 
     doc.save(`factura_${document.getElementById('fSerie').value}_${document.getElementById('fNum').value}.pdf`);
   }
@@ -2544,7 +2672,7 @@
   });
 
   // Actualizar vista previa al cambiar campos
-  ['fSerie', 'fNum', 'fFecha', 'fVencimiento', 'fEmisorNombre', 'fEmisorNIF', 'fEmisorDireccion', 
+  ['fSerie', 'fNum', 'fFecha', 'fVencimiento', 'fCaja', 'fCajero', 'fEmisorNombre', 'fEmisorGiro', 'fEmisorNIF', 'fEmisorDireccion', 
    'fEmisorEmail', 'fEmisorTelefono', 'fCliente', 'fClienteNIF', 'fClienteDireccion', 
    'fClienteTelefono', 'fClienteEmail'].forEach(id => {
     const el = document.getElementById(id);
@@ -2564,12 +2692,15 @@
   const lastNum = localStorage.getItem('lastFacturaNum');
   if (lastNum) {
     const nextNum = parseInt(lastNum) + 1;
-    document.getElementById('fNum').value = nextNum.toString().padStart(6, '0');
+    document.getElementById('fNum').value = nextNum.toString().padStart(9, '0');
+  } else {
+    document.getElementById('fNum').value = '000000001';
   }
   
   // Inicializar con await
   (async function() {
     await sincronizarConVenta();
+    actualizarVistaPrevia();
   })();
 </script>
 </body>

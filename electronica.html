@@ -1498,12 +1498,19 @@
       // Buscar por diferentes posibles claves de almacenamiento
       const posiblesClaves = [];
       
+      // 🔧 CORRECCIÓN: Buscar por code (SKU) - la clave principal en inventario.html
+      if (item.code) {
+        posiblesClaves.push(`img_${item.code}`);
+        posiblesClaves.push(`img_thumb_${item.code}`);
+      }
+      
       // Claves basadas en barcode
       if (item.barcode) {
         posiblesClaves.push(`img_${item.barcode}`);
         posiblesClaves.push(`image_${item.barcode}`);
+        posiblesClaves.push(`img_thumb_${item.barcode}`);
       }
-      if (item.code) {
+      if (item.code && item.code !== item.barcode) {
         posiblesClaves.push(`img_${item.code}`);
         posiblesClaves.push(`image_${item.code}`);
       }
@@ -1516,15 +1523,41 @@
       if (item.id) posiblesClaves.push(`img_${item.id}`);
       if (item.idVenta) posiblesClaves.push(`img_${item.idVenta}`);
       
+      // 🔧 CORRECCIÓN: También buscar en el inventario original por barcode
+      // para obtener el código SKU (code) si el producto vendido solo tiene barcode
+      if (item.barcode && !item.code) {
+        try {
+          const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
+          const productoOriginal = inventory.find(p => p.barcode === item.barcode);
+          if (productoOriginal && productoOriginal.code) {
+            posiblesClaves.push(`img_${productoOriginal.code}`);
+            posiblesClaves.push(`img_thumb_${productoOriginal.code}`);
+          }
+        } catch (e) {}
+      }
+      
       // Intentar recuperar de LocalForage con cada clave posible
       for (const clave of posiblesClaves) {
         try {
           const imagenData = await localforage.getItem(clave);
-          if (imagenData && typeof imagenData === 'string' && imagenData.startsWith('data:image')) {
-            productosFiltrados[i].image = imagenData;
-            productosFiltrados[i].imagen = imagenData;
-            productosFiltrados[i].img = imagenData;
-            break; // Imagen encontrada, salir del loop
+          if (imagenData) {
+            let imagenUrl = null;
+            
+            // Si es string (data URL)
+            if (typeof imagenData === 'string' && imagenData.startsWith('data:image')) {
+              imagenUrl = imagenData;
+            }
+            // Si es Blob
+            else if (imagenData instanceof Blob) {
+              imagenUrl = URL.createObjectURL(imagenData);
+            }
+            
+            if (imagenUrl) {
+              productosFiltrados[i].image = imagenUrl;
+              productosFiltrados[i].imagen = imagenUrl;
+              productosFiltrados[i].img = imagenUrl;
+              break; // Imagen encontrada, salir del loop
+            }
           }
         } catch (e) {
           // Continuar con la siguiente clave
@@ -1571,6 +1604,20 @@
       if (item.isCierreCaja) return false;
       if (item.type === 'cierre') return false;
       return true;
+    });
+    
+    // 🔧 CORRECCIÓN: Enriquecer productos con datos del inventario original
+    // para obtener el código SKU (code) si no lo tienen
+    const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
+    productosFiltrados = productosFiltrados.map(item => {
+      // Si el item no tiene code pero tiene barcode, buscar en inventario
+      if (!item.code && item.barcode) {
+        const original = inventory.find(p => p.barcode === item.barcode);
+        if (original) {
+          return { ...item, code: original.code };
+        }
+      }
+      return item;
     });
     
     // Cargar imágenes desde LocalForage/IndexedDB
@@ -1655,7 +1702,7 @@
       div.className = 'product-item';
       div.dataset.index = index;
       
-      const id = item.idVenta || item.id || item.code || item.codigo || 'prod_' + index;
+      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + index;
       div.dataset.id = id;
       
       const isSelected = productosFactura.some(p => p.id === id);
@@ -1671,7 +1718,7 @@
       // Obtener imagen de múltiples posibles propiedades
       let imagen = item.image || item.imagen || item.img || '';
       
-      // Verificar si es una data URL válida
+      // Verificar si es una data URL válida o URL de objeto
       const tieneImagenValida = imagen && (
         imagen.startsWith('data:image') || 
         imagen.startsWith('http://') || 
@@ -1785,7 +1832,7 @@
   // ========== SELECCIÓN DE PRODUCTOS ==========
   function toggleProducto(id) {
     const item = productosFiltrados.find(p => {
-      const pid = p.idVenta || p.id || p.code || p.codigo;
+      const pid = p.idVenta || p.id || p.code || p.barcode || p.codigo;
       return pid === id;
     });
     
@@ -1824,7 +1871,7 @@
 
   function seleccionarTodos() {
     productosFiltrados.forEach(item => {
-      const id = item.idVenta || item.id || item.code || item.codigo || 'prod_' + Date.now();
+      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + Date.now();
       if (!productosFactura.some(p => p.id === id)) {
         const cantidad = Number(item.quantity || item.cantidad || 1);
         const precio = Number(item.price || item.precio || item.total || 0);

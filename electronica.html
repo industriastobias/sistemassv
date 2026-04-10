@@ -2170,22 +2170,56 @@
         imagen.startsWith('blob:')
       );
       
-      div.innerHTML = `
-        <button class="modal-close" onclick="eliminarProductoFactura('${item.id}')" style="position:static;">
-          <i class="fa-solid fa-times"></i>
-        </button>
-        ${tieneImagenValida ? 
-          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(item.name)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
-          `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
-          `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
-        }
-        <div class="product-info">
-          <div class="product-name">${escapeHTML(item.name)}</div>
-          <div class="product-barcode">${escapeHTML(item.barcode || 'N/A')}</div>
-          <div class="product-meta">Cant: ${item.quantity} | $${item.price.toFixed(2)} c/u</div>
-        </div>
-        <div class="product-price">$${item.total.toFixed(2)}</div>
+      // Crear el botón de eliminar con addEventListener (más confiable que onclick inline)
+      const btnEliminar = document.createElement('button');
+      btnEliminar.className = 'modal-close';
+      btnEliminar.style.cssText = 'position:static; flex-shrink:0;';
+      btnEliminar.innerHTML = '<i class="fa-solid fa-times"></i>';
+      btnEliminar.title = 'Eliminar producto';
+      btnEliminar.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        eliminarProductoFactura(item.id);
+      });
+      
+      div.appendChild(btnEliminar);
+      
+      // Agregar imagen
+      if (tieneImagenValida) {
+        const img = document.createElement('img');
+        img.src = imagen;
+        img.className = 'product-image';
+        img.alt = item.name;
+        img.onerror = function() {
+          this.style.display = 'none';
+          const placeholder = document.createElement('div');
+          placeholder.className = 'product-image-placeholder';
+          placeholder.innerHTML = '<i class="fa-solid fa-box"></i>';
+          div.insertBefore(placeholder, this.nextSibling);
+        };
+        div.appendChild(img);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'product-image-placeholder';
+        placeholder.innerHTML = '<i class="fa-solid fa-box"></i>';
+        div.appendChild(placeholder);
+      }
+      
+      // Info del producto
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'product-info';
+      infoDiv.innerHTML = `
+        <div class="product-name">${escapeHTML(item.name)}</div>
+        <div class="product-barcode">${escapeHTML(item.barcode || 'N/A')}</div>
+        <div class="product-meta">Cant: ${item.quantity} | $${item.price.toFixed(2)} c/u</div>
       `;
+      div.appendChild(infoDiv);
+      
+      // Precio
+      const priceDiv = document.createElement('div');
+      priceDiv.className = 'product-price';
+      priceDiv.textContent = '$' + item.total.toFixed(2);
+      div.appendChild(priceDiv);
       
       container.appendChild(div);
     });

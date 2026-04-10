@@ -1195,7 +1195,41 @@
     .fullscreen-btn.hidden {
       display: none;
     }
+
+    /* ===== NOTIFICACIÓN FULLSCREEN ===== */
+    .fullscreen-notification {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--rose-text);
+      color: white;
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      font-weight: 500;
+      z-index: 10001;
+      box-shadow: var(--shadow-lg);
+      animation: slideDown 0.3s ease;
+      display: none;
+    }
+
+    .fullscreen-notification.show {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
   </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -1208,6 +1242,11 @@
 </div>
 
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<!-- Notificación de pantalla completa -->
+<div class="fullscreen-notification" id="fullscreenNotification">
+  <i class="fa-solid fa-expand"></i> Pantalla completa activada
+</div>
 
 <header class="header-bar">
   <div class="brand">
@@ -1700,6 +1739,8 @@
   let productosFiltrados = [];
   let qrCodeInstance = null;
   let fullscreenEnabled = false;
+  let fullscreenRetryCount = 0;
+  const MAX_FULLSCREEN_RETRIES = 3;
 
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
@@ -1710,7 +1751,15 @@
     document.getElementById('menuOverlay').classList.toggle('show');
   }
 
-  // ========== PANTALLA COMPLETA - CORREGIDO ==========
+  // ========== PANTALLA COMPLETA - SOLUCIÓN ROBUSTA PARA TABLETS ==========
+
+  // Detectar si es tablet/móvil
+  function isTouchDevice() {
+    return (('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0) ||
+            (navigator.msMaxTouchPoints > 0));
+  }
+
   function isFullscreen() {
     return !!(document.fullscreenElement || 
               document.webkitFullscreenElement || 
@@ -1725,6 +1774,7 @@
       icon.className = 'fa-solid fa-compress';
       btn.title = 'Salir de Pantalla Completa';
       fullscreenEnabled = true;
+      fullscreenRetryCount = 0; // Resetear contador al estar en fullscreen
     } else {
       icon.className = 'fa-solid fa-expand';
       btn.title = 'Pantalla Completa';
@@ -1732,64 +1782,205 @@
     }
   }
 
-  function toggleKiosk() {
-    if (!isFullscreen()) {
-      const elem = document.documentElement;
-      const requestMethod = elem.requestFullscreen || 
-                            elem.webkitRequestFullscreen || 
-                            elem.mozRequestFullScreen || 
-                            elem.msRequestFullscreen;
-      
-      if (requestMethod) {
-        requestMethod.call(elem).then(() => {
-          updateFullscreenButton();
-        }).catch(err => {
-          console.log('Error al activar pantalla completa:', err);
-          mostrarNotificacion('Toca el botón nuevamente para activar pantalla completa', 'warning');
-        });
+  // Mostrar notificación temporal
+  function showFullscreenNotification(message) {
+    const notif = document.getElementById('fullscreenNotification');
+    if (notif) {
+      notif.innerHTML = '<i class="fa-solid fa-expand"></i> ' + message;
+      notif.classList.add('show');
+      setTimeout(() => {
+        notif.classList.remove('show');
+      }, 2000);
+    }
+  }
+
+  // Función principal de toggle con reintentos automáticos
+  async function toggleKiosk() {
+    // Prevenir múltiples clicks rápidos
+    const btn = document.getElementById('fullscreenBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+      if (!isFullscreen()) {
+        await enterFullscreen();
+      } else {
+        await exitFullscreen();
       }
-    } else {
-      const exitMethod = document.exitFullscreen || 
-                         document.webkitExitFullscreen || 
-                         document.mozCancelFullScreen || 
-                         document.msExitFullscreen;
-      
-      if (exitMethod) {
-        exitMethod.call(document).then(() => {
+    } catch (err) {
+      console.log('Error en toggleKiosk:', err);
+      // Si falla, intentar método alternativo para tablets
+      if (!isFullscreen() && fullscreenRetryCount < MAX_FULLSCREEN_RETRIES) {
+        fullscreenRetryCount++;
+        setTimeout(() => {
+          forceFullscreenForTablet();
+        }, 300);
+      }
+    } finally {
+      setTimeout(() => {
+        if (btn) btn.disabled = false;
+      }, 500);
+    }
+  }
+
+  // Entrar en pantalla completa con múltiples métodos
+  async function enterFullscreen() {
+    const elem = document.documentElement;
+
+    // Intentar todos los métodos disponibles
+    const methods = [
+      elem.requestFullscreen,
+      elem.webkitRequestFullscreen,
+      elem.mozRequestFullScreen,
+      elem.msRequestFullscreen
+    ];
+
+    for (const method of methods) {
+      if (method) {
+        try {
+          await method.call(elem);
           updateFullscreenButton();
-        }).catch(err => {
-          console.log('Error al salir de pantalla completa:', err);
-        });
+          showFullscreenNotification('Pantalla completa activada');
+          return;
+        } catch (err) {
+          console.log('Método de fullscreen falló:', err.message);
+          continue;
+        }
+      }
+    }
+
+    // Si todos los métodos fallan, intentar forzar para tablet
+    forceFullscreenForTablet();
+  }
+
+  // Salir de pantalla completa
+  async function exitFullscreen() {
+    const methods = [
+      document.exitFullscreen,
+      document.webkitExitFullscreen,
+      document.mozCancelFullScreen,
+      document.msExitFullscreen
+    ];
+
+    for (const method of methods) {
+      if (method) {
+        try {
+          await method.call(document);
+          updateFullscreenButton();
+          return;
+        } catch (err) {
+          console.log('Método de exit fullscreen falló:', err.message);
+          continue;
+        }
       }
     }
   }
 
-  // Escuchar cambios de pantalla completa
+  // Método especial para tablets que usa trucos de viewport
+  function forceFullscreenForTablet() {
+    if (fullscreenRetryCount >= MAX_FULLSCREEN_RETRIES) {
+      console.log('Máximo de reintentos alcanzado');
+      return;
+    }
+
+    fullscreenRetryCount++;
+    console.log('Intentando forzar fullscreen para tablet, intento:', fullscreenRetryCount);
+
+    // Truco 1: Simular orientación landscape puede ayudar en algunas tablets
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+
+    // Truco 2: Intentar con un pequeño delay y scroll
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.style.height = '100vh';
+      document.body.style.overflow = 'hidden';
+
+      // Intentar de nuevo
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().then(() => {
+          updateFullscreenButton();
+          showFullscreenNotification('Pantalla completa activada');
+          fullscreenRetryCount = 0;
+        }).catch(() => {
+          // Si sigue fallando, reintentar
+          if (fullscreenRetryCount < MAX_FULLSCREEN_RETRIES) {
+            setTimeout(forceFullscreenForTablet, 500);
+          }
+        });
+      }
+    }, 100);
+  }
+
+  // ========== AUTO-RESTAURACIÓN DE PANTALLA COMPLETA ==========
+
+  // Verificación periódica del estado de pantalla completa
+  function startFullscreenMonitor() {
+    // Verificar cada 2 segundos si debería estar en fullscreen pero no lo está
+    setInterval(() => {
+      if (fullscreenEnabled && !isFullscreen() && fullscreenRetryCount < MAX_FULLSCREEN_RETRIES) {
+        console.log('Detectado: debería estar en fullscreen pero no lo está. Reintentando...');
+        enterFullscreen();
+      }
+    }, 2000);
+  }
+
+  // Escuchar cambios de pantalla completa de forma más robusta
   function setupFullscreenListeners() {
-    const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+    const events = [
+      'fullscreenchange', 
+      'webkitfullscreenchange', 
+      'mozfullscreenchange', 
+      'MSFullscreenChange'
+    ];
+
     events.forEach(event => {
-      document.addEventListener(event, updateFullscreenButton, false);
+      document.addEventListener(event, () => {
+        updateFullscreenButton();
+
+        // Si salió de fullscreen pero debería estar activo, reintentar
+        if (!isFullscreen() && fullscreenEnabled) {
+          setTimeout(() => {
+            if (!isFullscreen() && fullscreenEnabled) {
+              enterFullscreen();
+            }
+          }, 500);
+        }
+      }, false);
+    });
+
+    // Para tablets: detectar cuando el usuario vuelve a la página
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && fullscreenEnabled && !isFullscreen()) {
+        setTimeout(enterFullscreen, 300);
+      }
+    });
+
+    // Detectar resize (puede indicar cambio de orientación o salida de fullscreen)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (fullscreenEnabled && !isFullscreen()) {
+          enterFullscreen();
+        }
+      }, 300);
     });
   }
 
-  // Intentar restaurar pantalla completa después de operaciones que la pierden
-  function requestFullscreenWithDelay(delay = 100) {
-    setTimeout(() => {
-      if (!isFullscreen() && fullscreenEnabled) {
-        toggleKiosk();
-      }
-    }, delay);
-  }
-
+  // Activar pantalla completa automáticamente al cargar
   function activarPantallaCompletaAuto() {
-    setTimeout(() => {
-      if (!isFullscreen()) {
-        toggleKiosk();
-      }
-    }, 500);
+    // Solo activar automáticamente en tablets/dispositivos táctiles
+    if (isTouchDevice()) {
+      setTimeout(() => {
+        if (!isFullscreen()) {
+          enterFullscreen();
+        }
+      }, 1000);
+    }
   }
-
-  function cambiarTab(tab) {
+function cambiarTab(tab) {
     document.querySelectorAll('.products-section .tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');

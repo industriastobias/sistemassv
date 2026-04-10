@@ -6,6 +6,7 @@
   <title>FACTURA ELECTRÓNICA – KLOHESV</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -261,11 +262,11 @@
       margin: 0 auto;
       padding: 24px;
       display: grid;
-      grid-template-columns: 1fr 450px;
+      grid-template-columns: 1fr 500px;
       gap: 24px;
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 1200px) {
       .main-container {
         grid-template-columns: 1fr;
       }
@@ -332,7 +333,7 @@
 
     /* ===== LISTA DE PRODUCTOS ===== */
     .products-list {
-      max-height: 500px;
+      max-height: 600px;
       overflow-y: auto;
       border: 1px solid var(--border-light);
       border-radius: var(--radius-md);
@@ -368,14 +369,50 @@
       cursor: pointer;
     }
 
+    .product-image {
+      width: 50px;
+      height: 50px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .product-image-placeholder {
+      width: 50px;
+      height: 50px;
+      border-radius: var(--radius-sm);
+      background: var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
     .product-info {
       flex: 1;
+      min-width: 0;
     }
 
     .product-name {
       font-size: 0.9rem;
       font-weight: 500;
       color: var(--text-primary);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-barcode {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
       margin-bottom: 2px;
     }
 
@@ -385,9 +422,15 @@
     }
 
     .product-price {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: var(--rose-text);
+      text-align: right;
+    }
+
+    .product-date {
+      font-size: 0.7rem;
+      color: var(--text-muted);
     }
 
     /* ===== SECCIÓN DE FACTURA ===== */
@@ -399,121 +442,187 @@
       border: 1px solid var(--border-light);
       position: sticky;
       top: 80px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
     }
 
     /* ===== FORMULARIO ===== */
     .form-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .form-group label {
       display: block;
-      font-size: 0.75rem;
-      font-weight: 500;
+      font-size: 0.7rem;
+      font-weight: 600;
       color: var(--text-secondary);
       margin-bottom: 4px;
       text-transform: uppercase;
       letter-spacing: 0.02em;
     }
 
-    .form-group input {
+    .form-group input, .form-group select, .form-group textarea {
       width: 100%;
       padding: 8px 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: var(--transition);
+      background: var(--card);
     }
 
-    .form-group input:focus {
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
       outline: none;
       border-color: var(--rose-medium);
       box-shadow: 0 0 0 3px var(--rose-soft);
     }
 
+    .form-group input:disabled {
+      background: var(--border-light);
+      color: var(--text-muted);
+    }
+
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
     }
 
-    /* ===== FACTURA / TICKET ===== */
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form-section {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .form-section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      accent-color: var(--rose-text);
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      text-transform: none;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+
+    /* ===== FACTURA / TICKET POS ===== */
     .factura-container {
       background: #fff;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 20px;
       font-family: 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.4;
       color: #000;
       margin: 16px 0;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .factura-header {
       text-align: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px dashed #ccc;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #999;
     }
 
     .factura-logo {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: 0.15em;
-      margin-bottom: 6px;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
       color: #000;
     }
 
     .factura-info {
       color: #333;
-      font-size: 11px;
+      font-size: 9px;
       margin-bottom: 2px;
+      line-height: 1.3;
     }
 
     .factura-divider {
       border: none;
-      border-top: 1px dashed #ccc;
-      margin: 12px 0;
+      border-top: 1px dashed #999;
+      margin: 10px 0;
+    }
+
+    .factura-section-title {
+      font-weight: 700;
+      font-size: 10px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
     }
 
     .factura-datos {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .factura-dato {
       display: flex;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
+      line-height: 1.4;
     }
 
     .factura-dato-label {
       font-weight: 600;
-      min-width: 70px;
+      min-width: 80px;
+      flex-shrink: 0;
     }
 
     .factura-dato-valor {
-      color: #333;
+      color: #000;
+      flex: 1;
+      word-break: break-word;
     }
 
     .factura-tabla {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 11px;
+      margin: 10px 0;
+      font-size: 9px;
     }
 
     .factura-tabla thead th {
       text-align: left;
-      padding: 8px 4px;
+      padding: 6px 3px;
       border-bottom: 1px solid #000;
-      font-weight: 600;
-      font-size: 10px;
+      border-top: 1px solid #000;
+      font-weight: 700;
+      font-size: 9px;
+      background: #f5f5f5;
     }
 
     .factura-tabla thead th:nth-child(2),
-    .factura-tabla thead th:nth-child(3),
-    .factura-tabla thead th:nth-child(4),
-    .factura-tabla thead th:nth-child(5) {
+    .factura-tabla thead th:nth-child(3) {
       text-align: center;
     }
 
@@ -522,14 +631,13 @@
     }
 
     .factura-tabla tbody td {
-      padding: 6px 4px;
-      border-bottom: 1px solid #eee;
-      vertical-align: middle;
+      padding: 4px 3px;
+      border-bottom: 1px dotted #ccc;
+      vertical-align: top;
     }
 
     .factura-tabla tbody td:nth-child(2),
-    .factura-tabla tbody td:nth-child(3),
-    .factura-tabla tbody td:nth-child(4) {
+    .factura-tabla tbody td:nth-child(3) {
       text-align: center;
     }
 
@@ -541,37 +649,71 @@
       border-bottom: 1px solid #000;
     }
 
-    .factura-total-row {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px dashed #ccc;
-      font-size: 14px;
-      font-weight: 700;
+    .factura-desglose {
+      margin: 10px 0;
+      font-size: 10px;
     }
 
-    .factura-total-label {
-      margin-right: 10px;
+    .factura-desglose-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .factura-desglose-label {
+      font-weight: 600;
+    }
+
+    .factura-desglose-value {
+      text-align: right;
+    }
+
+    .factura-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 2px solid #000;
+      border-bottom: 1px dashed #999;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .factura-qr {
+      text-align: center;
+      margin: 12px 0;
+      padding: 10px;
+    }
+
+    .factura-qr img {
+      max-width: 120px;
+      height: auto;
+    }
+
+    .factura-qr-label {
+      font-size: 8px;
+      color: #666;
+      margin-top: 4px;
     }
 
     .factura-footer {
       text-align: center;
-      margin-top: 16px;
-      padding-top: 12px;
-      font-size: 10px;
+      margin-top: 12px;
+      padding-top: 10px;
+      font-size: 8px;
       color: #555;
+      line-height: 1.4;
     }
 
     .factura-footer-titulo {
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 10px;
     }
 
     .factura-footer-texto {
-      line-height: 1.4;
-      font-weight: bold;
+      line-height: 1.3;
     }
 
     /* ===== BOTONES DE FACTURA ===== */
@@ -696,7 +838,7 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-lg);
       width: 100%;
-      max-width: 420px;
+      max-width: 480px;
       max-height: 90vh;
       overflow: hidden;
       animation: modalSlide 0.3s ease;
@@ -781,15 +923,74 @@
       margin-bottom: 4px;
     }
 
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .tab {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .tab:hover {
+      color: var(--rose-text);
+    }
+
+    .tab.active {
+      color: var(--rose-text);
+      border-bottom-color: var(--rose-text);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
       .header-bar { padding: 12px 16px; }
       .controls-bar { padding: 12px 16px; }
       .main-container { padding: 16px; }
       .form-row { grid-template-columns: 1fr; }
-      .factura-container { padding: 16px; }
+      .form-row-3 { grid-template-columns: 1fr; }
+      .factura-container { padding: 16px; max-width: 100%; }
+    }
+
+    /* ===== PRINT STYLES ===== */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .factura-container, .factura-container * {
+        visibility: visible;
+      }
+      .factura-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        margin: 0;
+        padding: 5mm;
+        border: none;
+        box-shadow: none;
+      }
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -845,132 +1046,316 @@
   <button class="btn btn-rose" onclick="abrirProductoManual()">
     <i class="fa-solid fa-plus"></i> Agregar Producto Manual
   </button>
+  <button class="btn btn-info" onclick="sincronizarConVenta()">
+    <i class="fa-solid fa-sync"></i> Sincronizar con Venta
+  </button>
 </div>
 
 <div class="main-container">
   <!-- SECCIÓN DE PRODUCTOS -->
   <div class="products-section">
-    <div class="section-header">
-      <h2 class="section-title">
-        <i class="fa-solid fa-box"></i> Productos Vendidos
-      </h2>
-      <span id="productosCount" style="font-size: 0.85rem; color: var(--text-muted);">0 productos</span>
+    <div class="tabs">
+      <button class="tab active" onclick="cambiarTab('vendidos')">Productos Vendidos</button>
+      <button class="tab" onclick="cambiarTab('seleccionados')">Seleccionados (<span id="tabCount">0</span>)</button>
     </div>
     
-    <div class="search-box">
-      <i class="fa-solid fa-search"></i>
-      <input type="text" id="searchProducts" placeholder="Buscar producto..." oninput="filtrarProductos()">
+    <div id="tab-vendidos" class="tab-content active">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fa-solid fa-box"></i> Productos Vendidos desde Venta
+        </h2>
+        <span id="productosCount" style="font-size: 0.85rem; color: var(--text-muted);">0 productos</span>
+      </div>
+      
+      <div class="search-box">
+        <i class="fa-solid fa-search"></i>
+        <input type="text" id="searchProducts" placeholder="Buscar por nombre o código de barras..." oninput="filtrarProductos()">
+      </div>
+      
+      <div class="products-list" id="productsList">
+        <!-- Los productos se cargan dinámicamente -->
+      </div>
     </div>
-    
-    <div class="products-list" id="productsList">
-      <!-- Los productos se cargan dinámicamente -->
+
+    <div id="tab-seleccionados" class="tab-content">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fa-solid fa-check-circle"></i> Productos Seleccionados para Facturar
+        </h2>
+      </div>
+      <div class="products-list" id="selectedProductsList">
+        <!-- Productos seleccionados -->
+      </div>
     </div>
   </div>
 
   <!-- SECCIÓN DE FACTURA -->
   <div class="invoice-section">
-    <div class="section-header">
-      <h2 class="section-title">
-        <i class="fa-solid fa-file-invoice"></i> Generar Factura
-      </h2>
+    <div class="tabs">
+      <button class="tab active" onclick="cambiarTabFactura('datos')">Datos</button>
+      <button class="tab" onclick="cambiarTabFactura('preview')">Vista Previa</button>
     </div>
 
-    <!-- Resumen -->
-    <div class="resumen-factura">
-      <div class="resumen-item">
-        <div class="resumen-label">Productos</div>
-        <div class="resumen-value" id="resumenProductos">0</div>
-      </div>
-      <div class="resumen-item">
-        <div class="resumen-label">Total</div>
-        <div class="resumen-value" id="resumenTotal">$0.00</div>
-      </div>
-    </div>
-
-    <!-- Formulario -->
-    <div class="form-row">
-      <div class="form-group">
-        <label>Factura N°</label>
-        <input type="text" id="fNum" value="00015">
-      </div>
-      <div class="form-group">
-        <label>Fecha</label>
-        <input type="text" id="fFecha" readonly>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Cliente</label>
-      <input type="text" id="fCliente" value="Consumidor Final">
-    </div>
-    <div class="form-group">
-      <label>Costo de Envío ($)</label>
-      <input type="number" id="fEnvio" value="0" min="0" step="0.01" oninput="actualizarTablaTicket()">
-    </div>
-
-    <!-- Ticket Preview -->
-    <div class="factura-container">
-      <div class="factura-header">
-        <div class="factura-logo">KLOHESV</div>
-        <div class="factura-info">San Salvador, El Salvador</div>
-        <div class="factura-info">Correo: industriastobias@gmail.com</div>
-        <div class="factura-info">Instagram: @Klohesv</div>
+    <!-- TAB DATOS -->
+    <div id="tab-datos" class="tab-content active">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fa-solid fa-file-invoice"></i> Configurar Factura
+        </h2>
       </div>
 
-      <div class="factura-datos">
-        <div class="factura-dato">
-          <span class="factura-dato-label">Factura N°:</span>
-          <span class="factura-dato-valor" id="fNumTxt">00015</span>
+      <!-- Resumen -->
+      <div class="resumen-factura">
+        <div class="resumen-item">
+          <div class="resumen-label">Productos</div>
+          <div class="resumen-value" id="resumenProductos">0</div>
         </div>
-        <div class="factura-dato">
-          <span class="factura-dato-label">Fecha:</span>
-          <span class="factura-dato-valor" id="fFechaTxt"></span>
+        <div class="resumen-item">
+          <div class="resumen-label">Subtotal</div>
+          <div class="resumen-value" id="resumenSubtotal">$0.00</div>
         </div>
-        <div class="factura-dato">
-          <span class="factura-dato-label">Cliente:</span>
-          <span class="factura-dato-valor" id="fClienteTxt">Consumidor Final</span>
+        <div class="resumen-item">
+          <div class="resumen-label">Total</div>
+          <div class="resumen-value" id="resumenTotal">$0.00</div>
         </div>
       </div>
 
-      <table class="factura-tabla">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Cant</th>
-            <th>Precio</th>
-            <th>Desc(%)</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody id="fBody"></tbody>
-      </table>
-
-      <div class="factura-total-row">
-        <span class="factura-total-label">TOTAL:</span>
-        <span class="factura-total-valor">$<span id="fTotal">0.00</span></span>
+      <!-- DATOS DE LA FACTURA -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-hashtag"></i> Información de la Factura
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Serie</label>
+            <input type="text" id="fSerie" value="A" maxlength="3">
+          </div>
+          <div class="form-group">
+            <label>Número de Factura</label>
+            <input type="text" id="fNum" value="000001" onchange="formatearNumeroFactura()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha de Emisión</label>
+            <input type="datetime-local" id="fFecha">
+          </div>
+          <div class="form-group">
+            <label>Fecha de Vencimiento</label>
+            <input type="date" id="fVencimiento">
+          </div>
+        </div>
       </div>
 
-      <div class="factura-footer">
-        <div class="factura-footer-titulo">¡Gracias por su compra!</div>
-        <div class="factura-footer-texto">
-          Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.
+      <!-- DATOS DEL EMISOR -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-building"></i> Datos del Emisor (Vendedor)
+        </div>
+        <div class="form-group">
+          <label>Nombre / Razón Social</label>
+          <input type="text" id="fEmisorNombre" value="KLOHESV">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>NIF/CIF/CUIT/RFC</label>
+            <input type="text" id="fEmisorNIF" value="">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="fEmisorTelefono" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Domicilio Fiscal</label>
+          <input type="text" id="fEmisorDireccion" value="San Salvador, El Salvador">
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="fEmisorEmail" value="industriastobias@gmail.com">
+        </div>
+      </div>
+
+      <!-- DATOS DEL RECEPTOR -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-user"></i> Datos del Receptor (Comprador)
+        </div>
+        <div class="form-group">
+          <label>Nombre / Razón Social</label>
+          <input type="text" id="fCliente" value="Consumidor Final">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>NIF/CIF/CUIT/RFC</label>
+            <input type="text" id="fClienteNIF" value="">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="fClienteTelefono" value="">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" id="fClienteDireccion" value="">
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="fClienteEmail" value="">
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN DE IMPUESTOS Y DESCUENTOS -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-calculator"></i> Impuestos y Descuentos
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Tipo de IVA (%)</label>
+            <input type="number" id="fIVAPorcentaje" value="13" min="0" max="100" step="0.01" onchange="actualizarCalculos()">
+          </div>
+          <div class="form-group">
+            <label>Descuento Global (%)</label>
+            <input type="number" id="fDescuentoGlobal" value="0" min="0" max="100" step="0.01" onchange="actualizarCalculos()">
+          </div>
+          <div class="form-group">
+            <label>Costo de Envío ($)</label>
+            <input type="number" id="fEnvio" value="0" min="0" step="0.01" onchange="actualizarCalculos()">
+          </div>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="fSinIVA" onchange="toggleIVA()">
+          <label for="fSinIVA">Factura sin IVA (exento)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="fIncluirQR" checked>
+          <label for="fIncluirQR">Incluir código QR</label>
         </div>
       </div>
     </div>
 
-    <!-- Botones -->
-    <div class="factura-botones">
-      <button class="btn-factura" onclick="actualizarTablaTicket()">
-        <i class="fa-solid fa-rotate"></i> Actualizar Total
-      </button>
-      <button class="btn-factura" onclick="descargarPDF()">
-        <i class="fa-solid fa-file-pdf"></i> Descargar PDF
-      </button>
-      <button class="btn-factura" onclick="imprimirTicket()">
-        <i class="fa-solid fa-print"></i> Imprimir Factura
-      </button>
-      <button class="btn-factura secondary" onclick="limpiarFactura()">
-        <i class="fa-solid fa-trash"></i> Limpiar Factura
-      </button>
+    <!-- TAB VISTA PREVIA -->
+    <div id="tab-preview" class="tab-content">
+      <!-- Ticket Preview -->
+      <div class="factura-container" id="facturaTicket">
+        <div class="factura-header">
+          <div class="factura-logo" id="ticketLogo">KLOHESV</div>
+          <div class="factura-info" id="ticketEmisorDir">San Salvador, El Salvador</div>
+          <div class="factura-info" id="ticketEmisorEmail">industriastobias@gmail.com</div>
+          <div class="factura-info" id="ticketEmisorTel"></div>
+        </div>
+
+        <div class="factura-section-title">FACTURA</div>
+        <div class="factura-datos">
+          <div class="factura-dato">
+            <span class="factura-dato-label">Serie-N°:</span>
+            <span class="factura-dato-valor" id="ticketNum">A-000001</span>
+          </div>
+          <div class="factura-dato">
+            <span class="factura-dato-label">Fecha:</span>
+            <span class="factura-dato-valor" id="ticketFecha"></span>
+          </div>
+          <div class="factura-dato">
+            <span class="factura-dato-label">Vence:</span>
+            <span class="factura-dato-valor" id="ticketVencimiento"></span>
+          </div>
+        </div>
+
+        <div class="factura-section-title">EMISOR</div>
+        <div class="factura-datos">
+          <div class="factura-dato">
+            <span class="factura-dato-label">Nombre:</span>
+            <span class="factura-dato-valor" id="ticketEmisorNombre">KLOHESV</span>
+          </div>
+          <div class="factura-dato">
+            <span class="factura-dato-label">NIF/CIF:</span>
+            <span class="factura-dato-valor" id="ticketEmisorNIF"></span>
+          </div>
+        </div>
+
+        <div class="factura-section-title">RECEPTOR</div>
+        <div class="factura-datos">
+          <div class="factura-dato">
+            <span class="factura-dato-label">Nombre:</span>
+            <span class="factura-dato-valor" id="ticketCliente">Consumidor Final</span>
+          </div>
+          <div class="factura-dato">
+            <span class="factura-dato-label">NIF/CIF:</span>
+            <span class="factura-dato-valor" id="ticketClienteNIF"></span>
+          </div>
+          <div class="factura-dato">
+            <span class="factura-dato-label">Dirección:</span>
+            <span class="factura-dato-valor" id="ticketClienteDir"></span>
+          </div>
+        </div>
+
+        <div class="factura-section-title">DETALLE</div>
+        <table class="factura-tabla">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cant</th>
+              <th>P.Unit</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="ticketBody"></tbody>
+        </table>
+
+        <div class="factura-desglose">
+          <div class="factura-desglose-row">
+            <span class="factura-desglose-label">Base Imponible:</span>
+            <span class="factura-desglose-value" id="ticketBase">$0.00</span>
+          </div>
+          <div class="factura-desglose-row" id="rowDescuento" style="display:none;">
+            <span class="factura-desglose-label">Descuento:</span>
+            <span class="factura-desglose-value" id="ticketDescuento">-$0.00</span>
+          </div>
+          <div class="factura-desglose-row" id="rowEnvio" style="display:none;">
+            <span class="factura-desglose-label">Envío:</span>
+            <span class="factura-desglose-value" id="ticketEnvio">$0.00</span>
+          </div>
+          <div class="factura-desglose-row" id="rowIVA">
+            <span class="factura-desglose-label">IVA (<span id="ticketIVAPorc">13</span>%):</span>
+            <span class="factura-desglose-value" id="ticketIVA">$0.00</span>
+          </div>
+        </div>
+
+        <div class="factura-total-row">
+          <span class="factura-total-label">TOTAL A PAGAR:</span>
+          <span class="factura-total-valor" id="ticketTotal">$0.00</span>
+        </div>
+
+        <div class="factura-qr" id="ticketQRContainer">
+          <div id="qrcode"></div>
+          <div class="factura-qr-label">Escanea para verificar</div>
+        </div>
+
+        <div class="factura-footer">
+          <div class="factura-footer-titulo">¡Gracias por su compra!</div>
+          <div class="factura-footer-texto">
+            Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.
+          </div>
+          <div class="factura-info" style="margin-top:8px;">@Klohesv</div>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="factura-botones">
+        <button class="btn-factura" onclick="actualizarVistaPrevia()">
+          <i class="fa-solid fa-rotate"></i> Actualizar Vista
+        </button>
+        <button class="btn-factura" onclick="descargarPDF()">
+          <i class="fa-solid fa-file-pdf"></i> Descargar PDF (POS)
+        </button>
+        <button class="btn-factura" onclick="imprimirTicket()">
+          <i class="fa-solid fa-print"></i> Imprimir Factura (POS)
+        </button>
+        <button class="btn-factura secondary" onclick="limpiarFactura()">
+          <i class="fa-solid fa-trash"></i> Limpiar Factura
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -979,7 +1364,7 @@
 <div class="modal-overlay" id="productoManualModal">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-header">
-      <h2><i class="fa-solid fa-plus"></i> Agregar Producto</h2>
+      <h2><i class="fa-solid fa-plus"></i> Agregar Producto Manual</h2>
       <button class="modal-close" onclick="cerrarProductoManual()">
         <i class="fa-solid fa-times"></i>
       </button>
@@ -991,17 +1376,23 @@
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label>Código de Barras</label>
+          <input type="text" id="pmCodigo" placeholder="Ej: 123456789012">
+        </div>
+        <div class="form-group">
           <label>Cantidad</label>
           <input type="number" id="pmCantidad" value="1" min="1">
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label>Precio Unitario ($)</label>
           <input type="number" id="pmPrecio" value="0" min="0" step="0.01">
         </div>
-      </div>
-      <div class="form-group">
-        <label>Descuento (%)</label>
-        <input type="number" id="pmDescuento" value="0" min="0" max="100" step="0.01">
+        <div class="form-group">
+          <label>Descuento (%)</label>
+          <input type="number" id="pmDescuento" value="0" min="0" max="100" step="0.01">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1033,9 +1424,10 @@
   }
 
   // ========== VARIABLES GLOBALES ==========
-  let soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
+  let soldInventory = [];
   let productosFactura = [];
   let productosFiltrados = [];
+  let qrCodeInstance = null;
 
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
@@ -1054,34 +1446,122 @@
     }
   }
 
-  // ========== CARGAR PRODUCTOS ==========
-  function cargarProductos() {
+  function cambiarTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'seleccionados') {
+      renderizarSeleccionados();
+    }
+  }
+
+  function cambiarTabFactura(tab) {
+    const tabs = document.querySelectorAll('.invoice-section .tab');
+    const contents = document.querySelectorAll('.invoice-section .tab-content');
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'preview') {
+      actualizarVistaPrevia();
+    }
+  }
+
+  // ========== SINCRONIZACIÓN CON VENTA.HTML ==========
+  function sincronizarConVenta() {
     showSpinner();
     
-    // Obtener productos del localStorage (sincronizado con venta.html)
-    soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
+    // Intentar obtener de múltiples fuentes
+    const sources = [
+      'soldInventory',
+      'ventaProductos',
+      'productosVendidos',
+      'klohesv_ventas'
+    ];
+    
+    let found = false;
+    for (const source of sources) {
+      const data = localStorage.getItem(source);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            soldInventory = parsed;
+            localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+            found = true;
+            break;
+          }
+        } catch (e) {}
+      }
+    }
+    
+    if (!found) {
+      soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
+    }
     
     // Filtrar solo productos válidos (no cierres de caja)
-    productosFiltrados = soldInventory.filter(item => !item.isCierreCaja);
+    productosFiltrados = soldInventory.filter(item => {
+      if (!item) return false;
+      if (item.isCierreCaja) return false;
+      if (item.type === 'cierre') return false;
+      return true;
+    });
     
     // Ordenar por fecha más reciente
     productosFiltrados.sort((a, b) => {
-      const dateA = new Date(a.soldAt || a.date || 0);
-      const dateB = new Date(b.soldAt || b.date || 0);
+      const dateA = new Date(a.soldAt || a.date || a.fecha || 0);
+      const dateB = new Date(b.soldAt || b.date || b.fecha || 0);
       return dateB - dateA;
     });
     
     renderizarProductos();
     hideSpinner();
+    
+    if (found) {
+      mostrarNotificacion('Sincronización exitosa: ' + productosFiltrados.length + ' productos cargados', 'success');
+    } else {
+      mostrarNotificacion('No se encontraron productos en venta.html. Asegúrate de haber realizado ventas.', 'warning');
+    }
+  }
+
+  function mostrarNotificacion(mensaje, tipo) {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+      ${tipo === 'success' ? 'background: #ecfdf5; color: #10b981; border: 1px solid #10b981;' : ''}
+      ${tipo === 'warning' ? 'background: #fffbeb; color: #f59e0b; border: 1px solid #f59e0b;' : ''}
+      ${tipo === 'error' ? 'background: #fef2f2; color: #ef4444; border: 1px solid #ef4444;' : ''}
+    `;
+    div.textContent = mensaje;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  // ========== CARGAR PRODUCTOS ==========
+  function cargarProductos() {
+    sincronizarConVenta();
   }
 
   function renderizarProductos() {
     const container = document.getElementById('productsList');
-    const searchValue = document.getElementById('searchProducts').value.toLowerCase();
+    const searchValue = (document.getElementById('searchProducts').value || '').toLowerCase();
     
     // Filtrar por búsqueda
     const productosMostrar = searchValue 
-      ? productosFiltrados.filter(p => p.name.toLowerCase().includes(searchValue))
+      ? productosFiltrados.filter(p => {
+          const name = (p.name || p.nombre || '').toLowerCase();
+          const barcode = (p.barcode || p.code || p.codigo || '').toString().toLowerCase();
+          return name.includes(searchValue) || barcode.includes(searchValue);
+        })
       : productosFiltrados;
     
     document.getElementById('productosCount').textContent = `${productosMostrar.length} productos`;
@@ -1091,7 +1571,10 @@
         <div class="no-products">
           <i class="fa-solid fa-box-open"></i>
           <h3>No hay productos</h3>
-          <p>Los productos vendidos aparecerán aquí</p>
+          <p>Los productos vendidos aparecerán aquí desde venta.html</p>
+          <button class="btn btn-rose" onclick="sincronizarConVenta()" style="margin-top:16px;">
+            <i class="fa-solid fa-sync"></i> Sincronizar con Venta
+          </button>
         </div>
       `;
       return;
@@ -1103,37 +1586,109 @@
       const div = document.createElement('div');
       div.className = 'product-item';
       div.dataset.index = index;
-      div.dataset.id = item.idVenta || item.code;
       
-      const isSelected = productosFactura.some(p => p.id === (item.idVenta || item.code));
+      const id = item.idVenta || item.id || item.code || item.codigo || 'prod_' + index;
+      div.dataset.id = id;
+      
+      const isSelected = productosFactura.some(p => p.id === id);
       if (isSelected) {
         div.classList.add('selected');
       }
       
-      const fecha = item.soldAt || item.date 
-        ? new Date(item.soldAt || item.date).toLocaleDateString('es-SV')
-        : 'Sin fecha';
+      const nombre = item.name || item.nombre || 'Producto sin nombre';
+      const barcode = item.barcode || item.code || item.codigo || 'N/A';
+      const precio = Number(item.price || item.precio || item.total || 0);
+      const cantidad = Number(item.quantity || item.cantidad || 1);
+      const imagen = item.image || item.imagen || item.img || '';
+      
+      const fechaRaw = item.soldAt || item.date || item.fecha || new Date();
+      const fecha = new Date(fechaRaw).toLocaleDateString('es-SV', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
       
       div.innerHTML = `
         <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} 
-          onchange="toggleProducto('${item.idVenta || item.code}')">
+          onchange="toggleProducto('${id}')">
+        ${imagen ? 
+          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}">` :
+          `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
+        }
         <div class="product-info">
-          <div class="product-name">${escapeHTML(item.name)}</div>
-          <div class="product-meta">Cant: ${item.quantity} | ${fecha}</div>
+          <div class="product-name">${escapeHTML(nombre)}</div>
+          <div class="product-barcode">${escapeHTML(barcode.toString())}</div>
+          <div class="product-meta">Cant: ${cantidad} | ${fecha}</div>
         </div>
-        <div class="product-price">$${Number(item.total).toFixed(2)}</div>
+        <div>
+          <div class="product-price">$${precio.toFixed(2)}</div>
+          <div class="product-date">${fecha.split(',')[0]}</div>
+        </div>
       `;
       
       div.onclick = (e) => {
-        if (e.target.type !== 'checkbox') {
+        if (e.target.type !== 'checkbox' && !e.target.closest('.product-image') && !e.target.classList.contains('product-image')) {
           const checkbox = div.querySelector('.product-checkbox');
           checkbox.checked = !checkbox.checked;
-          toggleProducto(item.idVenta || item.code);
+          toggleProducto(id);
         }
       };
       
       container.appendChild(div);
     });
+  }
+
+  function renderizarSeleccionados() {
+    const container = document.getElementById('selectedProductsList');
+    document.getElementById('tabCount').textContent = productosFactura.length;
+    
+    if (productosFactura.length === 0) {
+      container.innerHTML = `
+        <div class="no-products">
+          <i class="fa-solid fa-cart-arrow-down"></i>
+          <h3>No hay productos seleccionados</h3>
+          <p>Selecciona productos de la lista para facturar</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = '';
+    
+    productosFactura.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'product-item selected';
+      
+      const imagen = item.image || '';
+      
+      div.innerHTML = `
+        <button class="modal-close" onclick="eliminarProductoFactura('${item.id}')" style="position:static;">
+          <i class="fa-solid fa-times"></i>
+        </button>
+        ${imagen ? 
+          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(item.name)}">` :
+          `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
+        }
+        <div class="product-info">
+          <div class="product-name">${escapeHTML(item.name)}</div>
+          <div class="product-barcode">${escapeHTML(item.barcode || 'N/A')}</div>
+          <div class="product-meta">Cant: ${item.quantity} | $${item.price.toFixed(2)} c/u</div>
+        </div>
+        <div class="product-price">$${item.total.toFixed(2)}</div>
+      `;
+      
+      container.appendChild(div);
+    });
+  }
+
+  function eliminarProductoFactura(id) {
+    productosFactura = productosFactura.filter(p => p.id !== id);
+    renderizarProductos();
+    renderizarSeleccionados();
+    actualizarResumen();
+    actualizarCalculos();
   }
 
   function filtrarProductos() {
@@ -1142,20 +1697,32 @@
 
   // ========== SELECCIÓN DE PRODUCTOS ==========
   function toggleProducto(id) {
-    const item = productosFiltrados.find(p => (p.idVenta || p.code) === id);
+    const item = productosFiltrados.find(p => {
+      const pid = p.idVenta || p.id || p.code || p.codigo;
+      return pid === id;
+    });
+    
     if (!item) return;
     
     const index = productosFactura.findIndex(p => p.id === id);
     
     if (index === -1) {
       // Agregar
+      const cantidad = Number(item.quantity || item.cantidad || 1);
+      const precio = Number(item.price || item.precio || item.total || 0);
+      const descuento = Number(item.discount || item.descuento || 0);
+      const subtotal = cantidad * precio;
+      const descuentoMonto = subtotal * (descuento / 100);
+      
       productosFactura.push({
         id: id,
-        name: item.name,
-        quantity: Number(item.quantity),
-        price: Number(item.price),
-        discount: 0,
-        total: Number(item.total),
+        name: item.name || item.nombre || 'Producto',
+        barcode: item.barcode || item.code || item.codigo || 'N/A',
+        quantity: cantidad,
+        price: precio,
+        discount: descuento,
+        total: subtotal - descuentoMonto,
+        image: item.image || item.imagen || item.img || '',
         isManual: false
       });
     } else {
@@ -1165,42 +1732,53 @@
     
     renderizarProductos();
     actualizarResumen();
-    actualizarTablaTicket();
+    actualizarCalculos();
   }
 
   function seleccionarTodos() {
     productosFiltrados.forEach(item => {
-      const id = item.idVenta || item.code;
+      const id = item.idVenta || item.id || item.code || item.codigo || 'prod_' + Date.now();
       if (!productosFactura.some(p => p.id === id)) {
+        const cantidad = Number(item.quantity || item.cantidad || 1);
+        const precio = Number(item.price || item.precio || item.total || 0);
+        const descuento = Number(item.discount || item.descuento || 0);
+        const subtotal = cantidad * precio;
+        const descuentoMonto = subtotal * (descuento / 100);
+        
         productosFactura.push({
           id: id,
-          name: item.name,
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          discount: 0,
-          total: Number(item.total),
+          name: item.name || item.nombre || 'Producto',
+          barcode: item.barcode || item.code || item.codigo || 'N/A',
+          quantity: cantidad,
+          price: precio,
+          discount: descuento,
+          total: subtotal - descuentoMonto,
+          image: item.image || item.imagen || item.img || '',
           isManual: false
         });
       }
     });
     renderizarProductos();
     actualizarResumen();
-    actualizarTablaTicket();
+    actualizarCalculos();
   }
 
   function deseleccionarTodos() {
     productosFactura = [];
     renderizarProductos();
     actualizarResumen();
-    actualizarTablaTicket();
+    actualizarCalculos();
   }
 
   function actualizarResumen() {
     const totalProductos = productosFactura.reduce((sum, p) => sum + p.quantity, 0);
-    const totalMonto = productosFactura.reduce((sum, p) => sum + p.total, 0);
+    const subtotal = productosFactura.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+    const total = productosFactura.reduce((sum, p) => sum + p.total, 0);
     
     document.getElementById('resumenProductos').textContent = totalProductos;
-    document.getElementById('resumenTotal').textContent = `$${totalMonto.toFixed(2)}`;
+    document.getElementById('resumenSubtotal').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('tabCount').textContent = productosFactura.length;
   }
 
   // ========== PRODUCTO MANUAL ==========
@@ -1212,6 +1790,7 @@
   function cerrarProductoManual() {
     document.getElementById('productoManualModal').classList.remove('show');
     document.getElementById('pmNombre').value = '';
+    document.getElementById('pmCodigo').value = '';
     document.getElementById('pmCantidad').value = '1';
     document.getElementById('pmPrecio').value = '0';
     document.getElementById('pmDescuento').value = '0';
@@ -1219,6 +1798,7 @@
 
   function guardarProductoManual() {
     const nombre = document.getElementById('pmNombre').value.trim();
+    const codigo = document.getElementById('pmCodigo').value.trim();
     const cantidad = parseInt(document.getElementById('pmCantidad').value) || 1;
     const precio = parseFloat(document.getElementById('pmPrecio').value) || 0;
     const descuento = parseFloat(document.getElementById('pmDescuento').value) || 0;
@@ -1235,346 +1815,582 @@
     productosFactura.push({
       id: 'MANUAL_' + Date.now(),
       name: nombre,
+      barcode: codigo || 'N/A',
       quantity: cantidad,
       price: precio,
       discount: descuento,
       total: total,
+      image: '',
       isManual: true
     });
     
     cerrarProductoManual();
     actualizarResumen();
-    actualizarTablaTicket();
+    actualizarCalculos();
+    mostrarNotificacion('Producto agregado manualmente', 'success');
   }
 
-  // ========== FACTURA ==========
-  function actualizarTablaTicket() {
-    const body = document.getElementById('fBody');
-    body.innerHTML = '';
+  // ========== CÁLCULOS DE FACTURA ==========
+  function toggleIVA() {
+    const sinIVA = document.getElementById('fSinIVA').checked;
+    document.getElementById('fIVAPorcentaje').disabled = sinIVA;
+    actualizarCalculos();
+  }
+
+  function formatearNumeroFactura() {
+    let num = document.getElementById('fNum').value.replace(/\D/g, '');
+    num = num.padStart(6, '0');
+    document.getElementById('fNum').value = num;
+  }
+
+  function actualizarCalculos() {
+    const subtotalProductos = productosFactura.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+    const descuentoGlobal = parseFloat(document.getElementById('fDescuentoGlobal').value) || 0;
+    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
+    const sinIVA = document.getElementById('fSinIVA').checked;
+    const ivaPorcentaje = sinIVA ? 0 : (parseFloat(document.getElementById('fIVAPorcentaje').value) || 0);
     
-    let sum = 0;
+    const descuentoMonto = subtotalProductos * (descuentoGlobal / 100);
+    const baseImponible = subtotalProductos - descuentoMonto + envio;
+    const ivaMonto = baseImponible * (ivaPorcentaje / 100);
+    const total = baseImponible + ivaMonto;
     
-    productosFactura.forEach((p) => {
+    // Actualizar resumen
+    document.getElementById('resumenSubtotal').textContent = '$' + subtotalProductos.toFixed(2);
+    document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
+    
+    return {
+      subtotal: subtotalProductos,
+      descuento: descuentoMonto,
+      envio: envio,
+      baseImponible: baseImponible,
+      iva: ivaMonto,
+      total: total,
+      ivaPorcentaje: ivaPorcentaje
+    };
+  }
+
+  // ========== VISTA PREVIA DE FACTURA ==========
+  function actualizarVistaPrevia() {
+    const calculos = actualizarCalculos();
+    
+    // Datos básicos
+    const serie = document.getElementById('fSerie').value || 'A';
+    const num = document.getElementById('fNum').value || '000001';
+    const fecha = document.getElementById('fFecha').value;
+    const vencimiento = document.getElementById('fVencimiento').value;
+    
+    document.getElementById('ticketLogo').textContent = document.getElementById('fEmisorNombre').value || 'KLOHESV';
+    document.getElementById('ticketNum').textContent = `${serie}-${num}`;
+    document.getElementById('ticketFecha').textContent = fecha ? new Date(fecha).toLocaleString('es-SV') : new Date().toLocaleString('es-SV');
+    document.getElementById('ticketVencimiento').textContent = vencimiento ? new Date(vencimiento).toLocaleDateString('es-SV') : 'N/A';
+    
+    // Emisor
+    document.getElementById('ticketEmisorNombre').textContent = document.getElementById('fEmisorNombre').value || 'KLOHESV';
+    document.getElementById('ticketEmisorNIF').textContent = document.getElementById('fEmisorNIF').value || '-';
+    document.getElementById('ticketEmisorDir').textContent = document.getElementById('fEmisorDireccion').value || 'San Salvador, El Salvador';
+    document.getElementById('ticketEmisorEmail').textContent = document.getElementById('fEmisorEmail').value || '';
+    document.getElementById('ticketEmisorTel').textContent = document.getElementById('fEmisorTelefono').value || '';
+    
+    // Cliente
+    document.getElementById('ticketCliente').textContent = document.getElementById('fCliente').value || 'Consumidor Final';
+    document.getElementById('ticketClienteNIF').textContent = document.getElementById('fClienteNIF').value || '-';
+    document.getElementById('ticketClienteDir').textContent = document.getElementById('fClienteDireccion').value || '';
+    
+    // Tabla de productos
+    const tbody = document.getElementById('ticketBody');
+    tbody.innerHTML = '';
+    
+    productosFactura.forEach(p => {
       const tr = document.createElement('tr');
-      
-      const tdProducto = document.createElement('td');
-      tdProducto.textContent = p.name.length > 15 ? p.name.substring(0, 14) + '...' : p.name;
-      
-      const tdCantidad = document.createElement('td');
-      tdCantidad.textContent = p.quantity;
-      
-      const tdPrecio = document.createElement('td');
-      tdPrecio.textContent = `$${p.price.toFixed(2)}`;
-      
-      const tdDescuento = document.createElement('td');
-      tdDescuento.textContent = p.discount > 0 ? `${p.discount}%` : '0';
-      
-      const tdTotal = document.createElement('td');
-      tdTotal.textContent = `$${p.total.toFixed(2)}`;
-      
-      tr.appendChild(tdProducto);
-      tr.appendChild(tdCantidad);
-      tr.appendChild(tdPrecio);
-      tr.appendChild(tdDescuento);
-      tr.appendChild(tdTotal);
-      
-      body.appendChild(tr);
-      sum += p.total;
+      const nombreCorto = p.name.length > 18 ? p.name.substring(0, 17) + '...' : p.name;
+      tr.innerHTML = `
+        <td>${escapeHTML(nombreCorto)}</td>
+        <td>${p.quantity}</td>
+        <td>$${p.price.toFixed(2)}</td>
+        <td>$${p.total.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
     });
     
-    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
-    if (envio > 0) {
-      const trEnvio = document.createElement('tr');
-      
-      const tdEnvioLabel = document.createElement('td');
-      tdEnvioLabel.textContent = 'Envío';
-      tdEnvioLabel.style.fontStyle = 'italic';
-      
-      const tdEnvioCant = document.createElement('td');
-      tdEnvioCant.textContent = '1';
-      
-      const tdEnvioPrecio = document.createElement('td');
-      tdEnvioPrecio.textContent = `$${envio.toFixed(2)}`;
-      
-      const tdEnvioDesc = document.createElement('td');
-      tdEnvioDesc.textContent = '0';
-      
-      const tdEnvioTotal = document.createElement('td');
-      tdEnvioTotal.textContent = `$${envio.toFixed(2)}`;
-      
-      trEnvio.appendChild(tdEnvioLabel);
-      trEnvio.appendChild(tdEnvioCant);
-      trEnvio.appendChild(tdEnvioPrecio);
-      trEnvio.appendChild(tdEnvioDesc);
-      trEnvio.appendChild(tdEnvioTotal);
-      
-      body.appendChild(trEnvio);
-      sum += envio;
+    // Desglose
+    document.getElementById('ticketBase').textContent = '$' + calculos.subtotal.toFixed(2);
+    
+    const rowDescuento = document.getElementById('rowDescuento');
+    if (calculos.descuento > 0) {
+      rowDescuento.style.display = 'flex';
+      document.getElementById('ticketDescuento').textContent = '-$' + calculos.descuento.toFixed(2);
+    } else {
+      rowDescuento.style.display = 'none';
     }
     
-    document.getElementById('fTotal').textContent = sum.toFixed(2);
-    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
-    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
-    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+    const rowEnvio = document.getElementById('rowEnvio');
+    if (calculos.envio > 0) {
+      rowEnvio.style.display = 'flex';
+      document.getElementById('ticketEnvio').textContent = '$' + calculos.envio.toFixed(2);
+    } else {
+      rowEnvio.style.display = 'none';
+    }
+    
+    const rowIVA = document.getElementById('rowIVA');
+    if (calculos.ivaPorcentaje > 0) {
+      rowIVA.style.display = 'flex';
+      document.getElementById('ticketIVAPorc').textContent = calculos.ivaPorcentaje;
+      document.getElementById('ticketIVA').textContent = '$' + calculos.iva.toFixed(2);
+    } else {
+      rowIVA.style.display = 'none';
+    }
+    
+    document.getElementById('ticketTotal').textContent = '$' + calculos.total.toFixed(2);
+    
+    // QR
+    generarQR(calculos.total, serie + '-' + num);
+  }
+
+  function generarQR(total, facturaNum) {
+    const container = document.getElementById('qrcode');
+    const incluirQR = document.getElementById('fIncluirQR').checked;
+    const qrContainer = document.getElementById('ticketQRContainer');
+    
+    if (!incluirQR) {
+      qrContainer.style.display = 'none';
+      return;
+    }
+    
+    qrContainer.style.display = 'block';
+    container.innerHTML = '';
+    
+    const qrData = {
+      emisor: document.getElementById('fEmisorNombre').value || 'KLOHESV',
+      factura: facturaNum,
+      fecha: document.getElementById('fFecha').value || new Date().toISOString(),
+      total: total.toFixed(2),
+      cliente: document.getElementById('fCliente').value || 'Consumidor Final'
+    };
+    
+    qrCodeInstance = new QRCode(container, {
+      text: JSON.stringify(qrData),
+      width: 100,
+      height: 100,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
   }
 
   function limpiarFactura() {
+    if (!confirm('¿Estás seguro de limpiar todos los datos de la factura?')) return;
+    
     productosFactura = [];
-    document.getElementById('fNum').value = '00015';
+    document.getElementById('fNum').value = '000001';
     document.getElementById('fCliente').value = 'Consumidor Final';
+    document.getElementById('fClienteNIF').value = '';
+    document.getElementById('fClienteDireccion').value = '';
+    document.getElementById('fClienteTelefono').value = '';
+    document.getElementById('fClienteEmail').value = '';
+    document.getElementById('fDescuentoGlobal').value = '0';
     document.getElementById('fEnvio').value = '0';
+    document.getElementById('fIVAPorcentaje').value = '13';
+    document.getElementById('fSinIVA').checked = false;
+    document.getElementById('fIVAPorcentaje').disabled = false;
+    
     renderizarProductos();
     actualizarResumen();
-    actualizarTablaTicket();
+    actualizarVistaPrevia();
+    
+    mostrarNotificacion('Factura limpiada correctamente', 'success');
   }
 
   // ========== IMPRESIÓN ==========
   function imprimirTicket() {
-    const contenido = document.querySelector('.factura-container').outerHTML;
-    const ventana = window.open('', '', 'width=500,height=800');
+    actualizarVistaPrevia();
+    
+    const contenido = document.getElementById('facturaTicket').outerHTML;
+    const ventana = window.open('', '', 'width=400,height=800');
     ventana.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <title>Factura - KLOHESV</title>
   <style>
+    @page { size: 80mm auto; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { 
       font-family: 'Courier New', monospace; 
-      font-size: 12px; 
-      line-height: 1.5; 
+      font-size: 10px; 
+      line-height: 1.4; 
       color: #000; 
       background: #fff;
-      padding: 20px;
-      max-width: 400px;
-      margin: 0 auto;
+      padding: 5mm;
+      width: 80mm;
     }
     .factura-container {
       background: #fff;
       padding: 0;
       font-family: 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.6;
+      font-size: 10px;
+      line-height: 1.4;
       color: #000;
+      width: 70mm;
     }
     .factura-header {
       text-align: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px dashed #ccc;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #999;
     }
     .factura-logo {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.15em;
-      margin-bottom: 6px;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
     }
     .factura-info {
       color: #333;
-      font-size: 11px;
-      margin-bottom: 2px;
+      font-size: 8px;
+      margin-bottom: 1px;
+      line-height: 1.2;
     }
-    .factura-datos { margin-bottom: 12px; }
+    .factura-section-title {
+      font-weight: 700;
+      font-size: 9px;
+      margin: 8px 0 4px 0;
+      text-transform: uppercase;
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+    }
+    .factura-datos { margin-bottom: 8px; }
     .factura-dato {
       display: flex;
-      margin-bottom: 4px;
+      margin-bottom: 1px;
+      line-height: 1.3;
+      font-size: 9px;
     }
     .factura-dato-label {
       font-weight: 600;
-      min-width: 70px;
+      min-width: 60px;
+      flex-shrink: 0;
+    }
+    .factura-dato-valor {
+      flex: 1;
+      word-break: break-word;
     }
     .factura-tabla {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
-      font-size: 11px;
+      margin: 8px 0;
+      font-size: 8px;
     }
     .factura-tabla thead th {
       text-align: left;
-      padding: 8px 4px;
+      padding: 4px 2px;
       border-bottom: 1px solid #000;
-      font-weight: 600;
+      border-top: 1px solid #000;
+      font-weight: 700;
+      background: #f5f5f5;
     }
     .factura-tabla thead th:nth-child(2),
-    .factura-tabla thead th:nth-child(3),
-    .factura-tabla thead th:nth-child(4) { text-align: center; }
+    .factura-tabla thead th:nth-child(3) { text-align: center; }
     .factura-tabla thead th:last-child { text-align: right; }
     .factura-tabla tbody td {
-      padding: 6px 4px;
-      border-bottom: 1px solid #eee;
+      padding: 3px 2px;
+      border-bottom: 1px dotted #ccc;
+      vertical-align: top;
     }
     .factura-tabla tbody td:nth-child(2),
-    .factura-tabla tbody td:nth-child(3),
-    .factura-tabla tbody td:nth-child(4) { text-align: center; }
+    .factura-tabla tbody td:nth-child(3) { text-align: center; }
     .factura-tabla tbody td:last-child { text-align: right; }
-    .factura-tabla tbody tr:last-child td { border-bottom: 1px solid #000; }
+    .factura-desglose {
+      margin: 8px 0;
+      font-size: 9px;
+    }
+    .factura-desglose-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+    .factura-desglose-label { font-weight: 600; }
+    .factura-desglose-value { text-align: right; }
     .factura-total-row {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px dashed #ccc;
-      font-size: 14px;
+      padding: 6px 0;
+      border-top: 2px solid #000;
+      border-bottom: 1px dashed #999;
+      font-size: 12px;
       font-weight: 700;
+      margin-top: 6px;
     }
-    .factura-total-label { margin-right: 10px; }
+    .factura-qr {
+      text-align: center;
+      margin: 10px 0;
+      padding: 8px;
+    }
+    .factura-qr img { max-width: 80px; height: auto; }
+    .factura-qr-label {
+      font-size: 7px;
+      color: #666;
+      margin-top: 2px;
+    }
     .factura-footer {
       text-align: center;
-      margin-top: 16px;
-      padding-top: 12px;
-      font-size: 10px;
+      margin-top: 10px;
+      padding-top: 8px;
+      font-size: 7px;
       color: #555;
+      line-height: 1.3;
     }
     .factura-footer-titulo {
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 3px;
+      font-size: 9px;
     }
   </style>
 </head>
 <body>
   ${contenido}
+  <script>
+    window.onload = function() { 
+      setTimeout(function() { 
+        window.print(); 
+        setTimeout(function() { window.close(); }, 500);
+      }, 300);
+    };
+  <\/script>
 </body>
 </html>`);
     ventana.document.close();
-    ventana.focus();
-    ventana.print();
-    ventana.close();
   }
 
   function descargarPDF() {
+    actualizarVistaPrevia();
+    
     const { jsPDF } = window.jspdf;
     
-    const alturaBase = 140;
-    const alturaPorProducto = 7;
-    const alturaTotal = alturaBase + (productosFactura.length * alturaPorProducto) + (parseFloat(document.getElementById('fEnvio').value) > 0 ? 7 : 0);
+    // Calcular altura dinámica
+    const alturaBase = 160;
+    const alturaPorProducto = 5;
+    const alturaProductos = productosFactura.length * alturaPorProducto;
+    const alturaExtras = (parseFloat(document.getElementById('fEnvio').value) > 0 ? 5 : 0) + 
+                         (parseFloat(document.getElementById('fDescuentoGlobal').value) > 0 ? 5 : 0);
+    const alturaTotal = alturaBase + alturaProductos + alturaExtras;
     
-    const doc = new jsPDF({ unit:'mm', format:[80, alturaTotal] });
+    const doc = new jsPDF({ 
+      unit: 'mm', 
+      format: [80, Math.max(200, alturaTotal)],
+      orientation: 'portrait'
+    });
     
     const margen = 4;
     const ancho = 80 - margen * 2;
     const centro = 40;
-    let y = 10;
+    let y = 8;
 
     function dibujarLineaPunteada(yPos) {
       const segmento = 2;
       const espacio = 1.5;
       let x = margen;
+      doc.setDrawColor(150);
+      doc.setLineWidth(0.2);
       while (x < 76) {
         doc.line(x, yPos, Math.min(x + segmento, 76), yPos);
         x += segmento + espacio;
       }
     }
 
-    doc.setFontSize(16);
+    // Logo
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('KLOHESV', centro, y, { align: 'center' });
-    y += 8;
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('San Salvador, El Salvador', centro, y, { align: 'center' });
-    y += 5;
-    doc.text('Correo: industriastobias@gmail.com', centro, y, { align: 'center' });
-    y += 5;
-    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
+    doc.text((document.getElementById('fEmisorNombre').value || 'KLOHESV').toUpperCase(), centro, y, { align: 'center' });
     y += 6;
     
-    dibujarLineaPunteada(y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('Factura N:', margen, y);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('fNum').value, margen + 22, y);
-    y += 6;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Fecha:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(document.getElementById('fFecha').value, margen + 22, y);
-    y += 6;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Cliente:', margen, y);
-    doc.setFont('helvetica', 'normal');
-    const clienteTexto = document.getElementById('fCliente').value;
-    if (clienteTexto.length > 18) {
-      doc.text(clienteTexto.substring(0, 17) + '...', margen + 22, y);
-    } else {
-      doc.text(clienteTexto, margen + 22, y);
-    }
-    y += 8;
-
-    dibujarLineaPunteada(y);
-    y += 5;
-    
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    
-    doc.text('Producto', margen, y);
-    doc.text('Cant', 40, y, { align: 'center' });
-    doc.text('Precio', 48, y);
-    doc.text('Desc', 60, y);
-    doc.text('Total', 76, y, { align: 'right' });
-    
+    doc.text(document.getElementById('fEmisorDireccion').value || 'San Salvador, El Salvador', centro, y, { align: 'center' });
     y += 4;
-    dibujarLineaPunteada(y);
-    y += 5;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
     
-    productosFactura.forEach(p => {
-      const nombre = p.name.length > 12 ? p.name.substring(0, 11) + '.' : p.name;
-      doc.text(nombre, margen, y);
-      doc.text(String(p.quantity), 40, y, { align: 'center' });
-      const precioStr = p.price.toFixed(2);
-      doc.text(precioStr, 48, y);
-      doc.text(p.discount > 0 ? String(Math.round(p.discount)) : '0', 62, y);
-      doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
-      y += 6;
-    });
-
-    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
-    if (envio > 0) {
-      doc.text('Envio', margen, y);
-      doc.text('1', 40, y, { align: 'center' });
-      doc.text(envio.toFixed(2), 48, y);
-      doc.text('0', 62, y);
-      doc.text(envio.toFixed(2), 76, y, { align: 'right' });
-      y += 6;
+    const email = document.getElementById('fEmisorEmail').value;
+    if (email) {
+      doc.text(email, centro, y, { align: 'center' });
+      y += 4;
     }
-
+    
+    const tel = document.getElementById('fEmisorTelefono').value;
+    if (tel) {
+      doc.text('Tel: ' + tel, centro, y, { align: 'center' });
+      y += 4;
+    }
+    
     y += 2;
     dibujarLineaPunteada(y);
-    y += 6;
+    y += 5;
 
-    const total = parseFloat(document.getElementById('fTotal').textContent);
+    // Factura info
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('FACTURA', centro, y, { align: 'center' });
+    y += 5;
+    
+    doc.setFontSize(8);
+    doc.text('Serie-N°: ' + document.getElementById('fSerie').value + '-' + document.getElementById('fNum').value, margen, y);
+    y += 4;
+    doc.text('Fecha: ' + new Date(document.getElementById('fFecha').value || new Date()).toLocaleString('es-SV'), margen, y);
+    y += 4;
+    
+    const venc = document.getElementById('fVencimiento').value;
+    if (venc) {
+      doc.text('Vence: ' + new Date(venc).toLocaleDateString('es-SV'), margen, y);
+      y += 4;
+    }
+    
+    y += 1;
+    dibujarLineaPunteada(y);
+    y += 4;
+
+    // Emisor
+    doc.setFont('helvetica', 'bold');
+    doc.text('EMISOR', margen, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('fEmisorNombre').value || 'KLOHESV', margen, y);
+    y += 4;
+    const emisorNIF = document.getElementById('fEmisorNIF').value;
+    if (emisorNIF) {
+      doc.text('NIF: ' + emisorNIF, margen, y);
+      y += 4;
+    }
+    
+    y += 1;
+    dibujarLineaPunteada(y);
+    y += 4;
+
+    // Receptor
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECEPTOR', margen, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    const cliente = document.getElementById('fCliente').value || 'Consumidor Final';
+    doc.text(cliente.length > 25 ? cliente.substring(0, 24) + '...' : cliente, margen, y);
+    y += 4;
+    const clienteNIF = document.getElementById('fClienteNIF').value;
+    if (clienteNIF) {
+      doc.text('NIF: ' + clienteNIF, margen, y);
+      y += 4;
+    }
+    const clienteDir = document.getElementById('fClienteDireccion').value;
+    if (clienteDir) {
+      doc.text(clienteDir.length > 30 ? clienteDir.substring(0, 29) + '...' : clienteDir, margen, y);
+      y += 4;
+    }
+    
+    y += 1;
+    dibujarLineaPunteada(y);
+    y += 5;
+
+    // Tabla productos
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text('PRODUCTO', margen, y);
+    doc.text('CANT', 36, y, { align: 'center' });
+    doc.text('P.UNIT', 48, y);
+    doc.text('TOTAL', 76, y, { align: 'right' });
+    y += 3;
+    
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.3);
+    doc.line(margen, y, 76, y);
+    y += 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    
+    let suma = 0;
+    productosFactura.forEach(p => {
+      const nombre = p.name.length > 16 ? p.name.substring(0, 15) + '.' : p.name;
+      doc.text(nombre, margen, y);
+      doc.text(String(p.quantity), 36, y, { align: 'center' });
+      doc.text(p.price.toFixed(2), 52, y);
+      doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
+      y += 4;
+      suma += p.total;
+    });
+
+    doc.line(margen, y, 76, y);
+    y += 5;
+
+    // Desglose
+    const calculos = actualizarCalculos();
+    
+    doc.setFontSize(8);
+    doc.text('Base Imponible:', margen, y);
+    doc.text('$' + calculos.subtotal.toFixed(2), 76, y, { align: 'right' });
+    y += 4;
+    
+    if (calculos.descuento > 0) {
+      doc.text('Descuento:', margen, y);
+      doc.text('-$' + calculos.descuento.toFixed(2), 76, y, { align: 'right' });
+      y += 4;
+    }
+    
+    if (calculos.envio > 0) {
+      doc.text('Envío:', margen, y);
+      doc.text('$' + calculos.envio.toFixed(2), 76, y, { align: 'right' });
+      y += 4;
+    }
+    
+    if (calculos.iva > 0) {
+      doc.text('IVA (' + calculos.ivaPorcentaje + '%):', margen, y);
+      doc.text('$' + calculos.iva.toFixed(2), 76, y, { align: 'right' });
+      y += 4;
+    }
+    
+    y += 2;
+    dibujarLineaPunteada(y);
+    y += 5;
+
+    // Total
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL:', 50, y);
-    doc.text('$' + total.toFixed(2), 76, y, { align: 'right' });
+    doc.text('TOTAL:', margen, y);
+    doc.text('$' + calculos.total.toFixed(2), 76, y, { align: 'right' });
     y += 6;
     
     dibujarLineaPunteada(y);
     y += 8;
 
-    doc.setFontSize(10);
+    // QR
+    if (document.getElementById('fIncluirQR').checked) {
+      const qrCanvas = document.querySelector('#qrcode canvas');
+      if (qrCanvas) {
+        const qrData = qrCanvas.toDataURL('image/png');
+        doc.addImage(qrData, 'PNG', 30, y, 20, 20);
+        y += 24;
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Escanea para verificar', centro, y, { align: 'center' });
+        y += 6;
+      }
+    }
+
+    // Footer
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Gracias por su compra!', centro, y, { align: 'center' });
-    y += 6;
+    doc.text('¡Gracias por su compra!', centro, y, { align: 'center' });
+    y += 5;
     
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
     const msg = 'Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.';
     const lineas = doc.splitTextToSize(msg, ancho - 4);
     lineas.forEach(l => {
       doc.text(l, centro, y, { align: 'center' });
-      y += 3.5;
+      y += 2.5;
     });
+    
+    y += 2;
+    doc.text('@Klohesv', centro, y, { align: 'center' });
 
-    doc.save(`factura_${document.getElementById('fNum').value}.pdf`);
+    doc.save(`factura_${document.getElementById('fSerie').value}_${document.getElementById('fNum').value}.pdf`);
   }
 
   // ========== EVENT LISTENERS ==========
@@ -1584,18 +2400,40 @@
 
   // Sincronización en tiempo real con venta.html
   window.addEventListener('storage', (e) => {
-    if (e.key === 'soldInventory') {
-      cargarProductos();
+    if (e.key === 'soldInventory' || e.key === 'ventaProductos') {
+      sincronizarConVenta();
     }
   });
 
   window.addEventListener('focus', () => {
-    cargarProductos();
+    sincronizarConVenta();
+  });
+
+  // Actualizar vista previa al cambiar campos
+  ['fSerie', 'fNum', 'fFecha', 'fVencimiento', 'fEmisorNombre', 'fEmisorNIF', 'fEmisorDireccion', 
+   'fEmisorEmail', 'fEmisorTelefono', 'fCliente', 'fClienteNIF', 'fClienteDireccion', 
+   'fClienteTelefono', 'fClienteEmail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', actualizarVistaPrevia);
   });
 
   // Inicializar
-  document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
-  cargarProductos();
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('fFecha').value = now.toISOString().slice(0, 16);
+  
+  const venc = new Date();
+  venc.setDate(venc.getDate() + 30);
+  document.getElementById('fVencimiento').value = venc.toISOString().slice(0, 10);
+  
+  // Cargar número de factura secuencial
+  const lastNum = localStorage.getItem('lastFacturaNum');
+  if (lastNum) {
+    const nextNum = parseInt(lastNum) + 1;
+    document.getElementById('fNum').value = nextNum.toString().padStart(6, '0');
+  }
+  
+  sincronizarConVenta();
 </script>
 </body>
 </html>

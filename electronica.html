@@ -2152,9 +2152,6 @@
 
   // ========== ACTUALIZAR A FACTURA ==========
   function actualizarAFactura() {
-    console.log('Actualizando factura...');
-    console.log('Productos seleccionados:', productosSeleccionados);
-    
     if (productosSeleccionados.length === 0) {
       mostrarNotificacion('No hay productos seleccionados', 'warning');
       return;
@@ -2162,19 +2159,33 @@
     
     let agregados = 0;
     
+    // Agregar cada producto seleccionado a la factura
     productosSeleccionados.forEach(producto => {
-      // Verificar si ya existe en la factura
+      // Verificar si ya existe en la factura por ID
       const existe = productosFactura.some(p => p.id === producto.id);
       if (!existe) {
-        productosFactura.push({ ...producto });
+        // Crear una copia limpia del producto
+        const nuevoProducto = {
+          id: producto.id,
+          name: producto.name,
+          barcode: producto.barcode,
+          quantity: Number(producto.quantity) || 1,
+          price: Number(producto.price) || 0,
+          discount: Number(producto.discount) || 0,
+          total: Number(producto.total) || 0,
+          image: producto.image || '',
+          isManual: producto.isManual || false
+        };
+        productosFactura.push(nuevoProducto);
         agregados++;
       }
     });
     
-    console.log('Productos en factura después de actualizar:', productosFactura);
-    
     // Limpiar seleccionados
     productosSeleccionados = [];
+    
+    // Actualizar contador en pestaña
+    document.getElementById('tabCountFactura').textContent = productosFactura.length;
     
     // Actualizar UI
     renderizarProductos();
@@ -2182,8 +2193,6 @@
     renderizarProductosEnFactura();
     actualizarResumen();
     actualizarCalculos();
-    
-    document.getElementById('tabCountFactura').textContent = productosFactura.length;
     
     if (agregados > 0) {
       mostrarNotificacion(`${agregados} producto(s) agregado(s) a la factura`, 'success');
@@ -2196,8 +2205,6 @@
     document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.products-section .tab')[1].classList.add('active');
     document.getElementById('tab-factura').classList.add('active');
-    
-    renderizarProductosEnFactura();
   }
 
   // ========== RENDERIZAR PRODUCTOS EN FACTURA ==========
@@ -2348,12 +2355,11 @@
 
   function actualizarResumen() {
     const totalProductos = productosFactura.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
-    const subtotal = productosFactura.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.price) || 0)), 0);
-    const total = productosFactura.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+    const calculos = calcularTotales();
     
     document.getElementById('resumenProductos').textContent = totalProductos;
-    document.getElementById('resumenSubtotal').textContent = '$' + subtotal.toFixed(2);
-    document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('resumenSubtotal').textContent = '$' + calculos.subtotal.toFixed(2);
+    document.getElementById('resumenTotal').textContent = '$' + calculos.total.toFixed(2);
   }
 
   // ========== PRODUCTO MANUAL ==========
@@ -2420,7 +2426,8 @@
     document.getElementById('fNum').value = num;
   }
 
-  function actualizarCalculos() {
+  // ========== CÁLCULO DE TOTALES (sin recursión) ==========
+  function calcularTotales() {
     const subtotalProductos = productosFactura.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.price) || 0)), 0);
     const descuentoGlobal = parseFloat(document.getElementById('fDescuentoGlobal').value) || 0;
     const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
@@ -2431,12 +2438,6 @@
     const baseImponible = subtotalProductos - descuentoMonto + envio;
     const ivaMonto = baseImponible * (ivaPorcentaje / 100);
     const total = baseImponible + ivaMonto;
-    
-    document.getElementById('resumenSubtotal').textContent = '$' + subtotalProductos.toFixed(2);
-    document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
-    
-    // Actualizar cambio si hay efectivo recibido
-    calcularCambio();
     
     return {
       subtotal: subtotalProductos,
@@ -2449,11 +2450,30 @@
     };
   }
 
+  function actualizarCalculos() {
+    const calculos = calcularTotales();
+    
+    document.getElementById('resumenSubtotal').textContent = '$' + calculos.subtotal.toFixed(2);
+    document.getElementById('resumenTotal').textContent = '$' + calculos.total.toFixed(2);
+    
+    // Solo actualizar cambio si hay efectivo ingresado
+    const efectivoRecibido = parseFloat(document.getElementById('fEfectivoRecibido').value) || 0;
+    if (efectivoRecibido > 0) {
+      actualizarCambioUI(efectivoRecibido, calculos.total);
+    }
+    
+    return calculos;
+  }
+
   // ========== CÁLCULO DE CAMBIO ==========
   function calcularCambio() {
-    const calculos = actualizarCalculos();
+    const calculos = calcularTotales();
     const efectivoRecibido = parseFloat(document.getElementById('fEfectivoRecibido').value) || 0;
-    const cambio = efectivoRecibido - calculos.total;
+    actualizarCambioUI(efectivoRecibido, calculos.total);
+  }
+
+  function actualizarCambioUI(efectivoRecibido, total) {
+    const cambio = efectivoRecibido - total;
     const cambioInput = document.getElementById('fCambio');
     const mensajeDiv = document.getElementById('cambioMensaje');
     
@@ -2498,7 +2518,7 @@
 
   // ========== VISTA PREVIA DE FACTURA ==========
   function actualizarVistaPrevia() {
-    const calculos = actualizarCalculos();
+    const calculos = calcularTotales();
     
     const serie = document.getElementById('fSerie').value || 'A';
     const num = document.getElementById('fNum').value || '000001';
@@ -3021,7 +3041,7 @@
     doc.line(margen, y, 76, y);
     y += 5;
 
-    const calculos = actualizarCalculos();
+    const calculos = calcularTotales();
     
     doc.setFontSize(8);
     doc.text('Subtotal:', margen, y);

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>FACTURA ELECTRÓNICA – KLOHESV</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -49,6 +49,8 @@
       color: var(--text-primary); 
       min-height: 100vh;
       line-height: 1.5;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* ===== HEADER ===== */
@@ -109,6 +111,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: manipulation;
     }
 
     #menuToggle:hover {
@@ -146,6 +149,7 @@
       font-size: 0.9rem;
       font-weight: 500;
       transition: var(--transition);
+      touch-action: manipulation;
     }
 
     #sideMenu a:hover {
@@ -196,6 +200,13 @@
       cursor: pointer;
       transition: var(--transition);
       text-decoration: none;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
     }
 
     .btn-primary {
@@ -347,6 +358,9 @@
       border-bottom: 1px solid var(--border-light);
       cursor: pointer;
       transition: var(--transition);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .product-item:hover {
@@ -363,10 +377,12 @@
     }
 
     .product-checkbox {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       accent-color: var(--rose-text);
       cursor: pointer;
+      flex-shrink: 0;
+      pointer-events: none;
     }
 
     .product-image {
@@ -377,6 +393,7 @@
       border: 1px solid var(--border);
       background: var(--bg);
       flex-shrink: 0;
+      pointer-events: none;
     }
 
     .product-image-placeholder {
@@ -390,11 +407,13 @@
       color: var(--text-muted);
       font-size: 1.2rem;
       flex-shrink: 0;
+      pointer-events: none;
     }
 
     .product-info {
       flex: 1;
       min-width: 0;
+      pointer-events: none;
     }
 
     .product-name {
@@ -520,8 +539,11 @@
     }
 
     .checkbox-group input[type="checkbox"] {
-      width: auto;
+      width: 18px;
+      height: 18px;
       accent-color: var(--rose-text);
+      cursor: pointer;
+      flex-shrink: 0;
     }
 
     .checkbox-group label {
@@ -529,6 +551,7 @@
       text-transform: none;
       font-weight: 500;
       font-size: 0.8rem;
+      cursor: pointer;
     }
 
     /* ===== FACTURA / TICKET POS ===== */
@@ -770,6 +793,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+      touch-action: manipulation;
     }
 
     .btn-factura:hover {
@@ -912,6 +936,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: manipulation;
     }
 
     .modal-close:hover {
@@ -971,6 +996,7 @@
       border-bottom: 2px solid transparent;
       cursor: pointer;
       transition: var(--transition);
+      touch-action: manipulation;
     }
 
     .tab:hover {
@@ -998,6 +1024,21 @@
       .form-row { grid-template-columns: 1fr; }
       .form-row-3 { grid-template-columns: 1fr; }
       .factura-container { padding: 16px; max-width: 100%; }
+      .product-item { padding: 10px 12px; }
+      .product-image, .product-image-placeholder { width: 45px; height: 45px; }
+    }
+
+    @media (max-width: 480px) {
+      .controls-bar { 
+        padding: 10px 12px; 
+        gap: 8px;
+      }
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
+      .brand-text h1 { font-size: 1rem; }
+      .brand-text span { font-size: 0.7rem; }
     }
 
     /* ===== PRINT STYLES ===== */
@@ -1019,8 +1060,38 @@
         box-shadow: none;
       }
     }
+
+    /* ===== FULLSCREEN BUTTON ===== */
+    .fullscreen-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: var(--rose-text);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      touch-action: manipulation;
+    }
+
+    .fullscreen-btn:hover {
+      transform: scale(1.1);
+      background: var(--accent-hover);
+    }
+
+    .fullscreen-btn.hidden {
+      display: none;
+    }
   </style>
-<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -1169,7 +1240,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Fecha de Emisión</label>
-            <input type="datetime-local" id="fFecha">
+            <input type="datetime-local" id="fFecha" onchange="actualizarFechaVencimiento()">
           </div>
           <div class="form-group">
             <label>Fecha de Vencimiento</label>
@@ -1199,12 +1270,12 @@
         </div>
         <div class="form-group">
           <label>Giro / Actividad del Negocio</label>
-          <input type="text" id="fEmisorGiro" value="Joyería y Accesorios">
+          <input type="text" id="fEmisorGiro" value="TIENDA ONLINE">
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>NIF/CIF/CUIT/RFC (NIT)</label>
-            <input type="text" id="fEmisorNIF" value="0000-000000-000-0">
+            <input type="text" id="fEmisorNIF" value="06864102-23">
           </div>
           <div class="form-group">
             <label>Teléfono</label>
@@ -1258,7 +1329,7 @@
         <div class="form-row-3">
           <div class="form-group">
             <label>Tipo de IVA (%)</label>
-            <input type="number" id="fIVAPorcentaje" value="13" min="0" max="100" step="0.01" onchange="actualizarCalculos()">
+            <input type="number" id="fIVAPorcentaje" value="13" min="0" max="100" step="0.01" onchange="actualizarCalculos()" disabled>
           </div>
           <div class="form-group">
             <label>Descuento Global (%)</label>
@@ -1270,7 +1341,7 @@
           </div>
         </div>
         <div class="checkbox-group">
-          <input type="checkbox" id="fSinIVA" onchange="toggleIVA()">
+          <input type="checkbox" id="fSinIVA" onchange="toggleIVA()" checked>
           <label for="fSinIVA">Factura sin IVA (exento)</label>
         </div>
         <div class="checkbox-group">
@@ -1286,12 +1357,12 @@
       <div class="factura-container" id="facturaTicket">
         <div class="factura-header">
           <div class="factura-logo" id="ticketLogo">KLOHESV</div>
-          <div class="factura-giro" id="ticketGiro">Joyería y Accesorios</div>
+          <div class="factura-giro" id="ticketGiro">TIENDA ONLINE</div>
           <div class="factura-info" id="ticketEmisorDir">San Salvador, El Salvador</div>
           <div class="factura-info" id="ticketEmisorEmail">industriastobias@gmail.com</div>
           <div class="factura-info" id="ticketEmisorTel">+503 0000-0000</div>
-          <div class="factura-info" id="ticketEmisorNIFDisplay">NIT: 0000-000000-000-0</div>
-          <div class="factura-info" id="ticketEmisorGiroDisplay">Giro: Venta de Joyería y Accesorios</div>
+          <div class="factura-info" id="ticketEmisorNIFDisplay">NIT: 06864102-23</div>
+          <div class="factura-info" id="ticketEmisorGiroDisplay">Giro: TIENDA ONLINE</div>
         </div>
 
         <div class="factura-section-title">FACTURA</div>
@@ -1360,7 +1431,7 @@
             <span class="factura-desglose-label">Envío:</span>
             <span class="factura-desglose-value" id="ticketEnvio">$0.00</span>
           </div>
-          <div class="factura-desglose-row" id="rowIVA">
+          <div class="factura-desglose-row" id="rowIVA" style="display:none;">
             <span class="factura-desglose-label">IVA (<span id="ticketIVAPorc">13</span>%):</span>
             <span class="factura-desglose-value" id="ticketIVA">$0.00</span>
           </div>
@@ -1457,6 +1528,11 @@
   </div>
 </div>
 
+<!-- Botón flotante para pantalla completa -->
+<button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleKiosk()" title="Pantalla Completa">
+  <i class="fa-solid fa-expand"></i>
+</button>
+
 <script>
   // ========== FUNCIONES DE SEGURIDAD ==========
   function safeJSONParse(str, defaultValue = []) {
@@ -1481,6 +1557,7 @@
   let productosFactura = [];
   let productosFiltrados = [];
   let qrCodeInstance = null;
+  let isProcessingClick = false;
 
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
@@ -1491,17 +1568,85 @@
     document.getElementById('menuOverlay').classList.toggle('show');
   }
 
+  // ========== PANTALLA COMPLETA ==========
   function toggleKiosk() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(()=>{});
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {
+          console.log('Error al activar pantalla completa:', err);
+        });
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen();
+      }
     } else {
-      document.exitFullscreen();
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      }
     }
   }
 
+  // Activar pantalla completa automáticamente al cargar
+  function activarPantallaCompletaAuto() {
+    // Intentar activar pantalla completa después de un breve delay
+    setTimeout(() => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        toggleKiosk();
+      }
+    }, 500);
+  }
+
+  // Mantener pantalla completa - reactivar si se sale
+  function mantenerPantallaCompleta() {
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        // El usuario salió de pantalla completa, reactivar después de un momento
+        setTimeout(() => {
+          if (!document.fullscreenElement) {
+            toggleKiosk();
+          }
+        }, 1000);
+      }
+    });
+
+    // También para webkit (Safari/Chrome en iOS)
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (!document.webkitFullscreenElement) {
+        setTimeout(() => {
+          if (!document.webkitFullscreenElement) {
+            toggleKiosk();
+          }
+        }, 1000);
+      }
+    });
+
+    // Prevenir salida accidental con tecla ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.fullscreenElement) {
+        e.preventDefault();
+        // No hacer nada, mantener pantalla completa
+      }
+    });
+
+    // Reactivar pantalla completa al volver a la pestaña
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !document.fullscreenElement) {
+        setTimeout(() => {
+          toggleKiosk();
+        }, 300);
+      }
+    });
+  }
+
   function cambiarTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.products-section .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.products-section .tab-content').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
     if (tab === 'seleccionados') {
@@ -1521,17 +1666,30 @@
     }
   }
 
+  // ========== FECHA DE VENCIMIENTO ==========
+  function actualizarFechaVencimiento() {
+    const fechaEmision = document.getElementById('fFecha').value;
+    if (fechaEmision) {
+      const fecha = new Date(fechaEmision);
+      // Sumar exactamente 1 mes
+      fecha.setMonth(fecha.getMonth() + 1);
+      // Formatear como YYYY-MM-DD para input type="date"
+      const year = fecha.getFullYear();
+      const month = String(fecha.getMonth() + 1).padStart(2, '0');
+      const day = String(fecha.getDate()).padStart(2, '0');
+      document.getElementById('fVencimiento').value = `${year}-${month}-${day}`;
+    }
+  }
+
   // ========== CARGAR IMÁGENES DESDE LOCALFORAGE ==========
   async function cargarImagenesLocalForage() {
     if (!productosFiltrados || productosFiltrados.length === 0) return;
     
     console.log('Cargando imágenes para', productosFiltrados.length, 'productos');
     
-    // Intentar cargar imagen para cada producto
     for (let i = 0; i < productosFiltrados.length; i++) {
       const item = productosFiltrados[i];
       
-      // Si ya tiene imagen válida en el objeto, no hacer nada
       const imagenActual = item.image || item.imagen || item.img || '';
       if (imagenActual && (
         imagenActual.startsWith('data:image') || 
@@ -1539,37 +1697,27 @@
         imagenActual.startsWith('https://') ||
         imagenActual.startsWith('blob:')
       )) {
-        console.log('Producto', item.name, 'ya tiene imagen');
         continue;
       }
       
-      // Intentar obtener la imagen usando el code (SKU) del producto
-      // Esto es igual a como funciona en venta.html
       let blob = null;
       const productCode = item.code || item.barcode;
-      
-      console.log('Buscando imagen para:', item.name, 'con code:', productCode);
       
       if (productCode) {
         try {
           blob = await localforage.getItem(`img_${productCode}`);
-          console.log('Resultado para img_' + productCode + ':', blob ? 'encontrado' : 'no encontrado');
         } catch (err) {
           console.error('Error cargando imagen de localforage:', err);
           blob = null;
         }
-      } else {
-        console.log('Producto sin code ni barcode:', item.name);
       }
       
-      // Si encontramos el blob, crear URL de objeto
       if (blob) {
         try {
           const imagenUrl = URL.createObjectURL(blob);
           productosFiltrados[i].image = imagenUrl;
           productosFiltrados[i].imagen = imagenUrl;
           productosFiltrados[i].img = imagenUrl;
-          console.log('Imagen cargada exitosamente para:', item.name);
         } catch (err) {
           console.error('Error creando URL de imagen:', err);
         }
@@ -1581,7 +1729,6 @@
   async function sincronizarConVenta() {
     showSpinner();
     
-    // Intentar obtener de múltiples fuentes
     const sources = [
       'soldInventory',
       'ventaProductos',
@@ -1609,7 +1756,6 @@
       soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
     }
     
-    // Filtrar solo productos válidos (no cierres de caja)
     productosFiltrados = soldInventory.filter(item => {
       if (!item) return false;
       if (item.isCierreCaja) return false;
@@ -1617,19 +1763,15 @@
       return true;
     });
     
-    // Enriquecer productos con datos del inventario original
     const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
     productosFiltrados = productosFiltrados.map(item => {
-      // Si el item no tiene code, intentar encontrarlo en el inventario
       if (!item.code) {
-        // Buscar por barcode
         if (item.barcode) {
           const original = inventory.find(p => p.barcode === item.barcode);
           if (original && original.code) {
             return { ...item, code: original.code };
           }
         }
-        // Buscar por nombre si no se encontró por barcode
         if (item.name) {
           const original = inventory.find(p => p.name === item.name);
           if (original && original.code) {
@@ -1640,10 +1782,8 @@
       return item;
     });
     
-    // Cargar imágenes desde LocalForage/IndexedDB
     await cargarImagenesLocalForage();
     
-    // Ordenar por fecha más reciente
     productosFiltrados.sort((a, b) => {
       const dateA = new Date(a.soldAt || a.date || a.fecha || 0);
       const dateB = new Date(b.soldAt || b.date || b.fecha || 0);
@@ -1690,7 +1830,6 @@
     const container = document.getElementById('productsList');
     const searchValue = (document.getElementById('searchProducts').value || '').toLowerCase();
     
-    // Filtrar por búsqueda
     const productosMostrar = searchValue 
       ? productosFiltrados.filter(p => {
           const name = (p.name || p.nombre || '').toLowerCase();
@@ -1722,7 +1861,7 @@
       div.className = 'product-item';
       div.dataset.index = index;
       
-      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + index;
+      const id = item.idVenta || item.id || item.code || item.barcode || item.codigo || 'prod_' + index + '_' + Date.now();
       div.dataset.id = id;
       
       const isSelected = productosFactura.some(p => p.id === id);
@@ -1735,10 +1874,8 @@
       const precio = Number(item.price || item.precio || item.total || 0);
       const cantidad = Number(item.quantity || item.cantidad || 1);
       
-      // Obtener imagen de múltiples posibles propiedades
       let imagen = item.image || item.imagen || item.img || '';
       
-      // Verificar si es una data URL válida o URL de objeto
       const tieneImagenValida = imagen && (
         imagen.startsWith('data:image') || 
         imagen.startsWith('http://') || 
@@ -1756,8 +1893,7 @@
       });
       
       div.innerHTML = `
-        <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} 
-          onchange="toggleProducto('${id}')">
+        <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''}>
         ${tieneImagenValida ? 
           `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
           `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
@@ -1774,13 +1910,20 @@
         </div>
       `;
       
-      div.onclick = (e) => {
-        if (e.target.type !== 'checkbox' && !e.target.closest('.product-image') && !e.target.classList.contains('product-image')) {
-          const checkbox = div.querySelector('.product-checkbox');
-          checkbox.checked = !checkbox.checked;
-          toggleProducto(id);
-        }
-      };
+      // Manejar click en el item completo (excepto en elementos interactivos)
+      div.addEventListener('click', function(e) {
+        // Prevenir múltiples clicks rápidos
+        if (isProcessingClick) return;
+        isProcessingClick = true;
+        
+        setTimeout(() => {
+          isProcessingClick = false;
+        }, 100);
+        
+        const checkbox = div.querySelector('.product-checkbox');
+        checkbox.checked = !checkbox.checked;
+        toggleProducto(id);
+      });
       
       container.appendChild(div);
     });
@@ -1807,7 +1950,6 @@
       const div = document.createElement('div');
       div.className = 'product-item selected';
       
-      // Obtener imagen de múltiples posibles propiedades
       let imagen = item.image || item.imagen || item.img || '';
       const tieneImagenValida = imagen && (
         imagen.startsWith('data:image') || 
@@ -1851,6 +1993,9 @@
 
   // ========== SELECCIÓN DE PRODUCTOS ==========
   function toggleProducto(id) {
+    // Prevenir procesamiento múltiple
+    if (isProcessingClick) return;
+    
     const item = productosFiltrados.find(p => {
       const pid = p.idVenta || p.id || p.code || p.barcode || p.codigo;
       return pid === id;
@@ -2009,7 +2154,6 @@
     const ivaMonto = baseImponible * (ivaPorcentaje / 100);
     const total = baseImponible + ivaMonto;
     
-    // Actualizar resumen
     document.getElementById('resumenSubtotal').textContent = '$' + subtotalProductos.toFixed(2);
     document.getElementById('resumenTotal').textContent = '$' + total.toFixed(2);
     
@@ -2027,11 +2171,10 @@
   // ========== GENERAR CÓDIGO DE VALIDACIÓN ==========
   function generarCodigoValidacion(serie, num, total, fecha) {
     const emisor = document.getElementById('fEmisorNombre').value || 'KLOHESV';
-    const nit = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
+    const nit = document.getElementById('fEmisorNIF').value || '06864102-23';
     const fechaStr = fecha ? new Date(fecha).toISOString().slice(0, 16).replace('T', '') : new Date().toISOString().slice(0, 16).replace('T', '');
     const totalStr = total.toFixed(2);
     
-    // Generar código aleatorio de 8 caracteres
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let randomCode = '';
     for (let i = 0; i < 8; i++) {
@@ -2045,7 +2188,6 @@
   function actualizarVistaPrevia() {
     const calculos = actualizarCalculos();
     
-    // Datos básicos
     const serie = document.getElementById('fSerie').value || 'A';
     const num = document.getElementById('fNum').value || '000001';
     const fecha = document.getElementById('fFecha').value;
@@ -2054,28 +2196,25 @@
     const cajero = document.getElementById('fCajero').value || 'ADMIN';
     
     document.getElementById('ticketLogo').textContent = document.getElementById('fEmisorNombre').value || 'KLOHESV';
-    document.getElementById('ticketGiro').textContent = document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios';
+    document.getElementById('ticketGiro').textContent = document.getElementById('fEmisorGiro').value || 'TIENDA ONLINE';
     document.getElementById('ticketNum').textContent = `${serie}-${num}`;
     document.getElementById('ticketFecha').textContent = fecha ? new Date(fecha).toLocaleString('es-SV') : new Date().toLocaleString('es-SV');
     document.getElementById('ticketVencimiento').textContent = vencimiento ? new Date(vencimiento).toLocaleDateString('es-SV') : 'N/A';
     document.getElementById('ticketCaja').textContent = caja;
     document.getElementById('ticketCajero').textContent = cajero;
     
-    // Emisor
-    const emisorNIF = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
-    const emisorGiro = document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios';
+    const emisorNIF = document.getElementById('fEmisorNIF').value || '06864102-23';
+    const emisorGiro = document.getElementById('fEmisorGiro').value || 'TIENDA ONLINE';
     document.getElementById('ticketEmisorDir').textContent = document.getElementById('fEmisorDireccion').value || 'San Salvador, El Salvador';
     document.getElementById('ticketEmisorEmail').textContent = document.getElementById('fEmisorEmail').value || '';
     document.getElementById('ticketEmisorTel').textContent = document.getElementById('fEmisorTelefono').value || '';
     document.getElementById('ticketEmisorNIFDisplay').textContent = `NIT: ${emisorNIF}`;
-    document.getElementById('ticketEmisorGiroDisplay').textContent = `Giro: Venta de ${emisorGiro}`;
+    document.getElementById('ticketEmisorGiroDisplay').textContent = `Giro: ${emisorGiro}`;
     
-    // Cliente
     document.getElementById('ticketCliente').textContent = document.getElementById('fCliente').value || 'Consumidor Final';
     document.getElementById('ticketClienteNIF').textContent = document.getElementById('fClienteNIF').value || '-';
     document.getElementById('ticketClienteDir').textContent = document.getElementById('fClienteDireccion').value || '';
     
-    // Tabla de productos
     const tbody = document.getElementById('ticketBody');
     tbody.innerHTML = '';
     
@@ -2097,7 +2236,6 @@
       });
     }
     
-    // Desglose
     document.getElementById('ticketSubtotal').textContent = '$' + calculos.subtotal.toFixed(2);
     document.getElementById('ticketBase').textContent = '$' + calculos.baseImponible.toFixed(2);
     
@@ -2128,10 +2266,8 @@
     
     document.getElementById('ticketTotal').textContent = '$' + calculos.total.toFixed(2);
     
-    // QR y código de validación
     generarQR(calculos.total, serie + '-' + num);
     
-    // Generar código de validación
     const codigoValidacion = generarCodigoValidacion(serie, num, calculos.total, fecha);
     document.getElementById('ticketCodigoValidacion').textContent = codigoValidacion;
   }
@@ -2180,8 +2316,8 @@
     document.getElementById('fDescuentoGlobal').value = '0';
     document.getElementById('fEnvio').value = '0';
     document.getElementById('fIVAPorcentaje').value = '13';
-    document.getElementById('fSinIVA').checked = false;
-    document.getElementById('fIVAPorcentaje').disabled = false;
+    document.getElementById('fSinIVA').checked = true;
+    document.getElementById('fIVAPorcentaje').disabled = true;
     
     renderizarProductos();
     actualizarResumen();
@@ -2374,7 +2510,6 @@
     
     const { jsPDF } = window.jspdf;
     
-    // Calcular altura dinámica
     const alturaBase = 180;
     const alturaPorProducto = 5;
     const alturaProductos = productosFactura.length * alturaPorProducto;
@@ -2405,7 +2540,6 @@
       }
     }
 
-    // Logo y giro
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text((document.getElementById('fEmisorNombre').value || 'KLOHESV').toUpperCase(), centro, y, { align: 'center' });
@@ -2413,7 +2547,7 @@
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
-    doc.text(document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios', centro, y, { align: 'center' });
+    doc.text(document.getElementById('fEmisorGiro').value || 'TIENDA ONLINE', centro, y, { align: 'center' });
     y += 4;
     
     doc.setFontSize(8);
@@ -2433,17 +2567,15 @@
       y += 4;
     }
     
-    // NIT y Giro
-    const nit = document.getElementById('fEmisorNIF').value || '0000-000000-000-0';
+    const nit = document.getElementById('fEmisorNIF').value || '06864102-23';
     doc.text('NIT: ' + nit, centro, y, { align: 'center' });
     y += 4;
-    doc.text('Giro: Venta de ' + (document.getElementById('fEmisorGiro').value || 'Joyería y Accesorios'), centro, y, { align: 'center' });
+    doc.text('Giro: ' + (document.getElementById('fEmisorGiro').value || 'TIENDA ONLINE'), centro, y, { align: 'center' });
     y += 5;
     
     dibujarLineaPunteada(y);
     y += 5;
 
-    // Factura info
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('FACTURA', centro, y, { align: 'center' });
@@ -2464,7 +2596,6 @@
       y += 4;
     }
     
-    // Caja y Cajero
     doc.text('Caja: ' + (document.getElementById('fCaja').value || '001'), margen, y);
     y += 4;
     doc.text('Cajero: ' + (document.getElementById('fCajero').value || 'ADMIN'), margen, y);
@@ -2474,7 +2605,6 @@
     dibujarLineaPunteada(y);
     y += 5;
 
-    // Cliente
     doc.setFont('helvetica', 'bold');
     doc.text('CLIENTE', margen, y);
     y += 4;
@@ -2497,7 +2627,6 @@
     dibujarLineaPunteada(y);
     y += 5;
 
-    // Tabla productos
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
     doc.text('PRODUCTO', margen, y);
@@ -2531,7 +2660,6 @@
     doc.line(margen, y, 76, y);
     y += 5;
 
-    // Desglose
     const calculos = actualizarCalculos();
     
     doc.setFontSize(8);
@@ -2565,7 +2693,6 @@
     dibujarLineaPunteada(y);
     y += 5;
 
-    // Total
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('TOTAL A PAGAR:', margen, y);
@@ -2575,7 +2702,6 @@
     dibujarLineaPunteada(y);
     y += 8;
 
-    // QR
     if (document.getElementById('fIncluirQR').checked) {
       const qrCanvas = document.querySelector('#qrcode canvas');
       if (qrCanvas) {
@@ -2587,7 +2713,6 @@
         doc.text('Escanea para verificar factura', centro, y, { align: 'center' });
         y += 4;
         
-        // Código de validación
         const codigoValidacion = document.getElementById('ticketCodigoValidacion').textContent;
         if (codigoValidacion) {
           doc.setFontSize(5);
@@ -2601,7 +2726,6 @@
       }
     }
 
-    // Footer
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text('¡GRACIAS POR SU COMPRA!', centro, y, { align: 'center' });
@@ -2658,8 +2782,9 @@
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   document.getElementById('fFecha').value = now.toISOString().slice(0, 16);
   
-  const venc = new Date();
-  venc.setDate(venc.getDate() + 30);
+  // Fecha de vencimiento: 1 mes después
+  const venc = new Date(now);
+  venc.setMonth(venc.getMonth() + 1);
   document.getElementById('fVencimiento').value = venc.toISOString().slice(0, 10);
   
   // Cargar número de factura secuencial
@@ -2675,6 +2800,12 @@
   (async function() {
     await sincronizarConVenta();
     actualizarVistaPrevia();
+    
+    // Activar pantalla completa automáticamente
+    activarPantallaCompletaAuto();
+    
+    // Configurar mantenimiento de pantalla completa
+    mantenerPantallaCompleta();
   })();
 </script>
 </body>

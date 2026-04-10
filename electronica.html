@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FACTURA ELECTRÓNICA – KLOHESV</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text-primary: #2d2d2d;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --accent: #4b5563;
+      --accent-hover: #374151;
+      --rose-pale: #fdf2f4;
+      --rose-soft: #fce7eb;
+      --rose-medium: #f9d5dc;
+      --rose-text: #be185d;
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --success: #10b981;
+      --success-soft: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-soft: #fffbeb;
+      --info: #3b82f6;
+      --info-soft: #eff6ff;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+      --transition: all 0.2s ease;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text-primary); 
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ===== HEADER ===== */
+    .header-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border-light);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--rose-soft) 0%, var(--rose-medium) 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--rose-text);
+      font-size: 1.1rem;
+    }
+
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* ===== MENÚ ===== */
+    #menuToggle {
+      width: 40px;
+      height: 40px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #menuToggle:hover {
+      background: var(--rose-pale);
+      border-color: var(--rose-medium);
+      color: var(--rose-text);
+    }
+
+    #sideMenu {
+      position: fixed;
+      top: 0;
+      right: -280px;
+      width: 280px;
+      height: 100vh;
+      background: var(--card);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      padding: 80px 16px 24px;
+      gap: 4px;
+      transition: right 0.3s ease;
+      z-index: 999;
+    }
+
+    #sideMenu.show { right: 0; }
+
+    #sideMenu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+
+    #sideMenu a:hover {
+      background: var(--rose-pale);
+      color: var(--rose-text);
+    }
+
+    #sideMenu a i {
+      width: 20px;
+      text-align: center;
+    }
+
+    .menu-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+      z-index: 998;
+    }
+
+    .menu-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ===== CONTROLES ===== */
+    .controls-bar {
+      background: var(--card);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--text-primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-rose {
+      background: var(--rose-soft);
+      color: var(--rose-text);
+    }
+
+    .btn-rose:hover {
+      background: var(--rose-medium);
+    }
+
+    .btn-success {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .btn-success:hover {
+      background: #d1fae5;
+    }
+
+    .btn-outline {
+      background: var(--card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+
+    .btn-info {
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
+    .btn-info:hover {
+      background: #dbeafe;
+    }
+
+    .btn-warning {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .btn-warning:hover {
+      background: #fef3c7;
+    }
+
+    /* ===== CONTENIDO PRINCIPAL ===== */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 450px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== SECCIÓN DE PRODUCTOS ===== */
+    .products-section {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-light);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--rose-medium);
+      background: var(--card);
+      box-shadow: 0 0 0 3px var(--rose-soft);
+    }
+
+    /* ===== LISTA DE PRODUCTOS ===== */
+    .products-list {
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+    }
+
+    .product-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .product-item:hover {
+      background: var(--rose-pale);
+    }
+
+    .product-item.selected {
+      background: var(--rose-soft);
+      border-left: 3px solid var(--rose-text);
+    }
+
+    .product-item:last-child {
+      border-bottom: none;
+    }
+
+    .product-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--rose-text);
+      cursor: pointer;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .product-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .product-price {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--rose-text);
+    }
+
+    /* ===== SECCIÓN DE FACTURA ===== */
+    .invoice-section {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-light);
+      position: sticky;
+      top: 80px;
+    }
+
+    /* ===== FORMULARIO ===== */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--rose-medium);
+      box-shadow: 0 0 0 3px var(--rose-soft);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ===== FACTURA / TICKET ===== */
+    .factura-container {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #000;
+      margin: 16px 0;
+    }
+
+    .factura-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #ccc;
+    }
+
+    .factura-logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      margin-bottom: 6px;
+      color: #000;
+    }
+
+    .factura-info {
+      color: #333;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .factura-divider {
+      border: none;
+      border-top: 1px dashed #ccc;
+      margin: 12px 0;
+    }
+
+    .factura-datos {
+      margin-bottom: 12px;
+    }
+
+    .factura-dato {
+      display: flex;
+      margin-bottom: 4px;
+    }
+
+    .factura-dato-label {
+      font-weight: 600;
+      min-width: 70px;
+    }
+
+    .factura-dato-valor {
+      color: #333;
+    }
+
+    .factura-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 11px;
+    }
+
+    .factura-tabla thead th {
+      text-align: left;
+      padding: 8px 4px;
+      border-bottom: 1px solid #000;
+      font-weight: 600;
+      font-size: 10px;
+    }
+
+    .factura-tabla thead th:nth-child(2),
+    .factura-tabla thead th:nth-child(3),
+    .factura-tabla thead th:nth-child(4),
+    .factura-tabla thead th:nth-child(5) {
+      text-align: center;
+    }
+
+    .factura-tabla thead th:last-child {
+      text-align: right;
+    }
+
+    .factura-tabla tbody td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    .factura-tabla tbody td:nth-child(2),
+    .factura-tabla tbody td:nth-child(3),
+    .factura-tabla tbody td:nth-child(4) {
+      text-align: center;
+    }
+
+    .factura-tabla tbody td:last-child {
+      text-align: right;
+    }
+
+    .factura-tabla tbody tr:last-child td {
+      border-bottom: 1px solid #000;
+    }
+
+    .factura-total-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px dashed #ccc;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .factura-total-label {
+      margin-right: 10px;
+    }
+
+    .factura-footer {
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 12px;
+      font-size: 10px;
+      color: #555;
+    }
+
+    .factura-footer-titulo {
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .factura-footer-texto {
+      line-height: 1.4;
+      font-weight: bold;
+    }
+
+    /* ===== BOTONES DE FACTURA ===== */
+    .factura-botones {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-factura {
+      width: 100%;
+      padding: 10px 14px;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-factura:hover {
+      background: #333;
+    }
+
+    .btn-factura.secondary {
+      background: var(--bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-factura.secondary:hover {
+      background: var(--border-light);
+    }
+
+    /* ===== RESUMEN ===== */
+    .resumen-factura {
+      background: var(--rose-pale);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .resumen-item {
+      text-align: center;
+    }
+
+    .resumen-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .resumen-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--rose-text);
+    }
+
+    /* ===== SPINNER ===== */
+    .spinner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.9);
+      z-index: 9999;
+      place-items: center;
+    }
+    
+    .spinner-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .spinner-ring {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--rose-text);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-text {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== MODAL AGREGAR PRODUCTO ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow: hidden;
+      animation: modalSlide 0.3s ease;
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      background: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(90vh - 120px);
+    }
+
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ===== SIN PRODUCTOS ===== */
+    .no-products {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .no-products i {
+      font-size: 3rem;
+      color: var(--border);
+      margin-bottom: 12px;
+    }
+
+    .no-products h3 {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .header-bar { padding: 12px 16px; }
+      .controls-bar { padding: 12px 16px; }
+      .main-container { padding: 16px; }
+      .form-row { grid-template-columns: 1fr; }
+      .factura-container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="spinner" id="spinner">
+  <div class="spinner-content">
+    <div class="spinner-ring"></div>
+    <span class="spinner-text">Cargando...</span>
+  </div>
+</div>
+
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<header class="header-bar">
+  <div class="brand">
+    <div class="brand-icon">
+      <i class="fa-solid fa-receipt"></i>
+    </div>
+    <div class="brand-text">
+      <h1>Factura Electrónica</h1>
+      <span>KLOHESV - Sistema de Facturación</span>
+    </div>
+  </div>
+  <button id="menuToggle" onclick="toggleMenu()">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+</header>
+
+<nav id="sideMenu">
+  <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
+  <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
+  <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
+  <a href="inventario.html"><i class="fa fa-boxes"></i> Inventario</a>
+  <a href="gastos.html"><i class="fa fa-money-bill-wave"></i> Gastos</a>
+  <a href="clientes.html"><i class="fa fa-users"></i> Clientes</a>
+  <a href="descuentos.html"><i class="fa fa-tags"></i> Descuentos</a>
+  <a href="facturas.html"><i class="fa fa-file-invoice"></i> Facturas</a>
+  <a href="traslados.html"><i class="fa fa-truck"></i> Traslados</a>
+  <a href="venta.html"><i class="fa fa-cash-register"></i> Venta</a>
+  <a href="electronica.html" style="background: var(--rose-pale); color: var(--rose-text);"><i class="fa fa-receipt"></i> Factura Electrónica</a>
+  <a href="#" onclick="toggleKiosk(); return false;"><i class="fa fa-expand"></i> Pantalla completa</a>
+</nav>
+
+<div class="controls-bar">
+  <a href="venta.html" class="btn btn-outline">
+    <i class="fa-solid fa-arrow-left"></i> Volver a Ventas
+  </a>
+  <button class="btn btn-success" onclick="seleccionarTodos()">
+    <i class="fa-solid fa-check-square"></i> Seleccionar Todos
+  </button>
+  <button class="btn btn-warning" onclick="deseleccionarTodos()">
+    <i class="fa-solid fa-square"></i> Deseleccionar Todos
+  </button>
+  <button class="btn btn-rose" onclick="abrirProductoManual()">
+    <i class="fa-solid fa-plus"></i> Agregar Producto Manual
+  </button>
+</div>
+
+<div class="main-container">
+  <!-- SECCIÓN DE PRODUCTOS -->
+  <div class="products-section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="fa-solid fa-box"></i> Productos Vendidos
+      </h2>
+      <span id="productosCount" style="font-size: 0.85rem; color: var(--text-muted);">0 productos</span>
+    </div>
+    
+    <div class="search-box">
+      <i class="fa-solid fa-search"></i>
+      <input type="text" id="searchProducts" placeholder="Buscar producto..." oninput="filtrarProductos()">
+    </div>
+    
+    <div class="products-list" id="productsList">
+      <!-- Los productos se cargan dinámicamente -->
+    </div>
+  </div>
+
+  <!-- SECCIÓN DE FACTURA -->
+  <div class="invoice-section">
+    <div class="section-header">
+      <h2 class="section-title">
+        <i class="fa-solid fa-file-invoice"></i> Generar Factura
+      </h2>
+    </div>
+
+    <!-- Resumen -->
+    <div class="resumen-factura">
+      <div class="resumen-item">
+        <div class="resumen-label">Productos</div>
+        <div class="resumen-value" id="resumenProductos">0</div>
+      </div>
+      <div class="resumen-item">
+        <div class="resumen-label">Total</div>
+        <div class="resumen-value" id="resumenTotal">$0.00</div>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>Factura N°</label>
+        <input type="text" id="fNum" value="00015">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="text" id="fFecha" readonly>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Cliente</label>
+      <input type="text" id="fCliente" value="Consumidor Final">
+    </div>
+    <div class="form-group">
+      <label>Costo de Envío ($)</label>
+      <input type="number" id="fEnvio" value="0" min="0" step="0.01" oninput="actualizarTablaTicket()">
+    </div>
+
+    <!-- Ticket Preview -->
+    <div class="factura-container">
+      <div class="factura-header">
+        <div class="factura-logo">KLOHESV</div>
+        <div class="factura-info">San Salvador, El Salvador</div>
+        <div class="factura-info">Correo: industriastobias@gmail.com</div>
+        <div class="factura-info">Instagram: @Klohesv</div>
+      </div>
+
+      <div class="factura-datos">
+        <div class="factura-dato">
+          <span class="factura-dato-label">Factura N°:</span>
+          <span class="factura-dato-valor" id="fNumTxt">00015</span>
+        </div>
+        <div class="factura-dato">
+          <span class="factura-dato-label">Fecha:</span>
+          <span class="factura-dato-valor" id="fFechaTxt"></span>
+        </div>
+        <div class="factura-dato">
+          <span class="factura-dato-label">Cliente:</span>
+          <span class="factura-dato-valor" id="fClienteTxt">Consumidor Final</span>
+        </div>
+      </div>
+
+      <table class="factura-tabla">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Cant</th>
+            <th>Precio</th>
+            <th>Desc(%)</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="fBody"></tbody>
+      </table>
+
+      <div class="factura-total-row">
+        <span class="factura-total-label">TOTAL:</span>
+        <span class="factura-total-valor">$<span id="fTotal">0.00</span></span>
+      </div>
+
+      <div class="factura-footer">
+        <div class="factura-footer-titulo">¡Gracias por su compra!</div>
+        <div class="factura-footer-texto">
+          Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="factura-botones">
+      <button class="btn-factura" onclick="actualizarTablaTicket()">
+        <i class="fa-solid fa-rotate"></i> Actualizar Total
+      </button>
+      <button class="btn-factura" onclick="descargarPDF()">
+        <i class="fa-solid fa-file-pdf"></i> Descargar PDF
+      </button>
+      <button class="btn-factura" onclick="imprimirTicket()">
+        <i class="fa-solid fa-print"></i> Imprimir Factura
+      </button>
+      <button class="btn-factura secondary" onclick="limpiarFactura()">
+        <i class="fa-solid fa-trash"></i> Limpiar Factura
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Producto Manual -->
+<div class="modal-overlay" id="productoManualModal">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="fa-solid fa-plus"></i> Agregar Producto</h2>
+      <button class="modal-close" onclick="cerrarProductoManual()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre del Producto</label>
+        <input type="text" id="pmNombre" placeholder="Ej: Collar de perlas">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cantidad</label>
+          <input type="number" id="pmCantidad" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Precio Unitario ($)</label>
+          <input type="number" id="pmPrecio" value="0" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descuento (%)</label>
+        <input type="number" id="pmDescuento" value="0" min="0" max="100" step="0.01">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarProductoManual()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProductoManual()">
+        <i class="fa-solid fa-check"></i> Agregar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== FUNCIONES DE SEGURIDAD ==========
+  function safeJSONParse(str, defaultValue = []) {
+    try {
+      if (!str) return defaultValue;
+      return JSON.parse(str);
+    } catch (e) {
+      console.error('Error parseando JSON:', e);
+      return defaultValue;
+    }
+  }
+  
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ========== VARIABLES GLOBALES ==========
+  let soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
+  let productosFactura = [];
+  let productosFiltrados = [];
+
+  // ========== FUNCIONES AUXILIARES ==========
+  function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
+  function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
+
+  function toggleMenu() {
+    document.getElementById('sideMenu').classList.toggle('show');
+    document.getElementById('menuOverlay').classList.toggle('show');
+  }
+
+  function toggleKiosk() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // ========== CARGAR PRODUCTOS ==========
+  function cargarProductos() {
+    showSpinner();
+    
+    // Obtener productos del localStorage (sincronizado con venta.html)
+    soldInventory = safeJSONParse(localStorage.getItem('soldInventory'), []);
+    
+    // Filtrar solo productos válidos (no cierres de caja)
+    productosFiltrados = soldInventory.filter(item => !item.isCierreCaja);
+    
+    // Ordenar por fecha más reciente
+    productosFiltrados.sort((a, b) => {
+      const dateA = new Date(a.soldAt || a.date || 0);
+      const dateB = new Date(b.soldAt || b.date || 0);
+      return dateB - dateA;
+    });
+    
+    renderizarProductos();
+    hideSpinner();
+  }
+
+  function renderizarProductos() {
+    const container = document.getElementById('productsList');
+    const searchValue = document.getElementById('searchProducts').value.toLowerCase();
+    
+    // Filtrar por búsqueda
+    const productosMostrar = searchValue 
+      ? productosFiltrados.filter(p => p.name.toLowerCase().includes(searchValue))
+      : productosFiltrados;
+    
+    document.getElementById('productosCount').textContent = `${productosMostrar.length} productos`;
+    
+    if (productosMostrar.length === 0) {
+      container.innerHTML = `
+        <div class="no-products">
+          <i class="fa-solid fa-box-open"></i>
+          <h3>No hay productos</h3>
+          <p>Los productos vendidos aparecerán aquí</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = '';
+    
+    productosMostrar.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'product-item';
+      div.dataset.index = index;
+      div.dataset.id = item.idVenta || item.code;
+      
+      const isSelected = productosFactura.some(p => p.id === (item.idVenta || item.code));
+      if (isSelected) {
+        div.classList.add('selected');
+      }
+      
+      const fecha = item.soldAt || item.date 
+        ? new Date(item.soldAt || item.date).toLocaleDateString('es-SV')
+        : 'Sin fecha';
+      
+      div.innerHTML = `
+        <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} 
+          onchange="toggleProducto('${item.idVenta || item.code}')">
+        <div class="product-info">
+          <div class="product-name">${escapeHTML(item.name)}</div>
+          <div class="product-meta">Cant: ${item.quantity} | ${fecha}</div>
+        </div>
+        <div class="product-price">$${Number(item.total).toFixed(2)}</div>
+      `;
+      
+      div.onclick = (e) => {
+        if (e.target.type !== 'checkbox') {
+          const checkbox = div.querySelector('.product-checkbox');
+          checkbox.checked = !checkbox.checked;
+          toggleProducto(item.idVenta || item.code);
+        }
+      };
+      
+      container.appendChild(div);
+    });
+  }
+
+  function filtrarProductos() {
+    renderizarProductos();
+  }
+
+  // ========== SELECCIÓN DE PRODUCTOS ==========
+  function toggleProducto(id) {
+    const item = productosFiltrados.find(p => (p.idVenta || p.code) === id);
+    if (!item) return;
+    
+    const index = productosFactura.findIndex(p => p.id === id);
+    
+    if (index === -1) {
+      // Agregar
+      productosFactura.push({
+        id: id,
+        name: item.name,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        discount: 0,
+        total: Number(item.total),
+        isManual: false
+      });
+    } else {
+      // Quitar
+      productosFactura.splice(index, 1);
+    }
+    
+    renderizarProductos();
+    actualizarResumen();
+    actualizarTablaTicket();
+  }
+
+  function seleccionarTodos() {
+    productosFiltrados.forEach(item => {
+      const id = item.idVenta || item.code;
+      if (!productosFactura.some(p => p.id === id)) {
+        productosFactura.push({
+          id: id,
+          name: item.name,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: 0,
+          total: Number(item.total),
+          isManual: false
+        });
+      }
+    });
+    renderizarProductos();
+    actualizarResumen();
+    actualizarTablaTicket();
+  }
+
+  function deseleccionarTodos() {
+    productosFactura = [];
+    renderizarProductos();
+    actualizarResumen();
+    actualizarTablaTicket();
+  }
+
+  function actualizarResumen() {
+    const totalProductos = productosFactura.reduce((sum, p) => sum + p.quantity, 0);
+    const totalMonto = productosFactura.reduce((sum, p) => sum + p.total, 0);
+    
+    document.getElementById('resumenProductos').textContent = totalProductos;
+    document.getElementById('resumenTotal').textContent = `$${totalMonto.toFixed(2)}`;
+  }
+
+  // ========== PRODUCTO MANUAL ==========
+  function abrirProductoManual() {
+    document.getElementById('productoManualModal').classList.add('show');
+    document.getElementById('pmNombre').focus();
+  }
+
+  function cerrarProductoManual() {
+    document.getElementById('productoManualModal').classList.remove('show');
+    document.getElementById('pmNombre').value = '';
+    document.getElementById('pmCantidad').value = '1';
+    document.getElementById('pmPrecio').value = '0';
+    document.getElementById('pmDescuento').value = '0';
+  }
+
+  function guardarProductoManual() {
+    const nombre = document.getElementById('pmNombre').value.trim();
+    const cantidad = parseInt(document.getElementById('pmCantidad').value) || 1;
+    const precio = parseFloat(document.getElementById('pmPrecio').value) || 0;
+    const descuento = parseFloat(document.getElementById('pmDescuento').value) || 0;
+    
+    if (!nombre) {
+      alert('Por favor ingresa el nombre del producto');
+      return;
+    }
+    
+    const subtotal = cantidad * precio;
+    const descuentoMonto = subtotal * (descuento / 100);
+    const total = subtotal - descuentoMonto;
+    
+    productosFactura.push({
+      id: 'MANUAL_' + Date.now(),
+      name: nombre,
+      quantity: cantidad,
+      price: precio,
+      discount: descuento,
+      total: total,
+      isManual: true
+    });
+    
+    cerrarProductoManual();
+    actualizarResumen();
+    actualizarTablaTicket();
+  }
+
+  // ========== FACTURA ==========
+  function actualizarTablaTicket() {
+    const body = document.getElementById('fBody');
+    body.innerHTML = '';
+    
+    let sum = 0;
+    
+    productosFactura.forEach((p) => {
+      const tr = document.createElement('tr');
+      
+      const tdProducto = document.createElement('td');
+      tdProducto.textContent = p.name.length > 15 ? p.name.substring(0, 14) + '...' : p.name;
+      
+      const tdCantidad = document.createElement('td');
+      tdCantidad.textContent = p.quantity;
+      
+      const tdPrecio = document.createElement('td');
+      tdPrecio.textContent = `$${p.price.toFixed(2)}`;
+      
+      const tdDescuento = document.createElement('td');
+      tdDescuento.textContent = p.discount > 0 ? `${p.discount}%` : '0';
+      
+      const tdTotal = document.createElement('td');
+      tdTotal.textContent = `$${p.total.toFixed(2)}`;
+      
+      tr.appendChild(tdProducto);
+      tr.appendChild(tdCantidad);
+      tr.appendChild(tdPrecio);
+      tr.appendChild(tdDescuento);
+      tr.appendChild(tdTotal);
+      
+      body.appendChild(tr);
+      sum += p.total;
+    });
+    
+    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
+    if (envio > 0) {
+      const trEnvio = document.createElement('tr');
+      
+      const tdEnvioLabel = document.createElement('td');
+      tdEnvioLabel.textContent = 'Envío';
+      tdEnvioLabel.style.fontStyle = 'italic';
+      
+      const tdEnvioCant = document.createElement('td');
+      tdEnvioCant.textContent = '1';
+      
+      const tdEnvioPrecio = document.createElement('td');
+      tdEnvioPrecio.textContent = `$${envio.toFixed(2)}`;
+      
+      const tdEnvioDesc = document.createElement('td');
+      tdEnvioDesc.textContent = '0';
+      
+      const tdEnvioTotal = document.createElement('td');
+      tdEnvioTotal.textContent = `$${envio.toFixed(2)}`;
+      
+      trEnvio.appendChild(tdEnvioLabel);
+      trEnvio.appendChild(tdEnvioCant);
+      trEnvio.appendChild(tdEnvioPrecio);
+      trEnvio.appendChild(tdEnvioDesc);
+      trEnvio.appendChild(tdEnvioTotal);
+      
+      body.appendChild(trEnvio);
+      sum += envio;
+    }
+    
+    document.getElementById('fTotal').textContent = sum.toFixed(2);
+    document.getElementById('fNumTxt').textContent = document.getElementById('fNum').value;
+    document.getElementById('fClienteTxt').textContent = document.getElementById('fCliente').value;
+    document.getElementById('fFechaTxt').textContent = document.getElementById('fFecha').value;
+  }
+
+  function limpiarFactura() {
+    productosFactura = [];
+    document.getElementById('fNum').value = '00015';
+    document.getElementById('fCliente').value = 'Consumidor Final';
+    document.getElementById('fEnvio').value = '0';
+    renderizarProductos();
+    actualizarResumen();
+    actualizarTablaTicket();
+  }
+
+  // ========== IMPRESIÓN ==========
+  function imprimirTicket() {
+    const contenido = document.querySelector('.factura-container').outerHTML;
+    const ventana = window.open('', '', 'width=500,height=800');
+    ventana.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Factura - KLOHESV</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Courier New', monospace; 
+      font-size: 12px; 
+      line-height: 1.5; 
+      color: #000; 
+      background: #fff;
+      padding: 20px;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .factura-container {
+      background: #fff;
+      padding: 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #000;
+    }
+    .factura-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #ccc;
+    }
+    .factura-logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      margin-bottom: 6px;
+    }
+    .factura-info {
+      color: #333;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .factura-datos { margin-bottom: 12px; }
+    .factura-dato {
+      display: flex;
+      margin-bottom: 4px;
+    }
+    .factura-dato-label {
+      font-weight: 600;
+      min-width: 70px;
+    }
+    .factura-tabla {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 11px;
+    }
+    .factura-tabla thead th {
+      text-align: left;
+      padding: 8px 4px;
+      border-bottom: 1px solid #000;
+      font-weight: 600;
+    }
+    .factura-tabla thead th:nth-child(2),
+    .factura-tabla thead th:nth-child(3),
+    .factura-tabla thead th:nth-child(4) { text-align: center; }
+    .factura-tabla thead th:last-child { text-align: right; }
+    .factura-tabla tbody td {
+      padding: 6px 4px;
+      border-bottom: 1px solid #eee;
+    }
+    .factura-tabla tbody td:nth-child(2),
+    .factura-tabla tbody td:nth-child(3),
+    .factura-tabla tbody td:nth-child(4) { text-align: center; }
+    .factura-tabla tbody td:last-child { text-align: right; }
+    .factura-tabla tbody tr:last-child td { border-bottom: 1px solid #000; }
+    .factura-total-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px dashed #ccc;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .factura-total-label { margin-right: 10px; }
+    .factura-footer {
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 12px;
+      font-size: 10px;
+      color: #555;
+    }
+    .factura-footer-titulo {
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  ${contenido}
+</body>
+</html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+    ventana.close();
+  }
+
+  function descargarPDF() {
+    const { jsPDF } = window.jspdf;
+    
+    const alturaBase = 140;
+    const alturaPorProducto = 7;
+    const alturaTotal = alturaBase + (productosFactura.length * alturaPorProducto) + (parseFloat(document.getElementById('fEnvio').value) > 0 ? 7 : 0);
+    
+    const doc = new jsPDF({ unit:'mm', format:[80, alturaTotal] });
+    
+    const margen = 4;
+    const ancho = 80 - margen * 2;
+    const centro = 40;
+    let y = 10;
+
+    function dibujarLineaPunteada(yPos) {
+      const segmento = 2;
+      const espacio = 1.5;
+      let x = margen;
+      while (x < 76) {
+        doc.line(x, yPos, Math.min(x + segmento, 76), yPos);
+        x += segmento + espacio;
+      }
+    }
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KLOHESV', centro, y, { align: 'center' });
+    y += 8;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('San Salvador, El Salvador', centro, y, { align: 'center' });
+    y += 5;
+    doc.text('Correo: industriastobias@gmail.com', centro, y, { align: 'center' });
+    y += 5;
+    doc.text('Instagram: @Klohesv', centro, y, { align: 'center' });
+    y += 6;
+    
+    dibujarLineaPunteada(y);
+    y += 6;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Factura N:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('fNum').value, margen + 22, y);
+    y += 6;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(document.getElementById('fFecha').value, margen + 22, y);
+    y += 6;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cliente:', margen, y);
+    doc.setFont('helvetica', 'normal');
+    const clienteTexto = document.getElementById('fCliente').value;
+    if (clienteTexto.length > 18) {
+      doc.text(clienteTexto.substring(0, 17) + '...', margen + 22, y);
+    } else {
+      doc.text(clienteTexto, margen + 22, y);
+    }
+    y += 8;
+
+    dibujarLineaPunteada(y);
+    y += 5;
+    
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    
+    doc.text('Producto', margen, y);
+    doc.text('Cant', 40, y, { align: 'center' });
+    doc.text('Precio', 48, y);
+    doc.text('Desc', 60, y);
+    doc.text('Total', 76, y, { align: 'right' });
+    
+    y += 4;
+    dibujarLineaPunteada(y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    
+    productosFactura.forEach(p => {
+      const nombre = p.name.length > 12 ? p.name.substring(0, 11) + '.' : p.name;
+      doc.text(nombre, margen, y);
+      doc.text(String(p.quantity), 40, y, { align: 'center' });
+      const precioStr = p.price.toFixed(2);
+      doc.text(precioStr, 48, y);
+      doc.text(p.discount > 0 ? String(Math.round(p.discount)) : '0', 62, y);
+      doc.text(p.total.toFixed(2), 76, y, { align: 'right' });
+      y += 6;
+    });
+
+    const envio = parseFloat(document.getElementById('fEnvio').value) || 0;
+    if (envio > 0) {
+      doc.text('Envio', margen, y);
+      doc.text('1', 40, y, { align: 'center' });
+      doc.text(envio.toFixed(2), 48, y);
+      doc.text('0', 62, y);
+      doc.text(envio.toFixed(2), 76, y, { align: 'right' });
+      y += 6;
+    }
+
+    y += 2;
+    dibujarLineaPunteada(y);
+    y += 6;
+
+    const total = parseFloat(document.getElementById('fTotal').textContent);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL:', 50, y);
+    doc.text('$' + total.toFixed(2), 76, y, { align: 'right' });
+    y += 6;
+    
+    dibujarLineaPunteada(y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Gracias por su compra!', centro, y, { align: 'center' });
+    y += 6;
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    const msg = 'Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.';
+    const lineas = doc.splitTextToSize(msg, ancho - 4);
+    lineas.forEach(l => {
+      doc.text(l, centro, y, { align: 'center' });
+      y += 3.5;
+    });
+
+    doc.save(`factura_${document.getElementById('fNum').value}.pdf`);
+  }
+
+  // ========== EVENT LISTENERS ==========
+  document.getElementById('productoManualModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarProductoManual();
+  });
+
+  // Sincronización en tiempo real con venta.html
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'soldInventory') {
+      cargarProductos();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    cargarProductos();
+  });
+
+  // Inicializar
+  document.getElementById('fFecha').value = new Date().toLocaleDateString('es-SV');
+  cargarProductos();
+</script>
+</body>
+</html>

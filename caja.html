@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=no">
+  <title>Caja Registradora - SISTEMA DE VENTAS KLOHE</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    :root { --bg: #fafafa; --surface: #ffffff; --text: #1a1a1a; --text-secondary: #6b7280; --border: #e5e7eb; --border-light: #f3f4f6; --accent: #111827; --accent-hover: #374151; --danger: #ef4444; --warning: #f59e0b; --success: #10b981; --info: #3b82f6; --purple: #8b5cf6; --shadow-sm: 0 1px 2px rgba(0,0,0,0.04); --shadow: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08); --radius: 12px; --radius-sm: 8px; --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    [data-theme="dark"] { --bg: #0f0f0f; --surface: #1a1a1a; --text: #f5f5f5; --text-secondary: #a1a1aa; --border: #27272a; --border-light: #27272a; --accent: #3f3f46; --accent-hover: #52525b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; transition: background 0.3s, color 0.3s; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.875rem; font-weight: 500; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    .btn:hover { background: var(--border-light); border-color: var(--text-secondary); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
+    .btn-success { background: var(--success); color: white; border-color: var(--success); }
+    .btn-icon { padding: 0.5rem; width: 40px; height: 40px; }
+    .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.875rem; min-height: 36px; }
+    .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
+    .form-label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.025em; }
+    .form-input, .form-select { padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; background: var(--surface); color: var(--text); transition: var(--transition); width: 100%; touch-action: manipulation; }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08); }
+    .notification-container { position: fixed; top: 1rem; right: 1rem; z-index: 3000; display: flex; flex-direction: column; gap: 0.5rem; max-width: 90vw; }
+    .notification { padding: 1rem 1.25rem; border-radius: var(--radius-sm); color: white; font-weight: 500; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease; max-width: 400px; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .notification.success { background: var(--success); }
+    .notification.error { background: var(--danger); }
+    .notification.warning { background: var(--warning); }
+    .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); z-index: 2500; align-items: center; justify-content: center; }
+    .loading-overlay.active { display: flex; }
+    .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .image-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; cursor: pointer; padding: 2rem; }
+    .image-overlay.active { display: flex; }
+    .image-overlay img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: var(--radius); }
+    
+    /* Caja Registradora Styles */
+    .cash-register { display: flex; flex-direction: column; min-height: 100vh; }
+    .cash-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 0.5rem; }
+    .cash-header h2 { font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .cash-controls-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; }
+    .cash-controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; align-items: end; }
+    .cash-mode-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-light); }
+    .cash-mode-buttons .btn { font-size: 0.875rem; padding: 0.625rem 1rem; min-height: 44px; }
+    .cash-mode-buttons .btn.active { background: var(--accent); color: white; }
+    .cash-scan-input { position: fixed; top: -1000px; left: -1000px; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+    .scan-indicator { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: #ecfdf5; border: 1px solid var(--success); border-radius: var(--radius-sm); font-size: 0.875rem; color: var(--success); font-weight: 500; }
+    .scan-indicator.active { animation: pulse-scan 1s infinite; }
+    @keyframes pulse-scan { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .cash-stats-bar { display: flex; gap: 1.5rem; flex-wrap: wrap; padding: 0.75rem 1.5rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .cash-stats-bar .stat-item { font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); }
+    .cash-stats-bar .stat-value { font-weight: 600; color: var(--text); }
+    .cash-products { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .cash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+    .cash-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .cash-list-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); touch-action: manipulation; }
+    .cash-list-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
+    .cash-list-item .info { flex: 1; }
+    .cash-list-item .name { font-weight: 500; font-size: 0.875rem; }
+    .cash-list-item .meta { font-size: 0.75rem; color: var(--text-secondary); }
+    .cash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.875rem; text-align: center; transition: var(--transition); touch-action: manipulation; }
+    .cash-card:hover { box-shadow: var(--shadow); }
+    .cash-card img { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 0.5rem; }
+    .cash-card .name { font-weight: 500; font-size: 0.8125rem; margin-bottom: 0.25rem; }
+    .cash-card .price { color: var(--success); font-weight: 600; margin-bottom: 0.5rem; }
+    .cash-card .stock { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .cash-card .stock.low { color: var(--danger); }
+    .qty-control { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .qty-control button { width: 44px; height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; cursor: pointer; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: var(--transition); }
+    .qty-control button:active { background: var(--accent); color: white; transform: scale(0.95); }
+    .qty-control input { width: 60px; height: 44px; text-align: center; border: 1px solid var(--border); border-radius: 8px; padding: 0.25rem; font-size: 1rem; font-weight: 600; touch-action: manipulation; }
+    .cash-float { position: fixed; top: 5rem; right: 1.5rem; width: 420px; max-height: 70vh; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0; box-shadow: var(--shadow-lg); display: none; flex-direction: column; z-index: 950; cursor: grab; user-select: none; touch-action: none; }
+    .cash-float:active { cursor: grabbing; }
+    .cash-float.active { display: flex; }
+    .cash-float-header { padding: 1rem; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); color: white; border-radius: var(--radius) var(--radius) 0 0; cursor: grab; display: flex; justify-content: space-between; align-items: center; touch-action: none; }
+    .cash-float-header h4 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .cash-float-header .drag-handle { font-size: 1rem; opacity: 0.7; }
+    .cash-float-content { flex: 1; overflow-y: auto; padding: 0.75rem; }
+    .cash-float-list { list-style: none; margin: 0; padding: 0; }
+    .cash-float-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 0.5rem; border: 1px solid var(--border-light); transition: var(--transition); }
+    .cash-float-item:hover { border-color: var(--accent); }
+    .cash-float-item-img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+    .cash-float-item-img-placeholder { width: 50px; height: 50px; background: var(--border-light); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; color: var(--text-secondary); flex-shrink: 0; }
+    .cash-float-item-info { flex: 1; min-width: 0; }
+    .cash-float-item-name { font-weight: 600; font-size: 0.875rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.25rem; }
+    .cash-float-item-details { font-size: 0.75rem; color: var(--text-secondary); }
+    .cash-float-item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+    .cash-float-item-price { font-weight: 700; color: var(--success); font-size: 0.9375rem; }
+    .cash-float-item-remove { background: var(--danger); color: white; border: none; border-radius: 4px; padding: 0.5rem; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem; transition: var(--transition); touch-action: manipulation; min-height: 32px; }
+    .cash-float-item-remove:hover { background: #dc2626; }
+    .cash-float-footer { padding: 1rem; background: var(--bg); border-top: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); }
+    .cash-float-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.125rem; font-weight: 700; }
+    .cash-float-total-label { color: var(--text-secondary); }
+    .cash-float-total-value { color: var(--success); }
+    .cash-float-count { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; }
+    .cash-total { padding: 1.5rem; background: var(--surface); border-top: 1px solid var(--border); }
+    .cash-total-amount { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+    .cash-total-amount span { color: var(--success); }
+    .cash-payment-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .cash-payment-row label { font-weight: 500; }
+    .cash-payment-row input { width: 150px; font-size: 16px; }
+    .cash-change { display: none; padding: 1rem; background: var(--success); color: white; border-radius: var(--radius-sm); text-align: center; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; }
+    .cash-actions { display: flex; gap: 0.5rem; }
+    
+    @media (max-width: 1024px) { 
+      .cash-float { width: 350px; right: 1rem; }
+      .cash-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .cash-controls-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) { 
+      .cash-controls-grid { grid-template-columns: 1fr; }
+      .cash-float { width: calc(100% - 2rem); right: 1rem; max-height: 60vh; }
+      .cash-grid { grid-template-columns: repeat(2, 1fr); }
+      .cash-mode-buttons { justify-content: center; }
+      .cash-stats-bar { justify-content: center; }
+      .cash-payment-row { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 480px) { 
+      .cash-grid { grid-template-columns: 1fr; }
+      .cash-float { width: calc(100% - 1rem); right: 0.5rem; left: 0.5rem; }
+      .cash-header h2 { font-size: 1rem; }
+    }
+    @keyframes flash { 0%, 100% { background: transparent; } 50% { background: #fef9c3; } }
+    .flash { animation: flash 0.5s ease; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+<base target="_blank">
+</head>
+<body>
+  <div class="notification-container" id="notificationContainer"></div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+  <div class="image-overlay" id="imageOverlay" onclick="closeImageOverlay()"><img src="" alt="" id="overlayImage"></div>
+  
+  <div class="cash-register" id="cashRegister">
+    <div class="cash-header">
+      <h2><i class="fa-solid fa-cash-register"></i> Caja Registradora</h2>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <button class="btn btn-icon" onclick="startCameraScanCash()" title="Escanear con Camara"><i class="fa-solid fa-camera"></i></button>
+        <span class="scan-indicator" id="cashScanIndicator" style="display:none;"><i class="fa-solid fa-barcode"></i> Escaneo activo</span>
+        <button class="btn" onclick="toggleCashView()"><i class="fa-solid fa-list" id="cashViewIcon"></i></button>
+        <button class="btn" onclick="downloadLabelsPDF()"><i class="fa-solid fa-tags"></i><span class="mobile-hide"> Etiquetas</span></button>
+        <a href="inventario.html" class="btn btn-primary"><i class="fa-solid fa-boxes-stacked"></i><span class="mobile-hide"> Inventario</span></a>
+        <button class="btn btn-danger" onclick="closeCashRegister()"><i class="fa-solid fa-xmark"></i><span class="mobile-hide"> Cerrar</span></button>
+      </div>
+    </div>
+    
+    <div class="cash-controls-panel">
+      <div class="cash-mode-buttons">
+        <button class="btn active" id="cashBtnScan" onclick="setCashMode('scan')" title="Escanear"><i class="fa-solid fa-barcode"></i> Escanear</button>
+        <button class="btn" id="cashBtnUSB" onclick="toggleCashUSB()"><i class="fa-solid fa-plug"></i> USB</button>
+      </div>
+      <div class="cash-controls-grid">
+        <div class="form-group"><label class="form-label">Buscar producto</label><input type="text" class="form-input" id="cashSearchInput" placeholder="Nombre, codigo o descripcion..." autocomplete="off"></div>
+        <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="cashCategoryFilter"><option value="">Todas las categorias</option></select></div>
+        <div class="form-group"><label class="form-label">Precio minimo</label><input type="number" class="form-input" id="cashMinPrice" placeholder="$0" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Precio maximo</label><input type="number" class="form-input" id="cashMaxPrice" placeholder="Sin limite" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Codigo de barras</label><input type="text" class="form-input" id="cashBarcodeFilter" placeholder="Escanear..." autocomplete="off"></div>
+        <div class="form-group"><label class="form-label">Fecha</label><input type="date" class="form-input" id="cashDateFilter"></div>
+        <div class="form-group"><label class="form-label">&nbsp;</label><div style="display:flex;gap:0.5rem;align-items:center;"><label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="cashStockFilter"><span>Solo stock</span></label></div></div>
+        <div class="form-group"><label class="form-label">&nbsp;</label><button class="btn" onclick="clearCashFilters()" style="width:100%;"><i class="fa-solid fa-broom"></i> Limpiar filtros</button></div>
+      </div>
+    </div>
+    
+    <div class="cash-stats-bar">
+      <div class="stat-item"><i class="fa-solid fa-box"></i><span>Productos: <span class="stat-value" id="cashTotalProducts">0</span></span></div>
+      <div class="stat-item"><i class="fa-solid fa-filter"></i><span>Filtrados: <span class="stat-value" id="cashFilteredProducts">0</span></span></div>
+      <div class="stat-item"><i class="fa-solid fa-dollar-sign"></i><span>Valor total: <span class="stat-value" id="cashTotalValue">$0</span></span></div>
+      <div class="stat-item" style="margin-left:auto;"><label>Ir a fila:</label><input type="number" class="form-input" id="cashGoToRow" min="1" placeholder="#" style="width:70px;margin:0 0.5rem;"><button class="btn btn-sm" onclick="goToCashRow()">Ir</button></div>
+    </div>
+    
+    <input type="text" class="cash-scan-input" id="cashScanInput" autocomplete="off" readonly>
+    <div class="cash-products" id="cashProducts"></div>
+    
+    <div class="cash-float" id="cashFloat">
+      <div class="cash-float-header" id="cashFloatHeader"><h4><i class="fa-solid fa-receipt"></i> Venta actual</h4><span class="drag-handle"><i class="fa-solid fa-grip-lines"></i></span></div>
+      <div class="cash-float-content"><ul class="cash-float-list" id="cashList"></ul></div>
+      <div class="cash-float-footer">
+        <div class="cash-float-total"><span class="cash-float-total-label">TOTAL:</span><span class="cash-float-total-value" id="cashFloatTotal">$0.00</span></div>
+        <div class="cash-float-count" id="cashFloatCount">0 productos</div>
+      </div>
+    </div>
+    
+    <div class="cash-total">
+      <div class="cash-total-amount">Total: $<span id="cashTotal">0.00</span></div>
+      <div class="cash-payment-row"><label>Paga con:</label><input type="number" class="form-input" id="cashPayment" placeholder="0.00" min="0" step="0.01"><button class="btn" onclick="calculateChange()">Calcular vuelto</button></div>
+      <div id="cashChange" class="cash-change"></div>
+      <div class="cash-actions"><button class="btn btn-success" onclick="confirmCashSale()" id="btnConfirmCash" style="display:none;"><i class="fa-solid fa-check"></i> Confirmar (F12)</button><button class="btn btn-danger" onclick="cancelCashSale()">Cancelar</button></div>
+    </div>
+  </div>
+
+<script src="caja.js"></script>
+</body>
+</html>

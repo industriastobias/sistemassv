@@ -505,6 +505,7 @@
         <span class="badge badge-warning" id="pendingBadge" style="display:none;" onclick="togglePendingPanel()"><i class="fa-solid fa-clock"></i><span id="pendingCount">0</span></span>
         <span class="badge badge-orange" id="pendingPaymentBadge" style="display:none;" onclick="togglePendingPanel()"><i class="fa-solid fa-money-bill-wave"></i><span id="pendingPaymentCount">0</span></span>
         <span class="badge badge-purple" id="dailySalesBadge" style="display:none;" onclick="toggleDailySalesPanel()"><i class="fa-solid fa-calendar-day"></i><span id="dailySalesCount">0</span></span>
+        <button class="btn btn-orange" onclick="openQuickSaleModal()" title="Venta Rápida"><i class="fa-solid fa-bolt"></i><span>Venta Rápida</span></button>
         <button class="btn btn-icon" onclick="startCameraScan()" title="Escanear"><i class="fa-solid fa-camera"></i></button>
         <button class="btn" id="usbBtn" onclick="toggleUSBReader()"><i class="fa-solid fa-plug"></i><span>USB</span></button>
         <button class="btn" onclick="downloadLabelsPDF()"><i class="fa-solid fa-tags"></i><span>Etiquetas</span></button>
@@ -733,16 +734,19 @@
       <div id="codTab" class="tab-content active">
         <div class="pending-summary"><h3>Resumen de Cobros Pendientes (COD)</h3><div class="summary-grid"><div class="summary-item"><label>Productos</label><div class="amount" id="summaryProductsCOD">$0</div></div><div class="summary-item"><label>Envios</label><div class="amount" id="summaryShippingCOD">$0</div></div><div class="summary-item"><label>Comisiones</label><div class="amount" id="summaryCommissionCOD">$0</div></div><div class="summary-item"><label>Total a Cobrar</label><div class="amount" id="summaryTotalCOD">$0</div></div></div></div>
         <div class="table-container"><table class="data-table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Envio</th><th>Comision</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="pendingListCOD"></tbody></table></div>
+        <div id="paginationCOD" class="pending-pagination"></div>
       </div>
       
       <div id="deliveryTab" class="tab-content">
         <div class="pending-summary" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><h3>Resumen de Entregas Pendientes</h3><div class="summary-grid"><div class="summary-item"><label>Productos</label><div class="amount" id="summaryProductsDelivery">$0</div></div><div class="summary-item"><label>Envios</label><div class="amount" id="summaryShippingDelivery">$0</div></div><div class="summary-item"><label>Comisiones</label><div class="amount" id="summaryCommissionDelivery">$0</div></div><div class="summary-item"><label>Total</label><div class="amount" id="summaryTotalDelivery">$0</div></div></div></div>
         <div class="table-container"><table class="data-table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Metodo Pago</th><th>Estado</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="pendingListDelivery"></tbody></table></div>
+        <div id="paginationDelivery" class="pending-pagination"></div>
       </div>
       
       <div id="paymentTab" class="tab-content">
         <div class="pending-payment-summary"><h3>Resumen de Cobros Pendientes</h3><div class="summary-grid"><div class="summary-item"><label>Total Productos</label><div class="amount" id="summaryProductsPayment">$0</div></div><div class="summary-item"><label>Total Abonado</label><div class="amount" id="summaryPaidPayment">$0</div></div><div class="summary-item"><label>Total por Cobrar</label><div class="amount" id="summaryPendingPayment">$0</div></div><div class="summary-item"><label>Clientes</label><div class="amount" id="summaryClientsPayment">0</div></div></div></div>
         <div class="table-container"><table class="data-table"><thead><tr><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Precio Original</th><th>Abonado</th><th>Debe</th><th>Acciones</th></tr></thead><tbody id="pendingListPayment"></tbody></table></div>
+        <div id="paginationPayment" class="pending-pagination"></div>
       </div>
     </div>
     
@@ -1545,9 +1549,9 @@ function updateStats() {
   document.getElementById('lowStockCount').textContent = lowStock; 
   lowBadge.style.display = lowStock > 0 ? 'inline-flex' : 'none'; 
   
-  const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
-  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  let pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); pendingCOD.sort((a,b) => new Date(b.date) - new Date(a.date));
+  let pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]'); pendingDelivery.sort((a,b) => new Date(b.date) - new Date(a.date));
+  let pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]'); pendingPayment.sort((a,b) => new Date(b.date) - new Date(a.date));
   const totalPending = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
   
   document.getElementById('pendingCount').textContent = totalPending;
@@ -2025,7 +2029,7 @@ function processSale() {
     const commission = (subtotal * commissionPercent) / 100;
     const total = subtotal + shipping + commission;
     
-    const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    let pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]'); pendingDelivery.sort((a,b) => new Date(b.date) - new Date(a.date));
     pendingDelivery.push({
       name: item.name,
       code: item.code,
@@ -2060,7 +2064,7 @@ function processSale() {
       return;
     }
     
-    const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    let pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]'); pendingPayment.sort((a,b) => new Date(b.date) - new Date(a.date));
     pendingPayment.push({
       name: item.name,
       code: item.code,
@@ -2199,7 +2203,7 @@ function switchPendingTab(tab) {
 async function loadPendingList() { 
   showLoading(true); 
   try { 
-    const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+    let pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); pendingCOD.sort((a,b) => new Date(b.date) - new Date(a.date));
     const tbodyCOD = document.getElementById('pendingListCOD');
     
     if (!pendingCOD.length) { 
@@ -2220,7 +2224,7 @@ async function loadPendingList() {
       document.getElementById('summaryCommissionCOD').textContent = formatCurrency(totalCommission); 
       document.getElementById('summaryTotalCOD').textContent = formatCurrency(grandTotal);
       
-      tbodyCOD.innerHTML = await Promise.all(pendingCOD.map(async (p, idx) => { 
+      renderPendingPagination('paginationCOD', pendingCOD.length, pendingPageCOD, 'changePageCOD'); const pagedCOD = pendingCOD.slice((pendingPageCOD-1)*pendingPageSize, pendingPageCOD*pendingPageSize); tbodyCOD.innerHTML = await Promise.all(pagedCOD.map(async (p, idx) => { 
         const productTotal = (p.price || 0) * (p.quantity || 0); 
         const imgUrl = await getProductImage(p.code);
         const barcodeUrl = p.barcode ? generateBarcodeDataUrl(p.barcode) : null;
@@ -2231,12 +2235,12 @@ async function loadPendingList() {
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
           <td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
-          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal(${idx})"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal(${idx})"><i class="fa-solid fa-trash"></i></button></div></td>
+          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal(pendingCOD.indexOf(p))"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal(pendingCOD.indexOf(p))"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal(pendingCOD.indexOf(p))"><i class="fa-solid fa-trash"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
     
-    const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    let pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]'); pendingDelivery.sort((a,b) => new Date(b.date) - new Date(a.date));
     const tbodyDelivery = document.getElementById('pendingListDelivery');
     
     if (!pendingDelivery.length) {
@@ -2257,7 +2261,7 @@ async function loadPendingList() {
       document.getElementById('summaryCommissionDelivery').textContent = formatCurrency(totalCommission);
       document.getElementById('summaryTotalDelivery').textContent = formatCurrency(grandTotal);
       
-      tbodyDelivery.innerHTML = await Promise.all(pendingDelivery.map(async (p, idx) => {
+      renderPendingPagination('paginationDelivery', pendingDelivery.length, pendingPageDelivery, 'changePageDelivery'); const pagedDelivery = pendingDelivery.slice((pendingPageDelivery-1)*pendingPageSize, pendingPageDelivery*pendingPageSize); tbodyDelivery.innerHTML = await Promise.all(pagedDelivery.map(async (p, idx) => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         const imgUrl = await getProductImage(p.code);
         const barcodeUrl = p.barcode ? generateBarcodeDataUrl(p.barcode) : null;
@@ -2272,13 +2276,13 @@ async function loadPendingList() {
           <td>${statusText}</td>
           <td><strong style="color:var(--purple);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
           <td><div class="cell-actions">
-            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal(${idx})" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal(${idx})" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending(${idx})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal(pendingDelivery.indexOf(p))" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal(pendingDelivery.indexOf(p))" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending(pendingDelivery.indexOf(p))" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
     }
     
-    const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    let pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]'); pendingPayment.sort((a,b) => new Date(b.date) - new Date(a.date));
     const tbodyPayment = document.getElementById('pendingListPayment');
     
     if (!pendingPayment.length) {
@@ -2298,7 +2302,7 @@ async function loadPendingList() {
       document.getElementById('summaryPendingPayment').textContent = formatCurrency(totalPending);
       document.getElementById('summaryClientsPayment').textContent = pendingPayment.length;
       
-      tbodyPayment.innerHTML = await Promise.all(pendingPayment.map(async (p, idx) => {
+      renderPendingPagination('paginationPayment', pendingPayment.length, pendingPagePayment, 'changePagePayment'); const pagedPayment = pendingPayment.slice((pendingPagePayment-1)*pendingPageSize, pendingPagePayment*pendingPageSize); tbodyPayment.innerHTML = await Promise.all(pagedPayment.map(async (p, idx) => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         const imgUrl = await getProductImage(p.code);
         const barcodeUrl = p.barcode ? generateBarcodeDataUrl(p.barcode) : null;
@@ -2312,7 +2316,7 @@ async function loadPendingList() {
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
           <td><strong style="color:#f97316;">${formatCurrency(p.pendingAmount)}</strong></td>
           <td><div class="cell-actions">
-            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal(${idx})" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending(${idx})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal(pendingPayment.indexOf(p))" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending(pendingPayment.indexOf(p))" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3754,7 +3758,8 @@ async function loadDailySales() {
       const imgUrl = await getProductImage(s.code);
       const barcodeUrl = s.barcode ? generateBarcodeDataUrl(s.barcode) : null;
       
-      return {
+      const originalIndex = sales.indexOf(s);
+    return { originalIndex,
         time, typeText, methodText, statusText, imgUrl, barcodeUrl, barcode: s.barcode,
         name: s.name, quantity: s.quantity, total: s.total, code: s.code
       };
@@ -3987,7 +3992,8 @@ async function renderSalesHistoryTable(filteredSales) {
     // Calcular precio unitario
     const unitPrice = s.price || (s.total / (s.quantity || 1));
 
-    return {
+    const originalIndex = sales.indexOf(s);
+    return { originalIndex,
       fullDateTime, dateStr, timeStr, typeBadge, methodBadge, imgUrl, barcodeUrl, barcode: s.barcode,
       name: s.name, quantity: s.quantity, total: s.total, unitPrice: unitPrice,
       seller: s.seller, code: s.code
@@ -4014,7 +4020,7 @@ async function renderSalesHistoryTable(filteredSales) {
       <td><span class="badge badge-warning">${s.quantity}</span></td>
       <td><strong style="color:var(--success);font-size:1.1rem;">${formatCurrency(s.total)}</strong></td>
       <td>${s.methodBadge}</td>
-      <td>${s.typeBadge}</td>
+      <td>${s.typeBadge}</td><td><button class="btn-delete-sale" onclick="openDeleteSaleModal(${s.originalIndex})" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
     </tr>
   `).join('');
 }
@@ -4300,7 +4306,8 @@ async function renderDailyReportTable(filteredSales) {
     // Calcular precio unitario
     const unitPrice = s.price || (s.total / (s.quantity || 1));
 
-    return {
+    const originalIndex = sales.indexOf(s);
+    return { originalIndex,
       dateStr, timeStr, typeClass, typeText, paymentClass, paymentIcon, paymentText,
       imgUrl, barcodeUrl, barcode: s.barcode, name: s.name, code: s.code,
       quantity: s.quantity, total: s.total, unitPrice: unitPrice
@@ -4413,5 +4420,83 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+
+  <!-- MODAL VENTA RÁPIDA -->
+  <div class="modal-overlay" id="quickSaleModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-bolt"></i> Venta Rápida (Sin Inventario)</h3>
+        <button class="modal-close" onclick="closeQuickSaleModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="cod-toggle">
+          <button id="qsBtnImmediate" class="active" onclick="setQuickSaleType('immediate')">Inmediata</button>
+          <button id="qsBtnCOD" onclick="setQuickSaleType('cod')">COD</button>
+          <button id="qsBtnDelivery" onclick="setQuickSaleType('pending_delivery')">P. Entrega</button>
+          <button id="qsBtnPayment" onclick="setQuickSaleType('pending_payment')">P. Cobro</button>
+        </div>
+        <div class="sale-layout">
+          <div class="sale-form">
+            <div class="form-group"><label class="form-label">Nombre del Producto</label><input type="text" class="form-input" id="qsName" placeholder="Ej: Producto Especial"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="form-group"><label class="form-label">Precio Unitario</label><input type="number" class="form-input" id="qsPrice" value="0" step="0.01" oninput="calculateQuickSale()"></div>
+              <div class="form-group"><label class="form-label">Cantidad</label><input type="number" class="form-input" id="qsQty" value="1" min="1" oninput="calculateQuickSale()"></div>
+            </div>
+            <div id="qsExtraFields" style="display:none;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div class="form-group"><label class="form-label">Envío</label><input type="number" class="form-input" id="qsShipping" value="0" step="0.01" oninput="calculateQuickSale()"></div>
+                <div class="form-group"><label class="form-label">Comisión %</label><input type="number" class="form-input" id="qsCommission" value="0" step="0.1" oninput="calculateQuickSale()"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">¿Quién paga el envío?</label>
+                <div class="who-pays">
+                  <label><input type="radio" name="qsWhoPays" value="client" checked onchange="calculateQuickSale()"><span>Cliente</span></label>
+                  <label><input type="radio" name="qsWhoPays" value="store" onchange="calculateQuickSale()"><span>Tienda</span></label>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" id="qsPaymentMethodGroup">
+              <label class="form-label">Método de Pago</label>
+              <div class="view-toggle" style="width:100%;">
+                <button id="qsBtnCash" class="active" style="flex:1;" onclick="setQuickSalePayment('cash')">Efectivo</button>
+                <button id="qsBtnTransfer" style="flex:1;" onclick="setQuickSalePayment('transfer')">Transferencia</button>
+              </div>
+            </div>
+          </div>
+          <div class="calculation-box">
+            <div class="calc-row"><span>Subtotal:</span><span id="qsCalcSubtotal">$0</span></div>
+            <div class="calc-row"><span>Envío:</span><span id="qsCalcShipping">$0</span></div>
+            <div class="calc-row"><span>Comisión:</span><span id="qsCalcCommission">$0</span></div>
+            <div class="calc-row total"><span>Total:</span><span id="qsCalcTotal">$0</span></div>
+            <div id="qsCollectRow" class="calc-row" style="color:var(--warning);font-weight:600;display:none;"><span>A Cobrar:</span><span id="qsCalcCollect">$0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeQuickSaleModal()">Cancelar</button>
+        <button class="btn btn-orange" onclick="processQuickSale()"><i class="fa-solid fa-check"></i> Registrar Venta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMACIÓN ELIMINAR VENTA -->
+  <div class="modal-overlay" id="deleteSaleModal">
+    <div class="modal">
+      <div class="modal-header" style="background:var(--danger);color:white;">
+        <h3 class="modal-title"><i class="fa-solid fa-trash"></i> Confirmar Eliminación</h3>
+        <button class="modal-close" onclick="closeDeleteSaleModal()" style="color:white;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que deseas eliminar este registro de venta?</p>
+        <div id="deleteSaleDetails" style="margin-top:1rem;padding:1rem;background:var(--bg);border-radius:8px;font-size:0.875rem;"></div>
+        <p style="margin-top:1rem;color:var(--text-secondary);font-size:0.75rem;">* Esta acción liberará espacio en el almacenamiento local pero no afectará el inventario actual.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeDeleteSaleModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmDeleteSale()">Eliminar Permanentemente</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

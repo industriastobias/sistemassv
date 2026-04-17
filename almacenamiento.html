@@ -4,17 +4,68 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=no">
   <title>SISTEMA DE VENTAS KLOHE</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css   ">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js   "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js   "></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js   "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js   "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300   ;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     :root { --bg: #fafafa; --surface: #ffffff; --text: #1a1a1a; --text-secondary: #6b7280; --border: #e5e7eb; --border-light: #f3f4f6; --accent: #111827; --accent-hover: #374151; --danger: #ef4444; --warning: #f59e0b; --success: #10b981; --info: #3b82f6; --purple: #8b5cf6; --shadow-sm: 0 1px 2px rgba(0,0,0,0.04); --shadow: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08); --radius: 12px; --radius-sm: 8px; --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+    
+    /* ESTILOS PARA MODO KIOSCO */
+    body.kiosk-mode {
+      overflow: hidden;
+    }
+    body.kiosk-mode .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+    body.kiosk-mode .main-container {
+      padding-top: 80px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    body.kiosk-mode .kiosk-exit-hint {
+      display: flex;
+    }
+    
+    .kiosk-exit-hint {
+      display: none;
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      z-index: 9999;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .kiosk-btn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+    }
+    .kiosk-btn:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+    .kiosk-btn.exit {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    .kiosk-btn.exit:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    
     .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); }
     .header-content { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .logo { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
@@ -195,7 +246,6 @@
     .confirm-detail-item .value.qty { color: var(--info); }
     .confirm-detail-item .value.stock { color: var(--success); }
     
-    /* NUEVOS ESTILOS PARA FUNCIONALIDADES ADICIONALES */
     .sale-type-toggle { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
     .toggle-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
     .toggle-row:hover { border-color: var(--accent); }
@@ -227,7 +277,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    /* NUEVOS ESTILOS PARA HISTORIAL DE VENTAS Y MODAL FIJO */
     .sales-history-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
     .sales-history-panel.active { display: block; }
     .sales-history-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
@@ -240,7 +289,6 @@
     .sales-history-card .amount { font-size: 1.5rem; font-weight: 700; }
     .sales-history-card .label { font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem; }
     
-    /* MODAL FIJO PARA VALOR TOTAL */
     .fixed-total-modal { position: fixed; bottom: 20px; left: 20px; background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.5rem; box-shadow: var(--shadow-lg); z-index: 400; display: none; flex-direction: column; gap: 0.5rem; min-width: 200px; }
     .fixed-total-modal.active { display: flex; }
     .fixed-total-modal.hidden-value .total-amount { filter: blur(8px); user-select: none; }
@@ -250,13 +298,11 @@
     .fixed-total-modal .total-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
     .fixed-total-modal .btn-toggle { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
     
-    /* BOTONES DE CONFIGURACION */
     .config-buttons { display: flex; gap: 0.5rem; margin-left: auto; }
     .btn-config { background: var(--surface); border: 1px solid var(--border); }
     .btn-config:hover { background: var(--border-light); }
     .btn-config.active { background: var(--accent); color: white; }
 
-    /* ESTILOS PARA VENTA PENDIENTE DE COBRO */
     .pending-payment-config { display: none; flex-direction: column; gap: 1rem; padding: 1rem; background: #fff7ed; border: 2px solid #f97316; border-radius: var(--radius-sm); margin-top: 1rem; }
     .pending-payment-config.active { display: flex; }
     .toggle-row.pending-payment.active { border-color: #f97316; background: #fff7ed; }
@@ -265,7 +311,6 @@
     .payment-status.partial { background: #fef3c7; color: #d97706; }
     .payment-status.paid { background: #d1fae5; color: #059669; }
 
-    /* NUEVOS ESTILOS PARA REPORTE DE VENTAS POR DIA - ACTUALIZADO */
     .daily-report-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
     .daily-report-panel.active { display: block; }
     .daily-report-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); align-items: end; }
@@ -301,7 +346,6 @@
     .daily-report-table .type-pending-delivery { background: #ede9fe; color: #7c3aed; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     .daily-report-table .type-pending-payment { background: #ffedd5; color: #c2410c; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     
-    /* PANEL DE PENDIENTES */
     .pending-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
     .pending-panel.active { display: block; }
     .pending-summary { background: linear-gradient(135deg, #B5838D 0%, #9c6b75 100%); color: white; padding: 1.25rem; border-radius: var(--radius-sm); margin-bottom: 1rem; }
@@ -310,6 +354,31 @@
     .summary-item { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.15); border-radius: var(--radius-sm); }
     .summary-item label { display: block; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; margin-bottom: 0.25rem; }
     .summary-item .amount { font-size: 1.125rem; font-weight: 700; }
+    
+    /* ESTILOS PARA TABLA DE HISTORIAL DE VENTAS CORREGIDA */
+    .sales-history-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    .sales-history-table th { background: var(--bg); padding: 0.875rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.025em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .sales-history-table td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--border-light); font-size: 0.875rem; vertical-align: middle; }
+    .sales-history-table tr:hover { background: var(--bg); }
+    .sales-history-table .product-img { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
+    .sales-history-table .product-img:hover { transform: scale(1.05); }
+    .sales-history-table .barcode-img { height: 50px; cursor: pointer; transition: var(--transition); }
+    .sales-history-table .barcode-img:hover { transform: scale(1.05); }
+    .sales-history-table .price-cell { font-weight: 600; color: var(--success); font-size: 1rem; }
+    .sales-history-table .total-cell { font-weight: 700; color: var(--success); font-size: 1.1rem; }
+    .sales-history-table .qty-cell { font-weight: 600; color: var(--info); }
+    .sales-history-table .datetime-cell { min-width: 140px; }
+    .sales-history-table .datetime-cell .date { font-weight: 600; }
+    .sales-history-table .datetime-cell .time { color: var(--text-secondary); font-size: 0.8125rem; }
+    .sales-history-table .product-cell { min-width: 180px; }
+    .sales-history-table .product-cell .name { font-weight: 600; }
+    .sales-history-table .product-cell .code { color: var(--text-secondary); font-size: 0.8125rem; }
+    .sales-history-table .payment-cash { background: #d1fae5; color: #059669; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; }
+    .sales-history-table .payment-transfer { background: #dbeafe; color: #2563eb; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; }
+    .sales-history-table .type-immediate { background: #d1fae5; color: #059669; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .sales-history-table .type-cod { background: #fef3c7; color: #d97706; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .sales-history-table .type-pending-delivery { background: #ede9fe; color: #7c3aed; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .sales-history-table .type-pending-payment { background: #ffedd5; color: #c2410c; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     
     @media (max-width: 1024px) { 
       .sale-layout { grid-template-columns: 1fr; } 
@@ -330,6 +399,9 @@
       .daily-report-table { font-size: 0.8125rem; }
       .daily-report-table .product-img { width: 50px; height: 50px; }
       .daily-report-table .barcode-img { height: 40px; }
+      .sales-history-table { font-size: 0.8125rem; }
+      .sales-history-table .product-img { width: 50px; height: 50px; }
+      .sales-history-table .barcode-img { height: 40px; }
     }
     @media (max-width: 768px) { 
       .header-content { flex-wrap: wrap; } 
@@ -358,6 +430,7 @@
       .daily-report-filters { grid-template-columns: 1fr; }
       .daily-report-summary { grid-template-columns: 1fr; }
       .daily-report-table { display: block; overflow-x: auto; }
+      .sales-history-table { display: block; overflow-x: auto; }
     }
     @media (max-width: 480px) { 
       .cards-grid { grid-template-columns: 1fr; } 
@@ -379,13 +452,18 @@
     }
   </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
   <div class="notification-container" id="notificationContainer"></div>
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
   <div class="image-overlay" id="imageOverlay" onclick="closeImageOverlay()"><img src="" alt="" id="overlayImage"></div>
   <div class="barcode-large-overlay" id="barcodeLargeOverlay" onclick="closeBarcodeLarge()"><div class="barcode-large-content" onclick="event.stopPropagation()"><img src="" alt="" id="barcodeLargeImg"><div class="barcode-large-text" id="barcodeLargeText"></div></div></div>
+  
+  <!-- HINT PARA SALIR DE MODO KIOSCO -->
+  <div class="kiosk-exit-hint" id="kioskExitHint">
+    <i class="fa-solid fa-info-circle"></i>
+    <span>Presiona ESC o F11 para salir de pantalla completa</span>
+  </div>
   
   <!-- MODAL FIJO DE VALOR TOTAL -->
   <div class="fixed-total-modal" id="fixedTotalModal">
@@ -412,6 +490,7 @@
         <button class="btn" id="usbBtn" onclick="toggleUSBReader()"><i class="fa-solid fa-plug"></i><span>USB</span></button>
       </div>
       <div class="config-buttons">
+        <button class="btn kiosk-btn" id="btnKiosk" onclick="toggleKioskMode()" title="Modo Kiosco"><i class="fa-solid fa-expand"></i><span class="mobile-hide"> Kiosco</span></button>
         <button class="btn btn-config" id="btnDailyReport" onclick="toggleDailyReportPanel()" title="Reporte por Dia"><i class="fa-solid fa-chart-bar"></i><span class="mobile-hide"> Reporte</span></button>
         <button class="btn btn-config" id="btnSalesHistory" onclick="toggleSalesHistoryPanel()" title="Historial de Ventas"><i class="fa-solid fa-chart-line"></i><span class="mobile-hide"> Historial</span></button>
         <button class="btn btn-config" id="btnFixedTotal" onclick="toggleFixedTotalModal()" title="Mostrar Total"><i class="fa-solid fa-dollar-sign"></i></button>
@@ -443,7 +522,7 @@
       <label>Ir a fila:</label><input type="number" class="form-input" id="goToRow" min="1" placeholder="#"><button class="btn" onclick="goToRow()">Ir</button><button class="btn" onclick="clearAllFilters()">Limpiar filtros</button>
     </div>
     
-    <!-- PANEL DE REPORTE DE VENTAS POR DIA - ACTUALIZADO -->
+    <!-- PANEL DE REPORTE DE VENTAS POR DIA -->
     <div class="daily-report-panel" id="dailyReportPanel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h3><i class="fa-solid fa-chart-bar"></i> Reporte de Ventas por Dia</h3>
@@ -531,7 +610,7 @@
       </div>
     </div>
     
-    <!-- NUEVO PANEL DE HISTORIAL DE VENTAS -->
+    <!-- PANEL DE HISTORIAL DE VENTAS - CORREGIDO -->
     <div class="sales-history-panel" id="salesHistoryPanel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h3><i class="fa-solid fa-chart-line"></i> Historial de Ventas</h3>
@@ -600,7 +679,7 @@
       </div>
       
       <div class="table-container">
-        <table class="data-table">
+        <table class="sales-history-table">
           <thead>
             <tr>
               <th>Fecha y Hora</th>
@@ -619,7 +698,7 @@
       </div>
     </div>
     
-    <!-- Panel de Pedidos Pendientes (COD + Pendientes de Entrega + Pendientes de Cobro) -->
+    <!-- Panel de Pedidos Pendientes -->
     <div class="pending-panel" id="pendingPanel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div>
       
@@ -645,7 +724,7 @@
       </div>
     </div>
     
-    <!-- Panel de Ventas del Dia ACTUALIZADA -->
+    <!-- Panel de Ventas del Dia -->
     <div class="daily-sales-panel" id="dailySalesPanel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
         <h3><i class="fa-solid fa-chart-line"></i> Ventas del Dia</h3>
@@ -965,7 +1044,7 @@
     </div>
   </div>
 
-  <!-- NUEVO: Delete Confirm Modal Delivery -->
+  <!-- Delete Confirm Modal Delivery -->
   <div class="modal-overlay" id="deleteDeliveryConfirmModal" onclick="if(event.target===this) event.stopPropagation()">
     <div class="modal delete-confirm-modal">
       <div class="delete-confirm-content">
@@ -997,7 +1076,7 @@
     </div>
   </div>
 
-  <!-- NUEVO: Delete Confirm Modal Pending Payment -->
+  <!-- Delete Confirm Modal Pending Payment -->
   <div class="modal-overlay" id="deletePaymentConfirmModal" onclick="if(event.target===this) event.stopPropagation()">
     <div class="modal delete-confirm-modal">
       <div class="delete-confirm-content">
@@ -1064,7 +1143,7 @@
     </div>
   </div>
 
-  <!-- NUEVO: Confirmar Pago Completo Modal -->
+  <!-- Confirmar Pago Completo Modal -->
   <div class="modal-overlay" id="completePaymentModal" onclick="if(event.target===this) event.stopPropagation()">
     <div class="modal payment-confirm-modal">
       <div class="payment-confirm-content">
@@ -1157,6 +1236,7 @@
     <a href="traslados.html"><i class="fa-solid fa-truck"></i> Traslados</a>
     <a href="venta.html"><i class="fa-solid fa-cash-register"></i> Venta</a>
   </nav>
+
 
 <script>
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1270,6 +1350,98 @@ let currentEditDeliveryIndex = -1;
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
 let currentCompletePaymentIndex = -1;
+let kioskModeActive = false;
+
+// ==================== MODO KIOSCO ====================
+
+function toggleKioskMode() {
+  if (!kioskModeActive) {
+    enterKioskMode();
+  } else {
+    exitKioskMode();
+  }
+}
+
+function enterKioskMode() {
+  kioskModeActive = true;
+  document.body.classList.add('kiosk-mode');
+  document.getElementById('btnKiosk').innerHTML = '<i class="fa-solid fa-compress"></i><span class="mobile-hide"> Salir</span>';
+  document.getElementById('btnKiosk').classList.add('exit');
+  
+  // Intentar activar pantalla completa
+  const elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen().catch(err => {
+      console.log('Error al activar pantalla completa:', err);
+    });
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+  
+  showNotification('Modo Kiosco activado - Pantalla Completa', 'success');
+  localStorage.setItem('kioskMode', 'true');
+}
+
+function exitKioskMode() {
+  kioskModeActive = false;
+  document.body.classList.remove('kiosk-mode');
+  document.getElementById('btnKiosk').innerHTML = '<i class="fa-solid fa-expand"></i><span class="mobile-hide"> Kiosco</span>';
+  document.getElementById('btnKiosk').classList.remove('exit');
+  
+  // Salir de pantalla completa
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(err => {
+      console.log('Error al salir de pantalla completa:', err);
+    });
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+  
+  showNotification('Modo Kiosco desactivado', 'warning');
+  localStorage.setItem('kioskMode', 'false');
+}
+
+// Detectar cambios en pantalla completa para mantener sincronizado
+function handleFullscreenChange() {
+  const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+  
+  if (!isFullscreen && kioskModeActive) {
+    // El usuario salio de pantalla completa con ESC o F11
+    kioskModeActive = false;
+    document.body.classList.remove('kiosk-mode');
+    document.getElementById('btnKiosk').innerHTML = '<i class="fa-solid fa-expand"></i><span class="mobile-hide"> Kiosco</span>';
+    document.getElementById('btnKiosk').classList.remove('exit');
+    localStorage.setItem('kioskMode', 'false');
+  } else if (isFullscreen && !kioskModeActive) {
+    // Entro a pantalla completa de otra forma
+    kioskModeActive = true;
+    document.body.classList.add('kiosk-mode');
+    document.getElementById('btnKiosk').innerHTML = '<i class="fa-solid fa-compress"></i><span class="mobile-hide"> Salir</span>';
+    document.getElementById('btnKiosk').classList.add('exit');
+    localStorage.setItem('kioskMode', 'true');
+  }
+}
+
+// Reintentar pantalla completa despues de interacciones del usuario
+function maintainKioskMode() {
+  if (kioskModeActive) {
+    const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    if (!isFullscreen) {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    }
+  }
+}
 
 function debounce(fn, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), delay); }; }
 function showNotification(message, type = 'success') { 
@@ -2300,8 +2472,6 @@ function confirmDeletePending() {
   }
 }
 
-// NUEVAS FUNCIONES PARA PENDIENTES DE ENTREGA CON MODAL
-
 async function openDeleteDeliveryConfirmModal(index) {
   pendingDeliveryDeleteIndex = index;
   const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
@@ -2613,8 +2783,6 @@ function saveEditPending() {
   showNotification('Pedido actualizado. Nuevo total a cobrar: ' + formatCurrency(totalToCollect), 'success');
 }
 
-// NUEVAS FUNCIONES PARA PENDIENTES DE COBRO
-
 async function openDeletePaymentConfirmModal(index) {
   pendingPaymentDeleteIndex = index;
   const pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
@@ -2807,7 +2975,8 @@ function handleUSBKey(e) {
 
 function toggleMenu() { document.getElementById('sideMenu').classList.toggle('active'); }
 
-// VENTAS DEL DIA ACTUALIZADA
+
+// VENTAS DEL DIA
 function toggleDailySalesPanel() {
   const panel = document.getElementById('dailySalesPanel'),
         controls = document.getElementById('viewControls'),
@@ -2949,8 +3118,7 @@ async function loadDailySales() {
   }
 }
 
-
-// NUEVAS FUNCIONES PARA HISTORIAL DE VENTAS
+// HISTORIAL DE VENTAS - CORREGIDO CON COLUMNAS: Fecha y Hora, Imagen, Producto, Codigo de Barras, Precio Unit., Cant., Total, Metodo Pago, Tipo
 function toggleSalesHistoryPanel() {
   const panel = document.getElementById('salesHistoryPanel'),
         controls = document.getElementById('viewControls'),
@@ -3064,6 +3232,7 @@ async function loadSalesHistory() {
     
     filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date));
     
+    // TABLA CORREGIDA CON LAS COLUMNAS SOLICITADAS
     const salesWithImages = await Promise.all(filteredSales.map(async (s) => {
       const dateTime = s.date ? new Date(s.date) : null;
       const date = dateTime ? dateTime.toLocaleDateString('es-ES') : 'N/A';
@@ -3084,6 +3253,7 @@ async function loadSalesHistory() {
       return { date, time, imgUrl, barcodeUrl, barcode: s.barcode, name: s.name, code: s.code, price: s.price, quantity: s.quantity, total: s.total, paymentClass, paymentText, typeText, typeClass };
     }));
     
+    // RENDERIZAR CON LAS 9 COLUMNAS: Fecha y Hora, Imagen, Producto, Codigo de Barras, Precio Unit., Cant., Total, Metodo Pago, Tipo
     tbody.innerHTML = salesWithImages.map(s => `
       <tr>
         <td class="datetime-cell"><div class="date">${s.date}</div><div class="time">${s.time}</div></td>
@@ -3106,7 +3276,7 @@ async function loadSalesHistory() {
   }
 }
 
-// NUEVAS FUNCIONES PARA REPORTE DE VENTAS POR DIA
+// REPORTE DE VENTAS POR DIA
 function toggleDailyReportPanel() {
   const panel = document.getElementById('dailyReportPanel'),
         controls = document.getElementById('viewControls'),
@@ -3314,6 +3484,28 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSearchHistory();
   setView(currentView);
   
+  // Detectar cambios en pantalla completa
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+  document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+  
+  // Restaurar modo kiosco si estaba activo
+  if (localStorage.getItem('kioskMode') === 'true') {
+    enterKioskMode();
+  }
+  
+  // Mantener pantalla completa en interacciones
+  document.addEventListener('click', () => {
+    maintainKioskMode();
+  });
+  document.addEventListener('keydown', () => {
+    maintainKioskMode();
+  });
+  document.addEventListener('touchstart', () => {
+    maintainKioskMode();
+  });
+  
   document.getElementById('searchInput').addEventListener('input', debouncedFilter);
   document.getElementById('categoryFilter').addEventListener('change', applyFilters);
   document.getElementById('minPriceFilter').addEventListener('input', debouncedFilter);
@@ -3343,7 +3535,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Inicializar el modal de total si estaba activo
   if (localStorage.getItem('fixedTotalVisible') === 'true') {
     toggleFixedTotalModal();
   }

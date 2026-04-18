@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -395,6 +396,7 @@
       .form-input, .form-select { font-size: 16px !important; }
     }
   </style>
+<base target="_blank">
 <base target="_blank">
 <base target="_blank">
 <base target="_blank">
@@ -3431,6 +3433,9 @@ function startCameraScan() {
     playScanSuccessSound();
     lastScannedBarcode = decodedText.trim();
     stopCameraScan();
+    // Filtrar tabla para mostrar solo el producto escaneado
+    document.getElementById('barcodeFilter').value = decodedText.trim();
+    applyFilters();
     // Abrir modal de venta directamente
     openSaleModal(foundIndex);
     showNotification('Producto encontrado: ' + inventory[foundIndex].name, 'success'); 
@@ -3456,40 +3461,27 @@ function handleScannedProduct(index) {
   // 2. Aplicar filtros para mostrar solo ese producto
   applyFilters();
 
-  // 3. Resaltar y hacer scroll al producto
-  setTimeout(() => {
-    const foundInFiltered = filteredInventory.find(p => p.barcode && p.barcode.trim() === item.barcode.trim());
-    if (foundInFiltered) {
-      const itemIndex = filteredInventory.indexOf(foundInFiltered);
-      const displayIdx = itemIndex + 1;
-      const targetPage = Math.floor(itemIndex / pageSize) + 1;
-
-      if (targetPage !== currentPage) {
-        currentPage = targetPage;
-        renderInventory();
-      }
-
-      setTimeout(() => {
+  // 3. Esperar a que el render complete y resaltar el producto
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const foundInFiltered = filteredInventory.find(p => p.barcode && p.barcode.trim() === item.barcode.trim());
+      if (foundInFiltered) {
+        const itemIndex = filteredInventory.indexOf(foundInFiltered);
+        const displayIdx = itemIndex + 1;
         const target = document.getElementById(`row-${displayIdx}`) || document.getElementById(`card-${displayIdx}`);
         if (target) {
           document.querySelectorAll('#inventoryTable tr, .product-card').forEach(el => el.classList.remove('highlight'));
           target.classList.add('highlight');
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          target.style.transition = 'background 0.3s';
-          const originalBg = target.style.background;
-          target.style.background = '#fef9c3';
-          setTimeout(() => {
-            target.style.background = originalBg;
-          }, 1500);
         }
-      }, 100);
-    }
-  }, 200);
+      }
+    }, 300);
+  });
 
   // 4. Abrir modal de venta
   setTimeout(() => {
     openSaleModal(index);
-  }, 350);
+  }, 400);
 }
 
 function focusAndHighlightProduct(barcode) {

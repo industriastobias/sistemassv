@@ -1,15 +1,26 @@
-<!DOCTYPE html>
+A ESTE CODIGO EDITAREMOS Y AGREGAREMOS ESTO 1. Escanear producto → Aparece en tabla/tarjetas
+Al escanear por cámara o lector USB, ahora el sistema:
+Filtra el inventario para mostrar solo el producto escaneado (en tabla o tarjetas según la vista activa)
+Lo resalta en amarillo y hace scroll automático a él
+Luego abre el modal de Registrar Venta con sus características
+Si el usuario le da Cancelar en el modal, el producto escaneado sigue visible en la pantalla porque el filtro está aplicado. Para volver a ver todo el inventario, usa el botón "Limpiar filtros". 2. Contraseña para editar Precio y Cantidad en el modal de venta
+En el modal de Registrar Venta, los campos Cantidad y Precio unitario ahora aparecen con un candado (bloqueados por defecto):
+Al hacer clic en el icono del candado, pide la contraseña KLOHESV
+Si la contraseña es correcta, se desbloquean los campos y aparecen 3 botones:
+Guardar Cambios → Actualiza el precio en el inventario y cierra el modal (sin vender)
+Confirmar Venta → Guarda el precio actualizado en inventario Y procesa la venta
+Cancelar → Cierra el modal sin guardar nada DAME CODIGO COMPLETO YA EDITADO TIENES PROHIBIDO EDITAR ALGO QUE NO TENGA QUE VER CON LO QUE SE TE A DICHO: <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=no">
   <title>SISTEMA DE VENTAS KLOHE</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css ">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js "></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300 ;400;500;600;700&display=swap');
     :root { --bg: #fafafa; --surface: #ffffff; --text: #1a1a1a; --text-secondary: #6b7280; --border: #e5e7eb; --border-light: #f3f4f6; --accent: #111827; --accent-hover: #374151; --danger: #ef4444; --warning: #f59e0b; --success: #10b981; --info: #3b82f6; --purple: #8b5cf6; --shadow-sm: 0 1px 2px rgba(0,0,0,0.04); --shadow: 0 4px 6px -1px rgba(0,0,0,0.05); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08); --radius: 12px; --radius-sm: 8px; --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
@@ -364,6 +375,25 @@
     }
     @keyframes flash { 0%, 100% { background: transparent; } 50% { background: #fef9c3; } }
     .flash { animation: flash 0.5s ease; }
+
+    /* Sale modal locked/unlocked field styles */
+    .sale-field-wrapper { position: relative; display: flex; align-items: center; }
+    .sale-field-wrapper .form-input { flex: 1; }
+    .sale-field-wrapper .form-input[readonly] { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+    .sale-field-wrapper .form-input.unlocked { background: #ecfdf5; border-color: var(--success); color: var(--text); }
+    .lock-icon { 
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; 
+      margin-left: 0.5rem; cursor: pointer; border-radius: var(--radius-sm); 
+      background: var(--border-light); border: 1px solid var(--border); 
+      transition: var(--transition); flex-shrink: 0; color: var(--text-secondary); 
+    }
+    .lock-icon:hover { background: var(--border); color: var(--accent); }
+    .lock-icon.unlocked { background: #ecfdf5; border-color: var(--success); color: var(--success); }
+    .lock-icon i { font-size: 0.875rem; }
+    .sale-modal-footer-default { display: flex; }
+    .sale-modal-footer-unlocked { display: none; }
+    .sale-modal-footer-unlocked.active { display: flex; }
+    .sale-modal-footer-default.hidden { display: none; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -376,6 +406,7 @@
       .form-input, .form-select { font-size: 16px !important; }
     }
   </style>
+<base target="_blank">
 <base target="_blank">
 <base target="_blank">
 </head>
@@ -844,7 +875,22 @@
             </div>
           </div>
           <div class="sale-form">
-            <div class="form-row"><div class="form-group"><label class="form-label">Cantidad</label><input type="number" class="form-input" id="saleQuantity" min="1" value="1" onchange="updateSaleCalculations()"></div><div class="form-group"><label class="form-label">Precio unitario</label><input type="number" class="form-input" id="salePrice" style="background:var(--bg);" oninput="updateSaleCalculations()"></div></div>
+            <div class="form-row">
+  <div class="form-group">
+    <label class="form-label">Cantidad <i class="fa-solid fa-lock" style="font-size:0.7rem;color:var(--text-secondary);"></i></label>
+    <div class="sale-field-wrapper">
+      <input type="number" class="form-input" id="saleQuantity" min="1" value="1" onchange="updateSaleCalculations()" readonly>
+      <button type="button" class="lock-icon" id="lockQtyBtn" onclick="toggleSaleFieldLock('quantity')" title="Desbloquear cantidad"><i class="fa-solid fa-lock"></i></button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Precio unitario <i class="fa-solid fa-lock" style="font-size:0.7rem;color:var(--text-secondary);"></i></label>
+    <div class="sale-field-wrapper">
+      <input type="number" class="form-input" id="salePrice" style="background:var(--bg);" oninput="updateSaleCalculations()" readonly>
+      <button type="button" class="lock-icon" id="lockPriceBtn" onclick="toggleSaleFieldLock('price')" title="Desbloquear precio"><i class="fa-solid fa-lock"></i></button>
+    </div>
+  </div>
+</div>
             
             <div class="form-group">
               <label class="form-label">Metodo de Pago</label>
@@ -911,7 +957,15 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer"><button class="btn" onclick="closeSaleModal()">Cancelar</button><button class="btn btn-success" onclick="processSale()"><i class="fa-solid fa-check"></i> Confirmar Venta</button></div>
+      <div class="modal-footer sale-modal-footer-default" id="saleModalFooterDefault">
+        <button class="btn" onclick="closeSaleModal()">Cancelar</button>
+        <button class="btn btn-success" onclick="processSale()"><i class="fa-solid fa-check"></i> Confirmar Venta</button>
+      </div>
+      <div class="modal-footer sale-modal-footer-unlocked" id="saleModalFooterUnlocked">
+        <button class="btn" onclick="closeSaleModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+        <button class="btn btn-primary" onclick="saveSaleChangesOnly()"><i class="fa-solid fa-floppy-disk"></i> Guardar Cambios</button>
+        <button class="btn btn-success" onclick="processSale()"><i class="fa-solid fa-check"></i> Confirmar Venta</button>
+      </div>
     </div>
   </div>
 
@@ -1383,6 +1437,10 @@ let fastSaleWhoPays = 'client';
 let fastSalePaymentMethod = 'cash';
 let fastSaleImageDataUrl = '';
 
+// Variables para bloqueo de campos en modal de venta
+let saleFieldsLocked = true;
+let pendingUnlockField = null;
+
 function debounce(fn, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), delay); }; }
 function showNotification(message, type = 'success') { 
   const container = document.getElementById('notificationContainer'); 
@@ -1737,6 +1795,7 @@ function verifyPassword() {
   closePasswordModal();
   if (action === 'price') openPriceModal(index);
   else if (action === 'stock') openStockModal(index);
+  else if (action === 'unlockSaleFields') unlockSaleFields();
 }
 
 // ===== FUNCIONES VENTA RÁPIDA =====
@@ -2047,8 +2106,114 @@ function processFastSale() {
 
 // ===== FIN VENTA RÁPIDA =====
 
+function toggleSaleFieldLock(field) {
+  pendingUnlockField = field;
+  document.getElementById('passwordAction').value = 'unlockSaleFields';
+  document.getElementById('passwordIndex').value = '-1';
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('passwordModal').classList.add('active');
+  setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+}
+
+function unlockSaleFields() {
+  saleFieldsLocked = false;
+
+  // Unlock quantity field
+  const qtyInput = document.getElementById('saleQuantity');
+  qtyInput.removeAttribute('readonly');
+  qtyInput.classList.add('unlocked');
+
+  // Unlock price field
+  const priceInput = document.getElementById('salePrice');
+  priceInput.removeAttribute('readonly');
+  priceInput.classList.add('unlocked');
+
+  // Update lock icons
+  document.getElementById('lockQtyBtn').classList.add('unlocked');
+  document.getElementById('lockQtyBtn').innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+  document.getElementById('lockQtyBtn').title = 'Campos desbloqueados';
+  document.getElementById('lockPriceBtn').classList.add('unlocked');
+  document.getElementById('lockPriceBtn').innerHTML = '<i class="fa-solid fa-lock-open"></i>';
+  document.getElementById('lockPriceBtn').title = 'Campos desbloqueados';
+
+  // Switch footer buttons
+  document.getElementById('saleModalFooterDefault').classList.add('hidden');
+  document.getElementById('saleModalFooterUnlocked').classList.add('active');
+
+  showNotification('Campos desbloqueados. Ahora puede editar cantidad y precio.', 'success');
+}
+
+function resetSaleLockState() {
+  saleFieldsLocked = true;
+  pendingUnlockField = null;
+
+  // Lock quantity field
+  const qtyInput = document.getElementById('saleQuantity');
+  if (qtyInput) {
+    qtyInput.setAttribute('readonly', 'readonly');
+    qtyInput.classList.remove('unlocked');
+  }
+
+  // Lock price field
+  const priceInput = document.getElementById('salePrice');
+  if (priceInput) {
+    priceInput.setAttribute('readonly', 'readonly');
+    priceInput.classList.remove('unlocked');
+  }
+
+  // Reset lock icons
+  const lockQtyBtn = document.getElementById('lockQtyBtn');
+  if (lockQtyBtn) {
+    lockQtyBtn.classList.remove('unlocked');
+    lockQtyBtn.innerHTML = '<i class="fa-solid fa-lock"></i>';
+    lockQtyBtn.title = 'Desbloquear cantidad';
+  }
+  const lockPriceBtn = document.getElementById('lockPriceBtn');
+  if (lockPriceBtn) {
+    lockPriceBtn.classList.remove('unlocked');
+    lockPriceBtn.innerHTML = '<i class="fa-solid fa-lock"></i>';
+    lockPriceBtn.title = 'Desbloquear precio';
+  }
+
+  // Reset footer buttons
+  const defaultFooter = document.getElementById('saleModalFooterDefault');
+  if (defaultFooter) defaultFooter.classList.remove('hidden');
+  const unlockedFooter = document.getElementById('saleModalFooterUnlocked');
+  if (unlockedFooter) unlockedFooter.classList.remove('active');
+}
+
+function saveSaleChangesOnly() {
+  playSuccessSound();
+  const item = inventory[currentSaleIndex];
+  if (!item) return;
+
+  // Update stock from the stock edit field
+  const editedStock = parseInt(document.getElementById('saleStockEdit').value);
+  if (!isNaN(editedStock) && editedStock >= 0) {
+    item.quantity = editedStock;
+  }
+
+  // Update unit price from salePrice (works whether locked or unlocked)
+  const editedPrice = parseFloat(document.getElementById('salePrice').value);
+  if (!isNaN(editedPrice) && editedPrice >= 0) {
+    item.price = editedPrice;
+  }
+
+  // Also update from salePriceEdit if it has a different value
+  const priceEditVal = parseFloat(document.getElementById('salePriceEdit').value);
+  if (!isNaN(priceEditVal) && priceEditVal >= 0) {
+    item.price = priceEditVal;
+  }
+
+  saveInventory();
+  applyFilters();
+  closeSaleModal();
+  showNotification('Cambios guardados en el inventario (sin venta)', 'success');
+}
+
 async function openSaleModal(index) { 
   playBeep();
+  resetSaleLockState();
   currentSaleIndex = index; 
   currentPaymentMethod = 'cash';
   
@@ -2095,7 +2260,11 @@ async function openSaleModal(index) {
   updateSaleCalculations(); 
   document.getElementById('saleModal').classList.add('active'); 
 }
-function closeSaleModal() { document.getElementById('saleModal').classList.remove('active'); ensureKioscoMode(); }
+function closeSaleModal() { 
+  resetSaleLockState();
+  document.getElementById('saleModal').classList.remove('active'); 
+  ensureKioscoMode(); 
+}
 
 function updateSaleStockDisplay() {
   const newStock = parseInt(document.getElementById('saleStockEdit').value);
@@ -2255,10 +2424,17 @@ function processSale() {
     item.quantity = editedStock;
   }
   item.quantity -= qty;
-  // Actualizar precio unitario si fue editado
-  const editedPrice = parseFloat(document.getElementById('salePriceEdit').value);
-  if (!isNaN(editedPrice) && editedPrice >= 0) {
-    item.price = editedPrice;
+  // Actualizar precio unitario si fue editado (desde salePriceEdit o salePrice desbloqueado)
+  const editedPriceFromEdit = parseFloat(document.getElementById('salePriceEdit').value);
+  if (!isNaN(editedPriceFromEdit) && editedPriceFromEdit >= 0) {
+    item.price = editedPriceFromEdit;
+  }
+  // Si el campo salePrice fue desbloqueado y editado, también actualizar
+  if (!saleFieldsLocked) {
+    const editedPriceFromSale = parseFloat(document.getElementById('salePrice').value);
+    if (!isNaN(editedPriceFromSale) && editedPriceFromSale >= 0) {
+      item.price = editedPriceFromSale;
+    }
   }
   saveInventory(); 
   
@@ -3252,7 +3428,7 @@ function startCameraScan() {
   const reader = document.createElement('div'); 
   reader.id = 'qrReader'; 
   reader.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:1rem;border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);z-index:2000;'; 
-  reader.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><strong>Escanear codigo</strong><button onclick="stopCameraScan(true)" class="btn btn-sm"><i class="fa-solid fa-xmark"></i> Cancelar</button></div><div id="readerContainer" style="width:300px;height:200px;"></div>`; 
+  reader.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><strong>Escanear codigo</strong><button onclick="stopCameraScan()" class="btn btn-sm"><i class="fa-solid fa-xmark"></i> Cancelar</button></div><div id="readerContainer" style="width:300px;height:200px;"></div>`; 
   document.body.appendChild(reader); 
   html5QrCode = new Html5Qrcode('readerContainer'); 
   html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 150 } }, (decodedText) => { 
@@ -3272,17 +3448,59 @@ function startCameraScan() {
   }, () => {}); 
 }
 
-function stopCameraScan(wasCancelled) { 
+function stopCameraScan() { 
   if (html5QrCode) { 
     html5QrCode.stop().then(() => { 
       html5QrCode = null; 
       document.getElementById('qrReader')?.remove(); 
-      // Si fue cancelado y hay un barcode escaneado previo, ir a ese producto
-      if (wasCancelled && lastScannedBarcode) {
-        setTimeout(() => focusAndHighlightProduct(lastScannedBarcode), 300);
-      }
     }); 
   } 
+}
+
+function handleScannedProduct(index) {
+  const item = inventory[index];
+  if (!item || !item.barcode) return;
+
+  // 1. Colocar el barcode en el filtro
+  document.getElementById('barcodeFilter').value = item.barcode;
+
+  // 2. Aplicar filtros para mostrar solo ese producto
+  applyFilters();
+
+  // 3. Resaltar y hacer scroll al producto
+  setTimeout(() => {
+    const foundInFiltered = filteredInventory.find(p => p.barcode && p.barcode.trim() === item.barcode.trim());
+    if (foundInFiltered) {
+      const itemIndex = filteredInventory.indexOf(foundInFiltered);
+      const displayIdx = itemIndex + 1;
+      const targetPage = Math.floor(itemIndex / pageSize) + 1;
+
+      if (targetPage !== currentPage) {
+        currentPage = targetPage;
+        renderInventory();
+      }
+
+      setTimeout(() => {
+        const target = document.getElementById(`row-${displayIdx}`) || document.getElementById(`card-${displayIdx}`);
+        if (target) {
+          document.querySelectorAll('#inventoryTable tr, .product-card').forEach(el => el.classList.remove('highlight'));
+          target.classList.add('highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target.style.transition = 'background 0.3s';
+          const originalBg = target.style.background;
+          target.style.background = '#fef9c3';
+          setTimeout(() => {
+            target.style.background = originalBg;
+          }, 1500);
+        }
+      }, 100);
+    }
+  }, 200);
+
+  // 4. Abrir modal de venta
+  setTimeout(() => {
+    openSaleModal(index);
+  }, 350);
 }
 
 function focusAndHighlightProduct(barcode) {
@@ -3349,7 +3567,7 @@ function handleUSBKey(e) {
         return; 
       } 
       playScanSuccessSound();
-      openSaleModal(foundIndex);
+      handleScannedProduct(foundIndex);
       showNotification('Producto encontrado: ' + inventory[foundIndex].name, 'success');
       usbBuffer = ''; 
     } 

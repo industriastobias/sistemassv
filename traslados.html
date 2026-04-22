@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización de Productos KLOHESV</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
     <style>
         * {
             margin: 0;
@@ -515,11 +515,19 @@
             margin-bottom: 10px;
             background: #fafafa;
             outline: none;
+            transition: all 0.2s ease;
         }
 
         .image-upload:focus {
             border-color: #B5838D;
             background: #f5f5f5;
+        }
+
+        /* NUEVO: Estilo cuando el mouse está encima */
+        .image-upload.hover-active {
+            border-color: #B5838D;
+            background: #f8f0f2;
+            transform: scale(1.02);
         }
 
         .image-preview {
@@ -1721,6 +1729,7 @@
             display: block;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="app">
@@ -2362,6 +2371,7 @@
         let numbersHidden = false;
         let isKioskoMode = false;
         let simplifiedViewActive = false; // NUEVO: Estado de vista simplificada
+        let isHoveringUpload = false; // NUEVO: Flag para tracking de hover sobre upload
 
         window.onload = async function() {
             document.getElementById('modalLoteDate').value = new Date().toLocaleDateString();
@@ -2372,35 +2382,60 @@
             updateImageCount(); // NUEVO: Actualizar contador de imágenes
             
             setupImageInput();
+            setupHoverPaste(); // NUEVO: Configurar paste por hover
             
             // Escuchar eventos de pantalla completa
             document.addEventListener('fullscreenchange', handleFullscreenChange);
             document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.addEventListener('mozfullscreenchange', handleFullscreenChange);
             document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-            // Permitir pegar imagen desde el portapapeles
-            const imageUploadArea = document.getElementById('imageUploadArea');
-            if (imageUploadArea) {
-                imageUploadArea.addEventListener('paste', function(e) {
-                    e.preventDefault();
-                    const items = e.clipboardData.items;
-                    for (let i = 0; i < items.length; i++) {
-                        if (items[i].type.indexOf('image') !== -1) {
-                            const blob = items[i].getAsFile();
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                currentImage = event.target.result;
-                                showImagePreview(currentImage);
-                                updateImageCount(); // NUEVO: Actualizar contador
-                            };
-                            reader.readAsDataURL(blob);
-                            break;
-                        }
-                    }
-                });
-            }
         };
+
+        // NUEVA FUNCIÓN: Configurar paste por hover sobre el área de imagen
+        function setupHoverPaste() {
+            const imageUploadArea = document.getElementById('imageUploadArea');
+            if (!imageUploadArea) return;
+            
+            // Track cuando el mouse entra/sale del área
+            imageUploadArea.addEventListener('mouseenter', function() {
+                isHoveringUpload = true;
+                imageUploadArea.classList.add('hover-active');
+                // Auto-focus para capturar paste
+                imageUploadArea.focus();
+            });
+            
+            imageUploadArea.addEventListener('mouseleave', function() {
+                isHoveringUpload = false;
+                imageUploadArea.classList.remove('hover-active');
+            });
+            
+            // Listener global de paste - funciona incluso en modo kiosco
+            document.addEventListener('paste', function(e) {
+                // Solo procesar si estamos hover sobre el área de upload
+                if (!isHoveringUpload) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const items = e.clipboardData.items;
+                let imageFound = false;
+                
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        imageFound = true;
+                        const blob = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            currentImage = event.target.result;
+                            showImagePreview(currentImage);
+                            updateImageCount();
+                        };
+                        reader.readAsDataURL(blob);
+                        break;
+                    }
+                }
+            });
+        }
 
         // NUEVA FUNCIÓN: Actualizar contador de imágenes
         function updateImageCount() {
@@ -3065,8 +3100,8 @@ Para más información: KLOHESV Cotización System
             lotesOrdenados.forEach((lote, index) => {
                 const totalUnidades = lote.products.reduce((sum, p) => sum + p.units, 0);
                 const totalVentas = lote.products.reduce((sum, p) => sum + p.price, 0);
-                const totalInversion = lote.products.reduce((sum, p) => sum + p.cost, 0) + 
-                                      lote.vendorShipping + lote.shipping + lote.taxes;
+                const totalCompra = lote.products.reduce((sum, p) => sum + p.cost, 0);
+                const totalInversion = totalCompra + lote.vendorShipping + lote.shipping + lote.taxes;
                 const gananciaNeta = totalVentas - totalInversion;
                 
                 html += `
@@ -3780,8 +3815,8 @@ Para más información: KLOHESV Cotización System
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
             const units = parseInt(document.getElementById('productUnits').value) || 1;
             
-            if (cost <= 0 || price <= 0) {
-                showAlert('Primero ingresa el costo de compra y precio de venta');
+            if (cost <= 0) {
+                showAlert('Primero ingresa el costo de compra');
                 return;
             }
             
@@ -3796,7 +3831,15 @@ Para más información: KLOHESV Cotización System
             
             document.getElementById('breakdownModalCost').textContent = '$' + cost.toFixed(2);
             document.getElementById('breakdownModalPrice').textContent = '$' + price.toFixed(2);
-            document.getElementById('breakdownModalMargin').textContent = ((price - cost) / cost * 100).toFixed(1) + '%';
+            
+            // Manejar margen infinito cuando price es 0
+            if (cost > 0 && price >= 0) {
+                const margin = ((price - cost) / cost * 100);
+                document.getElementById('breakdownModalMargin').textContent = margin.toFixed(1) + '%';
+            } else {
+                document.getElementById('breakdownModalMargin').textContent = '0%';
+            }
+            
             document.getElementById('breakdownModalGross').textContent = '$' + grossProfitPerUnit.toFixed(2);
             
             document.getElementById('detailBaseCost').textContent = '$' + cost.toFixed(2);
@@ -3849,7 +3892,7 @@ Para más información: KLOHESV Cotización System
             const priceUnitDisplay = document.getElementById('priceUnitDisplay');
             const priceUnitValue = document.getElementById('priceUnitValue');
             
-            if (price > 0) {
+            if (price >= 0 && document.getElementById('productPrice').value !== '') {
                 priceUnitDisplay.style.display = 'block';
                 priceUnitValue.textContent = '$' + price.toFixed(2);
             } else {
@@ -3861,7 +3904,7 @@ Para más información: KLOHESV Cotización System
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
-            if (cost > 0 && price > 0) {
+            if (cost > 0) {
                 const margin = ((price - cost) / cost) * 100;
                 const grossProfitPerUnit = price - cost;
                 const grossProfitTotal = grossProfitPerUnit * units;
@@ -3890,11 +3933,12 @@ Para más información: KLOHESV Cotización System
             
             const name = document.getElementById('productName').value.trim();
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
-            const price = parseFloat(document.getElementById('productPrice').value) || 0;
+            const priceInput = document.getElementById('productPrice').value;
+            const price = priceInput === '' ? -1 : parseFloat(priceInput);
             const units = parseInt(document.getElementById('productUnits').value) || 1;
             
-            if (!name || cost <= 0 || price <= 0) {
-                showAlert('COMPLETA: NOMBRE, COSTO DE COMPRA Y PRECIO DE VENTA');
+            if (!name || cost <= 0 || price < 0) {
+                showAlert('COMPLETA: NOMBRE, COSTO DE COMPRA Y PRECIO DE VENTA (PUEDE SER $0)');
                 return;
             }
             
@@ -3903,7 +3947,7 @@ Para más información: KLOHESV Cotización System
             const shipPerUnit = currentLote.shipping / newCount;
             const taxPerUnit = currentLote.taxes / newCount;
             
-            const margin = ((price - cost) / cost) * 100;
+            const margin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
             const grossProfitPerUnit = price - cost;
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
             const netProfitPerUnit = price - realCost;
@@ -3941,7 +3985,7 @@ Para más información: KLOHESV Cotización System
             
             recalculateAllProducts();
             clearForm();
-            updateImageCount(); // NUEVO: Actualizar contador de imágenes
+            updateImageCount(); // NUEVO: Actualizar contador
             saveData();
         }
 

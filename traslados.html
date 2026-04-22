@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización de Productos KLOHESV</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js  "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js  "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js  "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js  "></script>
     <style>
         * {
             margin: 0;
@@ -1729,6 +1729,7 @@
             display: block;
         }
     </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -4152,31 +4153,34 @@ Para más información: KLOHESV Cotización System
 
         async function exportPDF() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            
+            // TABLOIDE 10.99" x 16.97" en modo horizontal (landscape)
+            const tabloidW = 16.97 * 25.4;  // 431.038 mm
+            const tabloidH = 10.99 * 25.4;  // 279.146 mm
+            const doc = new jsPDF('l', 'mm', [tabloidW, tabloidH]);
+
             doc.setFillColor(181, 131, 141);
-            doc.rect(0, 0, 300, 20, 'F');
+            doc.rect(0, 0, tabloidW, 20, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
             doc.text(`REPORTE: ${currentLote.id.toUpperCase()}`, 15, 14);
-            
+
             doc.setTextColor(200);
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
-            doc.text(`${currentLote.products.length} PRODUCTOS`, 250, 14);
-            
+            doc.text(`${currentLote.products.length} PRODUCTOS`, tabloidW - 60, 14);
+
             let y = 30;
-            
+
             const totalPurchaseCost = currentLote.products.reduce((a, p) => a + p.cost, 0);
             const totalInvestment = totalPurchaseCost + currentLote.vendorShipping + currentLote.shipping + currentLote.taxes;
             const totalSales = currentLote.products.reduce((a, p) => a + p.price, 0);
             const totalNet = totalSales - totalInvestment;
             const totalUnits = currentLote.products.reduce((a, p) => a + p.units, 0);
-            
+
             doc.setFillColor(240, 240, 240);
-            doc.rect(15, y, 260, 20, 'F');
-            
+            doc.rect(15, y, tabloidW - 30, 20, 'F');
+
             doc.setTextColor(0);
             doc.setFontSize(10);
             const metrics = [
@@ -4188,8 +4192,9 @@ Para más información: KLOHESV Cotización System
                 [`INVERSIÓN:`, `$${totalInvestment.toFixed(2)}`],
                 [`GANANCIA:`, `$${totalNet.toFixed(2)}`]
             ];
-            
+
             let x = 20;
+            const metricSpacing = (tabloidW - 60) / 7;
             metrics.forEach(([label, value]) => {
                 doc.setTextColor(100);
                 doc.setFontSize(8);
@@ -4199,11 +4204,13 @@ Para más información: KLOHESV Cotización System
                 doc.setFontSize(11);
                 doc.setFont(undefined, 'bold');
                 doc.text(value, x, y + 15);
-                x += 36;
+                x += metricSpacing;
             });
-            
+
+            // Build table data with image column
             const data = currentLote.products.map((p, i) => [
                 (i + 1).toString(),
+                p.image ? 'IMG' : '',
                 p.name.toUpperCase(),
                 p.units.toString(),
                 `$${p.cost.toFixed(2)}`,
@@ -4215,10 +4222,19 @@ Para más información: KLOHESV Cotización System
                 `$${p.price.toFixed(2)}`,
                 `$${p.netProfit.toFixed(2)}`
             ]);
-            
+
+            // Detect image format from data URL
+            function getImageFormat(dataUrl) {
+                if (!dataUrl) return null;
+                if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG';
+                if (dataUrl.startsWith('data:image/png')) return 'PNG';
+                if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+                return 'JPEG';
+            }
+
             doc.autoTable({
                 startY: y + 28,
-                head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'P.UNIT', 'VENTA', 'GANANCIA']],
+                head: [['#', 'IMG', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'P.UNIT', 'VENTA', 'GANANCIA']],
                 body: data,
                 theme: 'plain',
                 headStyles: { 
@@ -4236,21 +4252,46 @@ Para más información: KLOHESV Cotización System
                 },
                 columnStyles: {
                     0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 40 },
-                    2: { cellWidth: 12, halign: 'center' },
-                    3: { cellWidth: 18, halign: 'right' },
-                    4: { cellWidth: 16, halign: 'right' },
-                    5: { cellWidth: 16, halign: 'right' },
-                    6: { cellWidth: 16, halign: 'right' },
-                    7: { cellWidth: 20, halign: 'right' },
-                    8: { cellWidth: 18, halign: 'right' },
+                    1: { cellWidth: 18, halign: 'center' },
+                    2: { cellWidth: 45 },
+                    3: { cellWidth: 12, halign: 'center' },
+                    4: { cellWidth: 20, halign: 'right' },
+                    5: { cellWidth: 18, halign: 'right' },
+                    6: { cellWidth: 18, halign: 'right' },
+                    7: { cellWidth: 18, halign: 'right' },
+                    8: { cellWidth: 22, halign: 'right' },
                     9: { cellWidth: 20, halign: 'right' },
-                    10: { cellWidth: 20, halign: 'right' }
+                    10: { cellWidth: 22, halign: 'right' },
+                    11: { cellWidth: 22, halign: 'right' }
+                },
+                didDrawCell: function(data) {
+                    // Draw product images in the IMG column
+                    if (data.column.index === 1 && data.cell.section === 'body') {
+                        const rowIdx = data.row.index;
+                        const product = currentLote.products[rowIdx];
+                        if (product && product.image) {
+                            const imgW = 12;
+                            const imgH = 12;
+                            const imgX = data.cell.x + (data.cell.width - imgW) / 2;
+                            const imgY = data.cell.y + (data.cell.height - imgH) / 2;
+                            const format = getImageFormat(product.image);
+                            try {
+                                doc.addImage(product.image, format, imgX, imgY, imgW, imgH, undefined, 'FAST');
+                            } catch(e) {
+                                // Fallback: try JPEG if other format fails
+                                try {
+                                    doc.addImage(product.image, 'JPEG', imgX, imgY, imgW, imgH, undefined, 'FAST');
+                                } catch(e2) {
+                                    // Silently skip if image cannot be added
+                                }
+                            }
+                        }
+                    }
                 }
             });
-            
+
             doc.save(`${currentLote.id.toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
-        }
+        }}
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {

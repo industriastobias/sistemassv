@@ -2231,6 +2231,7 @@
       font-size: 0.75rem;
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -2289,6 +2290,9 @@
 <div class="app-content" id="appContent">
 
 <script>
+  // ============================================
+  // MODO KIOSCO - INICIALIZACION INMEDIATA
+  // ============================================
   (function () {
     const kiosco = localStorage.getItem('kiosco') === 'true';
     if (kiosco) {
@@ -2305,6 +2309,11 @@
   </div>
   
   <div class="nav-menu">
+    <!-- Boton toggle modo kiosco en la barra principal -->
+    <button class="nav-btn" id="btnKioscoToggle" onclick="toggleKiosco()" title="Activar modo kiosco" style="color: var(--text-secondary); transition: all 0.3s;">
+      <i class="fa-solid fa-expand" id="iconKiosco"></i>
+    </button>
+
     <div class="total-badge">
       <span>Total:</span>
       <span id="totalAmount">$0.00</span>
@@ -2326,6 +2335,14 @@
         
         <div class="menu-divider"></div>
         
+        <!-- Toggle modo kiosco en el menu -->
+        <a href="#" onclick="toggleKiosco(); return false;" class="menu-item" id="menuItemKiosco">
+          <i class="fa-solid fa-expand" id="menuIconKiosco"></i> 
+          <span id="menuTextKiosco">Activar modo kiosco</span>
+        </a>
+        
+        <div class="menu-divider"></div>
+        
         <a href="#" onclick="abrirPapelera()" class="menu-item"><i class="fa-solid fa-trash-can"></i> Papelera</a>
         <a href="#" onclick="eliminarSinStock()" class="menu-item danger"><i class="fa-solid fa-eraser"></i> Eliminar Stock 0</a>
         <a href="#" onclick="mostrarAtajos()" class="menu-item"><i class="fa-solid fa-keyboard"></i> Atajos de Teclado</a>
@@ -2339,7 +2356,7 @@
         <div class="menu-divider"></div>
         
         <a href="#" onclick="cerrarSesion()" class="menu-item logout"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesion</a>
-        <a href="#" onclick="salirKiosco()" class="menu-item danger"><i class="fa-solid fa-xmark"></i> Salir modo kiosco</a>
+        <a href="#" onclick="salirKiosco()" class="menu-item danger" id="menuSalirKiosco" style="display: none;"><i class="fa-solid fa-xmark"></i> Salir modo kiosco</a>
       </div>
     </button>
   </div>
@@ -2395,6 +2412,10 @@
   <div class="shortcut-row">
     <span>Cerrar Modales</span>
     <span class="shortcut-key">Esc</span>
+  </div>
+  <div class="shortcut-row">
+    <span>Modo Kiosco</span>
+    <span class="shortcut-key">F11</span>
   </div>
   <div style="margin-top: 0.5rem; text-align: center; font-size: 0.75rem; color: var(--text-secondary);">
     Click fuera para cerrar
@@ -2905,6 +2926,86 @@
 <script>
 
 // ============================================
+// SISTEMA DE MODO KIOSCO ROBUSTO
+// Activa/desactiva manualmente, se mantiene 
+// activo en cada accion, re-entra automaticamente
+// ============================================
+let kioscoInterval = null;
+let kioscoActivado = localStorage.getItem('kiosco') === 'true';
+
+function entrarKiosco() {
+  localStorage.setItem('kiosco', 'true');
+  kioscoActivado = true;
+  document.body.classList.add('kiosco');
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  iniciarKioscoGuardian();
+  actualizarUIKiosco();
+}
+
+function salirKiosco() {
+  localStorage.setItem('kiosco', 'false');
+  kioscoActivado = false;
+  document.body.classList.remove('kiosco');
+  detenerKioscoGuardian();
+  document.exitFullscreen?.().catch(() => {});
+  actualizarUIKiosco();
+}
+
+function toggleKiosco() {
+  if (kioscoActivado) {
+    salirKiosco();
+  } else {
+    entrarKiosco();
+  }
+}
+
+function iniciarKioscoGuardian() {
+  // Re-entra en fullscreen cada segundo si se pierde (por modales, alerts, etc.)
+  if (kioscoInterval) clearInterval(kioscoInterval);
+  kioscoInterval = setInterval(() => {
+    if (kioscoActivado && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+  }, 1000);
+}
+
+function detenerKioscoGuardian() {
+  if (kioscoInterval) {
+    clearInterval(kioscoInterval);
+    kioscoInterval = null;
+  }
+}
+
+function actualizarUIKiosco() {
+  const btn = document.getElementById('btnKioscoToggle');
+  const icon = document.getElementById('iconKiosco');
+  const menuItem = document.getElementById('menuItemKiosco');
+  const menuIcon = document.getElementById('menuIconKiosco');
+  const menuText = document.getElementById('menuTextKiosco');
+  const menuSalir = document.getElementById('menuSalirKiosco');
+  
+  if (kioscoActivado) {
+    btn.title = 'Desactivar modo kiosco';
+    btn.style.color = 'var(--success)';
+    icon.className = 'fa-solid fa-compress';
+    if (menuItem) {
+      menuIcon.className = 'fa-solid fa-compress';
+      menuText.textContent = 'Desactivar modo kiosco';
+    }
+    if (menuSalir) menuSalir.style.display = 'flex';
+  } else {
+    btn.title = 'Activar modo kiosco';
+    btn.style.color = 'var(--text-secondary)';
+    icon.className = 'fa-solid fa-expand';
+    if (menuItem) {
+      menuIcon.className = 'fa-solid fa-expand';
+      menuText.textContent = 'Activar modo kiosco';
+    }
+    if (menuSalir) menuSalir.style.display = 'none';
+  }
+}
+
+// ============================================
 // SISTEMA DE COMPRESION DE IMAGENES OPTIMIZADO
 // Ahorro de espacio: 15-40KB por imagen
 // ============================================
@@ -3327,13 +3428,6 @@ document.addEventListener('click', e => {
   if (e.target === document.getElementById('eliminarStockModal')) cerrarModalEliminarStock(); 
 });
 
-function salirKiosco() { 
-  localStorage.setItem('kiosco', 'false'); 
-  document.body.classList.remove('kiosco'); 
-  document.exitFullscreen?.(); 
-  location.reload(); 
-}
-
 function switchTab(type, btn) { 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); 
   btn.classList.add('active'); 
@@ -3397,7 +3491,13 @@ function manejarAtajosTeclado(e) {
         openBulkModal(); 
         break; 
     } 
-  } 
+  }
+
+  // F11 para toggle modo kiosco
+  if (e.key === 'F11') {
+    e.preventDefault();
+    toggleKiosco();
+  }
 }
 
 function mostrarAtajos() { 
@@ -4596,6 +4696,12 @@ function initApp() {
   iniciarAutoguardado(); 
   document.addEventListener('keydown', manejarAtajosTeclado); 
   actualizarSelectoresCategorias(); 
+  
+  // Inicializar UI de modo kiosco
+  actualizarUIKiosco();
+  if (kioscoActivado) {
+    iniciarKioscoGuardian();
+  }
 }
 </script>
 

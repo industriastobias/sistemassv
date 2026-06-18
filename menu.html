@@ -20,11 +20,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    /* ================================================================
-       DAYMAR SHOP — DASHBOARD v2.1
-       Minimalista · 5 columnas · Rosa Vieja dominante
-       Paleta: Rosa Vieja #C4A4A4 | Azul Mar #2C5F7C | Blanco
-    ================================================================ */
     :root {
       --dm-rose:           #C4A4A4;
       --dm-rose-light:     #F5E8E8;
@@ -55,6 +50,8 @@
       --dm-transition-fast:  0.18s cubic-bezier(0.4,0,0.2,1);
       --dm-transition-smooth: 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
       --font-body:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --sidebar-width:     240px;
+      --sidebar-width-tablet: 200px;
     }
 
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -67,7 +64,7 @@
       color: var(--dm-text);
       min-height: 100vh;
       overflow-x: hidden;
-      overflow-y: auto;
+      overflow-y: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       line-height: 1.5;
@@ -92,17 +89,18 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
     }
 
     /* ================================================================
-       HEADER
+       HEADER — Nombre centrado, avatar a la derecha
     ================================================================ */
     .header {
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.95);
       backdrop-filter: blur(20px) saturate(1.2);
       -webkit-backdrop-filter: blur(20px) saturate(1.2);
       border-bottom: 1px solid rgba(196,164,164,0.2);
@@ -112,10 +110,19 @@
       justify-content: space-between;
       flex-shrink: 0;
       transition: box-shadow var(--dm-transition-fast);
+      height: 64px;
     }
 
     .header.scrolled {
       box-shadow: 0 4px 16px rgba(196,164,164,0.08);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+      flex: 0 0 auto;
     }
 
     .header-logo {
@@ -154,10 +161,38 @@
       opacity: 0.7;
     }
 
+    .header-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .header-center .user-name-center {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--dm-text);
+      letter-spacing: 0.02em;
+    }
+
+    .header-center .user-role-center {
+      font-size: 0.65rem;
+      color: var(--dm-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
     .header-right {
       display: flex;
       align-items: center;
       gap: 1rem;
+      flex: 0 0 auto;
+      margin-left: auto;
     }
 
     .user-section {
@@ -247,102 +282,123 @@
     }
 
     /* ================================================================
-       MAIN CONTENT
+       LAYOUT: Sidebar + Main
     ================================================================ */
-    .main-content {
-      flex: 1;
+    .layout {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem 1.5rem 2.5rem;
-      width: 100%;
-      max-width: 100%;
-      margin: 0 auto;
-      overflow-y: auto;
-    }
-
-    @keyframes fadeInUp {
-      from { opacity:0; transform:translateY(16px); }
-      to   { opacity:1; transform:translateY(0); }
+      flex: 1;
+      min-height: 100vh;
+      padding-top: 64px;
     }
 
     /* ================================================================
-       NAVIGATION GRID — 5 COLUMNAS
+       SIDEBAR — Vertical, 80% altura, scrollable
     ================================================================ */
-    .nav-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0.75rem;
-      width: 100%;
-      max-width: 900px;
-      margin: 0 auto;
-      animation: fadeInUp 0.7s ease-out both;
-      align-content: stretch;
+    .sidebar {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 80vh;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px) saturate(1.1);
+      -webkit-backdrop-filter: blur(16px) saturate(1.1);
+      border-right: 1px solid rgba(196,164,164,0.18);
+      border-bottom-right-radius: var(--dm-radius);
+      border-top-right-radius: var(--dm-radius);
+      box-shadow: var(--dm-shadow-md);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 90;
+      padding: 1rem 0.75rem 1rem 0.75rem;
+      gap: 0.35rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--dm-rose-muted); border-radius: 3px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: var(--dm-rose); }
+
+    .sidebar-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--dm-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 0.5rem 0.75rem 0.25rem;
+      margin-bottom: 0.25rem;
+      border-bottom: 1px solid var(--dm-border-light);
     }
 
     .nav-card {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 1.5rem 0.625rem;
-      background: var(--dm-surface);
-      border: 1px solid var(--dm-border-light);
+      gap: 0.75rem;
+      padding: 0.65rem 0.875rem;
+      background: transparent;
+      border: 1px solid transparent;
       border-radius: var(--dm-radius-xs);
       text-decoration: none;
       color: var(--dm-text);
       transition: all var(--dm-transition-smooth);
       position: relative;
       overflow: hidden;
-      min-height: 0;
-      box-shadow: var(--dm-shadow-xs);
       cursor: pointer;
+      width: 100%;
     }
 
-    .nav-card::after {
+    .nav-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(196,164,164,0.25), transparent);
-      opacity: 0;
-      transition: opacity var(--dm-transition-smooth);
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      background: var(--dm-rose);
+      border-radius: 0 3px 3px 0;
+      transition: height var(--dm-transition-smooth);
     }
 
     .nav-card:hover {
-      transform: translateY(-4px) scale(1.01);
-      border-color: rgba(196,164,164,0.3);
-      box-shadow: var(--dm-shadow-md);
       background: var(--dm-surface-hover);
+      border-color: rgba(196,164,164,0.15);
+      transform: translateX(3px);
     }
 
-    .nav-card:hover::after { opacity: 1; }
+    .nav-card:hover::before {
+      height: 60%;
+    }
 
     .nav-card:active {
-      transform: translateY(-1px) scale(0.985);
+      transform: translateX(1px) scale(0.98);
       transition-duration: 0.1s;
     }
 
     .nav-card .icon-wrap {
       position: relative;
       z-index: 1;
-      width: 50px;
-      height: 50px;
+      width: 36px;
+      height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 10px;
       background: linear-gradient(145deg, var(--dm-rose-light) 0%, rgba(232,242,248,0.5) 100%);
       transition: all var(--dm-transition-smooth);
+      flex-shrink: 0;
     }
 
     .nav-card:hover .icon-wrap {
       background: linear-gradient(145deg, var(--dm-rose-muted) 0%, var(--dm-primary-fade) 100%);
-      transform: scale(1.08);
+      transform: scale(1.05);
     }
 
     .nav-card .material-icons {
-      font-size: 24px;
+      font-size: 20px;
       color: var(--dm-rose-dark);
       transition: all var(--dm-transition-fast);
       font-family: 'Material Icons';
@@ -366,12 +422,15 @@
     .nav-card .nav-label {
       position: relative;
       z-index: 1;
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       font-weight: 600;
       color: var(--dm-text);
       letter-spacing: 0.01em;
-      text-align: center;
+      text-align: left;
       transition: color var(--dm-transition-fast);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .nav-card:hover .nav-label {
@@ -379,9 +438,12 @@
     }
 
     .nav-card.active {
-      border-color: var(--dm-rose);
       background: linear-gradient(145deg, var(--dm-rose-light), rgba(232,242,248,0.3));
-      box-shadow: 0 3px 12px rgba(196,164,164,0.1);
+      border-color: rgba(196,164,164,0.2);
+    }
+
+    .nav-card.active::before {
+      height: 70%;
     }
 
     .nav-card.active .icon-wrap {
@@ -398,9 +460,7 @@
       font-weight: 700;
     }
 
-    /* ================================================================
-       SYSTEM CARDS — Estilo especial para tarjetas de sistema
-    ================================================================ */
+    /* System cards en sidebar */
     .nav-card.system-card .icon-wrap {
       background: linear-gradient(145deg, var(--dm-rose-light) 0%, rgba(232,242,248,0.5) 100%);
     }
@@ -426,10 +486,72 @@
     }
 
     .nav-card.system-card.danger-card:hover {
-      border-color: rgba(199,107,107,0.3);
+      border-color: rgba(199,107,107,0.2);
     }
 
-    /* Kiosk Button */
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--dm-border-light), transparent);
+      margin: 0.5rem 0.5rem;
+    }
+
+    /* ================================================================
+       MAIN CONTENT
+    ================================================================ */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: 1.5rem 2rem 2.5rem;
+      min-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .main-content-inner {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .welcome-card {
+      background: linear-gradient(135deg, var(--dm-rose-light) 0%, var(--dm-primary-fade) 100%);
+      border: 1px solid var(--dm-border-light);
+      border-radius: var(--dm-radius);
+      padding: 2rem;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--dm-shadow-sm);
+    }
+
+    .welcome-card h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--dm-primary-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-card p {
+      font-size: 0.9rem;
+      color: var(--dm-text-secondary);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .welcome-card {
+      animation: fadeInUp 0.7s ease-out both;
+    }
+
+    /* ================================================================
+       KIOSK BUTTON
+    ================================================================ */
     #kioskBtn {
       position: fixed;
       bottom: 1.25rem;
@@ -636,172 +758,149 @@
     body::-webkit-scrollbar-thumb:hover { background: var(--dm-rose); }
 
     /* ================================================================
-       RESPONSIVE — 5 columnas fluido
+       RESPONSIVE — Tablets & iPads
     ================================================================ */
 
-    /* PC Desktop grande */
-    @media (min-width: 1200px) {
-      .header { padding: 0.875rem 2.5rem; }
-      .main-content { padding: 2rem 2.5rem 3rem; }
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 1rem;
-        max-width: 950px;
-      }
-      .nav-card {
-        padding: 1.75rem 1rem;
-        gap: 0.625rem;
-      }
-      .nav-card .icon-wrap {
-        width: 54px;
-        height: 54px;
-      }
-      .nav-card .material-icons { font-size: 26px; }
-      .nav-card .nav-label { font-size: 0.82rem; }
+    /* iPad Pro / Desktop */
+    @media (min-width: 1024px) {
+      .header { padding: 0.875rem 2rem; height: 68px; }
+      .layout { padding-top: 68px; }
+      .sidebar { top: 68px; width: var(--sidebar-width); height: 80vh; }
+      .main-content { margin-left: var(--sidebar-width); padding: 2rem 2.5rem 3rem; }
+      .header-center .user-name-center { font-size: 1.1rem; }
     }
 
-    /* PC Desktop medio */
-    @media (min-width: 1024px) and (max-width: 1199px) {
-      .header { padding: 0.875rem 2rem; }
-      .main-content { padding: 1.75rem 2rem 2.5rem; }
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.875rem;
-        max-width: 850px;
-      }
-      .nav-card { padding: 1.5rem 0.75rem; }
-    }
-
-    /* Tablet horizontal / iPad */
+    /* iPad / Tablet horizontal */
     @media (min-width: 768px) and (max-width: 1023px) {
-      .header { padding: 0.75rem 1.5rem; }
-      .main-content { padding: 1.5rem 1.5rem 2rem; }
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.75rem;
-        max-width: 720px;
+      .header { padding: 0.75rem 1.5rem; height: 60px; }
+      .layout { padding-top: 60px; }
+      .sidebar {
+        top: 60px;
+        width: var(--sidebar-width-tablet);
+        height: 80vh;
+        padding: 0.875rem 0.625rem;
       }
-      .nav-card {
-        padding: 1.35rem 0.625rem;
-        gap: 0.5rem;
-      }
-      .nav-card .icon-wrap {
-        width: 46px;
-        height: 46px;
-      }
-      .nav-card .material-icons { font-size: 22px; }
-      .nav-card .nav-label { font-size: 0.72rem; }
+      .main-content { margin-left: var(--sidebar-width-tablet); padding: 1.5rem 1.5rem 2rem; }
+      .nav-card { padding: 0.55rem 0.75rem; gap: 0.6rem; }
+      .nav-card .icon-wrap { width: 32px; height: 32px; }
+      .nav-card .material-icons { font-size: 18px; }
+      .nav-card .nav-label { font-size: 0.78rem; }
+      .header-center .user-name-center { font-size: 0.95rem; }
+      .header-center .user-role-center { font-size: 0.6rem; }
     }
 
     /* Tablet vertical / iPad portrait */
     @media (min-width: 640px) and (max-width: 767px) {
-      .header { padding: 0.75rem 1.25rem; }
-      .main-content { padding: 1.25rem 1.25rem 2rem; }
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.625rem;
-        max-width: 600px;
+      .header { padding: 0.625rem 1rem; height: 56px; }
+      .layout { padding-top: 56px; }
+      .sidebar {
+        top: 56px;
+        width: 180px;
+        height: 80vh;
+        padding: 0.75rem 0.5rem;
+        border-bottom-right-radius: var(--dm-radius-sm);
+        border-top-right-radius: var(--dm-radius-sm);
       }
-      .nav-card {
-        padding: 1.25rem 0.5rem;
-        gap: 0.4rem;
-      }
-      .nav-card .icon-wrap {
-        width: 42px;
-        height: 42px;
-      }
-      .nav-card .material-icons { font-size: 20px; }
-      .nav-card .nav-label { font-size: 0.68rem; }
+      .main-content { margin-left: 180px; padding: 1.25rem 1.25rem 2rem; }
+      .nav-card { padding: 0.5rem 0.625rem; gap: 0.5rem; }
+      .nav-card .icon-wrap { width: 30px; height: 30px; border-radius: 8px; }
+      .nav-card .material-icons { font-size: 17px; }
+      .nav-card .nav-label { font-size: 0.72rem; }
+      .header-logo-text { font-size: 1.1rem; }
+      .header-logo img { height: 34px; }
+      .header-center .user-name-center { font-size: 0.9rem; }
+      .header-center .user-role-center { display: none; }
+      .user-section { padding: 0.2rem 0.4rem 0.2rem 0.75rem; }
+      .user-name { font-size: 0.75rem; }
+      .user-role { font-size: 0.55rem; }
+      .user-avatar { width: 32px; height: 32px; }
     }
 
-    /* Movil grande */
+    /* Movil grande — sidebar colapsa a bottom nav */
     @media (max-width: 639px) {
-      .header { padding: 0.625rem 1rem; }
-      .main-content { padding: 1.25rem 1rem 1.75rem; }
-      .nav-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
+      .header { padding: 0.625rem 1rem; height: 56px; }
+      .layout { padding-top: 56px; flex-direction: column; }
+      .sidebar {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        max-height: 70px;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-right: none;
+        border-top: 1px solid rgba(196,164,164,0.18);
+        border-radius: var(--dm-radius-sm) var(--dm-radius-sm) 0 0;
+        padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom));
+        gap: 0.25rem;
+        align-items: center;
+        justify-content: flex-start;
+        box-shadow: 0 -4px 20px rgba(196,164,164,0.1);
       }
+      .sidebar-title, .sidebar-divider { display: none; }
       .nav-card {
-        padding: 1rem 0.375rem;
-        gap: 0.35rem;
+        flex-direction: column;
+        padding: 0.4rem 0.5rem;
+        gap: 0.2rem;
+        min-width: 64px;
         border-radius: 10px;
       }
-      .nav-card .icon-wrap {
-        width: 38px;
-        height: 38px;
-        border-radius: 8px;
-      }
+      .nav-card::before { display: none; }
+      .nav-card .icon-wrap { width: 32px; height: 32px; border-radius: 8px; }
       .nav-card .material-icons { font-size: 18px; }
-      .nav-card .nav-label { font-size: 0.65rem; }
-      .user-section { padding: 0.2rem 0.4rem 0.2rem 0.75rem; }
-      .user-name { font-size: 0.78rem; }
-      .user-role { font-size: 0.58rem; }
-      .user-avatar { width: 34px; height: 34px; }
+      .nav-card .nav-label { font-size: 0.6rem; text-align: center; }
+      .main-content {
+        margin-left: 0;
+        padding: 1rem 1rem calc(90px + env(safe-area-inset-bottom));
+      }
+      .header-center .user-name-center { font-size: 0.85rem; }
+      .header-center .user-role-center { display: none; }
+      .user-section { padding: 0.2rem 0.4rem 0.2rem 0.6rem; }
+      .user-name { font-size: 0.72rem; }
+      .user-role { display: none; }
+      .user-avatar { width: 30px; height: 30px; }
       #kioskBtn {
-        bottom: 1rem;
+        bottom: calc(5.5rem + env(safe-area-inset-bottom));
         right: 1rem;
         padding: 0.5rem 1rem;
-        font-size: 0.78rem;
+        font-size: 0.75rem;
       }
     }
 
     /* Movil pequeno */
     @media (max-width: 374px) {
-      .nav-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.4rem;
-      }
-      .nav-card {
-        padding: 1rem 0.375rem;
-        gap: 0.35rem;
-      }
-      .nav-card .icon-wrap {
-        width: 38px;
-        height: 38px;
-      }
-      .nav-card .material-icons { font-size: 18px; }
-      .nav-card .nav-label { font-size: 0.62rem; }
-      .header-logo-text { font-size: 1.1rem; }
-      .header-logo img { height: 34px; }
+      .nav-card { min-width: 58px; padding: 0.35rem 0.4rem; }
+      .nav-card .icon-wrap { width: 28px; height: 28px; }
+      .nav-card .material-icons { font-size: 16px; }
+      .nav-card .nav-label { font-size: 0.55rem; }
+      .header-logo-text { font-size: 1rem; }
+      .header-logo img { height: 30px; }
+      .header-center .user-name-center { font-size: 0.8rem; }
     }
 
     /* Landscape movil */
-    @media (max-height: 500px) and (orientation: landscape) {
-      .nav-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 0.4rem;
-      }
-      .nav-card {
-        padding: 0.75rem 0.375rem;
-        gap: 0.3rem;
-      }
-      .nav-card .icon-wrap {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-      }
-      .nav-card .material-icons { font-size: 16px; }
-      .nav-card .nav-label { font-size: 0.6rem; }
+    @media (max-height: 500px) and (orientation: landscape) and (max-width: 639px) {
+      .sidebar { max-height: 60px; padding: 0.3rem 0.5rem; }
+      .nav-card { min-width: 56px; padding: 0.25rem 0.4rem; }
+      .nav-card .icon-wrap { width: 26px; height: 26px; }
+      .nav-card .material-icons { font-size: 15px; }
+      .nav-card .nav-label { font-size: 0.55rem; }
     }
 
     /* iPad especifico */
     @media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.75rem;
-      }
-      .nav-card { padding: 1.35rem 0.625rem; }
+      .sidebar { width: var(--sidebar-width-tablet); height: 80vh; }
+      .main-content { margin-left: var(--sidebar-width-tablet); }
     }
 
-    /* iPad Pro */
+    /* iPad Pro especifico */
     @media only screen and (min-device-width: 1024px) and (max-device-width: 1366px) {
-      .nav-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 0.875rem;
-        max-width: 900px;
-      }
-      .nav-card { padding: 1.5rem 0.75rem; }
+      .sidebar { width: var(--sidebar-width); height: 80vh; }
+      .main-content { margin-left: var(--sidebar-width); }
     }
 
     /* iPhone notch safe area */
@@ -847,13 +946,20 @@
 
 <div id="app">
   <header class="header" id="mainHeader" aria-label="Encabezado principal">
-    <a href="dashboard.html" class="header-logo" aria-label="DAYMAR SHOP - Inicio">
-      <img src="newlogo.jpg" alt="DAYMAR SHOP Logo" width="40" height="40">
-      <div>
-        <div class="header-logo-text">DAYMAR</div>
-        <div class="header-logo-sub">SHOP</div>
-      </div>
-    </a>
+    <div class="header-left">
+      <a href="dashboard.html" class="header-logo" aria-label="DAYMAR SHOP - Inicio">
+        <img src="newlogo.jpg" alt="DAYMAR SHOP Logo" width="40" height="40">
+        <div>
+          <div class="header-logo-text">DAYMAR</div>
+          <div class="header-logo-sub">SHOP</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="header-center">
+      <div id="userNameCenter" class="user-name-center">ERNESTO TOBIAS</div>
+      <div class="user-role-center">Administrador</div>
+    </div>
 
     <div class="header-right">
       <div class="user-section">
@@ -871,8 +977,10 @@
     </div>
   </header>
 
-  <main class="main-content" role="main">
-    <nav class="nav-grid" id="main-nav" role="navigation" aria-label="Menu principal">
+  <div class="layout">
+    <nav class="sidebar" id="main-nav" role="navigation" aria-label="Menu principal">
+      <div class="sidebar-title">Menu Principal</div>
+
       <a class="nav-card" href="compra.html" data-page="compra">
         <div class="icon-wrap"><span class="material-icons">shopping_cart</span></div>
         <span class="nav-label">Compra</span>
@@ -921,6 +1029,10 @@
         <div class="icon-wrap"><span class="material-icons">memory</span></div>
         <span class="nav-label">Electronica</span>
       </a>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-title">Sistema</div>
+
       <button class="nav-card system-card" id="exportBtn">
         <div class="icon-wrap"><span class="material-icons">archive</span></div>
         <span class="nav-label">Exportar ZIP</span>
@@ -935,7 +1047,16 @@
       </button>
       <input type="file" id="importFile" accept=".zip" style="display:none;" />
     </nav>
-  </main>
+
+    <main class="main-content" role="main">
+      <div class="main-content-inner">
+        <div class="welcome-card">
+          <h1>Bienvenido, <span id="welcomeName">ERNESTO TOBIAS</span></h1>
+          <p>Selecciona una opcion del menu lateral para comenzar.</p>
+        </div>
+      </div>
+    </main>
+  </div>
 </div>
 
 <button id="kioskBtn">Modo kiosko</button>
@@ -1167,11 +1288,16 @@ const UIManager = {
   update(foto, nombre) {
     const imgEl = document.getElementById('userPhoto');
     const nameEl = document.getElementById('userName');
+    const nameCenterEl = document.getElementById('userNameCenter');
+    const welcomeNameEl = document.getElementById('welcomeName');
+
     if (imgEl) {
       imgEl.src = foto;
       imgEl.onerror = () => { imgEl.src = CONFIG.DEFAULT_AVATAR; };
     }
     if (nameEl) nameEl.textContent = nombre || CONFIG.DEFAULT_USER;
+    if (nameCenterEl) nameCenterEl.textContent = nombre || CONFIG.DEFAULT_USER;
+    if (welcomeNameEl) welcomeNameEl.textContent = nombre || CONFIG.DEFAULT_USER;
   }
 };
 

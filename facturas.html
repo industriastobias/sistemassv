@@ -3,452 +3,647 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Facturas – KLOHESV</title>
+  <title>Facturas — DAYMAR-SHOP</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap');
-    
     :root {
-      --bg: #f5f5f5;
-      --card: #ffffff;
-      --text-primary: #2d2d2d;
-      --text-secondary: #6b7280;
-      --text-muted: #9ca3af;
-      --border: #e5e7eb;
-      --border-dark: #d1d5db;
-      --accent: #4b5563;
-      --accent-hover: #374151;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 14px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
-      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --bg: #0c0e17;
+      --bg-elevated: #131620;
+      --bg-card: #1a1d2a;
+      --bg-card-hover: #1f2233;
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(255,255,255,0.12);
+      --text-primary: #f0f1f5;
+      --text-secondary: #8b8fa3;
+      --text-muted: #4e5268;
+      --accent: #e8b84b;
+      --accent-soft: rgba(232,184,75,0.15);
+      --accent-glow: rgba(232,184,75,0.4);
+      --success: #34d399;
+      --success-soft: rgba(52,211,153,0.12);
+      --danger: #fb7185;
+      --danger-soft: rgba(251,113,133,0.12);
+      --info: #60a5fa;
+      --info-soft: rgba(96,165,250,0.12);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 40px rgba(232,184,75,0.08);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: var(--bg); 
-      color: var(--text-primary); 
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
       min-height: 100vh;
       line-height: 1.5;
+      overflow-x: hidden;
     }
+
+    /* ===== BACKGROUND ANIMATED ===== */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .bg-mesh::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(ellipse 600px 600px at 20% 20%, rgba(232,184,75,0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 400px at 80% 60%, rgba(96,165,250,0.03) 0%, transparent 70%),
+        radial-gradient(ellipse 300px 300px at 50% 90%, rgba(52,211,153,0.03) 0%, transparent 70%);
+      animation: meshMove 20s ease-in-out infinite alternate;
+    }
+    @keyframes meshMove {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-2%, -1%) rotate(2deg); }
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
     /* ===== HEADER ===== */
     .header-bar {
-      background: var(--card);
+      background: rgba(12,14,23,0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
       border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
+      padding: 0 32px;
+      height: 68px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .brand-icon {
       width: 42px;
       height: 42px;
-      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      background: linear-gradient(135deg, var(--accent) 0%, #d4a03f 100%);
       border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--accent);
-      font-size: 1.2rem;
-      border: 1px solid var(--border);
+      color: #0c0e17;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 16px rgba(232,184,75,0.3);
+      transition: var(--transition);
+      animation: iconPulse 3s ease-in-out infinite;
     }
+    @keyframes iconPulse {
+      0%, 100% { box-shadow: 0 4px 16px rgba(232,184,75,0.3); }
+      50% { box-shadow: 0 4px 24px rgba(232,184,75,0.5); }
+    }
+    .brand-icon:hover { transform: scale(1.05) rotate(-5deg); }
 
     .brand-text h1 {
-      font-size: 1.3rem;
-      font-weight: 600;
+      font-size: 1.25rem;
+      font-weight: 700;
       color: var(--text-primary);
       letter-spacing: -0.02em;
     }
+    .brand-text h1 span { color: var(--accent); }
 
-    .brand-text span {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      font-weight: 400;
+    .brand-text .subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .subtitle-dot {
+      width: 5px; height: 5px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(52,211,153,0.6);
+      animation: dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
-    /* ===== MENÚ ===== */
+    /* ===== MENU BUTTON ===== */
     #menuToggle {
-      width: 40px;
-      height: 40px;
-      background: var(--card);
+      width: 42px; height: 42px;
+      background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       color: var(--text-secondary);
       font-size: 1rem;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
+      overflow: hidden;
     }
-
+    #menuToggle::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--accent-soft), transparent);
+      opacity: 0;
+      transition: var(--transition-fast);
+    }
     #menuToggle:hover {
-      background: #f3f4f6;
-      border-color: var(--border-dark);
-      color: var(--text-primary);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
     }
+    #menuToggle:hover::before { opacity: 1; }
+    #menuToggle i { position: relative; z-index: 1; }
 
+    /* ===== SIDEBAR ===== */
     #sideMenu {
       position: fixed;
       top: 0;
-      right: -300px;
-      width: 300px;
+      right: -320px;
+      width: 320px;
       height: 100vh;
-      background: var(--card);
-      box-shadow: var(--shadow-lg);
+      background: rgba(26,29,42,0.95);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      box-shadow: var(--shadow-md);
       display: flex;
       flex-direction: column;
-      padding: 80px 16px 24px;
+      padding: 90px 16px 24px;
       gap: 4px;
-      transition: right 0.3s ease;
+      transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 999;
+      border-left: 1px solid var(--border);
     }
-
     #sideMenu.show { right: 0; }
+
+    .menu-header {
+      padding: 0 12px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .menu-header h3 {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
 
     #sideMenu a {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
+      gap: 14px;
+      padding: 13px 16px;
       color: var(--text-secondary);
       text-decoration: none;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
       font-size: 0.9rem;
       font-weight: 500;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
+      position: relative;
+      overflow: hidden;
     }
-
+    #sideMenu a::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 0 4px 4px 0;
+      transform: scaleY(0);
+      transition: var(--transition-fast);
+    }
     #sideMenu a:hover {
-      background: #f3f4f6;
+      background: rgba(255,255,255,0.03);
       color: var(--text-primary);
     }
-
-    #sideMenu a i {
-      width: 20px;
-      text-align: center;
-    }
-
+    #sideMenu a:hover::before { transform: scaleY(1); }
     #sideMenu a.active {
-      background: #f3f4f6;
-      color: var(--text-primary);
+      background: var(--accent-soft);
+      color: var(--accent);
       font-weight: 600;
+    }
+    #sideMenu a.active::before { transform: scaleY(1); }
+    #sideMenu a i { width: 20px; text-align: center; font-size: 0.95rem; }
+
+    .menu-footer {
+      margin-top: auto;
+      padding: 16px 12px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .menu-footer img {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border);
+    }
+    .menu-footer-info {
+      flex: 1;
+    }
+    .menu-footer-info .name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .menu-footer-info .handle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
     }
 
     .menu-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
       z-index: 998;
     }
+    .menu-overlay.show { opacity: 1; visibility: visible; }
 
-    .menu-overlay.show {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    /* ===== CONTROLES ===== */
+    /* ===== CONTROLS ===== */
     .controls-bar {
-      background: var(--card);
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       align-items: center;
+      max-width: 1600px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
 
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 18px;
+      padding: 11px 20px;
       border: none;
       border-radius: var(--radius-md);
+      font-family: 'Outfit', sans-serif;
       font-size: 0.875rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
+      position: relative;
+      overflow: hidden;
     }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: var(--transition-fast);
+    }
+    .btn:hover::after { opacity: 1; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn i { position: relative; z-index: 1; }
+    .btn span { position: relative; z-index: 1; }
 
     .btn-primary {
-      background: var(--text-primary);
-      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #d4a03f);
+      color: #0c0e17;
+      box-shadow: 0 4px 16px rgba(232,184,75,0.25);
     }
-
     .btn-primary:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 8px 28px rgba(232,184,75,0.4);
     }
 
     .btn-outline {
-      background: var(--card);
+      background: var(--bg-card);
       color: var(--text-secondary);
       border: 1px solid var(--border);
     }
-
     .btn-outline:hover {
-      background: #f3f4f6;
-      border-color: var(--border-dark);
+      border-color: var(--border-hover);
       color: var(--text-primary);
+      background: var(--bg-card-hover);
     }
 
     .btn-success {
-      background: #ecfdf5;
+      background: var(--success-soft);
       color: var(--success);
-      border: 1px solid #a7f3d0;
+      border: 1px solid rgba(52,211,153,0.2);
     }
-
     .btn-success:hover {
-      background: #d1fae5;
+      background: rgba(52,211,153,0.2);
     }
 
     .btn-danger {
-      background: #fef2f2;
+      background: var(--danger-soft);
       color: var(--danger);
-      border: 1px solid #fecaca;
+      border: 1px solid rgba(251,113,133,0.2);
     }
-
     .btn-danger:hover {
-      background: #fee2e2;
+      background: rgba(251,113,133,0.2);
     }
 
-    /* ===== CONTENIDO PRINCIPAL ===== */
+    /* ===== MAIN LAYOUT ===== */
     .main-container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 0 32px 32px;
       display: grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 1fr 440px;
       gap: 24px;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 1100px) {
+      .main-container { grid-template-columns: 1fr; }
+      .header-bar { padding: 0 20px; }
+      .controls-bar, .main-container { padding-left: 20px; padding-right: 20px; }
     }
 
-    @media (max-width: 1024px) {
-      .main-container {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* ===== PANEL DE VENTAS ===== */
+    /* ===== PANEL ===== */
     .panel {
-      background: var(--card);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
       border: 1px solid var(--border);
       overflow: hidden;
+      transition: var(--transition);
+      animation: panelIn 0.5s ease-out;
     }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .panel:hover { border-color: var(--border-hover); }
 
     .panel-header {
-      padding: 16px 20px;
+      padding: 18px 24px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #fafafa;
+      background: rgba(255,255,255,0.015);
     }
-
     .panel-title {
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-primary);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
+    .panel-title i { color: var(--accent); font-size: 0.95rem; }
 
-    .panel-body {
-      padding: 20px;
-    }
+    .panel-body { padding: 24px; }
 
+    /* ===== SEARCH ===== */
     .search-box {
       position: relative;
       margin-bottom: 16px;
     }
-
     .search-box i {
       position: absolute;
-      left: 14px;
+      left: 16px;
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
       font-size: 0.9rem;
+      transition: var(--transition-fast);
     }
-
     .search-box input {
       width: 100%;
-      padding: 10px 14px 10px 40px;
+      padding: 12px 16px 12px 44px;
       border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--bg);
+      border-radius: var(--radius-lg);
+      background: var(--bg-elevated);
       color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
       font-size: 0.9rem;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
     }
-
     .search-box input:focus {
       outline: none;
-      border-color: var(--border-dark);
-      background: var(--card);
-      box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+      border-color: var(--accent);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-glow);
+    }
+    .search-box input:focus + i,
+    .search-box:focus-within i { color: var(--accent); }
+
+    /* ===== STATS ===== */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      background: var(--bg-elevated);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      flex: 1;
+      min-width: 120px;
+      transition: var(--transition-fast);
+    }
+    .stat-item:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 2px;
     }
 
-    /* ===== GRID DE VENTAS ===== */
+    /* ===== VENTAS GRID ===== */
     .ventas-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
       gap: 16px;
-      max-height: 500px;
+      max-height: 540px;
       overflow-y: auto;
       padding-right: 8px;
     }
 
     .venta-card {
-      background: var(--card);
+      background: var(--bg-elevated);
       border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 12px;
+      border-radius: var(--radius-lg);
+      padding: 14px;
       position: relative;
-      transition: all 0.2s ease;
+      transition: var(--transition);
       cursor: pointer;
+      animation: cardIn 0.4s ease-out backwards;
     }
-
+    @keyframes cardIn {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
     .venta-card:hover {
-      border-color: var(--border-dark);
-      box-shadow: var(--shadow-sm);
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md), var(--shadow-glow);
     }
-
     .venta-card.selected {
       border-color: var(--accent);
-      background: #f9fafb;
-      box-shadow: 0 0 0 2px rgba(75, 85, 99, 0.2);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 2px var(--accent-glow);
     }
+    .venta-card.selected .venta-precio { color: var(--accent); }
 
     .venta-checkbox {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 20px;
-      height: 20px;
+      top: 10px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
       accent-color: var(--accent);
       cursor: pointer;
       z-index: 10;
+      border-radius: 6px;
     }
 
     .venta-imagen {
       width: 100%;
       aspect-ratio: 1;
-      background: #f9fafb;
-      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 12px;
       overflow: hidden;
+      transition: var(--transition-fast);
     }
-
+    .venta-card:hover .venta-imagen { transform: scale(1.02); }
     .venta-imagen img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      padding: 8px;
+      object-fit: cover;
+      transition: var(--transition);
     }
-
-    .venta-imagen i {
-      font-size: 2.5rem;
-      color: var(--border);
-    }
+    .venta-imagen i { font-size: 2.2rem; color: var(--text-muted); opacity: 0.4; }
 
     .venta-nombre {
-      font-size: 0.9rem;
-      font-weight: 500;
+      font-size: 0.85rem;
+      font-weight: 600;
       color: var(--text-primary);
       margin-bottom: 4px;
-      line-height: 1.3;
+      line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-
     .venta-barcode {
-      font-family: 'Courier Prime', monospace;
-      font-size: 0.75rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
       color: var(--text-muted);
       margin-bottom: 8px;
       word-break: break-all;
     }
-
     .venta-precio {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       font-weight: 700;
       color: var(--text-primary);
       margin-bottom: 4px;
+      transition: var(--transition-fast);
     }
-
     .venta-cantidad {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-secondary);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
-
     .venta-fecha {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
       display: flex;
       align-items: center;
+      gap: 5px;
+    }
+    .venta-fecha i { font-size: 0.7rem; }
+
+    /* ===== BADGES ===== */
+    .fecha-badge {
+      display: inline-flex;
+      align-items: center;
       gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: 4px;
     }
+    .fecha-badge.hoy { background: rgba(52,211,153,0.15); color: var(--success); }
+    .fecha-badge.ayer { background: rgba(232,184,75,0.15); color: var(--accent); }
+    .fecha-badge.semana { background: var(--info-soft); color: var(--info); }
 
-    .venta-fecha i {
-      font-size: 0.7rem;
-    }
-
+    /* ===== NO RESULTS ===== */
     .no-results {
       text-align: center;
-      padding: 40px 20px;
+      padding: 48px 20px;
       color: var(--text-secondary);
       grid-column: 1 / -1;
     }
-
     .no-results i {
-      font-size: 3rem;
-      color: var(--border);
-      margin-bottom: 12px;
+      font-size: 3.5rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      opacity: 0.4;
+      display: block;
     }
+    .no-results a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .no-results a:hover { text-decoration: underline; }
 
-    /* ===== PANEL DE FACTURA ===== */
-    .factura-panel {
-      position: sticky;
-      top: 80px;
-    }
+    /* ===== FACTURA PANEL (STICKY) ===== */
+    .factura-panel { position: sticky; top: 84px; }
 
     .ticket-actions {
       display: flex;
@@ -456,465 +651,468 @@
       flex-wrap: wrap;
       margin-bottom: 16px;
     }
-
-    .ticket-actions .btn {
-      flex: 1;
-      min-width: 100px;
-      justify-content: center;
-    }
+    .ticket-actions .btn { flex: 1; min-width: 90px; justify-content: center; font-size: 0.8rem; padding: 10px 14px; }
 
     /* ===== TICKET POS ===== */
     .ticket-container {
-      background: #fff;
-      border: 1px solid var(--border);
+      background: #faf9f7;
+      border: 1px solid #e8e4df;
       border-radius: var(--radius-sm);
-      padding: 24px 20px;
-      font-family: 'Courier Prime', 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.5;
-      color: #000;
-      box-shadow: var(--shadow-sm);
+      padding: 28px 22px;
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      font-size: 11.5px;
+      line-height: 1.6;
+      color: #1a1a1a;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      color-scheme: light;
     }
 
     .ticket-header {
       text-align: center;
       margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px dashed #bbb;
+      padding-bottom: 14px;
+      border-bottom: 1.5px dashed #bbb5ad;
     }
-
     .ticket-logo {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      margin-bottom: 6px;
-      color: #000;
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      color: #0c0e17;
+      background: linear-gradient(135deg, #1a1d2a, #2d3142);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-
     .ticket-info {
-      color: #444;
-      font-size: 11px;
-      margin-bottom: 2px;
+      color: #555;
+      font-size: 10.5px;
+      margin-bottom: 3px;
     }
 
     .ticket-divider {
       border: none;
-      border-top: 1px dashed #bbb;
-      margin: 12px 0;
+      border-top: 1.5px dashed #bbb5ad;
+      margin: 14px 0;
     }
 
-    .ticket-section {
-      margin-bottom: 12px;
+    .ticket-section { margin-bottom: 12px; }
+
+    .ticket-section-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 0.06em;
     }
 
     .ticket-label {
-      font-weight: 700;
+      font-weight: 600;
       display: inline-block;
-      min-width: 80px;
+      min-width: 90px;
+      color: #444;
     }
 
     .ticket-line {
       display: flex;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       align-items: baseline;
+      flex-wrap: wrap;
     }
 
     .ticket-line span[contenteditable="true"] {
-      border-bottom: 1px dotted #999;
+      border-bottom: 1.5px dotted #aaa;
       min-width: 60px;
       padding: 0 4px;
       outline: none;
+      color: #1a1a1a;
+      font-weight: 500;
     }
-
     .ticket-line span[contenteditable="true"]:focus {
-      border-bottom: 1px solid #000;
-      background: #f9fafb;
+      border-bottom: 1.5px solid var(--accent);
+      background: rgba(232,184,75,0.08);
+      border-radius: 3px;
     }
 
-    /* ===== TABLA DE PRODUCTOS ===== */
+    /* ===== TABLE ===== */
     .ticket-table {
       width: 100%;
       border-collapse: collapse;
       margin: 12px 0;
-      font-size: 11px;
+      font-size: 10.5px;
     }
-
     .ticket-table th {
       text-align: left;
-      padding: 8px 4px;
-      border-bottom: 1px solid #000;
+      padding: 8px 5px;
+      border-bottom: 1.5px solid #333;
       font-weight: 700;
+      color: #333;
     }
-
     .ticket-table th:nth-child(2),
     .ticket-table th:nth-child(3),
-    .ticket-table th:nth-child(4) {
-      text-align: center;
-    }
-
-    .ticket-table th:last-child {
-      text-align: right;
-    }
+    .ticket-table th:nth-child(4) { text-align: center; }
+    .ticket-table th:last-child { text-align: right; }
 
     .ticket-table td {
-      padding: 6px 4px;
-      border-bottom: 1px solid #eee;
+      padding: 7px 5px;
+      border-bottom: 1px solid #e5e2de;
       vertical-align: top;
+      color: #333;
     }
-
     .ticket-table td:nth-child(2),
     .ticket-table td:nth-child(3),
-    .ticket-table td:nth-child(4) {
-      text-align: center;
-    }
-
-    .ticket-table td:last-child {
-      text-align: right;
-    }
+    .ticket-table td:nth-child(4) { text-align: center; }
+    .ticket-table td:last-child { text-align: right; font-weight: 600; }
 
     .ticket-table td[contenteditable="true"] {
-      border-bottom: 1px dotted #999;
+      border-bottom: 1.5px dotted #aaa;
       outline: none;
     }
-
     .ticket-table td[contenteditable="true"]:focus {
-      border-bottom: 1px solid #000;
-      background: #f9fafb;
+      border-bottom: 1.5px solid var(--accent);
+      background: rgba(232,184,75,0.08);
+      border-radius: 3px;
     }
-
-    .ticket-table tbody tr:last-child td {
-      border-bottom: 1px solid #000;
-    }
+    .ticket-table tbody tr:last-child td { border-bottom: 1.5px solid #333; }
 
     /* ===== TOTALES ===== */
     .ticket-totals {
-      margin-top: 12px;
-      padding-top: 8px;
-      border-top: 1px dashed #bbb;
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1.5px dashed #bbb5ad;
     }
-
     .ticket-total-line {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
+      color: #555;
     }
-
     .ticket-total-line.grande {
       font-size: 14px;
       font-weight: 700;
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #000;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1.5px solid #333;
+      color: #1a1a1a;
     }
 
     .ticket-iva-toggle {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      padding: 8px;
-      background: #f9fafb;
+      gap: 10px;
+      margin: 10px 0;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.03);
       border-radius: var(--radius-sm);
     }
-
     .ticket-iva-toggle input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
+      width: 18px; height: 18px;
       accent-color: var(--accent);
-    }
-
-    .ticket-iva-toggle label {
-      font-size: 11px;
       cursor: pointer;
     }
+    .ticket-iva-toggle label {
+      font-size: 10.5px;
+      cursor: pointer;
+      color: #555;
+      font-weight: 500;
+    }
 
-    /* ===== QR CODE ===== */
+    /* ===== QR ===== */
     .ticket-qr {
       text-align: center;
-      margin: 16px 0;
-      padding: 12px;
-      background: #fafafa;
+      margin: 18px 0;
+      padding: 14px;
+      background: rgba(0,0,0,0.02);
       border-radius: var(--radius-sm);
     }
-
-    #qrcode {
-      display: inline-block;
-    }
-
+    #qrcode { display: inline-block; }
     .ticket-qr-label {
       font-size: 9px;
-      color: #666;
-      margin-top: 6px;
+      color: #777;
+      margin-top: 8px;
+      font-family: 'Outfit', sans-serif;
     }
 
-    /* ===== FOOTER ===== */
+    /* ===== FOOTER TICKET ===== */
     .ticket-footer {
       text-align: center;
-      margin-top: 16px;
-      padding-top: 12px;
-      font-size: 10px;
-      color: #555;
-      border-top: 1px dashed #bbb;
+      margin-top: 18px;
+      padding-top: 14px;
+      font-size: 9.5px;
+      color: #666;
+      border-top: 1.5px dashed #bbb5ad;
+      line-height: 1.7;
     }
-
     .ticket-footer strong {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-size: 11px;
+      font-family: 'Outfit', sans-serif;
+      color: #333;
+      font-weight: 700;
+    }
+    .ticket-footer p:last-child {
+      margin-top: 10px;
+      font-size: 8.5px;
+      color: #999;
     }
 
     /* ===== MODALES ===== */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.4);
-      backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 999;
+      z-index: 1000;
       padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
-
     .modal-overlay.show {
       display: flex;
+      opacity: 1;
     }
 
     .modal-card {
-      background: var(--card);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
       width: 100%;
-      max-width: 480px;
+      max-width: 500px;
       max-height: 90vh;
       overflow: hidden;
-      animation: modalSlide 0.3s ease;
+      transform: scale(0.95) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-
-    @keyframes modalSlide {
-      from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.98);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+    .modal-overlay.show .modal-card {
+      transform: scale(1) translateY(0);
     }
 
     .modal-header {
-      padding: 18px 24px;
+      padding: 20px 28px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #fafafa;
+      background: rgba(255,255,255,0.02);
     }
-
     .modal-header h2 {
       font-size: 1.1rem;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
+    .modal-header h2 i { color: var(--accent); }
 
     .modal-close {
-      width: 32px;
-      height: 32px;
-      background: var(--bg);
-      border: none;
-      border-radius: var(--radius-sm);
+      width: 36px; height: 36px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
       color: var(--text-secondary);
-      font-size: 1.1rem;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: var(--transition-fast);
       display: flex;
       align-items: center;
       justify-content: center;
     }
-
     .modal-close:hover {
-      background: #fee2e2;
+      background: var(--danger-soft);
       color: var(--danger);
+      border-color: rgba(251,113,133,0.3);
+      transform: rotate(90deg);
     }
 
     .modal-body {
-      padding: 24px;
+      padding: 28px;
       overflow-y: auto;
-      max-height: calc(90vh - 140px);
+      max-height: calc(90vh - 150px);
     }
-
     .modal-footer {
-      padding: 16px 24px;
+      padding: 18px 28px;
       border-top: 1px solid var(--border);
       display: flex;
       gap: 10px;
       justify-content: flex-end;
     }
 
-    /* ===== FORMULARIOS ===== */
-    .form-group {
-      margin-bottom: 16px;
-    }
-
+    /* ===== FORMS ===== */
+    .form-group { margin-bottom: 18px; }
     .form-group label {
       display: block;
-      font-size: 0.8rem;
-      font-weight: 500;
+      font-size: 0.72rem;
+      font-weight: 600;
       color: var(--text-secondary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       text-transform: uppercase;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.06em;
     }
-
     .form-group input,
     .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
       font-size: 0.9rem;
-      transition: all 0.2s ease;
-      font-family: inherit;
+      transition: var(--transition-fast);
     }
-
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: var(--border-dark);
-      box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
     }
-
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
 
-    /* ===== IMPRESIÓN ===== */
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      .ticket-container,
-      .ticket-container * {
-        visibility: visible;
-      }
-      .ticket-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 80mm;
-        box-shadow: none;
-        border: none;
-        padding: 10px;
-      }
-      .no-print {
-        display: none !important;
-      }
+    /* ===== CONFIG SECTION ===== */
+    .config-section {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+    .config-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 768px) {
-      .header-bar { padding: 12px 16px; }
-      .controls-bar { padding: 12px 16px; }
-      .main-container { padding: 16px; }
+      .header-bar { height: 60px; padding: 0 16px; }
+      .controls-bar, .main-container { padding-left: 16px; padding-right: 16px; }
       .form-row { grid-template-columns: 1fr; }
       .ticket-actions .btn { flex: 1 1 100%; }
       .ventas-grid { grid-template-columns: repeat(2, 1fr); }
+      #sideMenu { width: 280px; right: -280px; }
     }
-
     @media (max-width: 480px) {
       .ventas-grid { grid-template-columns: 1fr; }
+      .brand-text h1 { font-size: 1.05rem; }
+      .btn span { display: none; }
+      .btn i { margin: 0; }
     }
 
-    /* ===== STATS ===== */
-    .stats-bar {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+    /* ===== PRINT ===== */
+    @media print {
+      body * { visibility: hidden; }
+      .ticket-container,
+      .ticket-container * { visibility: visible; }
+      .ticket-container {
+        position: absolute;
+        left: 0; top: 0;
+        width: 80mm;
+        box-shadow: none;
+        border: none;
+        padding: 10px;
+        background: #fff;
+      }
+      .no-print { display: none !important; }
     }
 
-    .stat-item {
-      background: #f9fafb;
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      flex: 1;
-      min-width: 120px;
+    /* ===== FLOATING PARTICLES CANVAS ===== */
+    #particlesCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.3;
     }
 
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .stat-value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    /* ===== CONFIGURACIÓN ===== */
-    .config-section {
-      background: #f9fafb;
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .config-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-    }
-
-    /* Badge de fecha */
-    .fecha-badge {
+    /* ===== LOADING SPINNER ===== */
+    .loading-spinner {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.65rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-left: 4px;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .fecha-badge.hoy {
-      background: #d1fae5;
-      color: #065f46;
+    /* ===== TOAST NOTIFICATION ===== */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-
-    .fecha-badge.ayer {
-      background: #fef3c7;
-      color: #92400e;
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-md);
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      font-size: 0.9rem;
+      font-weight: 500;
     }
-
-    .fecha-badge.semana {
-      background: #dbeafe;
-      color: #1e40af;
-    }
+    .toast.show { transform: translateX(0); }
+    .toast i { font-size: 1.1rem; }
+    .toast.success { border-color: rgba(52,211,153,0.3); }
+    .toast.success i { color: var(--success); }
+    .toast.error { border-color: rgba(251,113,133,0.3); }
+    .toast.error i { color: var(--danger); }
+    .toast.info { border-color: rgba(96,165,250,0.3); }
+    .toast.info i { color: var(--info); }
   </style>
 <base target="_blank">
 </head>
 <body>
 
+<!-- Animated Background -->
+<div class="bg-mesh"></div>
+<canvas id="particlesCanvas"></canvas>
+
+<!-- Menu Overlay -->
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- HEADER -->
 <header class="header-bar">
   <div class="brand">
     <div class="brand-icon">
       <i class="fa-solid fa-file-invoice"></i>
     </div>
     <div class="brand-text">
-      <h1>Sistema de Facturación</h1>
-      <span>KLOHESV - Facturas y Tickets</span>
+      <h1>DAYMAR<span>-</span>SHOP</h1>
+      <div class="subtitle">
+        <span class="subtitle-dot"></span>
+        Sistema de Facturacion
+      </div>
     </div>
   </div>
   <button id="menuToggle" onclick="toggleMenu()">
@@ -922,7 +1120,11 @@
   </button>
 </header>
 
+<!-- SIDEBAR -->
 <nav id="sideMenu">
+  <div class="menu-header">
+    <h3>Menu Principal</h3>
+  </div>
   <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
   <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
   <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
@@ -933,25 +1135,39 @@
   <a href="facturas.html" class="active"><i class="fa fa-file-invoice"></i> Facturas</a>
   <a href="traslados.html"><i class="fa fa-truck"></i> Traslados</a>
   <a href="venta.html"><i class="fa fa-cash-register"></i> Venta</a>
+
+  <div class="menu-footer">
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#d4a03f);display:flex;align-items:center;justify-content:center;color:#0c0e17;font-weight:700;font-size:0.75rem;">DS</div>
+    <div class="menu-footer-info">
+      <div class="name">DAYMAR-SHOP</div>
+      <div class="handle">@DAYMARSV</div>
+    </div>
+  </div>
 </nav>
 
+<!-- CONTROLS -->
 <div class="controls-bar">
   <button class="btn btn-primary" onclick="cargarVentasSeleccionadas()">
-    <i class="fa-solid fa-rotate"></i> Cargar Ventas Seleccionadas
+    <i class="fa-solid fa-rotate"></i>
+    <span>Cargar Ventas Seleccionadas</span>
   </button>
   <button class="btn btn-outline" onclick="abrirConfiguracion()">
-    <i class="fa-solid fa-cog"></i> Configurar Emisor
+    <i class="fa-solid fa-cog"></i>
+    <span>Configurar Emisor</span>
   </button>
   <button class="btn btn-outline" onclick="nuevaFactura()">
-    <i class="fa-solid fa-plus"></i> Nueva Factura
+    <i class="fa-solid fa-plus"></i>
+    <span>Nueva Factura</span>
   </button>
   <button class="btn btn-success" onclick="generarSiguienteNumero()">
-    <i class="fa-solid fa-hashtag"></i> Siguiente N°
+    <i class="fa-solid fa-hashtag"></i>
+    <span>Siguiente N°</span>
   </button>
 </div>
 
+<!-- MAIN CONTENT -->
 <div class="main-container">
-  <!-- PANEL IZQUIERDO: VENTAS -->
+  <!-- LEFT: VENTAS -->
   <div class="left-panel">
     <div class="panel">
       <div class="panel-header">
@@ -959,14 +1175,14 @@
           <i class="fa-solid fa-shopping-bag"></i>
           Ventas Disponibles
         </div>
-        <span id="contadorVentas" style="font-size: 0.85rem; color: var(--text-muted);">0 ventas</span>
+        <span id="contadorVentas" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">0 ventas</span>
       </div>
       <div class="panel-body">
         <div class="search-box">
           <i class="fa-solid fa-search"></i>
-          <input type="text" id="buscarVenta" placeholder="Buscar por producto, código de barras o fecha..." oninput="filtrarVentas()">
+          <input type="text" id="buscarVenta" placeholder="Buscar por producto, codigo de barras o fecha..." oninput="filtrarVentas()">
         </div>
-        
+
         <div class="stats-bar">
           <div class="stat-item">
             <div class="stat-label">Seleccionadas</div>
@@ -982,14 +1198,14 @@
           <div class="no-results">
             <i class="fa-solid fa-box-open"></i>
             <p>No hay ventas disponibles</p>
-            <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
+            <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html">Venta</a> para registrar productos</p>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- PANEL DERECHO: FACTURA -->
+  <!-- RIGHT: FACTURA -->
   <div class="factura-panel">
     <div class="panel">
       <div class="panel-header">
@@ -1001,26 +1217,29 @@
       <div class="panel-body">
         <div class="ticket-actions no-print">
           <button class="btn btn-primary" onclick="imprimirTicket()">
-            <i class="fa-solid fa-print"></i> Imprimir
+            <i class="fa-solid fa-print"></i>
+            <span>Imprimir</span>
           </button>
           <button class="btn btn-outline" onclick="descargarPDF()">
-            <i class="fa-solid fa-file-pdf"></i> PDF
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>PDF</span>
           </button>
           <button class="btn btn-success" onclick="agregarProductoManual()">
-            <i class="fa-solid fa-plus"></i> Producto
+            <i class="fa-solid fa-plus"></i>
+            <span>Producto</span>
           </button>
         </div>
 
         <div class="ticket-container" id="ticket">
-          <!-- ENCABEZADO -->
+          <!-- HEADER -->
           <div class="ticket-header">
-            <div class="ticket-logo" contenteditable="true">KLOHESV</div>
-            <div class="ticket-info" contenteditable="true">San Salvador, El Salvador</div>
-            <div class="ticket-info" contenteditable="true">industriastobias@gmail.com</div>
-            <div class="ticket-info" contenteditable="true">Instagram: @Klohesv</div>
+            <div class="ticket-logo">DAYMAR-SHOP</div>
+            <div class="ticket-info">San Salvador, El Salvador</div>
+            <div class="ticket-info">industriastobias@gmail.com</div>
+            <div class="ticket-info">Instagram: @DAYMARSV</div>
           </div>
 
-          <!-- DATOS DE FACTURA -->
+          <!-- FACTURA DATA -->
           <div class="ticket-section">
             <div class="ticket-line">
               <span class="ticket-label">FACTURA N°:</span>
@@ -1040,13 +1259,13 @@
 
           <!-- EMISOR -->
           <div class="ticket-section">
-            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">EMISOR</div>
+            <div class="ticket-section-title">Emisor</div>
             <div class="ticket-line">
               <span class="ticket-label">Nombre:</span>
-              <span contenteditable="true" id="emisorNombre">KLOHESV</span>
+              <span contenteditable="true" id="emisorNombre">DAYMAR-SHOP</span>
             </div>
             <div class="ticket-line">
-              <span class="ticket-label">Razón Soc:</span>
+              <span class="ticket-label">Razon Soc:</span>
               <span contenteditable="true" id="emisorRazon">Industrias Tobias S.A. de C.V.</span>
             </div>
             <div class="ticket-line">
@@ -1054,7 +1273,7 @@
               <span contenteditable="true" id="emisorNit">0614-010570-001-0</span>
             </div>
             <div class="ticket-line">
-              <span class="ticket-label">Dirección:</span>
+              <span class="ticket-label">Direccion:</span>
               <span contenteditable="true" id="emisorDireccion">San Salvador, El Salvador</span>
             </div>
           </div>
@@ -1063,13 +1282,13 @@
 
           <!-- RECEPTOR -->
           <div class="ticket-section" id="receptorSection">
-            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">RECEPTOR</div>
+            <div class="ticket-section-title">Receptor</div>
             <div class="ticket-line">
               <span class="ticket-label">Nombre:</span>
               <span contenteditable="true" id="receptorNombre">Consumidor Final</span>
             </div>
             <div class="ticket-line">
-              <span class="ticket-label">Razón Soc:</span>
+              <span class="ticket-label">Razon Soc:</span>
               <span contenteditable="true" id="receptorRazon">-</span>
             </div>
             <div class="ticket-line">
@@ -1077,7 +1296,7 @@
               <span contenteditable="true" id="receptorNit">-</span>
             </div>
             <div class="ticket-line">
-              <span class="ticket-label">Dirección:</span>
+              <span class="ticket-label">Direccion:</span>
               <span contenteditable="true" id="receptorDireccion">-</span>
             </div>
           </div>
@@ -1086,7 +1305,7 @@
 
           <!-- PRODUCTOS -->
           <div class="ticket-section">
-            <div style="font-weight: 700; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; color: #666;">DETALLE</div>
+            <div class="ticket-section-title">Detalle</div>
             <table class="ticket-table">
               <thead>
                 <tr>
@@ -1115,13 +1334,12 @@
               <span>SUBTOTAL (Base Imponible):</span>
               <span id="subtotal">$10.00</span>
             </div>
-            
-            <!-- Toggle IVA -->
+
             <div class="ticket-iva-toggle no-print">
               <input type="checkbox" id="aplicarIva" checked onchange="calcularTotales()">
               <label for="aplicarIva">Aplicar IVA (<span id="tasaIvaDisplay">13</span>%)</label>
             </div>
-            
+
             <div class="ticket-total-line" id="ivaLinea">
               <span>IVA (<span id="tasaIvaTexto">13</span>%):</span>
               <span id="iva">$1.30</span>
@@ -1140,7 +1358,7 @@
             </div>
           </div>
 
-          <!-- QR CODE -->
+          <!-- QR -->
           <div class="ticket-qr">
             <div id="qrcode"></div>
             <div class="ticket-qr-label">Escanea para verificar factura</div>
@@ -1148,12 +1366,9 @@
 
           <!-- FOOTER -->
           <div class="ticket-footer">
-            <strong>¡Gracias por su compra!</strong>
-            <p>Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderán casos de artículos dañados, reportados dentro de un plazo de 5 días después de la compra.</p>
-            <p style="margin-top: 8px; font-size: 9px; color: #888;">
-              Documento generado electrónicamente<br>
-              KLOHESV - Sistema de Facturación
-            </p>
+            <strong>!Gracias por su compra!</strong>
+            <p>Para garantizar la calidad de nuestros productos, no se aceptan cambios ni devoluciones. Solo se atenderan casos de articulos danados, reportados dentro de un plazo de 5 dias despues de la compra.</p>
+            <p>Documento generado electronicamente<br>DAYMAR-SHOP - Sistema de Facturacion</p>
           </div>
         </div>
       </div>
@@ -1161,11 +1376,11 @@
   </div>
 </div>
 
-<!-- MODAL CONFIGURACIÓN EMISOR -->
-<div class="modal-overlay" id="configModal">
+<!-- MODAL: CONFIGURACION -->
+<div class="modal-overlay" id="configModal" onclick="if(event.target===this)cerrarConfiguracion()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-header">
-      <h2><i class="fa-solid fa-cog"></i> Configuración del Emisor</h2>
+      <h2><i class="fa-solid fa-cog"></i> Configuracion del Emisor</h2>
       <button class="modal-close" onclick="cerrarConfiguracion()">
         <i class="fa-solid fa-times"></i>
       </button>
@@ -1175,10 +1390,10 @@
         <div class="config-title">Datos de la Empresa</div>
         <div class="form-group">
           <label>Nombre Comercial</label>
-          <input type="text" id="configNombre" value="KLOHESV">
+          <input type="text" id="configNombre" value="DAYMAR-SHOP">
         </div>
         <div class="form-group">
-          <label>Razón Social</label>
+          <label>Razon Social</label>
           <input type="text" id="configRazon" value="Industrias Tobias S.A. de C.V.">
         </div>
         <div class="form-row">
@@ -1187,29 +1402,29 @@
             <input type="text" id="configNit" value="0614-010570-001-0">
           </div>
           <div class="form-group">
-            <label>Teléfono</label>
+            <label>Telefono</label>
             <input type="text" id="configTelefono" value="">
           </div>
         </div>
         <div class="form-group">
-          <label>Correo Electrónico</label>
+          <label>Correo Electronico</label>
           <input type="email" id="configEmail" value="industriastobias@gmail.com">
         </div>
         <div class="form-group">
-          <label>Dirección Fiscal</label>
+          <label>Direccion Fiscal</label>
           <textarea id="configDireccion" rows="2">San Salvador, El Salvador</textarea>
         </div>
       </div>
 
       <div class="config-section">
-        <div class="config-title">Configuración de Factura</div>
+        <div class="config-title">Configuracion de Factura</div>
         <div class="form-row">
           <div class="form-group">
             <label>Serie</label>
             <input type="text" id="configSerie" value="A">
           </div>
           <div class="form-group">
-            <label>Último Número</label>
+            <label>Ultimo Numero</label>
             <input type="number" id="configUltimoNumero" value="1">
           </div>
         </div>
@@ -1228,8 +1443,8 @@
   </div>
 </div>
 
-<!-- MODAL AGREGAR PRODUCTO -->
-<div class="modal-overlay" id="productoModal">
+<!-- MODAL: AGREGAR PRODUCTO -->
+<div class="modal-overlay" id="productoModal" onclick="if(event.target===this)cerrarProductoModal()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h2><i class="fa-solid fa-plus"></i> Agregar Producto</h2>
@@ -1273,7 +1488,7 @@
   let productosFactura = [];
   let imagenesCache = {};
   let config = {
-    nombre: 'KLOHESV',
+    nombre: 'DAYMAR-SHOP',
     razon: 'Industrias Tobias S.A. de C.V.',
     nit: '0614-010570-001-0',
     telefono: '',
@@ -1284,30 +1499,117 @@
     tasaIva: 13
   };
 
-  // ========== INICIALIZACIÓN ==========
+  // ========== PARTICLES ==========
+  function initParticles() {
+    const canvas = document.getElementById('particlesCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let animationId;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.3;
+        this.speedY = (Math.random() - 0.5) * 0.3;
+        this.opacity = Math.random() * 0.5 + 0.1;
+        this.hue = Math.random() > 0.5 ? 44 : (Math.random() > 0.5 ? 160 : 150);
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${this.hue}, 70%, 60%, ${this.opacity})`;
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 50; i++) particles.push(new Particle());
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+
+      // Draw connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(232,184,75,${0.05 * (1 - dist / 120)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      animationId = requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  // ========== TOAST ==========
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    toast.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+    }, 3000);
+  }
+
+  // ========== INICIALIZACION ==========
   document.addEventListener('DOMContentLoaded', function() {
+    initParticles();
     cargarConfiguracion();
     cargarVentas();
     establecerFechaActual();
     generarQR();
     calcularTotales();
     actualizarVisibilidadReceptor();
-    
-    // Escuchar cambios en los campos del receptor para actualizar visibilidad
+
     ['receptorNombre', 'receptorRazon', 'receptorNit', 'receptorDireccion'].forEach(id => {
       document.getElementById(id).addEventListener('blur', actualizarVisibilidadReceptor);
     });
+
+    // Stagger card animations
+    setTimeout(() => {
+      document.querySelectorAll('.venta-card').forEach((card, i) => {
+        card.style.animationDelay = `${i * 0.05}s`;
+      });
+    }, 100);
   });
 
-  // ========== MENÚ ==========
+  // ========== MENU ==========
   function toggleMenu() {
     document.getElementById('sideMenu').classList.toggle('show');
     document.getElementById('menuOverlay').classList.toggle('show');
   }
 
-  // ========== CONFIGURACIÓN ==========
+  // ========== CONFIGURACION ==========
   function cargarConfiguracion() {
-    const saved = localStorage.getItem('klohesv_config');
+    const saved = localStorage.getItem('daymarsv_config') || localStorage.getItem('klohesv_config');
     if (saved) {
       config = { ...config, ...JSON.parse(saved) };
     }
@@ -1352,87 +1654,55 @@
     config.serie = document.getElementById('configSerie').value;
     config.ultimoNumero = parseInt(document.getElementById('configUltimoNumero').value) || 1;
     config.tasaIva = parseFloat(document.getElementById('configIva').value) || 13;
-    
-    localStorage.setItem('klohesv_config', JSON.stringify(config));
+
+    localStorage.setItem('daymarsv_config', JSON.stringify(config));
     aplicarConfiguracion();
     calcularTotales();
     cerrarConfiguracion();
+    showToast('Configuracion guardada correctamente', 'success');
   }
 
-  // ========== FUNCIONES DE FECHA ==========
+  // ========== FECHAS ==========
   function getToday() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
   }
-
   function getYesterday() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
     return yesterday;
   }
-
-  function isSameDay(date1, date2) {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+  function isSameDay(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
   }
+  function isToday(ds) { return ds ? isSameDay(new Date(ds), getToday()) : false; }
+  function isYesterday(ds) { return ds ? isSameDay(new Date(ds), getYesterday()) : false; }
 
-  function isToday(dateStr) {
-    if (!dateStr) return false;
-    try {
-      const d = new Date(dateStr);
-      return isSameDay(d, getToday());
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function isYesterday(dateStr) {
-    if (!dateStr) return false;
-    try {
-      const d = new Date(dateStr);
-      return isSameDay(d, getYesterday());
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function getFechaBadge(dateStr) {
-    if (isToday(dateStr)) return { text: 'Hoy', class: 'hoy' };
-    if (isYesterday(dateStr)) return { text: 'Ayer', class: 'ayer' };
+  function getFechaBadge(ds) {
+    if (isToday(ds)) return { text: 'Hoy', class: 'hoy' };
+    if (isYesterday(ds)) return { text: 'Ayer', class: 'ayer' };
     return null;
   }
 
-  function formatFecha(dateStr) {
-    if (!dateStr) return '-';
+  function formatFecha(ds) {
+    if (!ds) return '-';
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('es-SV', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(ds).toLocaleDateString('es-SV', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
       });
-    } catch (e) {
-      return '-';
-    }
+    } catch (e) { return '-'; }
   }
 
-  function formatFechaCorta(dateStr) {
-    if (!dateStr) return '-';
+  function formatFechaCorta(ds) {
+    if (!ds) return '-';
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('es-SV', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric'
-      });
-    } catch (e) {
-      return '-';
-    }
+      return new Date(ds).toLocaleDateString('es-SV', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (e) { return '-'; }
   }
 
   // ========== VENTAS ==========
@@ -1441,29 +1711,20 @@
     if (saved) {
       try {
         ventas = JSON.parse(saved);
-        // Filtrar solo ventas que no son cierres de caja
         ventas = ventas.filter(v => !v.isCierreCaja);
-        
-        // Ordenar por fecha más reciente primero
         ventas.sort((a, b) => {
-          const fechaA = new Date(a.soldAt || a.date || 0);
-          const fechaB = new Date(b.soldAt || b.date || 0);
-          return fechaB - fechaA;
+          const fa = new Date(a.soldAt || a.date || 0);
+          const fb = new Date(b.soldAt || b.date || 0);
+          return fb - fa;
         });
-        
         ventasFiltradas = [...ventas];
         await renderizarVentas();
-      } catch (e) {
-        console.error('Error cargando ventas:', e);
-      }
+      } catch (e) { console.error('Error cargando ventas:', e); }
     }
   }
 
   async function cargarImagenProducto(code) {
-    if (imagenesCache[code]) {
-      return imagenesCache[code];
-    }
-    
+    if (imagenesCache[code]) return imagenesCache[code];
     try {
       const blob = await localforage.getItem(`img_${code}`);
       if (blob) {
@@ -1471,40 +1732,35 @@
         imagenesCache[code] = url;
         return url;
       }
-    } catch (err) {
-      console.error('Error cargando imagen:', err);
-    }
+    } catch (err) { console.error('Error cargando imagen:', err); }
     return null;
   }
 
   async function renderizarVentas() {
     const grid = document.getElementById('ventasGrid');
     const contador = document.getElementById('contadorVentas');
-    
     contador.textContent = `${ventasFiltradas.length} venta${ventasFiltradas.length !== 1 ? 's' : ''}`;
-    
+
     if (ventasFiltradas.length === 0) {
       grid.innerHTML = `
         <div class="no-results">
           <i class="fa-solid fa-box-open"></i>
           <p>No hay ventas disponibles</p>
-          <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html" style="color: var(--accent);">Venta</a> para registrar productos</p>
-        </div>
-      `;
+          <p style="font-size: 0.8rem; margin-top: 8px;">Ve a <a href="venta.html">Venta</a> para registrar productos</p>
+        </div>`;
       return;
     }
 
     grid.innerHTML = '';
-    
     for (let i = 0; i < ventasFiltradas.length; i++) {
       const v = ventasFiltradas[i];
-      const fechaStr = v.soldAt || v.date;
-      const fechaFormateada = formatFechaCorta(fechaStr);
-      const fechaCompleta = formatFecha(fechaStr);
-      const badge = getFechaBadge(fechaStr);
-      
+      const fs = v.soldAt || v.date;
+      const badge = getFechaBadge(fs);
+      const imgUrl = await cargarImagenProducto(v.code);
+
       const card = document.createElement('div');
       card.className = 'venta-card';
+      card.style.animationDelay = `${i * 0.04}s`;
       card.dataset.index = i;
       card.onclick = (e) => {
         if (e.target.type !== 'checkbox') {
@@ -1514,14 +1770,11 @@
           card.classList.toggle('selected', cb.checked);
         }
       };
-      
-      // Cargar imagen
-      const imgUrl = await cargarImagenProducto(v.code);
-      
+
       card.innerHTML = `
         <input type="checkbox" class="venta-checkbox" value='${JSON.stringify(v).replace(/'/g, "&#39;")}' onchange="actualizarStats(); this.closest('.venta-card').classList.toggle('selected', this.checked);">
         <div class="venta-imagen">
-          ${imgUrl ? `<img src="${imgUrl}" alt="${v.name}">` : '<i class="fa-solid fa-image"></i>'}
+          ${imgUrl ? `<img src="${imgUrl}" alt="${v.name}" loading="lazy">` : '<i class="fa-solid fa-image"></i>'}
         </div>
         <div class="venta-nombre">${v.name || 'Sin nombre'}</div>
         ${v.barcode ? `<div class="venta-barcode">${v.barcode}</div>` : ''}
@@ -1529,52 +1782,40 @@
         <div class="venta-cantidad">Cantidad: ${v.quantity || 1} x $${parseFloat(v.price || v.total || 0).toFixed(2)}</div>
         <div class="venta-fecha">
           <i class="fa-regular fa-calendar"></i>
-          ${fechaCompleta}
+          ${formatFecha(fs)}
           ${badge ? `<span class="fecha-badge ${badge.class}">${badge.text}</span>` : ''}
-        </div>
-      `;
-      
+        </div>`;
       grid.appendChild(card);
     }
   }
 
   function filtrarVentas() {
-    const busqueda = document.getElementById('buscarVenta').value.toLowerCase();
-    ventasFiltradas = ventas.filter(v => 
-      (v.name && v.name.toLowerCase().includes(busqueda)) ||
-      (v.barcode && v.barcode.toLowerCase().includes(busqueda)) ||
-      (v.soldAt && v.soldAt.includes(busqueda)) ||
-      (v.date && v.date.includes(busqueda))
+    const b = document.getElementById('buscarVenta').value.toLowerCase();
+    ventasFiltradas = ventas.filter(v =>
+      (v.name && v.name.toLowerCase().includes(b)) ||
+      (v.barcode && v.barcode.toLowerCase().includes(b)) ||
+      (v.soldAt && v.soldAt.includes(b)) ||
+      (v.date && v.date.includes(b))
     );
     renderizarVentas();
   }
 
   function actualizarStats() {
-    const seleccionadas = [...document.querySelectorAll('.venta-checkbox:checked')];
-    const total = seleccionadas.reduce((sum, cb) => {
-      try {
-        const v = JSON.parse(cb.value);
-        return sum + parseFloat(v.total || 0);
-      } catch (e) {
-        return sum;
-      }
+    const sel = [...document.querySelectorAll('.venta-checkbox:checked')];
+    const total = sel.reduce((sum, cb) => {
+      try { return sum + parseFloat(JSON.parse(cb.value).total || 0); } catch (e) { return sum; }
     }, 0);
-    
-    document.getElementById('statsSeleccionadas').textContent = seleccionadas.length;
+    document.getElementById('statsSeleccionadas').textContent = sel.length;
     document.getElementById('statsTotal').textContent = `$${total.toFixed(2)}`;
   }
 
   // ========== CARGAR VENTAS A FACTURA ==========
   function cargarVentasSeleccionadas() {
-    const seleccionadas = [...document.querySelectorAll('.venta-checkbox:checked')];
-    
-    if (seleccionadas.length === 0) {
-      alert('Por favor selecciona al menos una venta');
-      return;
-    }
+    const sel = [...document.querySelectorAll('.venta-checkbox:checked')];
+    if (sel.length === 0) { showToast('Selecciona al menos una venta', 'error'); return; }
 
     productosFactura = [];
-    seleccionadas.forEach(cb => {
+    sel.forEach(cb => {
       try {
         const v = JSON.parse(cb.value);
         productosFactura.push({
@@ -1584,52 +1825,32 @@
           descuento: 0,
           total: parseFloat(v.total) || 0
         });
-      } catch (e) {
-        console.error('Error parseando venta:', e);
-      }
+      } catch (e) { console.error('Error parseando venta:', e); }
     });
 
     renderizarProductosFactura();
     calcularTotales();
     generarQR();
-    
-    // Scroll al ticket
     document.querySelector('.factura-panel').scrollIntoView({ behavior: 'smooth' });
+    showToast(`${sel.length} producto(s) cargados a la factura`, 'success');
   }
 
   function renderizarProductosFactura() {
     const tbody = document.getElementById('ticketProductos');
-    
     if (productosFactura.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td contenteditable="true">Producto de ejemplo</td>
-          <td contenteditable="true" onblur="calcularTotales()">1</td>
-          <td contenteditable="true" onblur="calcularTotales()">10.00</td>
-          <td contenteditable="true" onblur="calcularTotales()">0</td>
-          <td class="producto-total">10.00</td>
-        </tr>
-      `;
+      tbody.innerHTML = `<tr><td contenteditable="true">Producto de ejemplo</td><td contenteditable="true" onblur="calcularTotales()">1</td><td contenteditable="true" onblur="calcularTotales()">10.00</td><td contenteditable="true" onblur="calcularTotales()">0</td><td class="producto-total">10.00</td></tr>`;
       return;
     }
-
-    tbody.innerHTML = productosFactura.map((p, i) => `
-      <tr data-index="${i}">
-        <td contenteditable="true">${p.nombre}</td>
-        <td contenteditable="true" onblur="calcularTotales()">${p.cantidad}</td>
-        <td contenteditable="true" onblur="calcularTotales()">${p.precio.toFixed(2)}</td>
-        <td contenteditable="true" onblur="calcularTotales()">${p.descuento}</td>
-        <td class="producto-total">${p.total.toFixed(2)}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = productosFactura.map((p, i) =>
+      `<tr data-index="${i}"><td contenteditable="true">${p.nombre}</td><td contenteditable="true" onblur="calcularTotales()">${p.cantidad}</td><td contenteditable="true" onblur="calcularTotales()">${p.precio.toFixed(2)}</td><td contenteditable="true" onblur="calcularTotales()">${p.descuento}</td><td class="producto-total">${p.total.toFixed(2)}</td></tr>`
+    ).join('');
   }
 
-  // ========== PRODUCTOS MANUALES ==========
+  // ========== PRODUCTO MANUAL ==========
   function agregarProductoManual() {
     document.getElementById('productoModal').classList.add('show');
-    document.getElementById('prodNombre').focus();
+    setTimeout(() => document.getElementById('prodNombre').focus(), 100);
   }
-
   function cerrarProductoModal() {
     document.getElementById('productoModal').classList.remove('show');
     document.getElementById('prodNombre').value = '';
@@ -1637,269 +1858,179 @@
     document.getElementById('prodPrecio').value = '0';
     document.getElementById('prodDescuento').value = '0';
   }
-
   function guardarProductoManual() {
     const nombre = document.getElementById('prodNombre').value.trim();
     const cantidad = parseInt(document.getElementById('prodCantidad').value) || 1;
     const precio = parseFloat(document.getElementById('prodPrecio').value) || 0;
     const descuento = parseFloat(document.getElementById('prodDescuento').value) || 0;
-    
-    if (!nombre) {
-      alert('Por favor ingresa el nombre del producto');
-      return;
-    }
-    
+    if (!nombre) { showToast('Ingresa el nombre del producto', 'error'); return; }
+
     const subtotal = cantidad * precio;
-    const descuentoMonto = subtotal * (descuento / 100);
-    const total = subtotal - descuentoMonto;
-    
-    const tbody = document.getElementById('ticketProductos');
+    const descMonto = subtotal * (descuento / 100);
+    const total = subtotal - descMonto;
+
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td contenteditable="true">${nombre}</td>
-      <td contenteditable="true" onblur="calcularTotales()">${cantidad}</td>
-      <td contenteditable="true" onblur="calcularTotales()">${precio.toFixed(2)}</td>
-      <td contenteditable="true" onblur="calcularTotales()">${descuento}</td>
-      <td class="producto-total">${total.toFixed(2)}</td>
-    `;
-    tbody.appendChild(tr);
-    
+    tr.innerHTML = `<td contenteditable="true">${nombre}</td><td contenteditable="true" onblur="calcularTotales()">${cantidad}</td><td contenteditable="true" onblur="calcularTotales()">${precio.toFixed(2)}</td><td contenteditable="true" onblur="calcularTotales()">${descuento}</td><td class="producto-total">${total.toFixed(2)}</td>`;
+    document.getElementById('ticketProductos').appendChild(tr);
+
     cerrarProductoModal();
     calcularTotales();
     generarQR();
+    showToast('Producto agregado', 'success');
   }
 
-  // ========== CÁLCULOS ==========
+  // ========== CALCULOS ==========
   function calcularTotales() {
     let subtotal = 0;
-    let totalDescuentos = 0;
-    
     document.querySelectorAll('#ticketProductos tr').forEach(tr => {
-      const celdas = tr.querySelectorAll('td');
-      if (celdas.length >= 5) {
-        const cantidad = parseFloat(celdas[1].textContent) || 0;
-        const precio = parseFloat(celdas[2].textContent) || 0;
-        const descuento = parseFloat(celdas[3].textContent) || 0;
-        
-        const subtotalLinea = cantidad * precio;
-        const descuentoLinea = subtotalLinea * (descuento / 100);
-        const totalLinea = subtotalLinea - descuentoLinea;
-        
-        celdas[4].textContent = totalLinea.toFixed(2);
-        
-        subtotal += subtotalLinea;
-        totalDescuentos += descuentoLinea;
+      const c = tr.querySelectorAll('td');
+      if (c.length >= 5) {
+        const cant = parseFloat(c[1].textContent) || 0;
+        const precio = parseFloat(c[2].textContent) || 0;
+        const desc = parseFloat(c[3].textContent) || 0;
+        const st = cant * precio;
+        const totalLinea = st - st * (desc / 100);
+        c[4].textContent = totalLinea.toFixed(2);
+        subtotal += st;
       }
     });
-    
+
     const aplicarIva = document.getElementById('aplicarIva').checked;
     const iva = aplicarIva ? subtotal * (config.tasaIva / 100) : 0;
-    const descuentoGlobal = parseFloat(document.getElementById('descuentoGlobal').textContent.replace('$', '').replace(',', '')) || 0;
-    const anticipo = parseFloat(document.getElementById('anticipo').textContent.replace('$', '').replace(',', '')) || 0;
-    
-    const total = subtotal + iva - descuentoGlobal - anticipo;
-    
+    const descGlobal = parseFloat(document.getElementById('descuentoGlobal').textContent.replace(/[$,]/g, '')) || 0;
+    const anticipo = parseFloat(document.getElementById('anticipo').textContent.replace(/[$,]/g, '')) || 0;
+    const total = subtotal + iva - descGlobal - anticipo;
+
     document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
     document.getElementById('iva').textContent = `$${iva.toFixed(2)}`;
     document.getElementById('totalPagar').textContent = `$${Math.max(0, total).toFixed(2)}`;
-    
-    // Mostrar/ocultar línea de IVA según el toggle
-    const ivaLinea = document.getElementById('ivaLinea');
-    if (aplicarIva) {
-      ivaLinea.style.display = 'flex';
-    } else {
-      ivaLinea.style.display = 'none';
-    }
+    document.getElementById('ivaLinea').style.display = aplicarIva ? 'flex' : 'none';
   }
 
   // ========== FECHA ==========
   function establecerFechaActual() {
-    const hoy = new Date();
-    const fechaFormateada = `${String(hoy.getDate()).padStart(2, '0')}/${String(hoy.getMonth() + 1).padStart(2, '0')}/${hoy.getFullYear()} ${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`;
-    document.getElementById('facturaFecha').textContent = fechaFormateada;
+    const h = new Date();
+    document.getElementById('facturaFecha').textContent =
+      `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${h.getFullYear()} ${String(h.getHours()).padStart(2,'0')}:${String(h.getMinutes()).padStart(2,'0')}`;
   }
 
-  // ========== NÚMERO DE FACTURA ==========
+  // ========== FACTURA NUMERO ==========
   function generarSiguienteNumero() {
     config.ultimoNumero++;
-    localStorage.setItem('klohesv_config', JSON.stringify(config));
+    localStorage.setItem('daymarsv_config', JSON.stringify(config));
     document.getElementById('facturaNumero').textContent = String(config.ultimoNumero).padStart(5, '0');
     generarQR();
+    showToast(`Factura #${String(config.ultimoNumero).padStart(5,'0')} generada`, 'success');
   }
 
   function nuevaFactura() {
-    if (confirm('¿Deseas crear una nueva factura? Se generará un nuevo número.')) {
-      generarSiguienteNumero();
-      document.getElementById('receptorNombre').textContent = 'Consumidor Final';
-      document.getElementById('receptorRazon').textContent = '-';
-      document.getElementById('receptorNit').textContent = '-';
-      document.getElementById('receptorDireccion').textContent = '-';
-      document.getElementById('descuentoGlobal').textContent = '$0.00';
-      document.getElementById('anticipo').textContent = '$0.00';
-      document.getElementById('aplicarIva').checked = true;
-      document.getElementById('ticketProductos').innerHTML = '';
-      establecerFechaActual();
-      calcularTotales();
-      generarQR();
-      actualizarVisibilidadReceptor();
-      
-      // Desmarcar ventas
-      document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = false);
-      document.querySelectorAll('.venta-card').forEach(c => c.classList.remove('selected'));
-      actualizarStats();
-    }
+    if (!confirm('Deseas crear una nueva factura? Se generara un nuevo numero.')) return;
+    generarSiguienteNumero();
+    document.getElementById('receptorNombre').textContent = 'Consumidor Final';
+    document.getElementById('receptorRazon').textContent = '-';
+    document.getElementById('receptorNit').textContent = '-';
+    document.getElementById('receptorDireccion').textContent = '-';
+    document.getElementById('descuentoGlobal').textContent = '$0.00';
+    document.getElementById('anticipo').textContent = '$0.00';
+    document.getElementById('aplicarIva').checked = true;
+    document.getElementById('ticketProductos').innerHTML = '';
+    establecerFechaActual();
+    calcularTotales();
+    generarQR();
+    actualizarVisibilidadReceptor();
+    document.querySelectorAll('.venta-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.venta-card').forEach(c => c.classList.remove('selected'));
+    actualizarStats();
+    showToast('Nueva factura creada', 'info');
   }
 
-  // ========== QR CODE ==========
+  // ========== QR ==========
   function generarQR() {
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = '';
-    
-    const numero = document.getElementById('facturaNumero').textContent;
+    const qr = document.getElementById('qrcode');
+    qr.innerHTML = '';
+    const num = document.getElementById('facturaNumero').textContent;
     const serie = document.getElementById('facturaSerie').textContent;
     const fecha = document.getElementById('facturaFecha').textContent;
     const total = document.getElementById('totalPagar').textContent;
     const emisor = document.getElementById('emisorNit').textContent;
-    
-    const qrData = `KLOHESV|FACTURA:${serie}-${numero}|FECHA:${fecha}|TOTAL:${total}|NIT:${emisor}`;
-    
-    new QRCode(qrContainer, {
-      text: qrData,
-      width: 80,
-      height: 80,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
+    const qrData = `DAYMAR-SHOP|FACTURA:${serie}-${num}|FECHA:${fecha}|TOTAL:${total}|NIT:${emisor}`;
+
+    new QRCode(qr, {
+      text: qrData, width: 90, height: 90,
+      colorDark: '#1a1a1a', colorLight: '#faf9f7',
       correctLevel: QRCode.CorrectLevel.M
     });
   }
 
-  // ========== VERIFICAR DATOS DEL RECEPTOR ==========
+  // ========== RECEPTOR VISIBILIDAD ==========
   function tieneDatosReceptor() {
-    const nombre = document.getElementById('receptorNombre').textContent.trim();
-    const razon = document.getElementById('receptorRazon').textContent.trim();
-    const nit = document.getElementById('receptorNit').textContent.trim();
-    const direccion = document.getElementById('receptorDireccion').textContent.trim();
-    
-    // Si es "Consumidor Final" y los demás campos están vacíos o con guión, no hay datos
-    const esConsumidorFinal = nombre === 'Consumidor Final' || nombre === '';
-    const razonVacia = razon === '' || razon === '-';
-    const nitVacio = nit === '' || nit === '-';
-    const direccionVacia = direccion === '' || direccion === '-';
-    
-    return !(esConsumidorFinal && razonVacia && nitVacio && direccionVacia);
+    const n = document.getElementById('receptorNombre').textContent.trim();
+    const r = document.getElementById('receptorRazon').textContent.trim();
+    const ni = document.getElementById('receptorNit').textContent.trim();
+    const d = document.getElementById('receptorDireccion').textContent.trim();
+    const esCF = n === 'Consumidor Final' || n === '';
+    return !(esCF && (r === '' || r === '-') && (ni === '' || ni === '-') && (d === '' || d === '-'));
   }
 
   function actualizarVisibilidadReceptor() {
-    const receptorSection = document.getElementById('receptorSection');
-    const receptorDivider = document.getElementById('receptorDivider');
-    
-    if (tieneDatosReceptor()) {
-      receptorSection.style.display = 'block';
-      receptorDivider.style.display = 'block';
-    } else {
-      receptorSection.style.display = 'none';
-      receptorDivider.style.display = 'none';
-    }
-  }
-
-  // ========== IMPRESIÓN ==========
-  function imprimirTicket() {
-    // Verificar si hay datos del receptor y ocultar si es necesario
-    const receptorSection = document.getElementById('receptorSection');
-    const receptorDivider = document.getElementById('receptorDivider');
     const tieneDatos = tieneDatosReceptor();
-    
-    if (!tieneDatos) {
-      receptorSection.style.display = 'none';
-      receptorDivider.style.display = 'none';
-    }
-    
-    window.print();
-    
-    // Restaurar visibilidad después de imprimir
-    setTimeout(() => {
-      receptorSection.style.display = 'block';
-      receptorDivider.style.display = 'block';
-    }, 100);
+    document.getElementById('receptorSection').style.display = tieneDatos ? 'block' : 'none';
+    document.getElementById('receptorDivider').style.display = tieneDatos ? 'block' : 'none';
   }
 
-  // ========== PDF CON HTML2CANVAS ==========
+  // ========== IMPRESION ==========
+  function imprimirTicket() {
+    const rs = document.getElementById('receptorSection');
+    const rd = document.getElementById('receptorDivider');
+    if (!tieneDatosReceptor()) { rs.style.display = 'none'; rd.style.display = 'none'; }
+    window.print();
+    setTimeout(() => { rs.style.display = 'block'; rd.style.display = 'block'; }, 100);
+  }
+
+  // ========== PDF ==========
   async function descargarPDF() {
     const ticket = document.getElementById('ticket');
-    const receptorSection = document.getElementById('receptorSection');
-    const receptorDivider = document.getElementById('receptorDivider');
-    
-    // Ocultar elementos no-print temporalmente
-    const noPrintElements = ticket.querySelectorAll('.no-print');
-    noPrintElements.forEach(el => el.style.display = 'none');
-    
-    // Ocultar sección del receptor si no hay datos
-    const tieneDatos = tieneDatosReceptor();
-    if (!tieneDatos) {
-      receptorSection.style.display = 'none';
-      receptorDivider.style.display = 'none';
-    }
-    
+    const rs = document.getElementById('receptorSection');
+    const rd = document.getElementById('receptorDivider');
+    const noPrint = ticket.querySelectorAll('.no-print');
+    noPrint.forEach(el => el.style.display = 'none');
+    if (!tieneDatosReceptor()) { rs.style.display = 'none'; rd.style.display = 'none'; }
+
     try {
-      const canvas = await html2canvas(ticket, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false
-      });
-      
+      showToast('Generando PDF...', 'info');
+      const canvas = await html2canvas(ticket, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#faf9f7', logging: false });
       const imgData = canvas.toDataURL('image/png');
-      
       const { jsPDF } = window.jspdf;
-      
-      // Calcular dimensiones para formato ticket (80mm de ancho)
       const imgWidth = 80;
-      const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const doc = new jsPDF({
-        unit: 'mm',
-        format: [imgWidth, Math.max(imgHeight + 10, 100)]
-      });
-      
+      const doc = new jsPDF({ unit: 'mm', format: [imgWidth, Math.max(imgHeight + 10, 100)] });
       doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      
-      const numFactura = document.getElementById('facturaNumero').textContent;
-      doc.save(`factura_klohesv_${numFactura}.pdf`);
-      
+      doc.save(`factura_daymarsv_${document.getElementById('facturaNumero').textContent}.pdf`);
+      showToast('PDF descargado correctamente', 'success');
     } catch (error) {
       console.error('Error generando PDF:', error);
-      alert('Error al generar el PDF. Intenta de nuevo.');
+      showToast('Error al generar PDF', 'error');
     } finally {
-      // Restaurar elementos no-print
-      noPrintElements.forEach(el => el.style.display = '');
-      // Restaurar sección del receptor
-      receptorSection.style.display = 'block';
-      receptorDivider.style.display = 'block';
+      noPrint.forEach(el => el.style.display = '');
+      rs.style.display = 'block';
+      rd.style.display = 'block';
     }
   }
 
   // ========== EVENT LISTENERS ==========
-  document.getElementById('configModal').addEventListener('click', function(e) {
-    if (e.target === this) cerrarConfiguracion();
-  });
+  window.addEventListener('storage', e => { if (e.key === 'soldInventory') cargarVentas(); });
+  window.addEventListener('focus', () => cargarVentas());
 
-  document.getElementById('productoModal').addEventListener('click', function(e) {
-    if (e.target === this) cerrarProductoModal();
-  });
-
-  // Escuchar cambios en localStorage desde otras pestañas
-  window.addEventListener('storage', function(e) {
-    if (e.key === 'soldInventory') {
-      cargarVentas();
+  // Close modals with Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      cerrarConfiguracion();
+      cerrarProductoModal();
+      document.getElementById('sideMenu').classList.remove('show');
+      document.getElementById('menuOverlay').classList.remove('show');
     }
   });
-
-  // Actualizar ventas al volver a la página
-  window.addEventListener('focus', function() {
-    cargarVentas();
-  });
 </script>
+
 </body>
 </html>

@@ -1,1098 +1,952 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventario klohe</title>
+  <title>DAYMAR - Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
-    :root{--bg:#f5f7fa;--card:#ffffff;--text:#1f2937;--accent:#3b82f6;--accent-hover:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;--info:#06b6d4;--radius:16px;--shadow:0 6px 20px rgba(0,0,0,.08);--shadow-hover:0 8px 24px rgba(0,0,0,.12);--transition:.3s ease;--highlight:#fef08a;}
-    body.dark{--bg:#111;--card:#1e1e1e;--text:#eee;--highlight:#fde047;}
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',system-ui,sans-serif}
+    /* ─── SISTEMA DE DISEÑO DAYMAR ─── */
+    :root{
+      --dm-bg: #fafafa;
+      --dm-surface: #ffffff;
+      --dm-elevated: #f5f5f5;
+      --dm-text: #1a1a1a;
+      --dm-text-secondary: #6b6b6b;
+      --dm-text-muted: #9a9a9a;
+      --dm-border: #e8e8e8;
+      --dm-border-light: #f0f0f0;
+      --dm-accent: #111111;
+      --dm-accent-hover: #333333;
+      --dm-danger: #dc2626;
+      --dm-danger-light: #fef2f2;
+      --dm-success: #16a34a;
+      --dm-success-light: #f0fdf4;
+      --dm-warning: #d97706;
+      --dm-warning-light: #fffbeb;
+      --dm-info: #2563eb;
+      --dm-info-light: #eff6ff;
+      --dm-space-xs: 0.25rem;
+      --dm-space-sm: 0.5rem;
+      --dm-space-md: 1rem;
+      --dm-space-lg: 1.5rem;
+      --dm-space-xl: 2rem;
+      --dm-space-2xl: 3rem;
+      --dm-radius: 8px;
+      --dm-radius-sm: 4px;
+      --dm-radius-lg: 12px;
+      --dm-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      --dm-shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+      --dm-shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
+      --dm-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.dark{
+      --dm-bg: #0a0a0a;
+      --dm-surface: #141414;
+      --dm-elevated: #1a1a1a;
+      --dm-text: #f5f5f5;
+      --dm-text-secondary: #a3a3a3;
+      --dm-text-muted: #737373;
+      --dm-border: #262626;
+      --dm-border-light: #1f1f1f;
+      --dm-accent: #ffffff;
+      --dm-accent-hover: #e5e5e5;
+      --dm-danger: #ef4444;
+      --dm-danger-light: #2a0a0a;
+      --dm-success: #22c55e;
+      --dm-success-light: #0a2a0a;
+      --dm-warning: #f59e0b;
+      --dm-warning-light: #2a200a;
+      --dm-info: #3b82f6;
+      --dm-info-light: #0a1a2a;
+      --dm-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --dm-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+      --dm-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
     html{scroll-behavior:smooth}
-    body{background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+    body{background:var(--dm-bg);color:var(--dm-text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0}
 
-    /* ---------- MENÚ KIOSKO ---------- */
-    #kioskoBar{
+    .dm-nav{
       position:fixed;
-      top:0; right:0;
-      z-index: 9999;
-      background: var(--card);
-      box-shadow: var(--shadow);
-      border-radius: 0 0 0 var(--radius);
-      padding: .4rem .6rem;
-      display: flex; gap: .5rem; flex-wrap: wrap;
-      transform: translateX(100%);
-      transition: transform .3s ease;
+      top:0;left:0;right:0;
+      z-index:9999;
+      background:var(--dm-surface);
+      border-bottom:1px solid var(--dm-border);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
     }
-    #kioskoBar.show{ transform: translateX(0); }
-    #kioskoBar a{
-      color: var(--accent);
-      font-size: 1.3rem;
-      padding: .4rem;
-      border-radius: 50%;
-      transition: background .2s;
+    .dm-nav-inner{
+      max-width:1400px;
+      margin:0 auto;
+      padding:0 var(--dm-space-lg);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      height:64px;
     }
-    #kioskoBar a:hover{background: var(--highlight);}
-
-    #menuToggle{
-      position: fixed;
-      top: 1rem; right: 1rem;
-      z-index: 10000;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: .5rem .7rem;
-      border-radius: 50%;
-      font-size: 1.1rem;
-      cursor: pointer;
-      box-shadow: var(--shadow);
+    .dm-brand{
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+      font-size:1.25rem;
+      font-weight:700;
+      letter-spacing:2px;
+      color:var(--dm-text);
+      text-decoration:none;
     }
-
-    h1{font-size:2rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.5px}
-    h2{font-size:1.5rem;font-weight:600;margin:1.5rem 0 1rem;color:var(--accent)}
-    mark{background:var(--highlight);padding:.05rem .2rem;border-radius:4px;color:var(--text)}
-    #themeToggle{position:fixed;top:1rem;left:1rem;background:var(--accent);color:#fff;border:none;padding:.5rem .7rem;border-radius:50%;font-size:1rem;cursor:pointer;box-shadow:var(--shadow);}
-    
-    .report-section{
-      width:100%;
-      max-width:1200px;
-      background:var(--card);
-      border-radius:var(--radius);
-      padding:1.5rem;
-      margin-bottom:1.5rem;
-      box-shadow:var(--shadow);
-    }
-    .report-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-      gap:1rem;
-      margin-bottom:1rem;
-    }
-    .report-card{
-      background:var(--bg);
-      border-radius:12px;
-      padding:1rem;
-      border-left:4px solid var(--accent);
-    }
-    .report-card.warning{border-left-color:var(--warning);}
-    .report-card.danger{border-left-color:var(--danger);}
-    .report-card.success{border-left-color:var(--success);}
-    .report-card.info{border-left-color:var(--info);}
-    .report-card h4{font-size:.85rem;color:#6b7280;margin-bottom:.5rem;text-transform:uppercase;}
-    .report-card .value{font-size:1.8rem;font-weight:700;color:var(--text);}
-    .report-card .detail{font-size:.8rem;color:#6b7280;margin-top:.25rem;}
-    
-    .chart-container{
-      width:100%;
-      max-width:600px;
-      margin:1rem auto;
-      height:300px;
-    }
-    
-    .table-responsive{
-      width:100%;
-      overflow-x:auto;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:.9rem;
-    }
-    th,td{
-      padding:.75rem;
-      text-align:left;
-      border-bottom:1px solid #e5e7eb;
-    }
-    th{
-      background:var(--bg);
-      font-weight:600;
-      color:var(--text);
-      font-size:.8rem;
-      text-transform:uppercase;
-    }
-    tr:hover{background:var(--bg);}
-    .badge{
+    .dm-brand::before{
+      content:'';
+      width:8px;height:8px;
+      background:var(--dm-accent);
+      border-radius:50%;
       display:inline-block;
-      padding:.25rem .5rem;
-      border-radius:9999px;
-      font-size:.75rem;
+    }
+    .dm-nav-links{
+      display:flex;
+      gap:var(--dm-space-xs);
+      align-items:center;
+    }
+    .dm-nav-links a{
+      color:var(--dm-text-secondary);
+      text-decoration:none;
+      padding:var(--dm-space-sm) var(--dm-space-md);
+      border-radius:var(--dm-radius);
+      font-size:0.875rem;
+      font-weight:500;
+      transition:all var(--dm-transition);
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+    }
+    .dm-nav-links a:hover{
+      color:var(--dm-text);
+      background:var(--dm-elevated);
+    }
+    .dm-nav-links a.active{
+      color:var(--dm-text);
+      background:var(--dm-elevated);
       font-weight:600;
     }
-    .badge-success{background:#d1fae5;color:#065f46;}
-    .badge-warning{background:#fef3c7;color:#92400e;}
-    .badge-danger{background:#fee2e2;color:#991b1b;}
-    .badge-info{background:#cffafe;color:#155e75;}
-    
-    .price-range{display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;width:100%;max-width:960px}
-    .price-range input{width:100%;padding:.5rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:.9rem}
-    .summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;width:100%;max-width:960px;}
-    .summary-card{background:var(--card);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow);text-align:center;}
-    .summary-card h3{font-size:.8rem;color:#6b7280;margin-bottom:.25rem}
-    .summary-card p{font-size:1.5rem;font-weight:700;color:var(--accent);margin:0}
-    .search-bar{width:100%;max-width:960px;margin-bottom:1.5rem;}
-    .search-bar input{width:100%;padding:.75rem 1rem;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:1rem;}
-    .search-bar input:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
-    
-    /* Botones de descarga */
-    .pdf-buttons{
-      width:100%;
-      max-width:960px;
-      margin-bottom:1rem;
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-      gap:1rem;
+    .dm-nav-actions{
+      display:flex;
+      gap:var(--dm-space-sm);
+      align-items:center;
     }
-    .pdf-buttons button{
-      width:100%;
-      padding:.75rem 1rem;
-      border:none;
-      border-radius:12px;
-      font-size:1rem;
-      font-weight:600;
+    .dm-btn-icon{
+      width:36px;height:36px;
+      border-radius:var(--dm-radius);
+      border:1px solid var(--dm-border);
+      background:var(--dm-surface);
+      color:var(--dm-text-secondary);
       cursor:pointer;
-      transition:transform .2s,box-shadow .2s;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:.5rem;
+      transition:all var(--dm-transition);
+      font-size:0.875rem;
     }
-    .pdf-buttons button:hover{transform:translateY(-2px)}
-    
-    .btn-report{
-      background:var(--success);
-      color:#fff;
-      box-shadow:0 4px 14px rgba(16,185,129,.4);
+    .dm-btn-icon:hover{
+      background:var(--dm-elevated);
+      color:var(--dm-text);
+      border-color:var(--dm-text-muted);
     }
-    .btn-catalog{
-      background:var(--accent);
-      color:#fff;
-      box-shadow:0 4px 14px rgba(59,130,246,.4);
+    .dm-main{
+      width:100%;
+      max-width:1400px;
+      padding:calc(64px + var(--dm-space-2xl)) var(--dm-space-lg) var(--dm-space-2xl);
     }
-    .btn-barcode{
-      background:var(--warning);
-      color:#fff;
-      box-shadow:0 4px 14px rgba(245,158,11,.4);
+    .dm-header{
+      margin-bottom:var(--dm-space-2xl);
     }
-    .btn-category{
-      background:#8b5cf6;
-      color:#fff;
-      box-shadow:0 4px 14px rgba(139,92,246,.4);
+    .dm-header h1{
+      font-size:2rem;
+      font-weight:700;
+      letter-spacing:-0.5px;
+      margin-bottom:var(--dm-space-sm);
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-md);
+    }
+    .dm-header h1 i{
+      font-size:1.5rem;
+      color:var(--dm-text-muted);
+    }
+    .dm-header p{
+      color:var(--dm-text-secondary);
+      font-size:0.9375rem;
+    }
+    .dm-stats-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:var(--dm-space-md);
+      margin-bottom:var(--dm-space-xl);
+    }
+    .dm-stat-card{
+      background:var(--dm-surface);
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius-lg);
+      padding:var(--dm-space-lg);
+      transition:all var(--dm-transition);
+    }
+    .dm-stat-card:hover{
+      box-shadow:var(--dm-shadow-md);
+      transform:translateY(-1px);
+    }
+    .dm-stat-card .dm-stat-label{
+      font-size:0.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      color:var(--dm-text-muted);
+      margin-bottom:var(--dm-space-sm);
+    }
+    .dm-stat-card .dm-stat-value{
+      font-size:1.75rem;
+      font-weight:700;
+      color:var(--dm-text);
+      letter-spacing:-0.5px;
+    }
+    .dm-stat-card .dm-stat-change{
+      font-size:0.8125rem;
+      color:var(--dm-text-muted);
+      margin-top:var(--dm-space-xs);
+    }
+    .dm-filters{
+      display:flex;
+      gap:var(--dm-space-md);
+      margin-bottom:var(--dm-space-xl);
+      flex-wrap:wrap;
+      align-items:stretch;
+    }
+    .dm-filter-group{
+      flex:1;
+      min-width:200px;
+    }
+    .dm-filter-group label{
+      display:block;
+      font-size:0.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      color:var(--dm-text-muted);
+      margin-bottom:var(--dm-space-sm);
+    }
+    .dm-input{
+      width:100%;
+      padding:var(--dm-space-sm) var(--dm-space-md);
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius);
+      background:var(--dm-surface);
+      color:var(--dm-text);
+      font-size:0.9375rem;
+      transition:all var(--dm-transition);
+      font-family:inherit;
+    }
+    .dm-input:focus{
+      outline:none;
+      border-color:var(--dm-accent);
+      box-shadow:0 0 0 3px rgba(0,0,0,0.05);
+    }
+    .dm-input::placeholder{
+      color:var(--dm-text-muted);
+    }
+    .dm-input-group{
+      display:flex;
+      gap:var(--dm-space-sm);
+    }
+    .dm-input-group .dm-input{
+      flex:1;
+    }
+    .dm-actions-bar{
+      display:flex;
+      gap:var(--dm-space-sm);
+      margin-bottom:var(--dm-space-xl);
+      flex-wrap:wrap;
+    }
+    .dm-btn{
+      padding:var(--dm-space-sm) var(--dm-space-lg);
+      border-radius:var(--dm-radius);
+      font-size:0.875rem;
+      font-weight:600;
+      cursor:pointer;
+      transition:all var(--dm-transition);
+      display:inline-flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+      border:1px solid transparent;
+      font-family:inherit;
       white-space:nowrap;
     }
-    .btn-catalog i, .btn-barcode i, .btn-category i{font-size:1.2rem}
-
-    .table-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1.5rem;width:100%;max-width:1200px;}
-    @media(max-width:1200px){.table-grid{grid-template-columns:repeat(4,1fr)}}
-    @media(max-width:900px){.table-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:600px){.table-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:400px){.table-grid{grid-column:1fr}}
-    .line-item{background:var(--card);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem;transition:transform var(--transition),box-shadow var(--transition);}
-    .line-item:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover)}
-    .line-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;cursor:zoom-in}
-    .line-item h3{font-size:1rem;color:var(--accent)}
-    .line-item p{margin:0;font-size:.75rem;color:#6b7280}
-    .stock-line{font-weight:600;color:var(--success)}
-    .actions{display:flex;gap:.5rem;margin-top:auto;flex-wrap:wrap;}
-    button{padding:.4rem .8rem;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s;font-size:.75rem;}
-    button:hover{transform:translateY(-2px)}
-    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,130,246,.4);}
-    .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 14px rgba(239,68,68,.4);}
-    .btn-warning{background:var(--warning);color:#fff;box-shadow:0 4px 14px rgba(245,158,11,.4);}
-    .btn-barcode-small{background:var(--info);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.4);}
-    .total-box{background:var(--card);padding:1.2rem 2rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center;margin-top:2rem;}
-    .total-box h2{font-size:1rem;color:var(--accent);margin:0}
-    .total-box p{font-size:2rem;font-weight:700;margin:0;color:var(--accent)}
-    .copy-barcode{cursor:pointer;margin-left:.3rem;color:var(--accent)}
-    .copy-barcode:hover{color:var(--accent-hover)}
-    .edit-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem;font-size:.75rem;}
-    .edit-form input, .edit-form select, .edit-form textarea{padding:.4rem .5rem;border:1px solid #e5e7eb;border-radius:6px;font-size:.75rem;}
-    .edit-form textarea{resize:vertical;min-height:60px;}
-    @media print{body *{visibility:hidden} #printArea,#printArea *{visibility:visible} #printArea{position:absolute;top:0;left:0;width:100%}}
-    #lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;}
-    #lightbox img{max-width:90%;max-height:90%;border-radius:12px;}
-
-    #pdfContent{display: none;}
-
-    /* Estilos para el código de barras en la tarjeta */
-    .barcode-container {
-      background: #fff;
-      padding: 8px;
-      border-radius: 8px;
-      text-align: center;
-      margin: 5px 0;
-      border: 1px solid #e5e7eb;
+    .dm-btn:hover{
+      transform:translateY(-1px);
     }
-    .barcode-container svg {
-      max-width: 100%;
-      height: 40px;
+    .dm-btn-primary{
+      background:var(--dm-accent);
+      color:var(--dm-bg);
+      border-color:var(--dm-accent);
     }
-    .barcode-number {
-      font-size: 0.7rem;
-      color: #374151;
-      font-family: monospace;
-      letter-spacing: 1px;
-      margin-top: 2px;
+    .dm-btn-primary:hover{
+      background:var(--dm-accent-hover);
+      border-color:var(--dm-accent-hover);
     }
-    
-    /* Selector de categoría estilizado */
-    .category-filter-container {
-      display: flex;
-      gap: .5rem;
-      align-items: stretch;
-      width: 100%;
-      min-width: 280px;
+    .dm-btn-secondary{
+      background:var(--dm-surface);
+      color:var(--dm-text);
+      border-color:var(--dm-border);
     }
-    .category-filter-container select {
-      flex: 1;
-      padding: .75rem;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: #f9fafb;
-      font-size: 1rem;
-      cursor: pointer;
-      font-family: inherit;
+    .dm-btn-secondary:hover{
+      background:var(--dm-elevated);
+      border-color:var(--dm-text-muted);
     }
-    .category-filter-container select:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+    .dm-btn-success{
+      background:var(--dm-success);
+      color:#fff;
+      border-color:var(--dm-success);
     }
-
-    /* Info de cantidad de etiquetas */
-    .label-info {
-      background: var(--bg);
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      color: #6b7280;
-      margin-bottom: 1rem;
-      width: 100%;
-      max-width: 960px;
-      text-align: center;
+    .dm-btn-success:hover{
+      background:#15803d;
+      border-color:#15803d;
     }
-    .label-info strong {
-      color: var(--accent);
+    .dm-btn-warning{
+      background:var(--dm-warning);
+      color:#fff;
+      border-color:var(--dm-warning);
+    }
+    .dm-btn-warning:hover{
+      background:#b45309;
+      border-color:#b45309;
+    }
+    .dm-btn-danger{
+      background:var(--dm-danger);
+      color:#fff;
+      border-color:var(--dm-danger);
+    }
+    .dm-btn-danger:hover{
+      background:#b91c1c;
+      border-color:#b91c1c;
+    }
+    .dm-btn-info{
+      background:var(--dm-info);
+      color:#fff;
+      border-color:var(--dm-info);
+    }
+    .dm-btn-info:hover{
+      background:#1d4ed8;
+      border-color:#1d4ed8;
+    }
+    .dm-btn-ghost{
+      background:transparent;
+      color:var(--dm-text-secondary);
+      border-color:var(--dm-border);
+    }
+    .dm-btn-ghost:hover{
+      background:var(--dm-elevated);
+      color:var(--dm-text);
+    }
+    .dm-category-select{
+      display:flex;
+      gap:var(--dm-space-sm);
+      align-items:stretch;
+    }
+    .dm-category-select select{
+      flex:1;
+      min-width:180px;
+    }
+    .dm-info-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+      padding:var(--dm-space-sm) var(--dm-space-md);
+      background:var(--dm-elevated);
+      border:1px solid var(--dm-border);
+      border-radius:9999px;
+      font-size:0.8125rem;
+      color:var(--dm-text-secondary);
+      margin-bottom:var(--dm-space-xl);
+    }
+    .dm-info-pill i{
+      color:var(--dm-info);
+    }
+    .dm-info-pill strong{
+      color:var(--dm-text);
+    }
+    .dm-products-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:var(--dm-space-md);
+      margin-bottom:var(--dm-space-xl);
+    }
+    @media(max-width:1200px){.dm-products-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:900px){.dm-products-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:600px){.dm-products-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:400px){.dm-products-grid{grid-template-columns:1fr}}
+    .dm-product-card{
+      background:var(--dm-surface);
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius-lg);
+      overflow:hidden;
+      transition:all var(--dm-transition);
+      display:flex;
+      flex-direction:column;
+    }
+    .dm-product-card:hover{
+      box-shadow:var(--dm-shadow-lg);
+      transform:translateY(-2px);
+      border-color:var(--dm-text-muted);
+    }
+    .dm-product-img{
+      width:100%;
+      aspect-ratio:1/1;
+      object-fit:cover;
+      cursor:zoom-in;
+      background:var(--dm-elevated);
+    }
+    .dm-product-body{
+      padding:var(--dm-space-md);
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:var(--dm-space-xs);
+    }
+    .dm-product-name{
+      font-size:0.9375rem;
+      font-weight:600;
+      color:var(--dm-text);
+      line-height:1.3;
+    }
+    .dm-product-meta{
+      font-size:0.75rem;
+      color:var(--dm-text-muted);
+      font-family:monospace;
+      letter-spacing:0.5px;
+    }
+    .dm-product-stock{
+      font-size:0.8125rem;
+      font-weight:600;
+      color:var(--dm-success);
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-xs);
+    }
+    .dm-product-stock.low{
+      color:var(--dm-warning);
+    }
+    .dm-product-stock.out{
+      color:var(--dm-danger);
+    }
+    .dm-product-price{
+      font-size:1.125rem;
+      font-weight:700;
+      color:var(--dm-text);
+      margin-top:var(--dm-space-xs);
+    }
+    .dm-product-price .dm-original{
+      font-size:0.75rem;
+      color:var(--dm-text-muted);
+      text-decoration:line-through;
+      font-weight:400;
+      margin-left:var(--dm-space-xs);
+    }
+    .dm-product-discount{
+      display:inline-flex;
+      align-items:center;
+      padding:var(--dm-space-xs) var(--dm-space-sm);
+      background:var(--dm-danger-light);
+      color:var(--dm-danger);
+      border-radius:var(--dm-radius-sm);
+      font-size:0.75rem;
+      font-weight:700;
+      width:fit-content;
+    }
+    .dm-product-category{
+      font-size:0.75rem;
+      color:var(--dm-text-secondary);
+      background:var(--dm-elevated);
+      padding:var(--dm-space-xs) var(--dm-space-sm);
+      border-radius:var(--dm-radius-sm);
+      width:fit-content;
+    }
+    .dm-product-desc{
+      font-size:0.75rem;
+      color:var(--dm-text-muted);
+      line-height:1.4;
+      margin-top:var(--dm-space-xs);
+    }
+    .dm-barcode-box{
+      background:#fff;
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius);
+      padding:var(--dm-space-sm);
+      text-align:center;
+      margin-top:var(--dm-space-xs);
+    }
+    .dm-barcode-box svg{
+      max-width:100%;
+      height:32px;
+    }
+    .dm-barcode-number{
+      font-size:0.65rem;
+      color:var(--dm-text-muted);
+      font-family:monospace;
+      letter-spacing:1px;
+      margin-top:2px;
+    }
+    .dm-product-actions{
+      display:flex;
+      gap:var(--dm-space-xs);
+      margin-top:auto;
+      padding-top:var(--dm-space-sm);
+    }
+    .dm-product-actions .dm-btn{
+      flex:1;
+      justify-content:center;
+      padding:var(--dm-space-xs) var(--dm-space-sm);
+      font-size:0.75rem;
+    }
+    .dm-total-bar{
+      background:var(--dm-surface);
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius-lg);
+      padding:var(--dm-space-xl);
+      text-align:center;
+      margin-bottom:var(--dm-space-2xl);
+    }
+    .dm-total-bar h3{
+      font-size:0.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      color:var(--dm-text-muted);
+      margin-bottom:var(--dm-space-sm);
+    }
+    .dm-total-bar .dm-total-value{
+      font-size:2.5rem;
+      font-weight:700;
+      color:var(--dm-text);
+      letter-spacing:-1px;
+    }
+    .dm-section{
+      background:var(--dm-surface);
+      border:1px solid var(--dm-border);
+      border-radius:var(--dm-radius-lg);
+      padding:var(--dm-space-xl);
+      margin-bottom:var(--dm-space-xl);
+    }
+    .dm-section-header{
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+      margin-bottom:var(--dm-space-lg);
+      padding-bottom:var(--dm-space-md);
+      border-bottom:1px solid var(--dm-border-light);
+    }
+    .dm-section-header h2{
+      font-size:1.125rem;
+      font-weight:700;
+      color:var(--dm-text);
+      margin:0;
+    }
+    .dm-section-header i{
+      color:var(--dm-text-muted);
+      font-size:1rem;
+    }
+    .dm-report-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:var(--dm-space-md);
+    }
+    .dm-report-card{
+      padding:var(--dm-space-lg);
+      border-radius:var(--dm-radius);
+      border-left:3px solid var(--dm-border);
+      background:var(--dm-elevated);
+      transition:all var(--dm-transition);
+    }
+    .dm-report-card:hover{
+      transform:translateX(2px);
+    }
+    .dm-report-card.dm-success{border-left-color:var(--dm-success);background:var(--dm-success-light);}
+    .dm-report-card.dm-warning{border-left-color:var(--dm-warning);background:var(--dm-warning-light);}
+    .dm-report-card.dm-danger{border-left-color:var(--dm-danger);background:var(--dm-danger-light);}
+    .dm-report-card.dm-info{border-left-color:var(--dm-info);background:var(--dm-info-light);}
+    .dm-report-card h4{
+      font-size:0.6875rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      color:var(--dm-text-muted);
+      margin-bottom:var(--dm-space-sm);
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-xs);
+    }
+    .dm-report-card .dm-report-value{
+      font-size:1.5rem;
+      font-weight:700;
+      color:var(--dm-text);
+    }
+    .dm-report-card .dm-report-detail{
+      font-size:0.8125rem;
+      color:var(--dm-text-secondary);
+      margin-top:var(--dm-space-xs);
+    }
+    .dm-alert{
+      display:flex;
+      align-items:flex-start;
+      gap:var(--dm-space-md);
+      padding:var(--dm-space-md) var(--dm-space-lg);
+      border-radius:var(--dm-radius);
+      border-left:3px solid;
+      margin-bottom:var(--dm-space-sm);
+    }
+    .dm-alert.dm-alert-danger{
+      background:var(--dm-danger-light);
+      border-left-color:var(--dm-danger);
+    }
+    .dm-alert.dm-alert-warning{
+      background:var(--dm-warning-light);
+      border-left-color:var(--dm-warning);
+    }
+    .dm-alert.dm-alert-info{
+      background:var(--dm-info-light);
+      border-left-color:var(--dm-info);
+    }
+    .dm-alert i{
+      font-size:1rem;
+      margin-top:2px;
+    }
+    .dm-alert.dm-alert-danger i{color:var(--dm-danger);}
+    .dm-alert.dm-alert-warning i{color:var(--dm-warning);}
+    .dm-alert.dm-alert-info i{color:var(--dm-info);}
+    .dm-alert-content strong{
+      font-size:0.875rem;
+      display:block;
+      margin-bottom:var(--dm-space-xs);
+    }
+    .dm-alert-content p{
+      font-size:0.8125rem;
+      color:var(--dm-text-secondary);
+      margin:0;
+    }
+    .dm-table-wrap{
+      overflow-x:auto;
+      border-radius:var(--dm-radius);
+      border:1px solid var(--dm-border);
+    }
+    .dm-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:0.875rem;
+    }
+    .dm-table th{
+      background:var(--dm-elevated);
+      padding:var(--dm-space-sm) var(--dm-space-md);
+      text-align:left;
+      font-weight:600;
+      font-size:0.75rem;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+      color:var(--dm-text-muted);
+      border-bottom:1px solid var(--dm-border);
+      white-space:nowrap;
+    }
+    .dm-table td{
+      padding:var(--dm-space-sm) var(--dm-space-md);
+      border-bottom:1px solid var(--dm-border-light);
+      color:var(--dm-text);
+      vertical-align:middle;
+    }
+    .dm-table tr:hover td{
+      background:var(--dm-elevated);
+    }
+    .dm-table tr:last-child td{
+      border-bottom:none;
+    }
+    .dm-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:var(--dm-space-xs) var(--dm-space-sm);
+      border-radius:9999px;
+      font-size:0.6875rem;
+      font-weight:700;
+      letter-spacing:0.3px;
+    }
+    .dm-badge-success{background:var(--dm-success-light);color:var(--dm-success);}
+    .dm-badge-warning{background:var(--dm-warning-light);color:var(--dm-warning);}
+    .dm-badge-danger{background:var(--dm-danger-light);color:var(--dm-danger);}
+    .dm-badge-info{background:var(--dm-info-light);color:var(--dm-info);}
+    .dm-problem-item{
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-md);
+      padding:var(--dm-space-md) var(--dm-space-lg);
+      background:var(--dm-elevated);
+      border-radius:var(--dm-radius);
+      margin-bottom:var(--dm-space-sm);
+      border-left:3px solid var(--dm-border);
+      transition:all var(--dm-transition);
+    }
+    .dm-problem-item:hover{
+      border-left-color:var(--dm-accent);
+      transform:translateX(2px);
+    }
+    .dm-problem-item.dm-critical{
+      border-left-color:var(--dm-danger);
+    }
+    .dm-problem-item.dm-low{
+      border-left-color:var(--dm-warning);
+    }
+    .dm-problem-info{flex:1;}
+    .dm-problem-info strong{
+      font-size:0.9375rem;
+      display:flex;
+      align-items:center;
+      gap:var(--dm-space-sm);
+    }
+    .dm-problem-info p{
+      font-size:0.8125rem;
+      color:var(--dm-text-secondary);
+      margin-top:var(--dm-space-xs);
+      margin-bottom:0;
+    }
+    .dm-problem-price{
+      text-align:right;
+    }
+    .dm-problem-price .dm-price{
+      font-size:1.125rem;
+      font-weight:700;
+      color:var(--dm-text);
+    }
+    .dm-problem-price .dm-label{
+      font-size:0.75rem;
+      color:var(--dm-text-muted);
+    }
+    #lightbox{
+      position:fixed;
+      top:0;left:0;
+      width:100%;height:100%;
+      background:rgba(0,0,0,0.85);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:10000;
+      backdrop-filter:blur(8px);
+    }
+    #lightbox img{
+      max-width:90%;
+      max-height:90%;
+      border-radius:var(--dm-radius-lg);
+      box-shadow:0 20px 60px rgba(0,0,0,0.5);
+    }
+    @media print{
+      body *{visibility:hidden}
+      #printArea,#printArea *{visibility:visible}
+      #printArea{position:absolute;top:0;left:0;width:100%}
+    }
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--dm-border);border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--dm-text-muted)}
+    .dm-empty{
+      text-align:center;
+      padding:var(--dm-space-2xl);
+      color:var(--dm-text-muted);
+      grid-column:1/-1;
+    }
+    .dm-empty i{
+      font-size:3rem;
+      margin-bottom:var(--dm-space-md);
+      opacity:0.5;
+    }
+    .dm-empty p{
+      font-size:1rem;
+    }
+    mark{
+      background:#fde047;
+      padding:0 2px;
+      border-radius:2px;
+      color:var(--dm-text);
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
-<button id="menuToggle" title="Abrir menú"><i class="fa fa-bars"></i></button>
-
-<nav id="kioskoBar">
-  <a href="compra.html" title="Compra"><i class="fa fa-shopping-cart"></i></a>
-  <a href="almacenamiento.html" title="Almacenamiento"><i class="fa fa-warehouse"></i></a>
-  <a href="finanzas.html" title="Finanzas"><i class="fa fa-chart-line"></i></a>
-  <a href="inventario.html" title="Inventario"><i class="fa fa-boxes"></i></a>
-  <a href="catalogo.html" title="Catálogo"><i class="fa fa-book"></i></a>
-  <a href="clientes.html" title="Clientes"><i class="fa fa-users"></i></a>
-  <a href="descuentos.html" title="Descuentos"><i class="fa fa-percent"></i></a>
-  <a href="facturas.html" title="Facturas"><i class="fa fa-file-invoice"></i></a>
-  <a href="traslados.html" title="Traslados"><i class="fa fa-truck"></i></a>
-  <a href="venta.html" title="Venta"><i class="fa fa-cash-register"></i></a>
-  <a href="menu.html" title="Menú"><i class="fa fa-bars"></i></a>
+<nav class="dm-nav">
+  <div class="dm-nav-inner">
+    <a href="#" class="dm-brand">DAYMAR</a>
+    <div class="dm-nav-links">
+      <a href="compra.html"><i class="fa fa-shopping-cart"></i>Compra</a>
+      <a href="almacenamiento.html"><i class="fa fa-warehouse"></i>Almacén</a>
+      <a href="finanzas.html"><i class="fa fa-chart-line"></i>Finanzas</a>
+      <a href="inventario.html" class="active"><i class="fa fa-boxes"></i>Inventario</a>
+      <a href="catalogo.html"><i class="fa fa-book"></i>Catálogo</a>
+      <a href="clientes.html"><i class="fa fa-users"></i>Clientes</a>
+      <a href="descuentos.html"><i class="fa fa-percent"></i>Descuentos</a>
+      <a href="facturas.html"><i class="fa fa-file-invoice"></i>Facturas</a>
+      <a href="traslados.html"><i class="fa fa-truck"></i>Traslados</a>
+      <a href="venta.html"><i class="fa fa-cash-register"></i>Venta</a>
+      <a href="menu.html"><i class="fa fa-bars"></i>Menú</a>
+    </div>
+    <div class="dm-nav-actions">
+      <button class="dm-btn-icon" id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
+    </div>
+  </div>
 </nav>
 
-<button id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
+<main class="dm-main">
 
-<h1><i class="fa fa-boxes"></i> Inventario – Sincronizado con Compras</h1>
+  <div class="dm-header">
+    <h1><i class="fa fa-boxes"></i> Inventario</h1>
+    <p>Sistema sincronizado con compras — Gestión inteligente de stock</p>
+  </div>
 
-<div class="summary-cards">
-  <div class="summary-card"><h3>Total de productos</h3><p id="totalProducts">0</p></div>
-  <div class="summary-card"><h3>Stock total</h3><p id="totalStock">0</p></div>
-</div>
+  <div class="dm-stats-grid">
+    <div class="dm-stat-card">
+      <div class="dm-stat-label">Total de Productos</div>
+      <div class="dm-stat-value" id="totalProducts">0</div>
+      <div class="dm-stat-change">Registrados en sistema</div>
+    </div>
+    <div class="dm-stat-card">
+      <div class="dm-stat-label">Stock Total</div>
+      <div class="dm-stat-value" id="totalStock">0</div>
+      <div class="dm-stat-change">Unidades en inventario</div>
+    </div>
+  </div>
 
-<div class="price-range">
-  <input id="minPrice" type="number" placeholder="Precio mínimo" min="0" step="0.01"/>
-  <input id="maxPrice" type="number" placeholder="Precio máximo" min="0" step="0.01"/>
-</div>
+  <div class="dm-filters">
+    <div class="dm-filter-group" style="flex:2;">
+      <label>Buscar</label>
+      <input id="searchInput" class="dm-input" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
+    </div>
+    <div class="dm-filter-group">
+      <label>Rango de Precio</label>
+      <div class="dm-input-group">
+        <input id="minPrice" class="dm-input" type="number" placeholder="Mínimo" min="0" step="0.01"/>
+        <input id="maxPrice" class="dm-input" type="number" placeholder="Máximo" min="0" step="0.01"/>
+      </div>
+    </div>
+  </div>
 
-<div class="search-bar">
-  <input id="searchInput" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
-</div>
+  <div class="dm-info-pill">
+    <i class="fa fa-info-circle"></i>
+    <span>Las etiquetas se generan según el stock: <strong>1 etiqueta = 1 unidad en inventario</strong></span>
+  </div>
 
-<!-- Info sobre etiquetas -->
-<div class="label-info" id="labelInfo">
-  <i class="fa fa-info-circle"></i> Las etiquetas se generan según el stock: <strong>1 etiqueta = 1 unidad en inventario</strong>
-</div>
-
-<!-- BOTONES DE DESCARGA - CON NUEVA OPCIÓN POR CATEGORÍA -->
-<div class="pdf-buttons">
-  <button onclick="downloadPDF()" class="btn-report">
-    <i class="fa fa-file-pdf"></i> Descargar Reporte Completo PDF
-  </button>
-  <button onclick="downloadCatalogPDF()" class="btn-catalog">
-    <i class="fa fa-images"></i> PRODUCTOS (Catálogo)
-  </button>
-  <button onclick="downloadBarcodeLabelsPDF()" class="btn-barcode">
-    <i class="fa fa-barcode"></i> ETIQUETAS CÓDIGOS DE BARRA
-  </button>
-  
-  <!-- NUEVO: Descargar por categoría específica -->
-  <div class="category-filter-container">
-    <select id="categorySelect">
-      <option value="">Seleccionar categoría...</option>
-    </select>
-    <button onclick="downloadBarcodeLabelsByCategory()" class="btn-category">
-      <i class="fa fa-filter"></i> Por Categoría
+  <div class="dm-actions-bar">
+    <button onclick="downloadPDF()" class="dm-btn dm-btn-success">
+      <i class="fa fa-file-pdf"></i> Reporte Completo PDF
     </button>
+    <button onclick="downloadCatalogPDF()" class="dm-btn dm-btn-primary">
+      <i class="fa fa-images"></i> Catálogo Productos
+    </button>
+    <button onclick="downloadBarcodeLabelsPDF()" class="dm-btn dm-btn-warning">
+      <i class="fa fa-barcode"></i> Etiquetas Códigos de Barra
+    </button>
+    <div class="dm-category-select">
+      <select id="categorySelect" class="dm-input">
+        <option value="">Seleccionar categoría...</option>
+      </select>
+      <button onclick="downloadBarcodeLabelsByCategory()" class="dm-btn dm-btn-secondary">
+        <i class="fa fa-filter"></i> Por Categoría
+      </button>
+    </div>
   </div>
-</div>
 
-<div id="inventoryTable" class="table-grid"></div>
+  <div id="inventoryTable" class="dm-products-grid"></div>
 
-<div class="total-box"><h2>Total en USD</h2><p id="totalAmount">$0.00</p></div>
-
-<!-- NUEVO: Dashboard de Reportes - Movido al final -->
-<div class="report-section">
-  <h2><i class="fa fa-chart-pie"></i> Resumen Ejecutivo</h2>
-  <div class="report-grid" id="executiveSummary">
-    <!-- Se llena dinámicamente -->
+  <div class="dm-total-bar">
+    <h3>Total en USD</h3>
+    <div class="dm-total-value" id="totalAmount">$0.00</div>
   </div>
-  
-  <h3 style="margin-top:1.5rem;margin-bottom:1rem;color:var(--text);font-size:1.1rem;">
-    <i class="fa fa-exclamation-triangle"></i> Alertas y Notificaciones
-  </h3>
-  <div id="alertsContainer" style="display:flex;flex-direction:column;gap:.5rem;">
-    <!-- Alertas dinámicas -->
-  </div>
-</div>
 
-<!-- NUEVO: Análisis por Categoría - Movido al final -->
-<div class="report-section">
-  <h2><i class="fa fa-layer-group"></i> Análisis por Categoría</h2>
-  <div class="table-responsive">
-    <table id="categoryTable">
-      <thead>
-        <tr>
-          <th>Categoría</th>
-          <th>Productos</th>
-          <th>Stock Total</th>
-          <th>Valor del Stock</th>
-          <th>Promedio por Producto</th>
-          <th>% del Total</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody id="categoryTableBody">
-        <!-- Se llena dinámicamente -->
-      </tbody>
-    </table>
-  </div>
-</div>
+  <div class="dm-section">
+    <div class="dm-section-header">
+      <i class="fa fa-chart-pie"></i>
+      <h2>Resumen Ejecutivo</h2>
+    </div>
+    <div class="dm-report-grid" id="executiveSummary"></div>
 
-<!-- NUEVO: Top Productos - Movido al final -->
-<div class="report-section">
-  <h2><i class="fa fa-trophy"></i> Top Productos por Valor</h2>
-  <div class="table-responsive">
-    <table id="topProductsTable">
-      <thead>
-        <tr>
-          <th>Rank</th>
-          <th>Producto</th>
-          <th>Categoría</th>
-          <th>Stock</th>
-          <th>Precio Unit.</th>
-          <th>Valor Total</th>
-          <th>% del Inventario</th>
-        </tr>
-      </thead>
-      <tbody id="topProductsBody">
-        <!-- Se llena dinámicamente -->
-      </tbody>
-    </table>
+    <div style="margin-top:var(--dm-space-xl);">
+      <div class="dm-section-header" style="border:none;padding:0;margin-bottom:var(--dm-space-md);">
+        <i class="fa fa-exclamation-triangle"></i>
+        <h2 style="font-size:1rem;">Alertas y Notificaciones</h2>
+      </div>
+      <div id="alertsContainer"></div>
+    </div>
   </div>
-</div>
 
-<!-- NUEVO: Productos con Problemas - Movido al final con el símbolo de inventario añadido -->
-<div class="report-section" id="problemSection" style="display:none;">
-  <h2><i class="fa fa-exclamation-circle"></i> Productos que Requieren Atención <i class="fa fa-box" style="margin-left: 8px; color: var(--accent);" title="Inventario"></i></h2>
-  <div id="problemProductsContainer"></div>
-</div>
+  <div class="dm-section">
+    <div class="dm-section-header">
+      <i class="fa fa-layer-group"></i>
+      <h2>Análisis por Categoría</h2>
+    </div>
+    <div class="dm-table-wrap">
+      <table class="dm-table" id="categoryTable">
+        <thead>
+          <tr>
+            <th>Categoría</th>
+            <th>Productos</th>
+            <th>Stock Total</th>
+            <th>Valor del Stock</th>
+            <th>Promedio por Producto</th>
+            <th>% del Total</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="categoryTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dm-section">
+    <div class="dm-section-header">
+      <i class="fa fa-trophy"></i>
+      <h2>Top Productos por Valor</h2>
+    </div>
+    <div class="dm-table-wrap">
+      <table class="dm-table" id="topProductsTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Stock</th>
+            <th>Precio Unit.</th>
+            <th>Valor Total</th>
+            <th>% del Inventario</th>
+          </tr>
+        </thead>
+        <tbody id="topProductsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dm-section" id="problemSection" style="display:none;">
+    <div class="dm-section-header">
+      <i class="fa fa-exclamation-circle"></i>
+      <h2>Productos que Requieren Atención <i class="fa fa-box" style="margin-left:8px;color:var(--dm-text-muted);" title="Inventario"></i></h2>
+    </div>
+    <div id="problemProductsContainer"></div>
+  </div>
+
+</main>
 
 <div id="printArea" style="display:none;"></div>
-
 <div id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Imagen ampliada"/>
 </div>
-
-<!-- Contenedor oculto para generar etiquetas de códigos de barras -->
 <div id="barcodeLabelsContainer" style="display:none;"></div>
-
 <div id="pdfContent"></div>
 
 <script>
-function entrarKiosko(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().catch(()=>{});
-  }
-}
-window.addEventListener('load', entrarKiosko);
+} = window.jspdf;
 
-const menuToggle = document.getElementById('menuToggle');
-const kioskoBar  = document.getElementById('kioskoBar');
-menuToggle.addEventListener('click', () => kioskoBar.classList.toggle('show'));
-
-const CATEGORY_ORDER = [
-  "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
-];
-
-let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-let filtered   = [...inventory];
-let searchTerm = '';
-
-const themeToggle = document.getElementById('themeToggle');
-themeToggle.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
-});
-
-function calculateTotal(list){
-  return list.reduce((sum,item)=>{
-    const price = parseFloat(item.price)||0;
-    const qty   = parseFloat(item.quantity)||0;
-    const disc  = parseFloat(item.discount)||0;
-    return sum + (price * (1 - disc/100)) * qty;
-  },0);
-}
-function stockTotal(list){
-  return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
-}
-function calculateItemValue(item){
-  const price = parseFloat(item.price)||0;
-  const qty = parseInt(item.quantity)||0;
-  const disc = parseFloat(item.discount)||0;
-  return (price * (1 - disc/100)) * qty;
-}
-
-function sortByCustomCategory(list) {
-  return [...list].sort((a, b) => {
-    const catA = (a.category || "Otros").trim();
-    const catB = (b.category || "Otros").trim();
-    const indexA = CATEGORY_ORDER.indexOf(catA);
-    const indexB = CATEGORY_ORDER.indexOf(catB);
-    const posA = indexA === -1 ? 999 : indexA;
-    const posB = indexB === -1 ? 999 : indexB;
-    return posA - posB || a.name.localeCompare(b.name);
-  });
-}
-
-function highlight(text, query){
-  if(!query) return text;
-  const re = new RegExp(`(${query})`, 'gi');
-  return text.replace(re, '<mark>$1</mark>');
-}
-function copyToClipboard(text){
-  navigator.clipboard.writeText(text).then(()=>{
-    alert('Código de barras copiado: ' + text);
-  });
-}
-
-function openLightbox(src) {
-  const lightbox = document.getElementById('lightbox');
-  const img = document.getElementById('lightboxImg');
-  img.src = src;
-  lightbox.style.display = 'flex';
-}
-function closeLightbox() {
-  document.getElementById('lightbox').style.display = 'none';
-}
-
-function generateExecutiveReports(){
-  const totalValue = calculateTotal(inventory);
-  const totalQty = stockTotal(inventory);
-  const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0);
-  const lowStock = inventory.filter(i => {
-    const q = parseInt(i.quantity);
-    return q > 0 && q <= 5;
-  });
-  const inStock = inventory.filter(i => parseInt(i.quantity) > 5);
-  
-  const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
-  const categories = [...new Set(inventory.map(i => i.category || 'Sin categoría'))];
-  
-  const mostValuable = inventory.length > 0 ? 
-    inventory.reduce((max, item) => calculateItemValue(item) > calculateItemValue(max) ? item : max, inventory[0]) : null;
-  
-  const highestStock = inventory.length > 0 ?
-    inventory.reduce((max, item) => parseInt(item.quantity) > parseInt(max.quantity) ? item : max, inventory[0]) : null;
-
-  const summaryHTML = `
-    <div class="report-card success">
-      <h4><i class="fa fa-check-circle"></i> En Stock Saludable</h4>
-      <div class="value">${inStock.length}</div>
-      <div class="detail">Productos con >5 unidades</div>
-    </div>
-    <div class="report-card warning">
-      <h4><i class="fa fa-exclamation-triangle"></i> Stock Bajo</h4>
-      <div class="value">${lowStock.length}</div>
-      <div class="detail">Productos con 1-5 unidades</div>
-    </div>
-    <div class="report-card danger">
-      <h4><i class="fa fa-times-circle"></i> Fuera de Stock</h4>
-      <div class="value">${outOfStock.length}</div>
-      <div class="detail">Productos agotados</div>
-    </div>
-    <div class="report-card info">
-      <h4><i class="fa fa-dollar-sign"></i> Valor Promedio</h4>
-      <div class="value">$${avgPrice.toFixed(2)}</div>
-      <div class="detail">Por unidad en inventario</div>
-    </div>
-    <div class="report-card">
-      <h4><i class="fa fa-tags"></i> Categorías</h4>
-      <div class="value">${categories.length}</div>
-      <div class="detail">Diferentes categorías activas</div>
-    </div>
-    <div class="report-card">
-      <h4><i class="fa fa-crown"></i> Producto Top</h4>
-      <div class="value" style="font-size:1.2rem;">${mostValuable ? mostValuable.name.substring(0,15) + '...' : 'N/A'}</div>
-      <div class="detail">Mayor valor: $${mostValuable ? calculateItemValue(mostValuable).toFixed(2) : '0.00'}</div>
-    </div>
-  `;
-  
-  document.getElementById('executiveSummary').innerHTML = summaryHTML;
-  
-  const alertsContainer = document.getElementById('alertsContainer');
-  alertsContainer.innerHTML = '';
-  
-  if (outOfStock.length > 0) {
-    alertsContainer.innerHTML += `
-      <div style="background:#fee2e2;border-left:4px solid #ef4444;padding:1rem;border-radius:8px;">
-        <strong style="color:#991b1b;"><i class="fa fa-times-circle"></i> ${outOfStock.length} productos agotados</strong>
-        <p style="color:#991b1b;font-size:.9rem;margin-top:.25rem;">Requiere reposición inmediata para evitar pérdida de ventas.</p>
-      </div>
-    `;
-  }
-  
-  if (lowStock.length > 0) {
-    alertsContainer.innerHTML += `
-      <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:1rem;border-radius:8px;">
-        <strong style="color:#92400e;"><i class="fa fa-exclamation-triangle"></i> ${lowStock.length} productos con stock crítico</strong>
-        <p style="color:#92400e;font-size:.9rem;margin-top:.25rem;">Considere reordenar pronto para mantener disponibilidad.</p>
-      </div>
-    `;
-  }
-  
-  if (inventory.length === 0) {
-    alertsContainer.innerHTML += `
-      <div style="background:#e0f2fe;border-left:4px solid #06b6d4;padding:1rem;border-radius:8px;">
-        <strong style="color:#155e75;"><i class="fa fa-info-circle"></i> Inventario vacío</strong>
-        <p style="color:#155e75;font-size:.9rem;margin-top:.25rem;">No hay productos registrados en el sistema.</p>
-      </div>
-    `;
-  }
-  
-  generateCategoryTable();
-  generateTopProductsTable();
-  generateProblemProducts();
-}
-
-function generateCategoryTable(){
-  const categories = {};
-  const totalValue = calculateTotal(inventory);
-  
-  inventory.forEach(item => {
-    const cat = item.category || 'Sin categoría';
-    if (!categories[cat]) {
-      categories[cat] = { count: 0, stock: 0, value: 0 };
-    }
-    categories[cat].count++;
-    categories[cat].stock += parseInt(item.quantity) || 0;
-    categories[cat].value += calculateItemValue(item);
-  });
-  
-  const tbody = document.getElementById('categoryTableBody');
-  tbody.innerHTML = Object.entries(categories)
-    .sort((a, b) => b[1].value - a[1].value)
-    .map(([cat, data]) => {
-      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
-      const avgPerProduct = data.count > 0 ? (data.stock / data.count).toFixed(1) : 0;
-      
-      let statusBadge = '<span class="badge badge-success">OK</span>';
-      if (data.stock === 0) statusBadge = '<span class="badge badge-danger">Agotado</span>';
-      else if (data.stock / data.count <= 2) statusBadge = '<span class="badge badge-warning">Bajo</span>';
-      
-      return `
-        <tr>
-          <td><strong>${cat}</strong></td>
-          <td>${data.count}</td>
-          <td>${data.stock} u.</td>
-          <td>$${data.value.toFixed(2)}</td>
-          <td>${avgPerProduct} u.</td>
-          <td>${percentage}%</td>
-          <td>${statusBadge}</td>
-        </tr>
-      `;
-    }).join('');
-}
-
-function generateTopProductsTable(){
-  const totalValue = calculateTotal(inventory);
-  const sorted = [...inventory]
-    .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
-    .slice(0, 10);
-  
-  const tbody = document.getElementById('topProductsBody');
-  tbody.innerHTML = sorted.map((item, index) => {
-    const value = calculateItemValue(item);
-    const percentage = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
-    const finalPrice = item.discount > 0 
-      ? (item.price * (1 - item.discount / 100)).toFixed(2)
-      : parseFloat(item.price).toFixed(2);
-    
-    return `
-      <tr>
-        <td><span class="badge badge-info">#${index + 1}</span></td>
-        <td>${item.name}</td>
-        <td>${item.category}</td>
-        <td>${item.quantity} u.</td>
-        <td>$${finalPrice}</td>
-        <td><strong>$${value.toFixed(2)}</strong></td>
-        <td>${percentage}%</td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function generateProblemProducts(){
-  const problems = inventory.filter(item => {
-    const qty = parseInt(item.quantity);
-    return qty === 0 || (qty > 0 && qty <= 2);
-  }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
-  
-  const section = document.getElementById('problemSection');
-  const container = document.getElementById('problemProductsContainer');
-  
-  if (problems.length === 0) {
-    section.style.display = 'none';
-    return;
-  }
-  
-  section.style.display = 'block';
-  container.innerHTML = problems.map(item => {
-    const qty = parseInt(item.quantity);
-    const isOut = qty === 0;
-    const statusClass = isOut ? 'badge-danger' : 'badge-warning';
-    const statusText = isOut ? 'AGOTADO' : 'CRÍTICO';
-    
-    return `
-      <div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg);border-radius:8px;margin-bottom:.5rem;border-left:4px solid ${isOut ? '#ef4444' : '#f59e0b'};">
-        <div style="flex:1;">
-          <strong>${item.name}</strong>
-          <span class="badge ${statusClass}" style="margin-left:.5rem;">${statusText}</span>
-          <p style="font-size:.8rem;color:#6b7280;margin-top:.25rem;">
-            Código: ${item.code} | Categoría: ${item.category} | Stock: ${qty} u.
-          </p>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;color:var(--accent);">$${parseFloat(item.price).toFixed(2)}</div>
-          <div style="font-size:.75rem;color:#6b7280;">Precio unitario</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderTable(){
-  const container = document.getElementById('inventoryTable');
-
-  document.getElementById('totalProducts').textContent = inventory.length;
-  document.getElementById('totalStock').textContent = stockTotal(inventory);
-
-  filtered = sortByCustomCategory(filtered);
-
-  if(!filtered.length){
-    container.innerHTML = '<p style="text-align:center;color:#6b7280;grid-column:1/-1">No hay productos que coincidan con la búsqueda.</p>';
-    document.getElementById('totalAmount').textContent = '$0.00';
-    return;
-  }
-
-  container.innerHTML = filtered.map((item,idx)=>`
-    <div class="line-item" id="card-${idx}">
-      <img id="invImg${idx}" src="" alt="${item.name}"/>
-      <h3>${highlight(item.name, searchTerm)}</h3>
-      <p>Código: ${highlight(item.code, searchTerm)}</p>
-      <p class="stock-line"><i class="fa fa-box"></i> Stock: ${item.quantity} u.</p>
-      ${typeof item.discount === 'number' && item.discount > 0 ? `
-        <p style="color:#ef4444;font-weight:600;">${item.discount}% OFF</p>
-        <p>Precio: <del style="color:#9ca3af;">$${item.price}</del> <strong>$${(item.price * (1 - item.discount / 100)).toFixed(2)}</strong></p>
-      ` : `
-        <p>Precio: $${item.price}</p>
-      `}
-      <p>Categoría: ${highlight(item.category, searchTerm)}</p>
-      ${item.description ? `<p style="font-size:.7rem;color:#4b5563;"><i class="fa fa-info-circle"></i> ${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}</p>` : ''}
-      
-      <!-- CÓDIGO DE BARRAS -->
-      <div class="barcode-container">
-        <svg id="barcode-${idx}"></svg>
-        <div class="barcode-number">${item.barcode}</div>
-      </div>
-      
-      <div class="actions">
-        <button onclick="viewItem(${idx})" class="btn-primary">Ver</button>
-        <button onclick="downloadSingleBarcodeLabel(${idx})" class="btn-barcode-small" title="Descargar etiqueta"><i class="fa fa-barcode"></i></button>
-      </div>
-    </div>
-  `).join('');
-
-  // Generar códigos de barras
-  filtered.forEach((item, idx) => {
-    if (item.barcode) {
-      try {
-        JsBarcode(`#barcode-${idx}`, item.barcode, {
-          format: "CODE128",
-          width: 2,
-          height: 40,
-          displayValue: false,
-          margin: 0
-        });
-      } catch (e) {
-        console.error('Error generando código de barras:', e);
-      }
-    }
-  });
-
-  filtered.forEach((p,i)=>{
-    localforage.getItem(`img_${p.code}`).then(blob=>{
-      if(blob){
-        const url = URL.createObjectURL(blob);
-        const img = document.getElementById(`invImg${i}`);
-        img.src = url;
-        img.onclick = () => openLightbox(url);
-      }
-    });
-  });
-
-  document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
-  generateExecutiveReports();
-}
-
-function viewItem(index){
-  alert(`Detalles:\n\n${JSON.stringify(filtered[index],null,2)}`);
-}
-
-// Función auxiliar para dividir texto en líneas que quepan en un ancho
-function wrapText(pdf, text, maxWidth, fontSize) {
-  pdf.setFontSize(fontSize);
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
-  
-  for (let word of words) {
-    const testLine = currentLine ? currentLine + ' ' + word : word;
-    const width = pdf.getTextWidth(testLine);
-    
-    if (width <= maxWidth) {
-      currentLine = testLine;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  
-  return lines;
-}
-
-// Función para descargar una sola etiqueta
-async function downloadSingleBarcodeLabel(index) {
-  const item = filtered[index];
-  if (!item || !item.barcode) {
-    alert('Este producto no tiene código de barras');
-    return;
-  }
-  
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('p', 'mm', [50, 30]); // Tamaño etiqueta pequeña
-  
-  const finalPrice = item.discount > 0 
-    ? (item.price * (1 - item.discount / 100)).toFixed(2)
-    : parseFloat(item.price).toFixed(2);
-  
-  // MARCA KLOHE (vertical en la izquierda)
-  pdf.setFontSize(10);
-  pdf.setFont(undefined, 'bold');
-  pdf.setTextColor(0, 0, 0);
-  pdf.text('K', 2, 8);
-  pdf.text('L', 2, 12);
-  pdf.text('O', 2, 16);
-  pdf.text('H', 2, 20);
-  pdf.text('E', 2, 24);
-  
-  // Nombre del producto - ajustar tamaño según longitud
-  const maxWidth = 36; // Ancho disponible para el nombre
-  let fontSize = 7;
-  let lines = wrapText(pdf, item.name, maxWidth, fontSize);
-  
-  // Si es muy largo, reducir tamaño de fuente
-  if (lines.length > 2) {
-    fontSize = 6;
-    lines = wrapText(pdf, item.name, maxWidth, fontSize);
-  }
-  if (lines.length > 3) {
-    fontSize = 5;
-    lines = wrapText(pdf, item.name, maxWidth, fontSize);
-  }
-  
-  // Limitar a máximo 3 líneas
-  if (lines.length > 3) {
-    lines = lines.slice(0, 3);
-    lines[2] = lines[2].substring(0, 15) + '...';
-  }
-  
-  pdf.setFontSize(fontSize);
-  pdf.setFont(undefined, 'normal');
-  let yPos = 6;
-  lines.forEach(line => {
-    pdf.text(line, 12, yPos);
-    yPos += fontSize * 0.4;
-  });
-  
-  // Precio
-  pdf.setFontSize(9);
-  pdf.setFont(undefined, 'bold');
-  pdf.text(`$${finalPrice}`, 12, yPos + 2);
-  
-  // Código de barras
-  const canvas = document.createElement('canvas');
-  try {
-    JsBarcode(canvas, item.barcode, {
-      format: "CODE128",
-      width: 1.5,
-      height: 12,
-      displayValue: false,
-      margin: 0
-    });
-    
-    const barcodeData = canvas.toDataURL('image/png');
-    pdf.addImage(barcodeData, 'PNG', 12, 18, 35, 8);
-    
-    // Números del código de barras debajo
-    pdf.setFontSize(5);
-    pdf.setFont(undefined, 'normal');
-    pdf.text(item.barcode, 29.5, 28, { align: 'center' });
-    
-    pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
-  } catch (e) {
-    alert('Error al generar el código de barras');
-    console.error(e);
-  }
-}
-
-// FUNCIÓN MODIFICADA: Descargar etiquetas de códigos de barras en PDF - GENERA N ETIQUETAS SEGÚN STOCK
-async function downloadBarcodeLabelsPDF() {
-  const { jsPDF } = window.jspdf;
-  
-  if (!filtered || filtered.length === 0) {
-    alert('No hay productos para generar etiquetas');
-    return;
-  }
-  
-  // Filtrar solo productos con código de barras Y con stock > 0
-  const productsWithBarcode = filtered.filter(item => 
-    item.barcode && 
-    item.barcode.trim() !== '' && 
-    parseInt(item.quantity) > 0
-  );
-  
-  if (productsWithBarcode.length === 0) {
-    alert('No hay productos con código de barras y stock disponible');
-    return;
-  }
-  
-  // Calcular total de etiquetas a generar (suma de todas las cantidades)
-  const totalLabels = productsWithBarcode.reduce((sum, item) => sum + parseInt(item.quantity), 0);
-  
-  // Confirmar si es muchas etiquetas
-  if (totalLabels > 100) {
-    if (!confirm(`Se generarán ${totalLabels} etiquetas en total. ¿Deseas continuar?`)) {
-      return;
-    }
-  }
-  
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  
-  // Configuración: 3 columnas x 7 filas = 21 etiquetas por página
-  const cols = 3;
-  const rows = 7;
-  const labelWidth = 63;
-  const labelHeight = 37;
-  const marginX = 8;
-  const marginY = 10;
-  const gapX = 3;
-  const gapY = 2;
-  
-  let currentPage = 1;
-  let labelCount = 0;
-  
-  // Función para dividir texto en líneas que quepan en un ancho
-  const wrapTextForLabel = (text, maxWidth, fontSize) => {
-    pdf.setFontSize(fontSize);
-    const words = text.split(' ');
-    const lines = [];
-    let currentLine = '';
-    
-    for (let word of words) {
-      const testLine = currentLine ? currentLine + ' ' + word : word;
-      const width = pdf.getTextWidth(testLine);
-      
-      if (width <= maxWidth) {
-        currentLine = testLine;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-    
-    return lines;
-  };
-  
-  // Función para dibujar una etiqueta
-  const drawLabel = (item, x, y) => {
-    const rawPrice = parseFloat(item.price) || 0;
-    const finalPrice = item.discount > 0 
-      ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
-      : rawPrice.toFixed(2);
-    
-    // Borde de la etiqueta
-    pdf.setDrawColor(200, 200, 200);
-    pdf.setLineWidth(0.2);
-    pdf.rect(x, y, labelWidth, labelHeight);
-    
-    // MARCA KLOHE (vertical en la izquierda) - CENTRADO VERTICAL Y HORIZONTALMENTE
-    pdf.setFontSize(11);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(0, 0, 0);
-    // Centrado vertical: distribuir 5 letras en el alto de la etiqueta
-    const letterSpacing = 5.5;
-    const totalLettersHeight = 4 * letterSpacing;
-    const startY = y + (labelHeight - totalLettersHeight) / 2;
-    const letterX = x + 4;
-    pdf.text('K', letterX, startY);
-    pdf.text('L', letterX, startY + letterSpacing);
-    pdf.text('O', letterX, startY + letterSpacing * 2);
-    pdf.text('H', letterX, startY + letterSpacing * 3);
-    pdf.text('E', letterX, startY + letterSpacing * 4);
-    
-    // Línea separadora vertical
-    pdf.setDrawColor(150, 150, 150);
-    pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
-    
-    // Nombre del producto
-    const textX = x + 13;
-    const maxTextWidth = labelWidth - 16;
-    let fontSize = 8;
-    let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
-    
-    // Ajustar si es muy largo
-    if (lines.length > 2) {
-      fontSize = 7;
-      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
-    }
-    if (lines.length > 3) {
-      fontSize = 6;
-      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
-    }
-    
-    // Limitar a máximo 3 líneas
-    if (lines.length > 3) {
-      lines = lines.slice(0, 3);
-      const lastLine = lines[2];
-      if (lastLine.length > 18) {
-        lines[2] = lastLine.substring(0, 15) + '...';
-      }
-    }
-    
-    // Dibujar nombre
-    pdf.setFontSize(fontSize);
-    pdf.setFont(undefined, 'normal');
-    let textY = y + 6;
-    lines.forEach(line => {
-      pdf.text(line, textX, textY);
-      textY += fontSize * 0.4;
-    });
-    
-    // Precio
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'bold');
-    pdf.text(`$${finalPrice}`, textX, y + 16);
-    
-    // Código de barras
-    const canvas = document.createElement('canvas');
-    try {
-      JsBarcode(canvas, item.barcode, {
-        format: "CODE128",
-        width: 1.2,
-        height: 10,
-        displayValue: false,
-        margin: 0
-      });
-      
-      const barcodeData = canvas.toDataURL('image/png');
-      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10);
-      
-      // Números del código de barras
-      pdf.setFontSize(6);
-      pdf.setFont(undefined, 'normal');
-      pdf.setTextColor(80, 80, 80);
-      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' });
-    } catch (e) {
-      console.error('Error generando código de barras para:', item.name);
-    }
-  };
-  
-  // Generar etiquetas - UNA POR CADA UNIDAD EN STOCK
-  for (const item of productsWithBarcode) {
-    const stock = parseInt(item.quantity);
-    
-    // Generar N etiquetas según el stock del producto
-    for (let i = 0; i < stock; i++) {
-      // Calcular posición
-      const col = labelCount % cols;
-      const row = Math.floor((labelCount % (cols * rows)) / cols);
-      
-      const x = marginX + col * (labelWidth + gapX);
-      const y = marginY + row * (labelHeight + gapY);
-      
-      drawLabel(item, x, y);
-      
-      labelCount++;
-      
-      // Nueva página si se llenó (21 etiquetas)
-      if (labelCount % (cols * rows) === 0) {
-        pdf.addPage();
-        currentPage++;
-      }
-    }
-  }
-  
-  // Guardar
-  pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
-}
-
-// NUEVA FUNCIÓN: Descargar etiquetas filtradas por categoría seleccionada - GENERA N ETIQUETAS SEGÚN STOCK
-async function downloadBarcodeLabelsByCategory() {
-  const categorySelect = document.getElementById('categorySelect');
-  const selectedCategory = categorySelect.value;
-  
-  if (!selectedCategory) {
-    alert('Por favor selecciona una categoría del menú desplegable');
-    categorySelect.focus();
-    return;
-  }
-  
-  const { jsPDF } = window.jspdf;
-  
-  // Filtrar productos: por categoría seleccionada, que tengan código de barras Y stock > 0
   const productsByCategory = inventory.filter(item => {
     const itemCategory = (item.category || 'Sin categoría').trim();
     return itemCategory === selectedCategory && 
@@ -1100,25 +954,22 @@ async function downloadBarcodeLabelsByCategory() {
            item.barcode.trim() !== '' &&
            parseInt(item.quantity) > 0;
   });
-  
+
   if (productsByCategory.length === 0) {
     alert(`No hay productos con código de barras y stock disponible en la categoría "${selectedCategory}"`);
     return;
   }
-  
-  // Calcular total de etiquetas
+
   const totalLabels = productsByCategory.reduce((sum, item) => sum + parseInt(item.quantity), 0);
-  
-  // Confirmar descarga
+
   if (!confirm(`Se generarán ${totalLabels} etiquetas para ${productsByCategory.length} productos de "${selectedCategory}". ¿Continuar?`)) {
     return;
   }
-  
+
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  
-  // Configuración: 3 columnas x 7 filas = 21 etiquetas por página
+
   const cols = 3;
   const rows = 7;
   const labelWidth = 63;
@@ -1127,21 +978,20 @@ async function downloadBarcodeLabelsByCategory() {
   const marginY = 10;
   const gapX = 3;
   const gapY = 2;
-  
+
   let currentPage = 1;
   let labelCount = 0;
-  
-  // Función para dividir texto en líneas
+
   const wrapTextForLabel = (text, maxWidth, fontSize) => {
     pdf.setFontSize(fontSize);
     const words = text.split(' ');
     const lines = [];
     let currentLine = '';
-    
+
     for (let word of words) {
       const testLine = currentLine ? currentLine + ' ' + word : word;
       const width = pdf.getTextWidth(testLine);
-      
+
       if (width <= maxWidth) {
         currentLine = testLine;
       } else {
@@ -1150,47 +1000,43 @@ async function downloadBarcodeLabelsByCategory() {
       }
     }
     if (currentLine) lines.push(currentLine);
-    
+
     return lines;
   };
-  
-  // Función para dibujar una etiqueta
+
   const drawLabel = (item, x, y) => {
     const rawPrice = parseFloat(item.price) || 0;
     const finalPrice = item.discount > 0 
       ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
       : rawPrice.toFixed(2);
-    
-    // Borde de la etiqueta
+
     pdf.setDrawColor(200, 200, 200);
     pdf.setLineWidth(0.2);
     pdf.rect(x, y, labelWidth, labelHeight);
-    
-    // MARCA KLOHE vertical centrada
+
     pdf.setFontSize(11);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(0, 0, 0);
     const letterSpacing = 5.5;
-    const totalLettersHeight = 4 * letterSpacing;
+    const totalLettersHeight = 5 * letterSpacing;
     const startY = y + (labelHeight - totalLettersHeight) / 2;
     const letterX = x + 4;
-    
-    pdf.text('K', letterX, startY);
-    pdf.text('L', letterX, startY + letterSpacing);
-    pdf.text('O', letterX, startY + letterSpacing * 2);
-    pdf.text('H', letterX, startY + letterSpacing * 3);
-    pdf.text('E', letterX, startY + letterSpacing * 4);
-    
-    // Línea separadora
+
+    pdf.text('D', letterX, startY);
+    pdf.text('A', letterX, startY + letterSpacing);
+    pdf.text('Y', letterX, startY + letterSpacing * 2);
+    pdf.text('M', letterX, startY + letterSpacing * 3);
+    pdf.text('A', letterX, startY + letterSpacing * 4);
+    pdf.text('R', letterX, startY + letterSpacing * 5);
+
     pdf.setDrawColor(150, 150, 150);
     pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
-    
-    // Nombre del producto
+
     const textX = x + 13;
     const maxTextWidth = labelWidth - 16;
     let fontSize = 8;
     let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
-    
+
     if (lines.length > 2) {
       fontSize = 7;
       lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
@@ -1199,14 +1045,14 @@ async function downloadBarcodeLabelsByCategory() {
       fontSize = 6;
       lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
     }
-    
+
     if (lines.length > 3) {
       lines = lines.slice(0, 3);
       if (lines[2].length > 18) {
         lines[2] = lines[2].substring(0, 15) + '...';
       }
     }
-    
+
     pdf.setFontSize(fontSize);
     pdf.setFont(undefined, 'normal');
     let textY = y + 6;
@@ -1214,13 +1060,11 @@ async function downloadBarcodeLabelsByCategory() {
       pdf.text(line, textX, textY);
       textY += fontSize * 0.4;
     });
-    
-    // Precio
+
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
     pdf.text(`$${finalPrice}`, textX, y + 16);
-    
-    // Código de barras
+
     const canvas = document.createElement('canvas');
     try {
       JsBarcode(canvas, item.barcode, {
@@ -1230,11 +1074,10 @@ async function downloadBarcodeLabelsByCategory() {
         displayValue: false,
         margin: 0
       });
-      
+
       const barcodeData = canvas.toDataURL('image/png');
       pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10);
-      
-      // Números del código de barras
+
       pdf.setFontSize(6);
       pdf.setFont(undefined, 'normal');
       pdf.setTextColor(80, 80, 80);
@@ -1243,32 +1086,28 @@ async function downloadBarcodeLabelsByCategory() {
       console.error('Error generando código de barras para:', item.name);
     }
   };
-  
-  // Generar etiquetas - UNA POR CADA UNIDAD EN STOCK
+
   for (const item of productsByCategory) {
     const stock = parseInt(item.quantity);
-    
-    // Generar N etiquetas según el stock del producto
+
     for (let i = 0; i < stock; i++) {
       const col = labelCount % cols;
       const row = Math.floor((labelCount % (cols * rows)) / cols);
-      
+
       const x = marginX + col * (labelWidth + gapX);
       const y = marginY + row * (labelHeight + gapY);
-      
+
       drawLabel(item, x, y);
-      
+
       labelCount++;
-      
-      // Nueva página si se llenó (21 etiquetas)
+
       if (labelCount % (cols * rows) === 0) {
         pdf.addPage();
         currentPage++;
       }
     }
   }
-  
-  // Guardar archivo con nombre incluyendo la categoría
+
   const safeCategoryName = selectedCategory.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   pdf.save(`etiquetas_${safeCategoryName}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
@@ -1289,27 +1128,21 @@ function doFilter(){
     const matchPrice = price >= minP && price <= maxP;
     return matchText && matchPrice;
   });
-  
-  // Actualizar selector de categorías dinámicamente
+
   updateCategorySelector();
-  
   renderTable();
 }
 
-// Función para actualizar el selector de categorías
 function updateCategorySelector() {
   const categorySelect = document.getElementById('categorySelect');
   if (!categorySelect) return;
-  
-  // Obtener categorías únicas del inventario completo
+
   const categories = [...new Set(inventory.map(item => (item.category || 'Sin categoría').trim()))].sort();
-  
-  // Guardar selección actual
+
   const currentSelection = categorySelect.value;
-  
-  // Reconstruir opciones
+
   categorySelect.innerHTML = '<option value="">Seleccionar categoría...</option>';
-  
+
   categories.forEach(cat => {
     const count = inventory.filter(item => (item.category || 'Sin categoría').trim() === cat).length;
     const option = document.createElement('option');
@@ -1317,8 +1150,7 @@ function updateCategorySelector() {
     option.textContent = `${cat} (${count} prod.)`;
     categorySelect.appendChild(option);
   });
-  
-  // Restaurar selección si aún existe
+
   if (currentSelection && categories.includes(currentSelection)) {
     categorySelect.value = currentSelection;
   }
@@ -1349,22 +1181,21 @@ localStorage.setItem = function(key, value) {
   }
 };
 
-// FUNCIÓN ORIGINAL: Reporte completo de inventario
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
-  
+
   if (!filtered || filtered.length === 0) {
     alert('No hay productos para generar el PDF');
     return;
   }
-  
+
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 15;
-  
+
   let yPosition = 20;
   let pageCount = 1;
-  
+
   const checkNewPage = (neededSpace = 40) => {
     if (yPosition > 280 - neededSpace) {
       pdf.addPage();
@@ -1375,7 +1206,7 @@ async function downloadPDF() {
       pdf.text(`Reporte de Inventario - Página ${pageCount}`, pageWidth / 2, 10, { align: 'center' });
     }
   };
-  
+
   const blobToBase64 = (blob) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -1383,16 +1214,16 @@ async function downloadPDF() {
       reader.readAsDataURL(blob);
     });
   };
-  
+
   // PORTADA
   pdf.setFontSize(24);
-  pdf.setTextColor(59, 130, 246);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('REPORTE DE INVENTARIO', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 12;
-  
+
   pdf.setFontSize(10);
-  pdf.setTextColor(100, 100, 100);
+  pdf.setTextColor(107, 114, 128);
   pdf.setFont(undefined, 'normal');
   const fecha = new Date().toLocaleDateString('es-ES', { 
     year: 'numeric', 
@@ -1403,18 +1234,18 @@ async function downloadPDF() {
   });
   pdf.text(`Generado el ${fecha} | ${inventory.length} productos registrados`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 15;
-  
-  pdf.setDrawColor(59, 130, 246);
+
+  pdf.setDrawColor(229, 231, 235);
   pdf.line(margin, yPosition, pageWidth - margin, yPosition);
   yPosition += 10;
-  
+
   // RESUMEN EJECUTIVO
   pdf.setFontSize(16);
-  pdf.setTextColor(31, 41, 55);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('1. RESUMEN EJECUTIVO', margin, yPosition);
   yPosition += 8;
-  
+
   const totalValue = calculateTotal(inventory);
   const totalQty = stockTotal(inventory);
   const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0).length;
@@ -1424,10 +1255,10 @@ async function downloadPDF() {
   }).length;
   const inStock = inventory.filter(i => parseInt(i.quantity) > 5).length;
   const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
-  
+
   pdf.setFontSize(10);
   pdf.setFont(undefined, 'normal');
-  
+
   const summaryData = [
     ['Total de Productos:', inventory.length.toString()],
     ['Unidades en Stock:', totalQty.toString()],
@@ -1437,9 +1268,9 @@ async function downloadPDF() {
     ['Productos con Stock Bajo:', lowStock.toString()],
     ['Productos con Stock Saludable:', inStock.toString()]
   ];
-  
+
   summaryData.forEach(([label, value]) => {
-    pdf.setTextColor(100, 100, 100);
+    pdf.setTextColor(107, 114, 128);
     pdf.text(label, margin, yPosition);
     pdf.setTextColor(0, 0, 0);
     pdf.setFont(undefined, 'bold');
@@ -1447,44 +1278,44 @@ async function downloadPDF() {
     pdf.setFont(undefined, 'normal');
     yPosition += 6;
   });
-  
+
   yPosition += 5;
-  
+
   // DISTRIBUCIÓN POR ESTADO
   checkNewPage(60);
   pdf.setFontSize(16);
-  pdf.setTextColor(31, 41, 55);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('2. DISTRIBUCIÓN POR ESTADO DE STOCK', margin, yPosition);
   yPosition += 10;
-  
+
   const maxVal = Math.max(inStock, lowStock, outOfStock, 1);
   const barWidth = 80;
-  
-  pdf.setFillColor(16, 185, 129);
+
+  pdf.setFillColor(22, 163, 74);
   pdf.rect(margin, yPosition - 5, (inStock / maxVal) * barWidth, 8, 'F');
   pdf.setTextColor(0, 0, 0);
   pdf.text(`En Stock (>5u): ${inStock}`, margin + (inStock / maxVal) * barWidth + 5, yPosition);
   yPosition += 12;
-  
-  pdf.setFillColor(245, 158, 11);
+
+  pdf.setFillColor(217, 119, 6);
   pdf.rect(margin, yPosition - 5, (lowStock / maxVal) * barWidth, 8, 'F');
   pdf.text(`Stock Bajo (1-5u): ${lowStock}`, margin + (lowStock / maxVal) * barWidth + 5, yPosition);
   yPosition += 12;
-  
-  pdf.setFillColor(239, 68, 68);
+
+  pdf.setFillColor(220, 38, 38);
   pdf.rect(margin, yPosition - 5, (outOfStock / maxVal) * barWidth, 8, 'F');
   pdf.text(`Agotado (0u): ${outOfStock}`, margin + (outOfStock / maxVal) * barWidth + 5, yPosition);
   yPosition += 15;
-  
+
   // ANÁLISIS POR CATEGORÍA
   checkNewPage(100);
   pdf.setFontSize(16);
-  pdf.setTextColor(31, 41, 55);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('3. ANÁLISIS POR CATEGORÍA', margin, yPosition);
   yPosition += 10;
-  
+
   const categories = {};
   inventory.forEach(item => {
     const cat = item.category || 'Sin categoría';
@@ -1493,7 +1324,7 @@ async function downloadPDF() {
     categories[cat].stock += parseInt(item.quantity) || 0;
     categories[cat].value += calculateItemValue(item);
   });
-  
+
   pdf.setFillColor(243, 244, 246);
   pdf.rect(margin, yPosition - 6, pageWidth - margin * 2, 8, 'F');
   pdf.setFontSize(9);
@@ -1504,41 +1335,41 @@ async function downloadPDF() {
   pdf.text('Valor Total', margin + 105, yPosition);
   pdf.text('% del Total', margin + 140, yPosition);
   yPosition += 8;
-  
+
   pdf.setTextColor(0, 0, 0);
   Object.entries(categories)
     .sort((a, b) => b[1].value - a[1].value)
     .forEach(([cat, data]) => {
       checkNewPage(15);
       const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
-      
+
       pdf.setFontSize(9);
       pdf.text(cat.substring(0, 25), margin + 2, yPosition);
       pdf.text(data.count.toString(), margin + 60, yPosition);
       pdf.text(data.stock.toString(), margin + 80, yPosition);
       pdf.text(`$${data.value.toFixed(2)}`, margin + 105, yPosition);
       pdf.text(`${percentage}%`, margin + 140, yPosition);
-      
-      pdf.setFillColor(59, 130, 246);
+
+      pdf.setFillColor(26, 26, 26);
       pdf.rect(margin + 160, yPosition - 4, percentage * 0.8, 4, 'F');
-      
+
       yPosition += 7;
     });
-  
+
   yPosition += 10;
-  
+
   // TOP 10 PRODUCTOS
   checkNewPage(120);
   pdf.setFontSize(16);
-  pdf.setTextColor(31, 41, 55);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('4. TOP 10 PRODUCTOS POR VALOR DE INVENTARIO', margin, yPosition);
   yPosition += 10;
-  
+
   const topProducts = [...inventory]
     .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
     .slice(0, 10);
-  
+
   pdf.setFillColor(243, 244, 246);
   pdf.rect(margin, yPosition - 6, pageWidth - margin * 2, 8, 'F');
   pdf.setFontSize(9);
@@ -1550,7 +1381,7 @@ async function downloadPDF() {
   pdf.text('Valor Total', margin + 135, yPosition);
   pdf.text('%', margin + 165, yPosition);
   yPosition += 8;
-  
+
   topProducts.forEach((item, idx) => {
     checkNewPage(15);
     const value = calculateItemValue(item);
@@ -1558,7 +1389,7 @@ async function downloadPDF() {
     const finalPrice = item.discount > 0 
       ? (item.price * (1 - item.discount / 100)).toFixed(2)
       : parseFloat(item.price).toFixed(2);
-    
+
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     pdf.text((idx + 1).toString(), margin + 2, yPosition);
@@ -1571,34 +1402,34 @@ async function downloadPDF() {
     pdf.text(`${percentage}%`, margin + 165, yPosition);
     yPosition += 7;
   });
-  
+
   yPosition += 10;
-  
+
   // PRODUCTOS CON PROBLEMAS
   const problems = inventory.filter(item => {
     const qty = parseInt(item.quantity);
     return qty === 0 || (qty > 0 && qty <= 2);
   }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
-  
+
   if (problems.length > 0) {
     checkNewPage(100);
     pdf.setFontSize(16);
-    pdf.setTextColor(239, 68, 68);
+    pdf.setTextColor(220, 38, 38);
     pdf.setFont(undefined, 'bold');
     pdf.text('5. PRODUCTOS QUE REQUIEREN ATENCIÓN INMEDIATA', margin, yPosition);
     yPosition += 10;
-    
+
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
-    
+
     problems.forEach(item => {
       checkNewPage(20);
       const qty = parseInt(item.quantity);
       const isOut = qty === 0;
-      
-      pdf.setFillColor(isOut ? 239 : 245, isOut ? 68 : 158, isOut ? 68 : 11);
+
+      pdf.setFillColor(isOut ? 220 : 217, isOut ? 38 : 119, isOut ? 38 : 6);
       pdf.circle(margin + 3, yPosition - 2, 2, 'F');
-      
+
       pdf.setFont(undefined, 'bold');
       pdf.text(item.name.substring(0, 40), margin + 10, yPosition);
       pdf.setFont(undefined, 'normal');
@@ -1606,32 +1437,32 @@ async function downloadPDF() {
         margin + 10, yPosition + 5);
       yPosition += 12;
     });
-    
+
     yPosition += 5;
   }
-  
+
   // LISTADO COMPLETO
   checkNewPage(40);
   pdf.addPage();
   pageCount++;
   yPosition = 20;
-  
+
   pdf.setFontSize(16);
-  pdf.setTextColor(31, 41, 55);
+  pdf.setTextColor(26, 26, 26);
   pdf.setFont(undefined, 'bold');
   pdf.text('6. LISTADO COMPLETO DE PRODUCTOS', margin, yPosition);
   yPosition += 10;
-  
+
   const sortedItems = sortByCustomCategory(filtered);
-  
+
   for (let index = 0; index < sortedItems.length; index++) {
     const item = sortedItems[index];
     checkNewPage(35);
-    
+
     const finalPrice = item.discount > 0 
       ? (item.price * (1 - item.discount / 100)).toFixed(2)
       : parseFloat(item.price).toFixed(2);
-    
+
     try {
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
@@ -1639,81 +1470,79 @@ async function downloadPDF() {
         pdf.addImage(base64, 'JPEG', margin, yPosition, 20, 20);
       }
     } catch (e) {}
-    
+
     const textX = margin + 25;
-    
+
     pdf.setFontSize(10);
-    pdf.setTextColor(59, 130, 246);
+    pdf.setTextColor(26, 26, 26);
     pdf.setFont(undefined, 'bold');
     let nombre = item.name.length > 35 ? item.name.substring(0, 32) + '...' : item.name;
     pdf.text(nombre, textX, yPosition + 4);
-    
+
     const qty = parseInt(item.quantity) || 0;
     pdf.setFontSize(8);
     if (qty === 0) {
-      pdf.setTextColor(239, 68, 68);
+      pdf.setTextColor(220, 38, 38);
       pdf.text('[SIN STOCK]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
     } else if (qty <= 5) {
-      pdf.setTextColor(245, 158, 11);
+      pdf.setTextColor(217, 119, 6);
       pdf.text('[STOCK BAJO]', textX + pdf.getTextWidth(nombre) + 5, yPosition + 4);
     }
-    
+
     yPosition += 7;
-    
+
     pdf.setFontSize(8);
-    pdf.setTextColor(80, 80, 80);
+    pdf.setTextColor(107, 114, 128);
     pdf.setFont(undefined, 'normal');
     pdf.text(`Código: ${item.code} | Stock: ${item.quantity}u | Categoría: ${item.category}`, textX, yPosition);
     yPosition += 4;
-    
+
     if (item.discount > 0) {
-      pdf.setTextColor(239, 68, 68);
+      pdf.setTextColor(220, 38, 38);
       pdf.text(`Precio: $${finalPrice} (desc. ${item.discount}%) | Barras: ${item.barcode}`, textX, yPosition);
     } else {
       pdf.text(`Precio: $${finalPrice} | Barras: ${item.barcode}`, textX, yPosition);
     }
     yPosition += 4;
-    
+
     if (item.description) {
-      pdf.setTextColor(100, 100, 100);
+      pdf.setTextColor(156, 163, 175);
       pdf.setFontSize(7);
       let desc = item.description.trim();
       if (desc.length > 80) desc = desc.substring(0, 77) + '...';
       pdf.text(`Descripción: ${desc}`, textX, yPosition);
       yPosition += 4;
     }
-    
+
     yPosition += 8;
-    pdf.setDrawColor(230, 230, 230);
+    pdf.setDrawColor(229, 231, 235);
     pdf.line(margin, yPosition - 3, pageWidth - margin, yPosition - 3);
   }
-  
+
   pdf.setFontSize(8);
-  pdf.setTextColor(150, 150, 150);
-  pdf.text(`Reporte generado automáticamente por Sistema de Inventario | Total de páginas: ${pageCount}`, 
+  pdf.setTextColor(156, 163, 175);
+  pdf.text(`Reporte generado automáticamente por Sistema de Inventario DAYMAR | Total de páginas: ${pageCount}`, 
     pageWidth / 2, 285, { align: 'center' });
-  
+
   pdf.save(`reporte_inventario_completo_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-// NUEVA FUNCIÓN: Catálogo de Productos (Base de Datos en PDF)
 async function downloadCatalogPDF() {
   const { jsPDF } = window.jspdf;
-  
+
   if (!filtered || filtered.length === 0) {
     alert('No hay productos para generar el catálogo');
     return;
   }
-  
+
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 15;
-  
+
   let yPosition = 20;
   let pageCount = 1;
-  
-  // Función para convertir blob a base64
+
   const blobToBase64 = (blob) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -1721,44 +1550,40 @@ async function downloadCatalogPDF() {
       reader.readAsDataURL(blob);
     });
   };
-  
-  // Función para verificar espacio y agregar nueva página
+
   const checkNewPage = (neededSpace = 60) => {
     if (yPosition > pageHeight - margin - neededSpace) {
       pdf.addPage();
       pageCount++;
       yPosition = margin;
-      // Header en nueva página
       addHeader();
     }
   };
-  
-  // Función para agregar header
+
   const addHeader = () => {
-    pdf.setFillColor(59, 130, 246);
+    pdf.setFillColor(26, 26, 26);
     pdf.rect(0, 0, pageWidth, 12, 'F');
     pdf.setFontSize(10);
     pdf.setTextColor(255, 255, 255);
     pdf.setFont(undefined, 'bold');
-    pdf.text('CATÁLOGO DE PRODUCTOS', pageWidth / 2, 8, { align: 'center' });
-    
+    pdf.text('CATÁLOGO DE PRODUCTOS DAYMAR', pageWidth / 2, 8, { align: 'center' });
+
     pdf.setFontSize(8);
-    pdf.setTextColor(150, 150, 150);
+    pdf.setTextColor(156, 163, 175);
     pdf.text(`Página ${pageCount}`, pageWidth - margin, 8, { align: 'right' });
   };
-  
-  // Función para convertir número a palabras (para el precio en letras)
+
   const numeroALetras = (numero) => {
     const unidades = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
     const decenas = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
     const decenasCompuestas = ['veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
     const centenas = ['cien', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
-    
+
     const entero = Math.floor(numero);
     const decimal = Math.round((numero - entero) * 100);
-    
+
     let resultado = '';
-    
+
     if (entero === 0) {
       resultado = unidades[0];
     } else if (entero < 10) {
@@ -1788,20 +1613,20 @@ async function downloadCatalogPDF() {
       }
       if (resto > 0) resultado += ' ' + numeroALetras(resto);
     }
-    
+
     return resultado.toUpperCase() + (decimal > 0 ? ' CON ' + decimal + '/100' : ' CON 00/100') + ' DÓLARES';
   };
-  
+
   // PORTADA DEL CATÁLOGO
-  pdf.setFillColor(59, 130, 246);
+  pdf.setFillColor(26, 26, 26);
   pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-  
+
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(32);
   pdf.setFont(undefined, 'bold');
   pdf.text('CATÁLOGO', pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
-  pdf.text('DE PRODUCTOS', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
-  
+  pdf.text('DAYMAR', pageWidth / 2, pageHeight / 2 + 10, { align: 'center' });
+
   pdf.setFontSize(14);
   pdf.setFont(undefined, 'normal');
   const fecha = new Date().toLocaleDateString('es-ES', { 
@@ -1811,64 +1636,54 @@ async function downloadCatalogPDF() {
   });
   pdf.text(`Actualizado: ${fecha}`, pageWidth / 2, pageHeight / 2 + 40, { align: 'center' });
   pdf.text(`${filtered.length} productos disponibles`, pageWidth / 2, pageHeight / 2 + 50, { align: 'center' });
-  
+
   pdf.addPage();
   pageCount++;
   yPosition = margin;
   addHeader();
   yPosition += 15;
-  
-  // Ordenar productos por categoría
+
   const sortedItems = sortByCustomCategory(filtered);
   let currentCategory = '';
-  
-  // Procesar cada producto
+
   for (let index = 0; index < sortedItems.length; index++) {
     const item = sortedItems[index];
-    
-    // Nueva categoría?
+
     if (item.category !== currentCategory) {
       checkNewPage(30);
       currentCategory = item.category;
-      
-      // Título de categoría
+
       pdf.setFillColor(243, 244, 246);
       pdf.rect(margin, yPosition - 5, pageWidth - margin * 2, 10, 'F');
       pdf.setFontSize(12);
-      pdf.setTextColor(59, 130, 246);
+      pdf.setTextColor(26, 26, 26);
       pdf.setFont(undefined, 'bold');
       pdf.text(currentCategory.toUpperCase(), pageWidth / 2, yPosition + 1, { align: 'center' });
       yPosition += 15;
     }
-    
+
     checkNewPage(80);
-    
-    // CORRECCIÓN: Asegurar que el precio sea número
+
     const rawPrice = parseFloat(item.price) || 0;
     const finalPrice = item.discount > 0 
       ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
       : rawPrice.toFixed(2);
-    
-    // === DISEÑO DE FICHA DE PRODUCTO ===
-    
-    // Caja contenedora
+
     pdf.setDrawColor(229, 231, 235);
     pdf.setLineWidth(0.5);
     pdf.roundedRect(margin, yPosition, pageWidth - margin * 2, 75, 3, 3, 'S');
-    
-    // Imagen del producto (lado izquierdo)
+
     let imgX = margin + 5;
     let imgY = yPosition + 5;
     let imgWidth = 40;
     let imgHeight = 50;
-    
+
     try {
       const blob = await localforage.getItem(`img_${item.code}`);
       if (blob) {
         const base64 = await blobToBase64(blob);
         pdf.addImage(base64, 'JPEG', imgX, imgY, imgWidth, imgHeight);
       } else {
-        // Placeholder si no hay imagen
         pdf.setFillColor(243, 244, 246);
         pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
         pdf.setTextColor(156, 163, 175);
@@ -1879,37 +1694,31 @@ async function downloadCatalogPDF() {
       pdf.setFillColor(243, 244, 246);
       pdf.rect(imgX, imgY, imgWidth, imgHeight, 'F');
     }
-    
-    // Información del producto (lado derecho)
+
     let textX = margin + 50;
     let textY = yPosition + 10;
-    
-    // Nombre del producto
+
     pdf.setFontSize(14);
-    pdf.setTextColor(31, 41, 55);
+    pdf.setTextColor(26, 26, 26);
     pdf.setFont(undefined, 'bold');
     let nombre = item.name;
     if (nombre.length > 40) nombre = nombre.substring(0, 37) + '...';
     pdf.text(nombre, textX, textY);
     textY += 8;
-    
-    // Categoría
+
     pdf.setFontSize(9);
     pdf.setTextColor(107, 114, 128);
     pdf.setFont(undefined, 'normal');
     pdf.text(`Categoría: ${item.category}`, textX, textY);
     textY += 6;
-    
-    // Código y código de barras
+
     pdf.setFontSize(8);
     pdf.text(`Código: ${item.code}  |  Código de barras: ${item.barcode}`, textX, textY);
     textY += 6;
-    
-    // Descripción
+
     if (item.description && item.description.trim() !== '') {
       pdf.setTextColor(75, 85, 99);
       let desc = item.description.trim();
-      // Dividir descripción en líneas si es muy larga
       const maxChars = 65;
       const lines = [];
       while (desc.length > 0) {
@@ -1925,7 +1734,7 @@ async function downloadCatalogPDF() {
         lines.push(line);
         desc = desc.substring(line.length).trim();
       }
-      
+
       lines.slice(0, 2).forEach(line => {
         pdf.text(line, textX, textY);
         textY += 4;
@@ -1936,42 +1745,37 @@ async function downloadCatalogPDF() {
       }
       textY += 2;
     }
-    
-    // Stock disponible
+
     const qty = parseInt(item.quantity) || 0;
     pdf.setFontSize(9);
     if (qty === 0) {
-      pdf.setTextColor(239, 68, 68);
+      pdf.setTextColor(220, 38, 38);
       pdf.setFont(undefined, 'bold');
       pdf.text(`STOCK: AGOTADO`, textX, textY);
     } else if (qty <= 5) {
-      pdf.setTextColor(245, 158, 11);
+      pdf.setTextColor(217, 119, 6);
       pdf.setFont(undefined, 'bold');
       pdf.text(`STOCK: ${qty} unidades (¡Últimas!)`, textX, textY);
     } else {
-      pdf.setTextColor(16, 185, 129);
+      pdf.setTextColor(22, 163, 74);
       pdf.setFont(undefined, 'bold');
       pdf.text(`STOCK: ${qty} unidades disponibles`, textX, textY);
     }
     textY += 12;
-    
-    // PRECIO EN NEGRO - NÚMEROS Y LETRAS
+
     pdf.setFontSize(11);
-    pdf.setTextColor(0, 0, 0); // NEGRO PURO
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont(undefined, 'bold');
-    
-    // Precio en números
+
     const precioNumeros = `$${finalPrice}`;
     pdf.text(`PRECIO: ${precioNumeros}`, textX, textY);
-    
-    // Precio en letras (debajo)
+
     textY += 6;
     pdf.setFontSize(8);
     pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(80, 80, 80); // Gris oscuro para las letras
-    
+    pdf.setTextColor(80, 80, 80);
+
     const precioLetras = numeroALetras(parseFloat(finalPrice));
-    // Dividir en líneas si es muy largo
     const maxLetrasChars = 60;
     if (precioLetras.length > maxLetrasChars) {
       pdf.text(precioLetras.substring(0, maxLetrasChars), textX, textY);
@@ -1980,44 +1784,38 @@ async function downloadCatalogPDF() {
     } else {
       pdf.text(precioLetras, textX, textY);
     }
-    
-    // Si hay descuento, mostrar precio original tachado al lado
+
     if (item.discount > 0) {
-      textY -= 6; // Volver a la línea del precio
+      textY -= 6;
       const oldPriceX = textX + pdf.getTextWidth(`PRECIO: ${precioNumeros}`) + 15;
       pdf.setFontSize(9);
-      pdf.setTextColor(156, 163, 175); // Gris claro para precio tachado
+      pdf.setTextColor(156, 163, 175);
       pdf.setFont(undefined, 'normal');
       pdf.text(`$${rawPrice.toFixed(2)}`, oldPriceX, textY);
-      // Tachar
       const oldPriceWidth = pdf.getTextWidth(`$${rawPrice.toFixed(2)}`);
       pdf.setDrawColor(156, 163, 175);
       pdf.line(oldPriceX, textY - 2, oldPriceX + oldPriceWidth, textY - 2);
-      
-      // Badge de descuento
-      pdf.setFillColor(239, 68, 68);
+
+      pdf.setFillColor(220, 38, 38);
       pdf.roundedRect(oldPriceX + oldPriceWidth + 5, textY - 5, 18, 7, 2, 2, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(7);
       pdf.text(`-${item.discount}%`, oldPriceX + oldPriceWidth + 9, textY - 1);
     }
-    
-    yPosition += 80; // Espacio para la siguiente ficha
+
+    yPosition += 80;
   }
-  
-  // Pie de página final
+
   pdf.setFontSize(8);
-  pdf.setTextColor(150, 150, 150);
+  pdf.setTextColor(156, 163, 175);
   pdf.text(`Catálogo generado automáticamente | Total de páginas: ${pageCount}`, 
     pageWidth / 2, pageHeight - 10, { align: 'center' });
-  
-  // Guardar
-  pdf.save(`catalogo_productos_${new Date().toISOString().split('T')[0]}.pdf`);
+
+  pdf.save(`catalogo_productos_daymar_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 window.addEventListener('DOMContentLoaded',()=> {
   doFilter();
-  // Inicializar el selector de categorías al cargar
   updateCategorySelector();
 });
 </script>

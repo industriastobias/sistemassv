@@ -1,951 +1,1131 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DAYMAR - Inventario</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <style>
-    /* ─── SISTEMA DE DISEÑO DAYMAR ─── */
-    :root{
-      --dm-bg: #fafafa;
-      --dm-surface: #ffffff;
-      --dm-elevated: #f5f5f5;
-      --dm-text: #1a1a1a;
-      --dm-text-secondary: #6b6b6b;
-      --dm-text-muted: #9a9a9a;
-      --dm-border: #e8e8e8;
-      --dm-border-light: #f0f0f0;
-      --dm-accent: #111111;
-      --dm-accent-hover: #333333;
-      --dm-danger: #dc2626;
-      --dm-danger-light: #fef2f2;
-      --dm-success: #16a34a;
-      --dm-success-light: #f0fdf4;
-      --dm-warning: #d97706;
-      --dm-warning-light: #fffbeb;
-      --dm-info: #2563eb;
-      --dm-info-light: #eff6ff;
-      --dm-space-xs: 0.25rem;
-      --dm-space-sm: 0.5rem;
-      --dm-space-md: 1rem;
-      --dm-space-lg: 1.5rem;
-      --dm-space-xl: 2rem;
-      --dm-space-2xl: 3rem;
-      --dm-radius: 8px;
-      --dm-radius-sm: 4px;
-      --dm-radius-lg: 12px;
-      --dm-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      --dm-shadow-md: 0 4px 12px rgba(0,0,0,0.05);
-      --dm-shadow-lg: 0 8px 24px rgba(0,0,0,0.06);
-      --dm-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    body.dark{
-      --dm-bg: #0a0a0a;
-      --dm-surface: #141414;
-      --dm-elevated: #1a1a1a;
-      --dm-text: #f5f5f5;
-      --dm-text-secondary: #a3a3a3;
-      --dm-text-muted: #737373;
-      --dm-border: #262626;
-      --dm-border-light: #1f1f1f;
-      --dm-accent: #ffffff;
-      --dm-accent-hover: #e5e5e5;
-      --dm-danger: #ef4444;
-      --dm-danger-light: #2a0a0a;
-      --dm-success: #22c55e;
-      --dm-success-light: #0a2a0a;
-      --dm-warning: #f59e0b;
-      --dm-warning-light: #2a200a;
-      --dm-info: #3b82f6;
-      --dm-info-light: #0a1a2a;
-      --dm-shadow: 0 1px 3px rgba(0,0,0,0.3);
-      --dm-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-      --dm-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
-    }
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-    html{scroll-behavior:smooth}
-    body{background:var(--dm-bg);color:var(--dm-text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0}
+function entrarKiosko(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+}
+window.addEventListener('load', entrarKiosko);
 
-    .dm-nav{
-      position:fixed;
-      top:0;left:0;right:0;
-      z-index:9999;
-      background:var(--dm-surface);
-      border-bottom:1px solid var(--dm-border);
-      backdrop-filter:blur(20px);
-      -webkit-backdrop-filter:blur(20px);
-    }
-    .dm-nav-inner{
-      max-width:1400px;
-      margin:0 auto;
-      padding:0 var(--dm-space-lg);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      height:64px;
-    }
-    .dm-brand{
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-      font-size:1.25rem;
-      font-weight:700;
-      letter-spacing:2px;
-      color:var(--dm-text);
-      text-decoration:none;
-    }
-    .dm-brand::before{
-      content:'';
-      width:8px;height:8px;
-      background:var(--dm-accent);
-      border-radius:50%;
-      display:inline-block;
-    }
-    .dm-nav-links{
-      display:flex;
-      gap:var(--dm-space-xs);
-      align-items:center;
-    }
-    .dm-nav-links a{
-      color:var(--dm-text-secondary);
-      text-decoration:none;
-      padding:var(--dm-space-sm) var(--dm-space-md);
-      border-radius:var(--dm-radius);
-      font-size:0.875rem;
-      font-weight:500;
-      transition:all var(--dm-transition);
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-    }
-    .dm-nav-links a:hover{
-      color:var(--dm-text);
-      background:var(--dm-elevated);
-    }
-    .dm-nav-links a.active{
-      color:var(--dm-text);
-      background:var(--dm-elevated);
-      font-weight:600;
-    }
-    .dm-nav-actions{
-      display:flex;
-      gap:var(--dm-space-sm);
-      align-items:center;
-    }
-    .dm-btn-icon{
-      width:36px;height:36px;
-      border-radius:var(--dm-radius);
-      border:1px solid var(--dm-border);
-      background:var(--dm-surface);
-      color:var(--dm-text-secondary);
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      transition:all var(--dm-transition);
-      font-size:0.875rem;
-    }
-    .dm-btn-icon:hover{
-      background:var(--dm-elevated);
-      color:var(--dm-text);
-      border-color:var(--dm-text-muted);
-    }
-    .dm-main{
-      width:100%;
-      max-width:1400px;
-      padding:calc(64px + var(--dm-space-2xl)) var(--dm-space-lg) var(--dm-space-2xl);
-    }
-    .dm-header{
-      margin-bottom:var(--dm-space-2xl);
-    }
-    .dm-header h1{
-      font-size:2rem;
-      font-weight:700;
-      letter-spacing:-0.5px;
-      margin-bottom:var(--dm-space-sm);
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-md);
-    }
-    .dm-header h1 i{
-      font-size:1.5rem;
-      color:var(--dm-text-muted);
-    }
-    .dm-header p{
-      color:var(--dm-text-secondary);
-      font-size:0.9375rem;
-    }
-    .dm-stats-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-      gap:var(--dm-space-md);
-      margin-bottom:var(--dm-space-xl);
-    }
-    .dm-stat-card{
-      background:var(--dm-surface);
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius-lg);
-      padding:var(--dm-space-lg);
-      transition:all var(--dm-transition);
-    }
-    .dm-stat-card:hover{
-      box-shadow:var(--dm-shadow-md);
-      transform:translateY(-1px);
-    }
-    .dm-stat-card .dm-stat-label{
-      font-size:0.75rem;
-      font-weight:600;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
-      color:var(--dm-text-muted);
-      margin-bottom:var(--dm-space-sm);
-    }
-    .dm-stat-card .dm-stat-value{
-      font-size:1.75rem;
-      font-weight:700;
-      color:var(--dm-text);
-      letter-spacing:-0.5px;
-    }
-    .dm-stat-card .dm-stat-change{
-      font-size:0.8125rem;
-      color:var(--dm-text-muted);
-      margin-top:var(--dm-space-xs);
-    }
-    .dm-filters{
-      display:flex;
-      gap:var(--dm-space-md);
-      margin-bottom:var(--dm-space-xl);
-      flex-wrap:wrap;
-      align-items:stretch;
-    }
-    .dm-filter-group{
-      flex:1;
-      min-width:200px;
-    }
-    .dm-filter-group label{
-      display:block;
-      font-size:0.75rem;
-      font-weight:600;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
-      color:var(--dm-text-muted);
-      margin-bottom:var(--dm-space-sm);
-    }
-    .dm-input{
-      width:100%;
-      padding:var(--dm-space-sm) var(--dm-space-md);
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius);
-      background:var(--dm-surface);
-      color:var(--dm-text);
-      font-size:0.9375rem;
-      transition:all var(--dm-transition);
-      font-family:inherit;
-    }
-    .dm-input:focus{
-      outline:none;
-      border-color:var(--dm-accent);
-      box-shadow:0 0 0 3px rgba(0,0,0,0.05);
-    }
-    .dm-input::placeholder{
-      color:var(--dm-text-muted);
-    }
-    .dm-input-group{
-      display:flex;
-      gap:var(--dm-space-sm);
-    }
-    .dm-input-group .dm-input{
-      flex:1;
-    }
-    .dm-actions-bar{
-      display:flex;
-      gap:var(--dm-space-sm);
-      margin-bottom:var(--dm-space-xl);
-      flex-wrap:wrap;
-    }
-    .dm-btn{
-      padding:var(--dm-space-sm) var(--dm-space-lg);
-      border-radius:var(--dm-radius);
-      font-size:0.875rem;
-      font-weight:600;
-      cursor:pointer;
-      transition:all var(--dm-transition);
-      display:inline-flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-      border:1px solid transparent;
-      font-family:inherit;
-      white-space:nowrap;
-    }
-    .dm-btn:hover{
-      transform:translateY(-1px);
-    }
-    .dm-btn-primary{
-      background:var(--dm-accent);
-      color:var(--dm-bg);
-      border-color:var(--dm-accent);
-    }
-    .dm-btn-primary:hover{
-      background:var(--dm-accent-hover);
-      border-color:var(--dm-accent-hover);
-    }
-    .dm-btn-secondary{
-      background:var(--dm-surface);
-      color:var(--dm-text);
-      border-color:var(--dm-border);
-    }
-    .dm-btn-secondary:hover{
-      background:var(--dm-elevated);
-      border-color:var(--dm-text-muted);
-    }
-    .dm-btn-success{
-      background:var(--dm-success);
-      color:#fff;
-      border-color:var(--dm-success);
-    }
-    .dm-btn-success:hover{
-      background:#15803d;
-      border-color:#15803d;
-    }
-    .dm-btn-warning{
-      background:var(--dm-warning);
-      color:#fff;
-      border-color:var(--dm-warning);
-    }
-    .dm-btn-warning:hover{
-      background:#b45309;
-      border-color:#b45309;
-    }
-    .dm-btn-danger{
-      background:var(--dm-danger);
-      color:#fff;
-      border-color:var(--dm-danger);
-    }
-    .dm-btn-danger:hover{
-      background:#b91c1c;
-      border-color:#b91c1c;
-    }
-    .dm-btn-info{
-      background:var(--dm-info);
-      color:#fff;
-      border-color:var(--dm-info);
-    }
-    .dm-btn-info:hover{
-      background:#1d4ed8;
-      border-color:#1d4ed8;
-    }
-    .dm-btn-ghost{
-      background:transparent;
-      color:var(--dm-text-secondary);
-      border-color:var(--dm-border);
-    }
-    .dm-btn-ghost:hover{
-      background:var(--dm-elevated);
-      color:var(--dm-text);
-    }
-    .dm-category-select{
-      display:flex;
-      gap:var(--dm-space-sm);
-      align-items:stretch;
-    }
-    .dm-category-select select{
-      flex:1;
-      min-width:180px;
-    }
-    .dm-info-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-      padding:var(--dm-space-sm) var(--dm-space-md);
-      background:var(--dm-elevated);
-      border:1px solid var(--dm-border);
-      border-radius:9999px;
-      font-size:0.8125rem;
-      color:var(--dm-text-secondary);
-      margin-bottom:var(--dm-space-xl);
-    }
-    .dm-info-pill i{
-      color:var(--dm-info);
-    }
-    .dm-info-pill strong{
-      color:var(--dm-text);
-    }
-    .dm-products-grid{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:var(--dm-space-md);
-      margin-bottom:var(--dm-space-xl);
-    }
-    @media(max-width:1200px){.dm-products-grid{grid-template-columns:repeat(4,1fr)}}
-    @media(max-width:900px){.dm-products-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:600px){.dm-products-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:400px){.dm-products-grid{grid-template-columns:1fr}}
-    .dm-product-card{
-      background:var(--dm-surface);
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius-lg);
-      overflow:hidden;
-      transition:all var(--dm-transition);
-      display:flex;
-      flex-direction:column;
-    }
-    .dm-product-card:hover{
-      box-shadow:var(--dm-shadow-lg);
-      transform:translateY(-2px);
-      border-color:var(--dm-text-muted);
-    }
-    .dm-product-img{
-      width:100%;
-      aspect-ratio:1/1;
-      object-fit:cover;
-      cursor:zoom-in;
-      background:var(--dm-elevated);
-    }
-    .dm-product-body{
-      padding:var(--dm-space-md);
-      flex:1;
-      display:flex;
-      flex-direction:column;
-      gap:var(--dm-space-xs);
-    }
-    .dm-product-name{
-      font-size:0.9375rem;
-      font-weight:600;
-      color:var(--dm-text);
-      line-height:1.3;
-    }
-    .dm-product-meta{
-      font-size:0.75rem;
-      color:var(--dm-text-muted);
-      font-family:monospace;
-      letter-spacing:0.5px;
-    }
-    .dm-product-stock{
-      font-size:0.8125rem;
-      font-weight:600;
-      color:var(--dm-success);
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-xs);
-    }
-    .dm-product-stock.low{
-      color:var(--dm-warning);
-    }
-    .dm-product-stock.out{
-      color:var(--dm-danger);
-    }
-    .dm-product-price{
-      font-size:1.125rem;
-      font-weight:700;
-      color:var(--dm-text);
-      margin-top:var(--dm-space-xs);
-    }
-    .dm-product-price .dm-original{
-      font-size:0.75rem;
-      color:var(--dm-text-muted);
-      text-decoration:line-through;
-      font-weight:400;
-      margin-left:var(--dm-space-xs);
-    }
-    .dm-product-discount{
-      display:inline-flex;
-      align-items:center;
-      padding:var(--dm-space-xs) var(--dm-space-sm);
-      background:var(--dm-danger-light);
-      color:var(--dm-danger);
-      border-radius:var(--dm-radius-sm);
-      font-size:0.75rem;
-      font-weight:700;
-      width:fit-content;
-    }
-    .dm-product-category{
-      font-size:0.75rem;
-      color:var(--dm-text-secondary);
-      background:var(--dm-elevated);
-      padding:var(--dm-space-xs) var(--dm-space-sm);
-      border-radius:var(--dm-radius-sm);
-      width:fit-content;
-    }
-    .dm-product-desc{
-      font-size:0.75rem;
-      color:var(--dm-text-muted);
-      line-height:1.4;
-      margin-top:var(--dm-space-xs);
-    }
-    .dm-barcode-box{
-      background:#fff;
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius);
-      padding:var(--dm-space-sm);
-      text-align:center;
-      margin-top:var(--dm-space-xs);
-    }
-    .dm-barcode-box svg{
-      max-width:100%;
-      height:32px;
-    }
-    .dm-barcode-number{
-      font-size:0.65rem;
-      color:var(--dm-text-muted);
-      font-family:monospace;
-      letter-spacing:1px;
-      margin-top:2px;
-    }
-    .dm-product-actions{
-      display:flex;
-      gap:var(--dm-space-xs);
-      margin-top:auto;
-      padding-top:var(--dm-space-sm);
-    }
-    .dm-product-actions .dm-btn{
-      flex:1;
-      justify-content:center;
-      padding:var(--dm-space-xs) var(--dm-space-sm);
-      font-size:0.75rem;
-    }
-    .dm-total-bar{
-      background:var(--dm-surface);
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius-lg);
-      padding:var(--dm-space-xl);
-      text-align:center;
-      margin-bottom:var(--dm-space-2xl);
-    }
-    .dm-total-bar h3{
-      font-size:0.75rem;
-      font-weight:600;
-      text-transform:uppercase;
-      letter-spacing:1px;
-      color:var(--dm-text-muted);
-      margin-bottom:var(--dm-space-sm);
-    }
-    .dm-total-bar .dm-total-value{
-      font-size:2.5rem;
-      font-weight:700;
-      color:var(--dm-text);
-      letter-spacing:-1px;
-    }
-    .dm-section{
-      background:var(--dm-surface);
-      border:1px solid var(--dm-border);
-      border-radius:var(--dm-radius-lg);
-      padding:var(--dm-space-xl);
-      margin-bottom:var(--dm-space-xl);
-    }
-    .dm-section-header{
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-      margin-bottom:var(--dm-space-lg);
-      padding-bottom:var(--dm-space-md);
-      border-bottom:1px solid var(--dm-border-light);
-    }
-    .dm-section-header h2{
-      font-size:1.125rem;
-      font-weight:700;
-      color:var(--dm-text);
-      margin:0;
-    }
-    .dm-section-header i{
-      color:var(--dm-text-muted);
-      font-size:1rem;
-    }
-    .dm-report-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-      gap:var(--dm-space-md);
-    }
-    .dm-report-card{
-      padding:var(--dm-space-lg);
-      border-radius:var(--dm-radius);
-      border-left:3px solid var(--dm-border);
-      background:var(--dm-elevated);
-      transition:all var(--dm-transition);
-    }
-    .dm-report-card:hover{
-      transform:translateX(2px);
-    }
-    .dm-report-card.dm-success{border-left-color:var(--dm-success);background:var(--dm-success-light);}
-    .dm-report-card.dm-warning{border-left-color:var(--dm-warning);background:var(--dm-warning-light);}
-    .dm-report-card.dm-danger{border-left-color:var(--dm-danger);background:var(--dm-danger-light);}
-    .dm-report-card.dm-info{border-left-color:var(--dm-info);background:var(--dm-info-light);}
-    .dm-report-card h4{
-      font-size:0.6875rem;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
-      color:var(--dm-text-muted);
-      margin-bottom:var(--dm-space-sm);
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-xs);
-    }
-    .dm-report-card .dm-report-value{
-      font-size:1.5rem;
-      font-weight:700;
-      color:var(--dm-text);
-    }
-    .dm-report-card .dm-report-detail{
-      font-size:0.8125rem;
-      color:var(--dm-text-secondary);
-      margin-top:var(--dm-space-xs);
-    }
-    .dm-alert{
-      display:flex;
-      align-items:flex-start;
-      gap:var(--dm-space-md);
-      padding:var(--dm-space-md) var(--dm-space-lg);
-      border-radius:var(--dm-radius);
-      border-left:3px solid;
-      margin-bottom:var(--dm-space-sm);
-    }
-    .dm-alert.dm-alert-danger{
-      background:var(--dm-danger-light);
-      border-left-color:var(--dm-danger);
-    }
-    .dm-alert.dm-alert-warning{
-      background:var(--dm-warning-light);
-      border-left-color:var(--dm-warning);
-    }
-    .dm-alert.dm-alert-info{
-      background:var(--dm-info-light);
-      border-left-color:var(--dm-info);
-    }
-    .dm-alert i{
-      font-size:1rem;
-      margin-top:2px;
-    }
-    .dm-alert.dm-alert-danger i{color:var(--dm-danger);}
-    .dm-alert.dm-alert-warning i{color:var(--dm-warning);}
-    .dm-alert.dm-alert-info i{color:var(--dm-info);}
-    .dm-alert-content strong{
-      font-size:0.875rem;
-      display:block;
-      margin-bottom:var(--dm-space-xs);
-    }
-    .dm-alert-content p{
-      font-size:0.8125rem;
-      color:var(--dm-text-secondary);
-      margin:0;
-    }
-    .dm-table-wrap{
-      overflow-x:auto;
-      border-radius:var(--dm-radius);
-      border:1px solid var(--dm-border);
-    }
-    .dm-table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:0.875rem;
-    }
-    .dm-table th{
-      background:var(--dm-elevated);
-      padding:var(--dm-space-sm) var(--dm-space-md);
-      text-align:left;
-      font-weight:600;
-      font-size:0.75rem;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
-      color:var(--dm-text-muted);
-      border-bottom:1px solid var(--dm-border);
-      white-space:nowrap;
-    }
-    .dm-table td{
-      padding:var(--dm-space-sm) var(--dm-space-md);
-      border-bottom:1px solid var(--dm-border-light);
-      color:var(--dm-text);
-      vertical-align:middle;
-    }
-    .dm-table tr:hover td{
-      background:var(--dm-elevated);
-    }
-    .dm-table tr:last-child td{
-      border-bottom:none;
-    }
-    .dm-badge{
-      display:inline-flex;
-      align-items:center;
-      padding:var(--dm-space-xs) var(--dm-space-sm);
-      border-radius:9999px;
-      font-size:0.6875rem;
-      font-weight:700;
-      letter-spacing:0.3px;
-    }
-    .dm-badge-success{background:var(--dm-success-light);color:var(--dm-success);}
-    .dm-badge-warning{background:var(--dm-warning-light);color:var(--dm-warning);}
-    .dm-badge-danger{background:var(--dm-danger-light);color:var(--dm-danger);}
-    .dm-badge-info{background:var(--dm-info-light);color:var(--dm-info);}
-    .dm-problem-item{
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-md);
-      padding:var(--dm-space-md) var(--dm-space-lg);
-      background:var(--dm-elevated);
-      border-radius:var(--dm-radius);
-      margin-bottom:var(--dm-space-sm);
-      border-left:3px solid var(--dm-border);
-      transition:all var(--dm-transition);
-    }
-    .dm-problem-item:hover{
-      border-left-color:var(--dm-accent);
-      transform:translateX(2px);
-    }
-    .dm-problem-item.dm-critical{
-      border-left-color:var(--dm-danger);
-    }
-    .dm-problem-item.dm-low{
-      border-left-color:var(--dm-warning);
-    }
-    .dm-problem-info{flex:1;}
-    .dm-problem-info strong{
-      font-size:0.9375rem;
-      display:flex;
-      align-items:center;
-      gap:var(--dm-space-sm);
-    }
-    .dm-problem-info p{
-      font-size:0.8125rem;
-      color:var(--dm-text-secondary);
-      margin-top:var(--dm-space-xs);
-      margin-bottom:0;
-    }
-    .dm-problem-price{
-      text-align:right;
-    }
-    .dm-problem-price .dm-price{
-      font-size:1.125rem;
-      font-weight:700;
-      color:var(--dm-text);
-    }
-    .dm-problem-price .dm-label{
-      font-size:0.75rem;
-      color:var(--dm-text-muted);
-    }
-    #lightbox{
-      position:fixed;
-      top:0;left:0;
-      width:100%;height:100%;
-      background:rgba(0,0,0,0.85);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:10000;
-      backdrop-filter:blur(8px);
-    }
-    #lightbox img{
-      max-width:90%;
-      max-height:90%;
-      border-radius:var(--dm-radius-lg);
-      box-shadow:0 20px 60px rgba(0,0,0,0.5);
-    }
-    @media print{
-      body *{visibility:hidden}
-      #printArea,#printArea *{visibility:visible}
-      #printArea{position:absolute;top:0;left:0;width:100%}
-    }
-    ::-webkit-scrollbar{width:6px;height:6px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:var(--dm-border);border-radius:3px}
-    ::-webkit-scrollbar-thumb:hover{background:var(--dm-text-muted)}
-    .dm-empty{
-      text-align:center;
-      padding:var(--dm-space-2xl);
-      color:var(--dm-text-muted);
-      grid-column:1/-1;
-    }
-    .dm-empty i{
-      font-size:3rem;
-      margin-bottom:var(--dm-space-md);
-      opacity:0.5;
-    }
-    .dm-empty p{
-      font-size:1rem;
-    }
-    mark{
-      background:#fde047;
-      padding:0 2px;
-      border-radius:2px;
-      color:var(--dm-text);
-    }
-  </style>
-<base target="_blank">
-</head>
-<body>
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+});
 
-<nav class="dm-nav">
-  <div class="dm-nav-inner">
-    <a href="#" class="dm-brand">DAYMAR</a>
-    <div class="dm-nav-links">
-      <a href="compra.html"><i class="fa fa-shopping-cart"></i>Compra</a>
-      <a href="almacenamiento.html"><i class="fa fa-warehouse"></i>Almacén</a>
-      <a href="finanzas.html"><i class="fa fa-chart-line"></i>Finanzas</a>
-      <a href="inventario.html" class="active"><i class="fa fa-boxes"></i>Inventario</a>
-      <a href="catalogo.html"><i class="fa fa-book"></i>Catálogo</a>
-      <a href="clientes.html"><i class="fa fa-users"></i>Clientes</a>
-      <a href="descuentos.html"><i class="fa fa-percent"></i>Descuentos</a>
-      <a href="facturas.html"><i class="fa fa-file-invoice"></i>Facturas</a>
-      <a href="traslados.html"><i class="fa fa-truck"></i>Traslados</a>
-      <a href="venta.html"><i class="fa fa-cash-register"></i>Venta</a>
-      <a href="menu.html"><i class="fa fa-bars"></i>Menú</a>
+const CATEGORY_ORDER = [
+  "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
+];
+
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+let filtered   = [...inventory];
+let searchTerm = '';
+
+function calculateTotal(list){
+  return list.reduce((sum,item)=>{
+    const price = parseFloat(item.price)||0;
+    const qty   = parseFloat(item.quantity)||0;
+    const disc  = parseFloat(item.discount)||0;
+    return sum + (price * (1 - disc/100)) * qty;
+  },0);
+}
+function stockTotal(list){
+  return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+}
+function calculateItemValue(item){
+  const price = parseFloat(item.price)||0;
+  const qty = parseInt(item.quantity)||0;
+  const disc = parseFloat(item.discount)||0;
+  return (price * (1 - disc/100)) * qty;
+}
+
+function sortByCustomCategory(list) {
+  return [...list].sort((a, b) => {
+    const catA = (a.category || "Otros").trim();
+    const catB = (b.category || "Otros").trim();
+    const indexA = CATEGORY_ORDER.indexOf(catA);
+    const indexB = CATEGORY_ORDER.indexOf(catB);
+    const posA = indexA === -1 ? 999 : indexA;
+    const posB = indexB === -1 ? 999 : indexB;
+    return posA - posB || a.name.localeCompare(b.name);
+  });
+}
+
+function highlight(text, query){
+  if(!query) return text;
+  const re = new RegExp(`(${query})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('Código de barras copiado: ' + text);
+  });
+}
+
+function openLightbox(src) {
+  const lightbox = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = src;
+  lightbox.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+function generateExecutiveReports(){
+  const totalValue = calculateTotal(inventory);
+  const totalQty = stockTotal(inventory);
+  const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0);
+  const lowStock = inventory.filter(i => {
+    const q = parseInt(i.quantity);
+    return q > 0 && q <= 5;
+  });
+  const inStock = inventory.filter(i => parseInt(i.quantity) > 5);
+
+  const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
+  const categories = [...new Set(inventory.map(i => i.category || 'Sin categoría'))];
+
+  const mostValuable = inventory.length > 0 ? 
+    inventory.reduce((max, item) => calculateItemValue(item) > calculateItemValue(max) ? item : max, inventory[0]) : null;
+
+  const highestStock = inventory.length > 0 ?
+    inventory.reduce((max, item) => parseInt(item.quantity) > parseInt(max.quantity) ? item : max, inventory[0]) : null;
+
+  const summaryHTML = `
+    <div class="dm-report-card dm-success">
+      <h4><i class="fa fa-check-circle"></i> En Stock Saludable</h4>
+      <div class="dm-report-value">${inStock.length}</div>
+      <div class="dm-report-detail">Productos con >5 unidades</div>
     </div>
-    <div class="dm-nav-actions">
-      <button class="dm-btn-icon" id="themeToggle" title="Cambiar tema"><i class="fa fa-moon"></i></button>
+    <div class="dm-report-card dm-warning">
+      <h4><i class="fa fa-exclamation-triangle"></i> Stock Bajo</h4>
+      <div class="dm-report-value">${lowStock.length}</div>
+      <div class="dm-report-detail">Productos con 1-5 unidades</div>
     </div>
-  </div>
-</nav>
-
-<main class="dm-main">
-
-  <div class="dm-header">
-    <h1><i class="fa fa-boxes"></i> Inventario</h1>
-    <p>Sistema sincronizado con compras — Gestión inteligente de stock</p>
-  </div>
-
-  <div class="dm-stats-grid">
-    <div class="dm-stat-card">
-      <div class="dm-stat-label">Total de Productos</div>
-      <div class="dm-stat-value" id="totalProducts">0</div>
-      <div class="dm-stat-change">Registrados en sistema</div>
+    <div class="dm-report-card dm-danger">
+      <h4><i class="fa fa-times-circle"></i> Fuera de Stock</h4>
+      <div class="dm-report-value">${outOfStock.length}</div>
+      <div class="dm-report-detail">Productos agotados</div>
     </div>
-    <div class="dm-stat-card">
-      <div class="dm-stat-label">Stock Total</div>
-      <div class="dm-stat-value" id="totalStock">0</div>
-      <div class="dm-stat-change">Unidades en inventario</div>
+    <div class="dm-report-card dm-info">
+      <h4><i class="fa fa-dollar-sign"></i> Valor Promedio</h4>
+      <div class="dm-report-value">$${avgPrice.toFixed(2)}</div>
+      <div class="dm-report-detail">Por unidad en inventario</div>
     </div>
-  </div>
+    <div class="dm-report-card">
+      <h4><i class="fa fa-tags"></i> Categorías</h4>
+      <div class="dm-report-value">${categories.length}</div>
+      <div class="dm-report-detail">Diferentes categorías activas</div>
+    </div>
+    <div class="dm-report-card">
+      <h4><i class="fa fa-crown"></i> Producto Top</h4>
+      <div class="dm-report-value" style="font-size:1.1rem;">${mostValuable ? mostValuable.name.substring(0,15) + '...' : 'N/A'}</div>
+      <div class="dm-report-detail">Mayor valor: $${mostValuable ? calculateItemValue(mostValuable).toFixed(2) : '0.00'}</div>
+    </div>
+  `;
 
-  <div class="dm-filters">
-    <div class="dm-filter-group" style="flex:2;">
-      <label>Buscar</label>
-      <input id="searchInput" class="dm-input" type="text" placeholder="Buscar por nombre, código, barras o categoría..."/>
-    </div>
-    <div class="dm-filter-group">
-      <label>Rango de Precio</label>
-      <div class="dm-input-group">
-        <input id="minPrice" class="dm-input" type="number" placeholder="Mínimo" min="0" step="0.01"/>
-        <input id="maxPrice" class="dm-input" type="number" placeholder="Máximo" min="0" step="0.01"/>
+  document.getElementById('executiveSummary').innerHTML = summaryHTML;
+
+  const alertsContainer = document.getElementById('alertsContainer');
+  alertsContainer.innerHTML = '';
+
+  if (outOfStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-danger">
+        <i class="fa fa-times-circle"></i>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-danger);">${outOfStock.length} productos agotados</strong>
+          <p>Requiere reposición inmediata para evitar pérdida de ventas.</p>
+        </div>
       </div>
-    </div>
-  </div>
+    `;
+  }
 
-  <div class="dm-info-pill">
-    <i class="fa fa-info-circle"></i>
-    <span>Las etiquetas se generan según el stock: <strong>1 etiqueta = 1 unidad en inventario</strong></span>
-  </div>
-
-  <div class="dm-actions-bar">
-    <button onclick="downloadPDF()" class="dm-btn dm-btn-success">
-      <i class="fa fa-file-pdf"></i> Reporte Completo PDF
-    </button>
-    <button onclick="downloadCatalogPDF()" class="dm-btn dm-btn-primary">
-      <i class="fa fa-images"></i> Catálogo Productos
-    </button>
-    <button onclick="downloadBarcodeLabelsPDF()" class="dm-btn dm-btn-warning">
-      <i class="fa fa-barcode"></i> Etiquetas Códigos de Barra
-    </button>
-    <div class="dm-category-select">
-      <select id="categorySelect" class="dm-input">
-        <option value="">Seleccionar categoría...</option>
-      </select>
-      <button onclick="downloadBarcodeLabelsByCategory()" class="dm-btn dm-btn-secondary">
-        <i class="fa fa-filter"></i> Por Categoría
-      </button>
-    </div>
-  </div>
-
-  <div id="inventoryTable" class="dm-products-grid"></div>
-
-  <div class="dm-total-bar">
-    <h3>Total en USD</h3>
-    <div class="dm-total-value" id="totalAmount">$0.00</div>
-  </div>
-
-  <div class="dm-section">
-    <div class="dm-section-header">
-      <i class="fa fa-chart-pie"></i>
-      <h2>Resumen Ejecutivo</h2>
-    </div>
-    <div class="dm-report-grid" id="executiveSummary"></div>
-
-    <div style="margin-top:var(--dm-space-xl);">
-      <div class="dm-section-header" style="border:none;padding:0;margin-bottom:var(--dm-space-md);">
+  if (lowStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-warning">
         <i class="fa fa-exclamation-triangle"></i>
-        <h2 style="font-size:1rem;">Alertas y Notificaciones</h2>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-warning);">${lowStock.length} productos con stock crítico</strong>
+          <p>Considere reordenar pronto para mantener disponibilidad.</p>
+        </div>
       </div>
-      <div id="alertsContainer"></div>
-    </div>
-  </div>
+    `;
+  }
 
-  <div class="dm-section">
-    <div class="dm-section-header">
-      <i class="fa fa-layer-group"></i>
-      <h2>Análisis por Categoría</h2>
-    </div>
-    <div class="dm-table-wrap">
-      <table class="dm-table" id="categoryTable">
-        <thead>
-          <tr>
-            <th>Categoría</th>
-            <th>Productos</th>
-            <th>Stock Total</th>
-            <th>Valor del Stock</th>
-            <th>Promedio por Producto</th>
-            <th>% del Total</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody id="categoryTableBody"></tbody>
-      </table>
-    </div>
-  </div>
+  if (inventory.length === 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-info">
+        <i class="fa fa-info-circle"></i>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-info);">Inventario vacío</strong>
+          <p>No hay productos registrados en el sistema.</p>
+        </div>
+      </div>
+    `;
+  }
 
-  <div class="dm-section">
-    <div class="dm-section-header">
-      <i class="fa fa-trophy"></i>
-      <h2>Top Productos por Valor</h2>
+  generateCategoryTable();
+  generateTopProductsTable();
+  generateProblemProducts();
+}
+
+function generateCategoryTable(){
+  const categories = {};
+  const totalValue = calculateTotal(inventory);
+
+  inventory.forEach(item => {
+    const cat = item.category || 'Sin categoría';
+    if (!categories[cat]) {
+      categories[cat] = { count: 0, stock: 0, value: 0 };
+    }
+    categories[cat].count++;
+    categories[cat].stock += parseInt(item.quantity) || 0;
+    categories[cat].value += calculateItemValue(item);
+  });
+
+  const tbody = document.getElementById('categoryTableBody');
+  tbody.innerHTML = Object.entries(categories)
+    .sort((a, b) => b[1].value - a[1].value)
+    .map(([cat, data]) => {
+      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
+      const avgPerProduct = data.count > 0 ? (data.stock / data.count).toFixed(1) : 0;
+
+      let statusBadge = '<span class="dm-badge dm-badge-success">OK</span>';
+      if (data.stock === 0) statusBadge = '<span class="dm-badge dm-badge-danger">Agotado</span>';
+      else if (data.stock / data.count <= 2) statusBadge = '<span class="dm-badge dm-badge-warning">Bajo</span>';
+
+      return `
+        <tr>
+          <td><strong>${cat}</strong></td>
+          <td>${data.count}</td>
+          <td>${data.stock} u.</td>
+          <td>$${data.value.toFixed(2)}</td>
+          <td>${avgPerProduct} u.</td>
+          <td>${percentage}%</td>
+          <td>${statusBadge}</td>
+        </tr>
+      `;
+    }).join('');
+}
+
+function generateTopProductsTable(){
+  const totalValue = calculateTotal(inventory);
+  const sorted = [...inventory]
+    .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
+    .slice(0, 10);
+
+  const tbody = document.getElementById('topProductsBody');
+  tbody.innerHTML = sorted.map((item, index) => {
+    const value = calculateItemValue(item);
+    const percentage = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+
+    return `
+      <tr>
+        <td><span class="dm-badge dm-badge-info">#${index + 1}</span></td>
+        <td><strong>${item.name}</strong></td>
+        <td>${item.category}</td>
+        <td>${item.quantity} u.</td>
+        <td>$${finalPrice}</td>
+        <td><strong>$${value.toFixed(2)}</strong></td>
+        <td>${percentage}%</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function generateProblemProducts(){
+  const problems = inventory.filter(item => {
+    const qty = parseInt(item.quantity);
+    return qty === 0 || (qty > 0 && qty <= 2);
+  }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
+
+  const section = document.getElementById('problemSection');
+  const container = document.getElementById('problemProductsContainer');
+
+  if (problems.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  container.innerHTML = problems.map(item => {
+    const qty = parseInt(item.quantity);
+    const isOut = qty === 0;
+
+    return `
+      <div class="dm-problem-item ${isOut ? 'dm-critical' : 'dm-low'}">
+        <div class="dm-problem-info">
+          <strong>
+            ${item.name}
+            <span class="dm-badge ${isOut ? 'dm-badge-danger' : 'dm-badge-warning'}">${isOut ? 'AGOTADO' : 'CRÍTICO'}</span>
+          </strong>
+          <p>Código: ${item.code} | Categoría: ${item.category} | Stock: ${qty} u.</p>
+        </div>
+        <div class="dm-problem-price">
+          <div class="dm-price">$${parseFloat(item.price).toFixed(2)}</div>
+          <div class="dm-label">Precio unitario</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTable(){
+  const container = document.getElementById('inventoryTable');
+
+  document.getElementById('totalProducts').textContent = inventory.length;
+  document.getElementById('totalStock').textContent = stockTotal(inventory);
+
+  filtered = sortByCustomCategory(filtered);
+
+  if(!filtered.length){
+    container.innerHTML = `
+      <div class="dm-empty">
+        <i class="fa fa-search"></i>
+        <p>No hay productos que coincidan con la búsqueda.</p>
+      </div>
+    `;
+    document.getElementById('totalAmount').textContent = '$0.00';
+    return;
+  }
+
+  container.innerHTML = filtered.map((item,idx)=>{
+    const qty = parseInt(item.quantity) || 0;
+    const stockClass = qty === 0 ? 'out' : (qty <= 5 ? 'low' : '');
+    const stockIcon = qty === 0 ? 'fa-times-circle' : (qty <= 5 ? 'fa-exclamation-circle' : 'fa-check-circle');
+
+    return `
+    <div class="dm-product-card" id="card-${idx}">
+      <img id="invImg${idx}" class="dm-product-img" src="" alt="${item.name}"/>
+      <div class="dm-product-body">
+        <div class="dm-product-name">${highlight(item.name, searchTerm)}</div>
+        <div class="dm-product-meta">${highlight(item.code, searchTerm)}</div>
+        <div class="dm-product-stock ${stockClass}">
+          <i class="fa ${stockIcon}"></i>
+          ${qty === 0 ? 'Sin stock' : (qty <= 5 ? `${qty} u. (bajo)` : `${qty} u.`)}
+        </div>
+        ${typeof item.discount === 'number' && item.discount > 0 ? `
+          <div class="dm-product-discount">${item.discount}% OFF</div>
+          <div class="dm-product-price">
+            <span class="dm-original">$${item.price}</span>
+            $${(item.price * (1 - item.discount / 100)).toFixed(2)}
+          </div>
+        ` : `
+          <div class="dm-product-price">$${item.price}</div>
+        `}
+        <div class="dm-product-category">${highlight(item.category, searchTerm)}</div>
+        ${item.description ? `<div class="dm-product-desc">${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}</div>` : ''}
+
+        <div class="dm-barcode-box">
+          <svg id="barcode-${idx}"></svg>
+          <div class="dm-barcode-number">${item.barcode}</div>
+        </div>
+
+        <div class="dm-product-actions">
+          <button onclick="viewItem(${idx})" class="dm-btn dm-btn-primary" style="flex:1;">
+            <i class="fa fa-eye"></i> Ver
+          </button>
+          <button onclick="downloadSingleBarcodeLabel(${idx})" class="dm-btn dm-btn-secondary" title="Descargar etiqueta">
+            <i class="fa fa-barcode"></i>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="dm-table-wrap">
-      <table class="dm-table" id="topProductsTable">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th>Stock</th>
-            <th>Precio Unit.</th>
-            <th>Valor Total</th>
-            <th>% del Inventario</th>
-          </tr>
-        </thead>
-        <tbody id="topProductsBody"></tbody>
-      </table>
+  `}).join('');
+
+  filtered.forEach((item, idx) => {
+    if (item.barcode) {
+      try {
+        JsBarcode(`#barcode-${idx}`, item.barcode, {
+          format: "CODE128",
+          width: 2,
+          height: 32,
+          displayValue: false,
+          margin: 0
+        });
+      } catch (e) {
+        console.error('Error generando código de barras:', e);
+      }
+    }
+  });
+
+  filtered.forEach((p,i)=>{
+    localforage.getItem(`img_${p.code}`).then(blob=>{
+      if(blob){
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById(`invImg${i}`);
+        img.src = url;
+        img.onclick = () => openLightbox(url);
+      }
+    });
+  });
+
+  document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
+  generateExecutiveReports();
+}
+
+function viewItem(index){
+  alert(`Detalles:
+
+${JSON.stringify(filtered[index],null,2)}`);
+}
+
+function wrapText(pdf, text, maxWidth, fontSize) {
+  pdf.setFontSize(fontSize);
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+
+  for (let word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const width = pdf.getTextWidth(testLine);
+
+    if (width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  return lines;
+}
+
+async function downloadSingleBarcodeLabel(index) {
+  const item = filtered[index];
+  if (!item || !item.barcode) {
+    alert('Este producto no tiene código de barras');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', [50, 30]);
+
+  const finalPrice = item.discount > 0 
+    ? (item.price * (1 - item.discount / 100)).toFixed(2)
+    : parseFloat(item.price).toFixed(2);
+
+  // MARCA DAYMAR vertical
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('D', 2, 8);
+  pdf.text('A', 2, 12);
+  pdf.text('Y', 2, 16);
+  pdf.text('M', 2, 20);
+  pdf.text('A', 2, 24);
+  pdf.text('R', 2, 28);
+
+  const maxWidth = 36;
+  let fontSize = 7;
+  let lines = wrapText(pdf, item.name, maxWidth, fontSize);
+
+  if (lines.length > 2) {
+    fontSize = 6;
+    lines = wrapText(pdf, item.name, maxWidth, fontSize);
+  }
+  if (lines.length > 3) {
+    fontSize = 5;
+    lines = wrapText(pdf, item.name, maxWidth, fontSize);
+  }
+
+  if (lines.length > 3) {
+    lines = lines.slice(0, 3);
+    lines[2] = lines[2].substring(0, 15) + '...';
+  }
+
+  pdf.setFontSize(fontSize);
+  pdf.setFont(undefined, 'normal');
+  let yPos = 6;
+  lines.forEach(line => {
+    pdf.text(line, 12, yPos);
+    yPos += fontSize * 0.4;
+  });
+
+  pdf.setFontSize(9);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(`$${finalPrice}`, 12, yPos + 2);
+
+  const canvas = document.createElement('canvas');
+  try {
+    JsBarcode(canvas, item.barcode, {
+      format: "CODE128",
+      width: 1.5,
+      height: 12,
+      displayValue: false,
+      margin: 0
+    });
+
+    const barcodeData = canvas.toDataURL('image/png');
+    pdf.addImage(barcodeData, 'PNG', 12, 18, 35, 8);
+
+    pdf.setFontSize(5);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(item.barcode, 29.5, 28, { align: 'center' });
+
+    pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
+  } catch (e) {
+    alert('Error al generar el código de barras');
+    console.error(e);
+  }
+}
+function entrarKiosko(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+}
+window.addEventListener('load', entrarKiosko);
+
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  themeToggle.innerHTML = document.body.classList.contains('dark') ? '<i class="fa fa-sun"></i>' : '<i class="fa fa-moon"></i>';
+});
+
+const CATEGORY_ORDER = [
+  "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
+];
+
+let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+let filtered   = [...inventory];
+let searchTerm = '';
+
+function calculateTotal(list){
+  return list.reduce((sum,item)=>{
+    const price = parseFloat(item.price)||0;
+    const qty   = parseFloat(item.quantity)||0;
+    const disc  = parseFloat(item.discount)||0;
+    return sum + (price * (1 - disc/100)) * qty;
+  },0);
+}
+function stockTotal(list){
+  return list.reduce((sum,item)=> sum + (parseInt(item.quantity)||0), 0);
+}
+function calculateItemValue(item){
+  const price = parseFloat(item.price)||0;
+  const qty = parseInt(item.quantity)||0;
+  const disc = parseFloat(item.discount)||0;
+  return (price * (1 - disc/100)) * qty;
+}
+
+function sortByCustomCategory(list) {
+  return [...list].sort((a, b) => {
+    const catA = (a.category || "Otros").trim();
+    const catB = (b.category || "Otros").trim();
+    const indexA = CATEGORY_ORDER.indexOf(catA);
+    const indexB = CATEGORY_ORDER.indexOf(catB);
+    const posA = indexA === -1 ? 999 : indexA;
+    const posB = indexB === -1 ? 999 : indexB;
+    return posA - posB || a.name.localeCompare(b.name);
+  });
+}
+
+function highlight(text, query){
+  if(!query) return text;
+  const re = new RegExp(`(${query})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('Código de barras copiado: ' + text);
+  });
+}
+
+function openLightbox(src) {
+  const lightbox = document.getElementById('lightbox');
+  const img = document.getElementById('lightboxImg');
+  img.src = src;
+  lightbox.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+
+function generateExecutiveReports(){
+  const totalValue = calculateTotal(inventory);
+  const totalQty = stockTotal(inventory);
+  const outOfStock = inventory.filter(i => parseInt(i.quantity) === 0);
+  const lowStock = inventory.filter(i => {
+    const q = parseInt(i.quantity);
+    return q > 0 && q <= 5;
+  });
+  const inStock = inventory.filter(i => parseInt(i.quantity) > 5);
+
+  const avgPrice = inventory.length > 0 ? totalValue / totalQty : 0;
+  const categories = [...new Set(inventory.map(i => i.category || 'Sin categoría'))];
+
+  const mostValuable = inventory.length > 0 ? 
+    inventory.reduce((max, item) => calculateItemValue(item) > calculateItemValue(max) ? item : max, inventory[0]) : null;
+
+  const highestStock = inventory.length > 0 ?
+    inventory.reduce((max, item) => parseInt(item.quantity) > parseInt(max.quantity) ? item : max, inventory[0]) : null;
+
+  const summaryHTML = `
+    <div class="dm-report-card dm-success">
+      <h4><i class="fa fa-check-circle"></i> En Stock Saludable</h4>
+      <div class="dm-report-value">${inStock.length}</div>
+      <div class="dm-report-detail">Productos con >5 unidades</div>
     </div>
-  </div>
-
-  <div class="dm-section" id="problemSection" style="display:none;">
-    <div class="dm-section-header">
-      <i class="fa fa-exclamation-circle"></i>
-      <h2>Productos que Requieren Atención <i class="fa fa-box" style="margin-left:8px;color:var(--dm-text-muted);" title="Inventario"></i></h2>
+    <div class="dm-report-card dm-warning">
+      <h4><i class="fa fa-exclamation-triangle"></i> Stock Bajo</h4>
+      <div class="dm-report-value">${lowStock.length}</div>
+      <div class="dm-report-detail">Productos con 1-5 unidades</div>
     </div>
-    <div id="problemProductsContainer"></div>
-  </div>
+    <div class="dm-report-card dm-danger">
+      <h4><i class="fa fa-times-circle"></i> Fuera de Stock</h4>
+      <div class="dm-report-value">${outOfStock.length}</div>
+      <div class="dm-report-detail">Productos agotados</div>
+    </div>
+    <div class="dm-report-card dm-info">
+      <h4><i class="fa fa-dollar-sign"></i> Valor Promedio</h4>
+      <div class="dm-report-value">$${avgPrice.toFixed(2)}</div>
+      <div class="dm-report-detail">Por unidad en inventario</div>
+    </div>
+    <div class="dm-report-card">
+      <h4><i class="fa fa-tags"></i> Categorías</h4>
+      <div class="dm-report-value">${categories.length}</div>
+      <div class="dm-report-detail">Diferentes categorías activas</div>
+    </div>
+    <div class="dm-report-card">
+      <h4><i class="fa fa-crown"></i> Producto Top</h4>
+      <div class="dm-report-value" style="font-size:1.1rem;">${mostValuable ? mostValuable.name.substring(0,15) + '...' : 'N/A'}</div>
+      <div class="dm-report-detail">Mayor valor: $${mostValuable ? calculateItemValue(mostValuable).toFixed(2) : '0.00'}</div>
+    </div>
+  `;
 
-</main>
+  document.getElementById('executiveSummary').innerHTML = summaryHTML;
 
-<div id="printArea" style="display:none;"></div>
-<div id="lightbox" onclick="closeLightbox()">
-  <img id="lightboxImg" src="" alt="Imagen ampliada"/>
-</div>
-<div id="barcodeLabelsContainer" style="display:none;"></div>
-<div id="pdfContent"></div>
+  const alertsContainer = document.getElementById('alertsContainer');
+  alertsContainer.innerHTML = '';
 
-<script>
-} = window.jspdf;
+  if (outOfStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-danger">
+        <i class="fa fa-times-circle"></i>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-danger);">${outOfStock.length} productos agotados</strong>
+          <p>Requiere reposición inmediata para evitar pérdida de ventas.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  if (lowStock.length > 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-warning">
+        <i class="fa fa-exclamation-triangle"></i>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-warning);">${lowStock.length} productos con stock crítico</strong>
+          <p>Considere reordenar pronto para mantener disponibilidad.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  if (inventory.length === 0) {
+    alertsContainer.innerHTML += `
+      <div class="dm-alert dm-alert-info">
+        <i class="fa fa-info-circle"></i>
+        <div class="dm-alert-content">
+          <strong style="color:var(--dm-info);">Inventario vacío</strong>
+          <p>No hay productos registrados en el sistema.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  generateCategoryTable();
+  generateTopProductsTable();
+  generateProblemProducts();
+}
+
+function generateCategoryTable(){
+  const categories = {};
+  const totalValue = calculateTotal(inventory);
+
+  inventory.forEach(item => {
+    const cat = item.category || 'Sin categoría';
+    if (!categories[cat]) {
+      categories[cat] = { count: 0, stock: 0, value: 0 };
+    }
+    categories[cat].count++;
+    categories[cat].stock += parseInt(item.quantity) || 0;
+    categories[cat].value += calculateItemValue(item);
+  });
+
+  const tbody = document.getElementById('categoryTableBody');
+  tbody.innerHTML = Object.entries(categories)
+    .sort((a, b) => b[1].value - a[1].value)
+    .map(([cat, data]) => {
+      const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
+      const avgPerProduct = data.count > 0 ? (data.stock / data.count).toFixed(1) : 0;
+
+      let statusBadge = '<span class="dm-badge dm-badge-success">OK</span>';
+      if (data.stock === 0) statusBadge = '<span class="dm-badge dm-badge-danger">Agotado</span>';
+      else if (data.stock / data.count <= 2) statusBadge = '<span class="dm-badge dm-badge-warning">Bajo</span>';
+
+      return `
+        <tr>
+          <td><strong>${cat}</strong></td>
+          <td>${data.count}</td>
+          <td>${data.stock} u.</td>
+          <td>$${data.value.toFixed(2)}</td>
+          <td>${avgPerProduct} u.</td>
+          <td>${percentage}%</td>
+          <td>${statusBadge}</td>
+        </tr>
+      `;
+    }).join('');
+}
+
+function generateTopProductsTable(){
+  const totalValue = calculateTotal(inventory);
+  const sorted = [...inventory]
+    .sort((a, b) => calculateItemValue(b) - calculateItemValue(a))
+    .slice(0, 10);
+
+  const tbody = document.getElementById('topProductsBody');
+  tbody.innerHTML = sorted.map((item, index) => {
+    const value = calculateItemValue(item);
+    const percentage = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+    const finalPrice = item.discount > 0 
+      ? (item.price * (1 - item.discount / 100)).toFixed(2)
+      : parseFloat(item.price).toFixed(2);
+
+    return `
+      <tr>
+        <td><span class="dm-badge dm-badge-info">#${index + 1}</span></td>
+        <td><strong>${item.name}</strong></td>
+        <td>${item.category}</td>
+        <td>${item.quantity} u.</td>
+        <td>$${finalPrice}</td>
+        <td><strong>$${value.toFixed(2)}</strong></td>
+        <td>${percentage}%</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function generateProblemProducts(){
+  const problems = inventory.filter(item => {
+    const qty = parseInt(item.quantity);
+    return qty === 0 || (qty > 0 && qty <= 2);
+  }).sort((a, b) => parseInt(a.quantity) - parseInt(b.quantity));
+
+  const section = document.getElementById('problemSection');
+  const container = document.getElementById('problemProductsContainer');
+
+  if (problems.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  container.innerHTML = problems.map(item => {
+    const qty = parseInt(item.quantity);
+    const isOut = qty === 0;
+
+    return `
+      <div class="dm-problem-item ${isOut ? 'dm-critical' : 'dm-low'}">
+        <div class="dm-problem-info">
+          <strong>
+            ${item.name}
+            <span class="dm-badge ${isOut ? 'dm-badge-danger' : 'dm-badge-warning'}">${isOut ? 'AGOTADO' : 'CRÍTICO'}</span>
+          </strong>
+          <p>Código: ${item.code} | Categoría: ${item.category} | Stock: ${qty} u.</p>
+        </div>
+        <div class="dm-problem-price">
+          <div class="dm-price">$${parseFloat(item.price).toFixed(2)}</div>
+          <div class="dm-label">Precio unitario</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTable(){
+  const container = document.getElementById('inventoryTable');
+
+  document.getElementById('totalProducts').textContent = inventory.length;
+  document.getElementById('totalStock').textContent = stockTotal(inventory);
+
+  filtered = sortByCustomCategory(filtered);
+
+  if(!filtered.length){
+    container.innerHTML = `
+      <div class="dm-empty">
+        <i class="fa fa-search"></i>
+        <p>No hay productos que coincidan con la búsqueda.</p>
+      </div>
+    `;
+    document.getElementById('totalAmount').textContent = '$0.00';
+    return;
+  }
+
+  container.innerHTML = filtered.map((item,idx)=>{
+    const qty = parseInt(item.quantity) || 0;
+    const stockClass = qty === 0 ? 'out' : (qty <= 5 ? 'low' : '');
+    const stockIcon = qty === 0 ? 'fa-times-circle' : (qty <= 5 ? 'fa-exclamation-circle' : 'fa-check-circle');
+
+    return `
+    <div class="dm-product-card" id="card-${idx}">
+      <img id="invImg${idx}" class="dm-product-img" src="" alt="${item.name}"/>
+      <div class="dm-product-body">
+        <div class="dm-product-name">${highlight(item.name, searchTerm)}</div>
+        <div class="dm-product-meta">${highlight(item.code, searchTerm)}</div>
+        <div class="dm-product-stock ${stockClass}">
+          <i class="fa ${stockIcon}"></i>
+          ${qty === 0 ? 'Sin stock' : (qty <= 5 ? `${qty} u. (bajo)` : `${qty} u.`)}
+        </div>
+        ${typeof item.discount === 'number' && item.discount > 0 ? `
+          <div class="dm-product-discount">${item.discount}% OFF</div>
+          <div class="dm-product-price">
+            <span class="dm-original">$${item.price}</span>
+            $${(item.price * (1 - item.discount / 100)).toFixed(2)}
+          </div>
+        ` : `
+          <div class="dm-product-price">$${item.price}</div>
+        `}
+        <div class="dm-product-category">${highlight(item.category, searchTerm)}</div>
+        ${item.description ? `<div class="dm-product-desc">${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}</div>` : ''}
+
+        <div class="dm-barcode-box">
+          <svg id="barcode-${idx}"></svg>
+          <div class="dm-barcode-number">${item.barcode}</div>
+        </div>
+
+        <div class="dm-product-actions">
+          <button onclick="viewItem(${idx})" class="dm-btn dm-btn-primary" style="flex:1;">
+            <i class="fa fa-eye"></i> Ver
+          </button>
+          <button onclick="downloadSingleBarcodeLabel(${idx})" class="dm-btn dm-btn-secondary" title="Descargar etiqueta">
+            <i class="fa fa-barcode"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `}).join('');
+
+  filtered.forEach((item, idx) => {
+    if (item.barcode) {
+      try {
+        JsBarcode(`#barcode-${idx}`, item.barcode, {
+          format: "CODE128",
+          width: 2,
+          height: 32,
+          displayValue: false,
+          margin: 0
+        });
+      } catch (e) {
+        console.error('Error generando código de barras:', e);
+      }
+    }
+  });
+
+  filtered.forEach((p,i)=>{
+    localforage.getItem(`img_${p.code}`).then(blob=>{
+      if(blob){
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById(`invImg${i}`);
+        img.src = url;
+        img.onclick = () => openLightbox(url);
+      }
+    });
+  });
+
+  document.getElementById('totalAmount').textContent = `$${calculateTotal(filtered).toFixed(2)}`;
+  generateExecutiveReports();
+}
+
+function viewItem(index){
+  alert(`Detalles:
+
+${JSON.stringify(filtered[index],null,2)}`);
+}
+
+function wrapText(pdf, text, maxWidth, fontSize) {
+  pdf.setFontSize(fontSize);
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+
+  for (let word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const width = pdf.getTextWidth(testLine);
+
+    if (width <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  return lines;
+}
+
+async function downloadSingleBarcodeLabel(index) {
+  const item = filtered[index];
+  if (!item || !item.barcode) {
+    alert('Este producto no tiene código de barras');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', [50, 30]);
+
+  const finalPrice = item.discount > 0 
+    ? (item.price * (1 - item.discount / 100)).toFixed(2)
+    : parseFloat(item.price).toFixed(2);
+
+  // MARCA DAYMAR vertical
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('D', 2, 8);
+  pdf.text('A', 2, 12);
+  pdf.text('Y', 2, 16);
+  pdf.text('M', 2, 20);
+  pdf.text('A', 2, 24);
+  pdf.text('R', 2, 28);
+
+  const maxWidth = 36;
+  let fontSize = 7;
+  let lines = wrapText(pdf, item.name, maxWidth, fontSize);
+
+  if (lines.length > 2) {
+    fontSize = 6;
+    lines = wrapText(pdf, item.name, maxWidth, fontSize);
+  }
+  if (lines.length > 3) {
+    fontSize = 5;
+    lines = wrapText(pdf, item.name, maxWidth, fontSize);
+  }
+
+  if (lines.length > 3) {
+    lines = lines.slice(0, 3);
+    lines[2] = lines[2].substring(0, 15) + '...';
+  }
+
+  pdf.setFontSize(fontSize);
+  pdf.setFont(undefined, 'normal');
+  let yPos = 6;
+  lines.forEach(line => {
+    pdf.text(line, 12, yPos);
+    yPos += fontSize * 0.4;
+  });
+
+  pdf.setFontSize(9);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(`$${finalPrice}`, 12, yPos + 2);
+
+  const canvas = document.createElement('canvas');
+  try {
+    JsBarcode(canvas, item.barcode, {
+      format: "CODE128",
+      width: 1.5,
+      height: 12,
+      displayValue: false,
+      margin: 0
+    });
+
+    const barcodeData = canvas.toDataURL('image/png');
+    pdf.addImage(barcodeData, 'PNG', 12, 18, 35, 8);
+
+    pdf.setFontSize(5);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(item.barcode, 29.5, 28, { align: 'center' });
+
+    pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
+  } catch (e) {
+    alert('Error al generar el código de barras');
+    console.error(e);
+  }
+}
+async function downloadBarcodeLabelsPDF() {
+  const { jsPDF } = window.jspdf;
+
+  if (!filtered || filtered.length === 0) {
+    alert('No hay productos para generar etiquetas');
+    return;
+  }
+
+  const productsWithBarcode = filtered.filter(item => 
+    item.barcode && 
+    item.barcode.trim() !== '' && 
+    parseInt(item.quantity) > 0
+  );
+
+  if (productsWithBarcode.length === 0) {
+    alert('No hay productos con código de barras y stock disponible');
+    return;
+  }
+
+  const totalLabels = productsWithBarcode.reduce((sum, item) => sum + parseInt(item.quantity), 0);
+
+  if (totalLabels > 100) {
+    if (!confirm(`Se generarán ${totalLabels} etiquetas en total. ¿Deseas continuar?`)) {
+      return;
+    }
+  }
+
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const cols = 3;
+  const rows = 7;
+  const labelWidth = 63;
+  const labelHeight = 37;
+  const marginX = 8;
+  const marginY = 10;
+  const gapX = 3;
+  const gapY = 2;
+
+  let currentPage = 1;
+  let labelCount = 0;
+
+  const wrapTextForLabel = (text, maxWidth, fontSize) => {
+    pdf.setFontSize(fontSize);
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      const width = pdf.getTextWidth(testLine);
+
+      if (width <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    return lines;
+  };
+
+  const drawLabel = (item, x, y) => {
+    const rawPrice = parseFloat(item.price) || 0;
+    const finalPrice = item.discount > 0 
+      ? (rawPrice * (1 - item.discount / 100)).toFixed(2)
+      : rawPrice.toFixed(2);
+
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, y, labelWidth, labelHeight);
+
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(0, 0, 0);
+    const letterSpacing = 5.5;
+    const totalLettersHeight = 5 * letterSpacing;
+    const startY = y + (labelHeight - totalLettersHeight) / 2;
+    const letterX = x + 4;
+
+    pdf.text('D', letterX, startY);
+    pdf.text('A', letterX, startY + letterSpacing);
+    pdf.text('Y', letterX, startY + letterSpacing * 2);
+    pdf.text('M', letterX, startY + letterSpacing * 3);
+    pdf.text('A', letterX, startY + letterSpacing * 4);
+    pdf.text('R', letterX, startY + letterSpacing * 5);
+
+    pdf.setDrawColor(150, 150, 150);
+    pdf.line(x + 10, y + 2, x + 10, y + labelHeight - 2);
+
+    const textX = x + 13;
+    const maxTextWidth = labelWidth - 16;
+    let fontSize = 8;
+    let lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+
+    if (lines.length > 2) {
+      fontSize = 7;
+      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+    }
+    if (lines.length > 3) {
+      fontSize = 6;
+      lines = wrapTextForLabel(item.name, maxTextWidth, fontSize);
+    }
+
+    if (lines.length > 3) {
+      lines = lines.slice(0, 3);
+      if (lines[2].length > 18) {
+        lines[2] = lines[2].substring(0, 15) + '...';
+      }
+    }
+
+    pdf.setFontSize(fontSize);
+    pdf.setFont(undefined, 'normal');
+    let textY = y + 6;
+    lines.forEach(line => {
+      pdf.text(line, textX, textY);
+      textY += fontSize * 0.4;
+    });
+
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`$${finalPrice}`, textX, y + 16);
+
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, item.barcode, {
+        format: "CODE128",
+        width: 1.2,
+        height: 10,
+        displayValue: false,
+        margin: 0
+      });
+
+      const barcodeData = canvas.toDataURL('image/png');
+      pdf.addImage(barcodeData, 'PNG', textX, y + 19, labelWidth - 18, 10);
+
+      pdf.setFontSize(6);
+      pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(item.barcode, x + labelWidth / 2 + 5, y + 34, { align: 'center' });
+    } catch (e) {
+      console.error('Error generando código de barras para:', item.name);
+    }
+  };
+
+  for (const item of productsWithBarcode) {
+    const stock = parseInt(item.quantity);
+
+    for (let i = 0; i < stock; i++) {
+      const col = labelCount % cols;
+      const row = Math.floor((labelCount % (cols * rows)) / cols);
+
+      const x = marginX + col * (labelWidth + gapX);
+      const y = marginY + row * (labelHeight + gapY);
+
+      drawLabel(item, x, y);
+
+      labelCount++;
+
+      if (labelCount % (cols * rows) === 0) {
+        pdf.addPage();
+        currentPage++;
+      }
+    }
+  }
+
+  pdf.save(`etiquetas_codigos_barra_${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+async function downloadBarcodeLabelsByCategory() {
+  const categorySelect = document.getElementById('categorySelect');
+  const selectedCategory = categorySelect.value;
+
+  if (!selectedCategory) {
+    alert('Por favor selecciona una categoría del menú desplegable');
+    categorySelect.focus();
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
 
   const productsByCategory = inventory.filter(item => {
     const itemCategory = (item.category || 'Sin categoría').trim();
@@ -967,9 +1147,6 @@
   }
 
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
   const cols = 3;
   const rows = 7;
   const labelWidth = 63;
@@ -1180,7 +1357,6 @@ localStorage.setItem = function(key, value) {
     originalSetItem.call(this, 'inventario', value);
   }
 };
-
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
 
@@ -1526,7 +1702,6 @@ async function downloadPDF() {
 
   pdf.save(`reporte_inventario_completo_${new Date().toISOString().split('T')[0]}.pdf`);
 }
-
 async function downloadCatalogPDF() {
   const { jsPDF } = window.jspdf;
 

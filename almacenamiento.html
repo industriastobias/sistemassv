@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -716,7 +718,7 @@
 
     <!-- Panel de Pedidos Pendientes (COD + Pendientes de Entrega + Pendientes de Cobro) -->
     <div class="pending-panel" id="pendingPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-sm" onclick="requestPassword('deletePendingHistory', -1)" title="Limpiar historial sin devolver stock"><i class="fa-solid fa-trash-can"></i> Limpiar historial</button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
 
       <div class="tabs-container">
         <button class="tab-btn active" onclick="switchPendingTab('cod')"><i class="fa-solid fa-truck"></i> Contra Entrega</button>
@@ -1038,7 +1040,7 @@
     <div class="modal">
       <div class="modal-header"><h3 class="modal-title"><i class="fa-solid fa-lock"></i> Acceso Restringido</h3><button class="modal-close" onclick="closePasswordModal()"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="modal-body">
-        <p style="margin-bottom:1rem;color:var(--text-secondary);">Ingresa la contrasena para editar precio/stock o eliminar pedidos pendientes:</p>
+        <p style="margin-bottom:1rem;color:var(--text-secondary);">Ingresa la contrasena para editar precio/stock, eliminar pedidos pendientes o limpiar su historial:</p>
         <div class="form-group">
           <input type="hidden" id="passwordAction">
           <input type="hidden" id="passwordIndex">
@@ -1898,6 +1900,7 @@ function verifyPassword() {
   else if (action === 'deleteDeliveryPending') executeDeleteDeliveryPending();
   else if (action === 'deletePaymentPending') executeDeletePaymentPending();
   else if (action === 'deleteAllDeliveryPending') executeDeleteAllDeliveryPending();
+  else if (action === 'deletePendingHistory') executeDeletePendingHistory();
 }
 
 // ===== FUNCIONES VENTA RAPIDA =====
@@ -3101,6 +3104,21 @@ function confirmDeleteDeliveryPending() {
   if (pendingDeliveryDeleteIndex === -1) return;
   requestPassword('deleteDeliveryPending', pendingDeliveryDeleteIndex);
 }
+function executeDeletePendingHistory() {
+  const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  const total = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
+  if (!total) { showNotification('No hay pedidos pendientes para limpiar', 'warning'); return; }
+  if (!confirm(`¿Eliminar del historial los ${total} pedidos pendientes? El stock NO será devuelto.`)) return;
+  localStorage.setItem('pendingInventory', '[]');
+  localStorage.setItem('pendingDeliveryInventory', '[]');
+  localStorage.setItem('pendingPaymentInventory', '[]');
+  loadPendingList();
+  updateStats();
+  showNotification('Historial de pedidos limpiado. El stock no fue devuelto.', 'success');
+}
+
 function executeDeleteAllDeliveryPending() {
   const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
   if (!pending.length) { showNotification('No hay entregas pendientes para eliminar', 'warning'); return; }

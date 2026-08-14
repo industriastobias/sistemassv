@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -549,7 +548,7 @@
       <div class="daily-report-filters">
         <div class="form-group">
           <label class="form-label">Filtro Rapido</label>
-          <select class="form-select" id="dailyReportQuickFilter" onchange="onDailyReportQuickFilterChange()">
+          <select class="form-select" id="dailyReportQuickFilter" onchange="applyDailyReportFilter()">
             <option value="all">Todo el historial</option>
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -637,7 +636,7 @@
       <div class="sales-history-filters">
         <div class="form-group">
           <label class="form-label">Filtro Rapido</label>
-          <select class="form-select" id="historyQuickFilter" onchange="onHistoryQuickFilterChange()">
+          <select class="form-select" id="historyQuickFilter" onchange="applySalesHistoryFilter()">
             <option value="all">Todas las ventas</option>
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -1039,7 +1038,7 @@
     <div class="modal">
       <div class="modal-header"><h3 class="modal-title"><i class="fa-solid fa-lock"></i> Acceso Restringido</h3><button class="modal-close" onclick="closePasswordModal()"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="modal-body">
-        <p style="margin-bottom:1rem;color:var(--text-secondary);" id="passwordModalText">Ingresa la contrasena para editar precio/stock:</p>
+        <p style="margin-bottom:1rem;color:var(--text-secondary);">Ingresa la contrasena para editar precio/stock o eliminar pedidos pendientes:</p>
         <div class="form-group">
           <input type="hidden" id="passwordAction">
           <input type="hidden" id="passwordIndex">
@@ -1513,7 +1512,6 @@ let currentEditDeliveryIndex = -1;
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
 let currentCompletePaymentIndex = -1;
-let pendingAuthCode = '', pendingAuthDate = '';
 
 // Variables para Venta Rapida
 let fastSaleWhoPays = 'client';
@@ -1536,15 +1534,23 @@ function showNotification(message, type = 'success') {
 function showLoading(show = true) { document.getElementById('loadingOverlay').classList.toggle('active', show); }
 function formatCurrency(amount) { return '$' + (amount || 0).toFixed(2); }
 function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { return new Date(dateStr).toLocaleString('es-ES'); } catch { return 'N/A'; } }
-// Devuelve la fecha LOCAL en formato YYYY-MM-DD (sin desfase por zona horaria UTC). Retorna null si la fecha es invalida.
-function toLocalDateStr(dateVal) {
-  try {
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return null;
-    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  } catch (e) { return null; }
+function localDateKey(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function getSalesDateRange() {
+  let sales=[]; try { sales=JSON.parse(localStorage.getItem('soldInventory')||'[]'); } catch(e) {}
+  const dates=sales.map(s=>new Date(s.date)).filter(d=>!Number.isNaN(d.getTime()));
+  const today=new Date(), first=dates.length?new Date(Math.min(...dates.map(d=>d.getTime()))):today;
+  return {start:localDateKey(first),end:localDateKey(today)};
+}
+function setSalesDateRange(prefix) {
+  const r=getSalesDateRange(), start=document.getElementById(`${prefix}DateStart`), end=document.getElementById(`${prefix}DateEnd`);
+  if(start) start.value=r.start; if(end) end.value=r.end;
+}
+
 
 function levenshteinDistance(a, b) { 
   const matrix = []; 
@@ -1667,11 +1673,11 @@ function updateStats() {
 }
 
 function updateDailySalesBadge() {
-  const today = toLocalDateStr(new Date());
+  const today = new Date().toISOString().split('T')[0];
   const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
   const todaySales = sales.filter(s => {
-    const saleDate = toLocalDateStr(s.date);
-    return saleDate && saleDate === today;
+    const saleDate = s.date ? localDateKey(s.date) : '';
+    return saleDate === today;
   });
 
   document.getElementById('dailySalesCount').textContent = todaySales.length;
@@ -1871,20 +1877,6 @@ function requestPassword(action, index) {
   document.getElementById('passwordAction').value = action;
   document.getElementById('passwordIndex').value = index;
   document.getElementById('passwordInput').value = '';
-  document.getElementById('passwordModalText').textContent = 'Ingresa la contrasena para editar precio/stock:';
-  document.getElementById('passwordModal').classList.add('active');
-  setTimeout(() => document.getElementById('passwordInput').focus(), 100);
-}
-
-// Pide la clave (la misma de editar precios) antes de eliminar un pedido pendiente.
-// type: 'deleteCOD' | 'deleteDelivery' | 'deletePayment'
-function requestDeletePassword(type, code, date) {
-  pendingAuthCode = code;
-  pendingAuthDate = date;
-  document.getElementById('passwordAction').value = type;
-  document.getElementById('passwordIndex').value = '-1';
-  document.getElementById('passwordInput').value = '';
-  document.getElementById('passwordModalText').textContent = 'Ingresa la contrasena de administrador para ELIMINAR este pedido (el stock sera devuelto al inventario):';
   document.getElementById('passwordModal').classList.add('active');
   setTimeout(() => document.getElementById('passwordInput').focus(), 100);
 }
@@ -1902,9 +1894,9 @@ function verifyPassword() {
   if (action === 'price') openPriceModal(index);
   else if (action === 'stock') openStockModal(index);
   else if (action === 'unlockSaleFields') unlockSaleFields();
-  else if (action === 'deleteCOD') openDeleteConfirmModal(pendingAuthCode, pendingAuthDate);
-  else if (action === 'deleteDelivery') openDeleteDeliveryConfirmModal(pendingAuthCode, pendingAuthDate);
-  else if (action === 'deletePayment') openDeletePaymentConfirmModal(pendingAuthCode, pendingAuthDate);
+  else if (action === 'deletePending') executeDeletePending();
+  else if (action === 'deleteDeliveryPending') executeDeleteDeliveryPending();
+  else if (action === 'deletePaymentPending') executeDeletePaymentPending();
 }
 
 // ===== FUNCIONES VENTA RAPIDA =====
@@ -2220,7 +2212,6 @@ function toggleSaleFieldLock(field) {
   document.getElementById('passwordAction').value = 'unlockSaleFields';
   document.getElementById('passwordIndex').value = '-1';
   document.getElementById('passwordInput').value = '';
-  document.getElementById('passwordModalText').textContent = 'Ingresa la contrasena para desbloquear cantidad y precio:';
   document.getElementById('passwordModal').classList.add('active');
   setTimeout(() => document.getElementById('passwordInput').focus(), 100);
 }
@@ -2816,7 +2807,7 @@ async function loadPendingList() {
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
           <td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
-          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal('${p.code}', '${p.date}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="requestDeletePassword('deleteCOD', '${p.code}', '${p.date}')" title="Eliminar (requiere clave)"><i class="fa-solid fa-trash"></i></button></div></td>
+          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal('${p.code}', '${p.date}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-trash"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
@@ -2860,7 +2851,7 @@ async function loadPendingList() {
           <td>${statusText}</td>
           <td><strong style="color:var(--purple);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
           <td><div class="cell-actions">
-            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="requestDeletePassword('deleteDelivery', '${p.code}', '${p.date}')" title="Eliminar (requiere clave)"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -2903,7 +2894,7 @@ async function loadPendingList() {
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
           <td><strong style="color:#f97316;">${formatCurrency(p.pendingAmount)}</strong></td>
           <td><div class="cell-actions">
-            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="requestDeletePassword('deletePayment', '${p.code}', '${p.date}')" title="Eliminar (requiere clave)"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3034,6 +3025,10 @@ function closeDeleteConfirmModal() {
 
 function confirmDeletePending() {
   if (pendingDeleteIndex === -1) return;
+  requestPassword('deletePending', pendingDeleteIndex);
+}
+function executeDeletePending() {
+  if (pendingDeleteIndex === -1) return;
   showLoading(true); 
   try { 
     let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
@@ -3102,6 +3097,10 @@ function deleteDeliveryPending(code, date) {
 
 // ===== CORRECCION CRITICA: Se agrega pending.sort() para sincronizar el indice =====
 function confirmDeleteDeliveryPending() {
+  if (pendingDeliveryDeleteIndex === -1) return;
+  requestPassword('deleteDeliveryPending', pendingDeliveryDeleteIndex);
+}
+function executeDeleteDeliveryPending() {
   if (pendingDeliveryDeleteIndex === -1) return;
 
   showLoading(true);
@@ -3435,6 +3434,10 @@ function deletePaymentPending(code, date) {
 // ===== CORRECCION CRITICA: Se agrega pending.sort() para sincronizar el indice =====
 function confirmDeletePaymentPending() {
   if (pendingPaymentDeleteIndex === -1) return;
+  requestPassword('deletePaymentPending', pendingPaymentDeleteIndex);
+}
+function executeDeletePaymentPending() {
+  if (pendingPaymentDeleteIndex === -1) return;
 
   showLoading(true);
   try {
@@ -3731,7 +3734,7 @@ function toggleDailySalesPanel() {
     cards.style.display = 'none';
 
     if (!document.getElementById('dailySalesDate').value) {
-      document.getElementById('dailySalesDate').value = toLocalDateStr(new Date());
+      document.getElementById('dailySalesDate').value = new Date().toISOString().split('T')[0];
     }
     loadDailySales();
   }
@@ -3746,8 +3749,8 @@ async function loadDailySales() {
   try {
     const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
     const daySales = sales.filter(s => {
-      const saleDate = toLocalDateStr(s.date);
-      return saleDate && saleDate === selectedDate;
+      const saleDate = s.date ? localDateKey(s.date) : '';
+      return saleDate === selectedDate;
     });
 
     let cashTotal = 0, transferTotal = 0, pendingTotal = 0, codTotal = 0, pendingPaymentTotal = 0;
@@ -3875,24 +3878,11 @@ function toggleSalesHistoryPanel() {
     cards.style.display = 'none';
     document.getElementById('btnSalesHistory').classList.add('active');
 
-    // Por defecto mostrar TODO el historial (sin limite de fechas)
-    document.getElementById('historyQuickFilter').value = 'all';
-    document.getElementById('historyTypeFilter').value = 'all';
-    document.getElementById('historyPaymentFilter').value = 'all';
-    document.getElementById('historyDateStart').value = '';
-    document.getElementById('historyDateEnd').value = '';
+    setSalesDateRange('history');
 
     applySalesHistoryFilter();
   }
   ensureKioscoMode();
-}
-
-function onHistoryQuickFilterChange() {
-  if (document.getElementById('historyQuickFilter').value === 'all') {
-    document.getElementById('historyDateStart').value = '';
-    document.getElementById('historyDateEnd').value = '';
-  }
-  applySalesHistoryFilter();
 }
 
 function applySalesHistoryFilter() {
@@ -3926,22 +3916,20 @@ function applySalesHistoryFilter() {
         end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
     }
-    document.getElementById('historyDateStart').value = toLocalDateStr(start);
-    document.getElementById('historyDateEnd').value = toLocalDateStr(end);
+    document.getElementById('historyDateStart').value = start.toISOString().split('T')[0];
+    document.getElementById('historyDateEnd').value = end.toISOString().split('T')[0];
     startDate = document.getElementById('historyDateStart').value;
     endDate = document.getElementById('historyDateEnd').value;
   }
 
+  if (!startDate || !endDate) return;
+
   const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
 
-  // Si no hay fechas seleccionadas (Filtro Rapido = Todo el historial), se muestran TODAS las ventas.
-  // Se usa fecha LOCAL para evitar el desfase de zona horaria, y se omiten registros con fecha invalida sin romper la lista.
   let filteredSales = sales.filter(s => {
-    const saleDate = toLocalDateStr(s.date);
-    if (!saleDate) return false;
-    if (startDate && saleDate < startDate) return false;
-    if (endDate && saleDate > endDate) return false;
-    return true;
+    if (!s.date) return false;
+    const saleDate = localDateKey(s.date);
+    return saleDate >= startDate && saleDate <= endDate;
   });
 
   if (typeFilter !== 'all') {
@@ -3963,7 +3951,7 @@ function applySalesHistoryFilter() {
   document.getElementById('historyAvgSale').textContent = formatCurrency(avg);
 
   const labels = {
-    'all': 'en todo el historial',
+    'all': 'en el periodo seleccionado',
     'today': 'hoy',
     'week': 'esta semana',
     'month': 'este mes',
@@ -3978,8 +3966,7 @@ function clearSalesHistoryFilters() {
   document.getElementById('historyQuickFilter').value = 'all';
   document.getElementById('historyTypeFilter').value = 'all';
   document.getElementById('historyPaymentFilter').value = 'all';
-  document.getElementById('historyDateStart').value = '';
-  document.getElementById('historyDateEnd').value = '';
+  setSalesDateRange('history');
   applySalesHistoryFilter();
   showNotification('Filtros limpiados', 'success');
 }
@@ -4136,12 +4123,7 @@ function toggleDailyReportPanel() {
     cards.style.display = 'none';
     document.getElementById('btnDailyReport').classList.add('active');
 
-    // Por defecto mostrar TODO el historial (sin limite de fechas)
-    document.getElementById('dailyReportQuickFilter').value = 'all';
-    document.getElementById('dailyReportTypeFilter').value = 'all';
-    document.getElementById('dailyReportPaymentFilter').value = 'all';
-    document.getElementById('dailyReportDateStart').value = '';
-    document.getElementById('dailyReportDateEnd').value = '';
+    setSalesDateRange('dailyReport');
 
     applyDailyReportFilter();
   }
@@ -4152,18 +4134,9 @@ function clearDailyReportFilters() {
   document.getElementById('dailyReportQuickFilter').value = 'all';
   document.getElementById('dailyReportTypeFilter').value = 'all';
   document.getElementById('dailyReportPaymentFilter').value = 'all';
-  document.getElementById('dailyReportDateStart').value = '';
-  document.getElementById('dailyReportDateEnd').value = '';
+  setSalesDateRange('dailyReport');
   applyDailyReportFilter();
   showNotification('Filtros limpiados', 'success');
-}
-
-function onDailyReportQuickFilterChange() {
-  if (document.getElementById('dailyReportQuickFilter').value === 'all') {
-    document.getElementById('dailyReportDateStart').value = '';
-    document.getElementById('dailyReportDateEnd').value = '';
-  }
-  applyDailyReportFilter();
 }
 
 function applyDailyReportFilter() {
@@ -4197,22 +4170,20 @@ function applyDailyReportFilter() {
         end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
     }
-    document.getElementById('dailyReportDateStart').value = toLocalDateStr(start);
-    document.getElementById('dailyReportDateEnd').value = toLocalDateStr(end);
+    document.getElementById('dailyReportDateStart').value = start.toISOString().split('T')[0];
+    document.getElementById('dailyReportDateEnd').value = end.toISOString().split('T')[0];
     startDate = document.getElementById('dailyReportDateStart').value;
     endDate = document.getElementById('dailyReportDateEnd').value;
   }
 
+  if (!startDate || !endDate) return;
+
   const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
 
-  // Si no hay fechas seleccionadas (Filtro Rapido = Todo el historial), se muestran TODAS las ventas.
-  // Se usa fecha LOCAL para evitar el desfase de zona horaria, y se omiten registros con fecha invalida sin romper la lista.
   let filteredSales = sales.filter(s => {
-    const saleDate = toLocalDateStr(s.date);
-    if (!saleDate) return false;
-    if (startDate && saleDate < startDate) return false;
-    if (endDate && saleDate > endDate) return false;
-    return true;
+    if (!s.date) return false;
+    const saleDate = localDateKey(s.date);
+    return saleDate >= startDate && saleDate <= endDate;
   });
 
   if (typeFilter !== 'all') {

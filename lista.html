@@ -650,24 +650,24 @@
 
 <div id="toastContainer" class="toast-container"></div>
 
-<div id="confirmModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalText">
+<div id="confirmModal" class="modal-overlay">
   <div class="modal-content">
     <div class="modal-title" id="modalTitle">Confirmar acción</div>
     <div class="modal-text" id="modalText">¿Estás seguro de que deseas continuar?</div>
     <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-secondary" onclick="cerrarModal()">Cancelar</button>
-      <button type="button" class="modal-btn modal-btn-danger" id="modalConfirmBtn" onclick="confirmarAccion()">Eliminar</button>
+      <button class="modal-btn modal-btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button class="modal-btn modal-btn-danger" id="modalConfirmBtn" onclick="confirmarAccion()">Eliminar</button>
     </div>
   </div>
 </div>
 
 <nav>
-<button class="tab active" type="button" data-tab="dashboard" aria-selected="true">Dashboard</button>
-  <button class="tab" type="button" data-tab="ingresos" aria-selected="false">Ingresos</button>
-  <button class="tab" type="button" data-tab="gastos" aria-selected="false">Gastos</button>
-  <button class="tab" type="button" data-tab="gastosDesdeIngresos" aria-selected="false">Gastos desde Ingresos</button>
-  <button class="tab" type="button" data-tab="proveedores" aria-selected="false">Proveedores</button>
-  <button class="tab" type="button" data-tab="cuentas" aria-selected="false">Cuentas Pendientes</button>
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="ingresos">Ingresos</div>
+  <div class="tab" data-tab="gastos">Gastos</div>
+  <div class="tab" data-tab="gastosDesdeIngresos">Gastos desde Ingresos</div>
+  <div class="tab" data-tab="proveedores">Proveedores</div>
+  <div class="tab" data-tab="cuentas">Cuentas Pendientes</div>
 </nav>
 
 <main>
@@ -675,11 +675,11 @@
     <h2>Resumen General</h2>
     <div class="date-filter-bar">
       <div class="date-input-group">
-        <label for="fechaInicio">Desde:</label>
+        <label>Desde:</label>
         <input type="date" id="fechaInicio" onchange="filtrarDashboardPorFecha()">
       </div>
       <div class="date-input-group">
-        <label for="fechaFin">Hasta:</label>
+        <label>Hasta:</label>
         <input type="date" id="fechaFin" onchange="filtrarDashboardPorFecha()">
       </div>
       <button class="btn-filter" onclick="limpiarFiltrosFecha()">Limpiar Filtros</button>
@@ -974,10 +974,6 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
-document.getElementById('confirmModal').addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') cerrarModal();
-});
-
 /* ---------- UTILIDADES ---------- */
 function debounce(func, wait) {
   let timeout;
@@ -1172,46 +1168,44 @@ function actualizarTablaConPaginacion(tipo) {
 }
 
 /* ---------- 5. Empty States + 14. Animaciones ---------- */
-function renderTable(id, arr, keys, keyName, wrapperId) {
-  const table = document.getElementById(id);
-  const tbody = table.querySelector('tbody');
+function renderTable(id, arr, keys, keyName, wrapperId, estaVacio = false) {
+  const tbody = document.querySelector(`#${id} tbody`);
   const wrapper = document.getElementById(wrapperId);
-  let emptyState = wrapper.querySelector('.empty-state');
-
-  if (!emptyState) {
-    emptyState = document.createElement('div');
-    emptyState.className = 'empty-state';
-    emptyState.innerHTML = `
-      <div class="empty-state-icon">📋</div>
-      <h3>No hay registros</h3>
-      <p>Comience agregando su primer ${keyName === 'ingresos' ? 'ingreso' : keyName === 'gastos' ? 'gasto' : keyName === 'proveedores' ? 'proveedor' : keyName === 'cuentas' ? 'cuenta' : 'registro'}</p>
+  
+  if (estaVacio || arr.length === 0) {
+    wrapper.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <h3>No hay registros</h3>
+        <p>Comience agregando su primer ${keyName === 'ingresos' ? 'ingreso' : keyName === 'gastos' ? 'gasto' : keyName === 'proveedores' ? 'proveedor' : keyName === 'cuentas' ? 'cuenta' : 'registro'}</p>
+      </div>
     `;
-    wrapper.insertBefore(emptyState, table);
-  }
-
-  const estaVacio = arr.length === 0;
-  table.hidden = estaVacio;
-  emptyState.hidden = !estaVacio;
-
-  if (estaVacio) {
-    tbody.replaceChildren();
     return;
   }
-
-  tbody.innerHTML = arr.map(it => `
+  
+  // Restaurar tabla si estaba en empty state
+  if (!document.querySelector(`#${id}`)) {
+    location.reload(); // Fallback simple
+    return;
+  }
+  
+  tbody.innerHTML = arr.map((it, i) => `
     <tr class="fila-dato" data-id="${escapeHtml(it.id)}">
       ${keys.map(k => `<td>${k === 'monto' ? '$' + parseFloat(it[k] || 0).toFixed(2) : escapeHtml(it[k])}</td>`).join('')}
       <td class="acciones">${keyName === 'ingresos' ? '<span style="color:#9ca3af;font-size:0.75rem;">Sistema</span>' : `
-        <button type="button" class="editar" data-key="${escapeHtml(keyName)}" data-id="${escapeHtml(it.id)}" title="Editar" aria-label="Editar registro">✏️</button>
-        <button type="button" class="clonar" data-key="${escapeHtml(keyName)}" data-id="${escapeHtml(it.id)}" title="Duplicar" aria-label="Duplicar registro">📋</button>
-        <button type="button" class="eliminar" data-key="${escapeHtml(keyName)}" data-id="${escapeHtml(it.id)}" title="Eliminar" aria-label="Eliminar registro">🗑️</button>`}
+        <button class="editar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Editar">✏️</button>
+        <button class="clonar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Duplicar">📋</button>
+        <button class="eliminar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Eliminar">🗑️</button>`}
       </td>
     </tr>`).join('');
-
+    
+  // Animar nuevas filas (últimas agregadas)
   const filas = tbody.querySelectorAll('tr');
   if (filas.length > 0) {
     filas[filas.length - 1].classList.add('nueva-fila');
-    setTimeout(() => filas[filas.length - 1]?.classList.remove('nueva-fila'), 300);
+    setTimeout(() => {
+      filas[filas.length - 1].classList.remove('nueva-fila');
+    }, 300);
   }
 }
 
@@ -1300,7 +1294,6 @@ tabs.forEach(btn => {
   btn.addEventListener('click', () => {
     tabs.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    tabs.forEach(b => b.setAttribute('aria-selected', b === btn ? 'true' : 'false'));
     const id = btn.dataset.tab;
     sections.forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -1308,24 +1301,13 @@ tabs.forEach(btn => {
   });
 });
 
-function cargarArrayLocal(clave) {
-  try {
-    const valor = JSON.parse(localStorage.getItem(clave) || '[]');
-    return Array.isArray(valor) ? valor : [];
-  } catch (error) {
-    console.error(`Datos inválidos para ${clave}`, error);
-    mostrarToast(`No se pudieron cargar los datos de ${clave}`, 'error', 5000);
-    return [];
-  }
-}
-
 const data = {
-  ingresos: cargarArrayLocal('ingresos'),
-  gastos: cargarArrayLocal('gastos'),
-  proveedores: cargarArrayLocal('proveedores'),
-  cuentas: cargarArrayLocal('cuentas')
+  ingresos: [],
+  gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
+  proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
+  cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
 };
-const gastosDesdeIngresos = cargarArrayLocal('gastosDesdeIngresos');
+const gastosDesdeIngresos = JSON.parse(localStorage.getItem('gastosDesdeIngresos') || '[]');
 
 // Asegurar que datos existentes tengan ID (migración)
 function migrarIds() {
@@ -1421,12 +1403,7 @@ function actualizarDashboard() {
     }).reduce((a, g) => a + (parseFloat(g.monto) || 0), 0);
   }
   
-  const cuentasFiltradas = data.cuentas.filter(c => {
-    if (filtrosFecha.inicio && c.fecha_vencimiento && c.fecha_vencimiento < filtrosFecha.inicio) return false;
-    if (filtrosFecha.fin && c.fecha_vencimiento && c.fecha_vencimiento > filtrosFecha.fin) return false;
-    return true;
-  });
-  const totalDeudas = cuentasFiltradas
+  const totalDeudas = data.cuentas
     .filter(c => c.tipo === 'Por pagar' && c.estado === 'Pendiente')
     .reduce((a, c) => a + (parseFloat(c.monto) || 0), 0);
   
@@ -1458,102 +1435,38 @@ function actualizarDashboard() {
   chart.update();
 }
 
-function hashEstable(valor) {
-  const texto = JSON.stringify(valor);
-  let hash = 2166136261;
-  for (let i = 0; i < texto.length; i++) {
-    hash ^= texto.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-function eliminarIngresosDuplicados() {
-  const vistos = new Set();
-  const originales = data.ingresos.length;
-  const unicos = data.ingresos.filter(ingreso => {
-    const esVentaSistema = ingreso.categoria === 'Venta' && ingreso.responsable === 'Sistema';
-    if (!esVentaSistema) return true;
-
-    const firma = [
-      ingreso.fecha,
-      ingreso.descripcion,
-      Number(ingreso.monto) || 0,
-      ingreso.observaciones
-    ].join('|');
-
-    if (vistos.has(firma)) return false;
-    vistos.add(firma);
-    return true;
-  });
-
-  if (unicos.length !== originales) {
-    data.ingresos.splice(0, data.ingresos.length, ...unicos);
-    return true;
-  }
-  return false;
-}
-
 function cargarVentasComoIngresos() {
-  let ventas = [];
-  try {
-    const valor = JSON.parse(localStorage.getItem('soldInventory') || '[]');
-    ventas = Array.isArray(valor) ? valor : [];
-  } catch (error) {
-    console.error('No se pudieron cargar las ventas', error);
-    return;
-  }
-
-  const huboLimpieza = eliminarIngresosDuplicados();
-  const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta).filter(Boolean));
+  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
+  const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta));
+  
   let nuevasVentas = 0;
-
   ventas.forEach(v => {
-    const fecha = v.date || v.createdAt || new Date().toISOString().split('T')[0];
-    const idOriginal = v.id || v.saleId || v.transactionId || v.code;
-    const idVenta = `venta_${idOriginal || hashEstable({
-      code: v.code,
-      name: v.name,
-      total: v.total,
-      quantity: v.quantity
-    })}`;
-
-    if (ventasExistentes.has(idVenta)) return;
-
-    data.ingresos.push({
-      id: generarId(),
-      id_venta: idVenta,
-      fecha,
-      descripcion: `Venta: ${v.name || 'Sin nombre'} (Cód: ${v.code || 'N/D'})`,
-      categoria: 'Venta',
-      monto: parseFloat(v.total) || 0,
-      metodo_pago: 'Efectivo',
-      responsable: 'Sistema',
-      observaciones: `Cantidad vendida: ${v.quantity || 0}`
-    });
-    ventasExistentes.add(idVenta);
-    nuevasVentas++;
+    const idVenta = `venta_${v.code}_${v.date || Date.now()}`;
+    if (!ventasExistentes.has(idVenta)) {
+      data.ingresos.push({
+        id: generarId(),
+        id_venta: idVenta,
+        fecha: v.date || new Date().toISOString().split('T')[0],
+        descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
+        categoria: 'Venta',
+        monto: parseFloat(v.total),
+        metodo_pago: 'Efectivo',
+        responsable: 'Sistema',
+        observaciones: `Cantidad vendida: ${v.quantity}`
+      });
+      nuevasVentas++;
+    }
   });
-
-  if (nuevasVentas > 0 || huboLimpieza) {
+  
+  if (nuevasVentas > 0) {
     saveData();
-    if (nuevasVentas > 0) mostrarToast(`${nuevasVentas} ventas nuevas importadas`, 'success');
+    mostrarToast(`${nuevasVentas} ventas nuevas importadas`, 'success');
   }
 }
 
 function validarMonto(valor) {
   const monto = parseFloat(valor);
   return !isNaN(monto) && monto > 0;
-}
-
-let registroEnEdicion = null;
-
-function cancelarEdicion() {
-  registroEnEdicion = null;
-  document.querySelectorAll('form').forEach(form => {
-    const boton = form.querySelector('button[type="submit"]');
-    if (boton) boton.textContent = 'Guardar';
-  });
 }
 
 const forms = [
@@ -1576,29 +1489,20 @@ forms.forEach(f => {
       }
     }
     
-    const item = { id: registroEnEdicion?.key === f.key ? registroEnEdicion.id : generarId() };
+    const item = { id: generarId() };
     f.fields.forEach(k => {
       item[k] = form[k].value;
       if (k === 'monto') item[k] = parseFloat(form[k].value);
     });
     
     try {
-      if (registroEnEdicion?.key === f.key) {
-        const idx = data[f.key].findIndex(registro => registro.id === registroEnEdicion.id);
-        if (idx === -1) throw new Error('Registro no encontrado');
-        data[f.key][idx] = item;
-      } else {
-        data[f.key].push(item);
-      }
+      data[f.key].push(item);
       saveData();
-      datosFiltrados[f.key] = null;
       actualizarTablaConPaginacion(f.key);
-      const estabaEditando = Boolean(registroEnEdicion);
       form.reset();
       limpiarBorrador(f.id);
       limpiarCambiosSinGuardar(f.id);
-      cancelarEdicion();
-      mostrarToast(estabaEditando ? 'Registro actualizado correctamente' : 'Registro guardado correctamente', 'success');
+      mostrarToast('Registro guardado correctamente', 'success');
     } catch (error) {
       // Error manejado en saveData
     }
@@ -1617,7 +1521,7 @@ formGDI.addEventListener('submit', e => {
   }
   
   const item = {
-    id: registroEnEdicion?.key === 'gastosDesdeIngresos' ? registroEnEdicion.id : generarId(),
+    id: generarId(),
     fecha: formGDI.fecha.value,
     descripcion: formGDI.descripcion.value,
     categoria: formGDI.categoria.value,
@@ -1627,22 +1531,13 @@ formGDI.addEventListener('submit', e => {
   };
   
   try {
-    if (registroEnEdicion?.key === 'gastosDesdeIngresos') {
-      const idx = gastosDesdeIngresos.findIndex(registro => registro.id === registroEnEdicion.id);
-      if (idx === -1) throw new Error('Registro no encontrado');
-      gastosDesdeIngresos[idx] = item;
-    } else {
-      gastosDesdeIngresos.push(item);
-    }
+    gastosDesdeIngresos.push(item);
     saveData();
-    datosFiltrados.gastosDesdeIngresos = null;
     actualizarTablaConPaginacion('gastosDesdeIngresos');
     formGDI.reset();
     limpiarBorrador('formGastosDesdeIngresos');
     limpiarCambiosSinGuardar('formGastosDesdeIngresos');
-    const estabaEditando = Boolean(registroEnEdicion);
-    cancelarEdicion();
-    mostrarToast(estabaEditando ? 'Registro actualizado correctamente' : 'Registro guardado correctamente', 'success');
+    mostrarToast('Registro guardado correctamente', 'success');
   } catch (error) {
     // Error manejado en saveData
   }
@@ -1668,13 +1563,13 @@ document.addEventListener('click', e => {
               const idx = gastosDesdeIngresos.findIndex(x => x.id === id);
               if (idx > -1) {
                 gastosDesdeIngresos.splice(idx, 1);
-                saveData();
+                localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
               }
             } else {
               const idx = data[key].findIndex(x => x.id === id);
               if (idx > -1) {
                 data[key].splice(idx, 1);
-                saveData();
+                localStorage.setItem(key, JSON.stringify(data[key]));
               }
             }
             actualizarDashboard();
@@ -1704,8 +1599,10 @@ document.addEventListener('click', e => {
           formGDI.responsable.value = item.responsable;
           formGDI.observaciones.value = item.observaciones;
           
-          registroEnEdicion = { key, id };
-          formGDI.querySelector('button[type="submit"]').textContent = 'Actualizar';
+          // Eliminar original
+          const idx = gastosDesdeIngresos.findIndex(x => x.id === id);
+          if (idx > -1) gastosDesdeIngresos.splice(idx, 1);
+          saveData();
           actualizarTablaConPaginacion('gastosDesdeIngresos');
         }
       } else {
@@ -1715,8 +1612,8 @@ document.addEventListener('click', e => {
         if (idx > -1) {
           item = data[key][idx];
           f.fields.forEach(k => { if (form[k]) form[k].value = item[k] || ''; });
-          registroEnEdicion = { key, id };
-          form.querySelector('button[type="submit"]').textContent = 'Actualizar';
+          data[key].splice(idx, 1);
+          saveData();
           actualizarTablaConPaginacion(key);
         }
       }
@@ -1739,14 +1636,14 @@ document.addEventListener('click', e => {
         if (item) {
           const nuevo = { ...item, id: generarId() };
           gastosDesdeIngresos.push(nuevo);
-          saveData();
+          localStorage.setItem('gastosDesdeIngresos', JSON.stringify(gastosDesdeIngresos));
         }
       } else {
         item = data[key].find(x => x.id === id);
         if (item) {
           const nuevo = { ...item, id: generarId() };
           data[key].push(nuevo);
-          saveData();
+          localStorage.setItem(key, JSON.stringify(data[key]));
         }
       }
       actualizarTablaConPaginacion(key);
@@ -1772,38 +1669,7 @@ function exportExcel(key, filename) {
   }
 }
 
-function normalizarFechaImportada(valor) {
-  if (typeof valor === 'number' && Number.isFinite(valor) && typeof XLSX !== 'undefined' && XLSX.SSF) {
-    const partes = XLSX.SSF.parse_date_code(valor);
-    if (partes) return `${partes.y}-${String(partes.m).padStart(2, '0')}-${String(partes.d).padStart(2, '0')}`;
-  }
-  if (valor instanceof Date && !isNaN(valor)) return valor.toISOString().slice(0, 10);
-  const texto = String(valor ?? '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
-  const fecha = new Date(texto);
-  return !isNaN(fecha) ? fecha.toISOString().slice(0, 10) : '';
-}
-
-function validarFilaImportada(row, key, fields) {
-  const errores = [];
-  const fecha = row.fecha !== undefined ? normalizarFechaImportada(row.fecha) : '';
-  if (fields.includes('fecha') && !fecha) errores.push('fecha inválida');
-  if (fields.includes('monto')) {
-    const monto = Number(row.monto);
-    if (!Number.isFinite(monto) || monto <= 0) errores.push('monto inválido');
-  }
-  if (key === 'proveedores' && !String(row.nombre ?? '').trim()) errores.push('nombre obligatorio');
-  if (key === 'gastosDesdeIngresos' && !String(row.descripcion ?? '').trim()) errores.push('descripción obligatoria');
-  if (key === 'cuentas') {
-    if (!['Por cobrar', 'Por pagar'].includes(String(row.tipo ?? '').trim())) errores.push('tipo inválido');
-    if (row.estado !== undefined && !['Pendiente', 'Pagado'].includes(String(row.estado).trim())) errores.push('estado inválido');
-  }
-  if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(row.email).trim())) errores.push('correo inválido');
-  return { valido: errores.length === 0, errores, fecha };
-}
-
 function importExcel(file, key, fields) {
-  if (!file) return;
   const reader = new FileReader();
   reader.onload = function (e) {
     try {
@@ -1811,35 +1677,33 @@ function importExcel(file, key, fields) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       let importados = 0;
-      let rechazados = 0;
-      const motivos = [];
       
-      rows.forEach((r, indice) => {
-        const validacion = validarFilaImportada(r, key, fields);
-        if (!validacion.valido) {
-          rechazados++;
-          motivos.push(`Fila ${indice + 2}: ${validacion.errores.join(', ')}`);
-          return;
-        }
-
-        const item = { id: generarId() };
+      rows.forEach(r => {
+        const item = { id: generarId() }; // Generar ID único al importar
+        let valido = true;
+        
         fields.forEach(f => {
-          item[f] = f === 'fecha' ? validacion.fecha : String(r[f] ?? '').trim();
-          if (f === 'monto') item[f] = Number(r[f]);
+          item[f] = r[f] || '';
+          if (f === 'monto') {
+            item[f] = parseFloat(r[f]) || 0;
+            if (item[f] <= 0) valido = false;
+          }
         });
         
-        if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
-        else data[key].push(item);
-        importados++;
+        if (valido) {
+          if (key === 'gastosDesdeIngresos') gastosDesdeIngresos.push(item);
+          else data[key].push(item);
+          importados++;
+        }
       });
       
       saveData();
       actualizarTablaConPaginacion(key);
       
       if (importados > 0) {
-        mostrarToast(`Se importaron ${importados} registros${rechazados ? `; ${rechazados} rechazados` : ''}`, 'success', 5000);
+        mostrarToast(`Se importaron ${importados} registros correctamente`, 'success');
       } else {
-        mostrarToast(`No se importaron registros. ${motivos[0] || 'Revise los datos del archivo.'}`, 'warning', 6000);
+        mostrarToast('No se importaron registros. Verifique que los montos sean mayores a cero.', 'warning');
       }
     } catch (error) {
       mostrarToast('Error al importar archivo', 'error');

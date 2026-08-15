@@ -1532,7 +1532,7 @@ function playSoftClick() {
 
 const CONFIG = { PASSWORD_EDIT: 'KLOHESV', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DELAY: 150, PAGE_SIZE_DEFAULT: 5000 };
 let inventory = [], filteredInventory = [], currentPage = 1, pageSize = parseInt(localStorage.getItem('pageSize')) || CONFIG.PAGE_SIZE_DEFAULT;
-let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentPriceIndex = -1, currentStockIndex = -1, currentEditPendingIndex = -1;
+let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentSaleCode = null, currentPriceIndex = -1, currentStockIndex = -1, currentEditPendingIndex = -1;
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
@@ -2316,7 +2316,7 @@ function resetSaleLockState() {
 
 function saveSaleChangesOnly() {
   playSuccessSound();
-  const item = inventory[currentSaleIndex];
+  const item = inventory.find(product => product.code === currentSaleCode) || inventory[currentSaleIndex];
   if (!item) return;
 
   // Update stock from the stock edit field
@@ -2347,9 +2347,11 @@ async function openSaleModal(index) {
   playBeep();
   resetSaleLockState();
   currentSaleIndex = index; 
+  const selectedItem = inventory[index];
+  currentSaleCode = selectedItem ? selectedItem.code : null;
   currentPaymentMethod = 'cash';
 
-  const item = inventory[index], finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100); 
+  const item = inventory.find(product => product.code === currentSaleCode) || selectedItem, finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100); 
   document.getElementById('salePrice').value = finalPrice.toFixed(2); 
   document.getElementById('saleQuantity').value = 1; 
   document.getElementById('saleDisplayPrice').textContent = formatCurrency(finalPrice); 
@@ -2474,8 +2476,8 @@ function selectWhoPays(who) {
   updateSaleCalculations(); 
 }
 
-function updateSaleCalculations() { 
-  const item = inventory[currentSaleIndex]; 
+function updateSaleCalculations() {
+  const item = inventory.find(product => product.code === currentSaleCode) || inventory[currentSaleIndex];
   if (!item) return; 
   const qty = parseInt(document.getElementById('saleQuantity').value) || 1, 
         price = parseFloat(document.getElementById('salePrice').value) || 0, 
@@ -2541,10 +2543,11 @@ function updateSaleCalculations() {
 
 function processSale() { 
   playSuccessSound();
-  const item = inventory[currentSaleIndex], 
-        qty = parseInt(document.getElementById('saleQuantity').value) || 1, 
-        price = parseFloat(document.getElementById('salePrice').value) || 0, 
-        isCOD = document.getElementById('isCOD').checked,
+  const item = inventory.find(product => product.code === currentSaleCode) || inventory[currentSaleIndex];
+  if (!item) { showNotification('Producto no encontrado. Vuelve a abrir la venta.', 'error'); return; }
+  const qty = parseInt(document.getElementById('saleQuantity').value) || 1;
+  let price = parseFloat(document.getElementById('salePrice').value) || 0;
+  const isCOD = document.getElementById('isCOD').checked,
         isPendingDelivery = document.getElementById('isPendingDelivery').checked,
         isPendingPayment = document.getElementById('isPendingPayment').checked; 
 
@@ -2568,6 +2571,7 @@ function processSale() {
       item.price = editedPriceFromSale;
     }
   }
+  price = parseFloat(document.getElementById('salePrice').value) || item.price || 0;
   saveInventory(); 
 
   const subtotal = price * qty;

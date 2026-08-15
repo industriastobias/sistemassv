@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1537,7 +1538,7 @@ let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = n
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
 let currentPaymentMethod = 'cash';
-let currentEditDeliveryIndex = -1, currentEditPendingCode = null, currentEditPendingDate = null, currentEditPendingPosition = -1;
+let currentEditDeliveryIndex = -1, currentEditDeliveryCode = null, currentEditDeliveryDate = null, currentEditPendingCode = null, currentEditPendingDate = null, currentEditPendingPosition = -1;
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
 let currentCompletePaymentIndex = -1;
@@ -1687,17 +1688,15 @@ function updateStats() {
   lowBadge.style.display = lowStock > 0 ? 'inline-flex' : 'none'; 
 
   const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
-  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
-  const activeDelivery = pendingDelivery.filter(p => p.deliveryStatus === 'pending');
-  const activePayment = pendingPayment.filter(p => p.paymentStatus === 'partial');
-  const totalPending = pendingCOD.length + activeDelivery.length + activePayment.length;
+  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]').filter(p => p.deliveryStatus === 'pending');
+  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]').filter(p => p.paymentStatus === 'partial');
+  const totalPending = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
 
   document.getElementById('pendingCount').textContent = totalPending;
   document.getElementById('pendingBadge').style.display = totalPending > 0 ? 'inline-flex' : 'none';
 
-  document.getElementById('pendingPaymentCount').textContent = activePayment.length;
-  document.getElementById('pendingPaymentBadge').style.display = activePayment.length > 0 ? 'inline-flex' : 'none';
+  document.getElementById('pendingPaymentCount').textContent = pendingPayment.length;
+  document.getElementById('pendingPaymentBadge').style.display = pendingPayment.length > 0 ? 'inline-flex' : 'none';
 
   updateDailySalesBadge();
   updateFixedTotal();
@@ -2210,9 +2209,6 @@ function processFastSale() {
 
   } else {
     // Venta inmediata - guardar en soldInventory
-    const stockBeforeSale = typeof availableStock !== 'undefined' ? availableStock : (Number(item.quantity) || 0);
-    item.quantity = stockBeforeSale - qty;
-    saveInventory();
     const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
     sales.push({
       ...saleRecord,
@@ -2557,11 +2553,6 @@ function processSale() {
         isPendingDelivery = document.getElementById('isPendingDelivery').checked,
         isPendingPayment = document.getElementById('isPendingPayment').checked; 
 
-  // Aplicar el stock editado antes de validar la cantidad.
-  const editedStock = parseInt(document.getElementById('saleStockEdit').value, 10);
-  const availableStock = !isNaN(editedStock) && editedStock >= 0 ? editedStock : (Number(item.quantity) || 0);
-  if (qty > availableStock) { showNotification('Stock insuficiente', 'error'); return; }
-
   // Actualizar precio unitario si fue editado (desde salePriceEdit o salePrice desbloqueado)
   const editedPriceFromEdit = parseFloat(document.getElementById('salePriceEdit').value);
   if (!isNaN(editedPriceFromEdit) && editedPriceFromEdit >= 0) {
@@ -2575,8 +2566,36 @@ function processSale() {
     }
   }
   price = parseFloat(document.getElementById('salePrice').value) || item.price || 0;
-
   const subtotal = price * qty;
+
+  // ===== CORRECCION: validar ANTES de descontar stock o guardar =====
+  if (isCOD) {
+    const shipV = parseFloat(document.getElementById('codShipping').value) || 0,
+          commTypeV = document.getElementById('codCommissionType').value,
+          commValV = parseFloat(document.getElementById('codCommission').value) || 0,
+          insV = parseFloat(document.getElementById('codInsurance').value) || 0,
+          commV = commTypeV === 'percentage' ? (subtotal * commValV) / 100 : commValV,
+          totalCheck = whoPays === 'client'
+            ? subtotal + shipV + commV + insV
+            : (subtotal - commV) + shipV + insV;
+    if (totalCheck < 0) {
+      showNotification('Error: La comision no puede ser mayor que el precio', 'error');
+      return;
+    }
+  }
+  if (isPendingPayment) {
+    const clientNameV = document.getElementById('pendingPaymentClientName').value.trim(),
+          paidAmountV = parseFloat(document.getElementById('pendingPaymentAmount').value) || 0;
+    if (!clientNameV) { showNotification('Debe ingresar el nombre del cliente', 'error'); return; }
+    if (paidAmountV >= subtotal) { showNotification('El monto abonado no puede ser igual o mayor al total', 'error'); return; }
+  }
+
+  // Aplicar stock editado si es valido y validar contra el stock efectivo
+  const editedStock = parseInt(document.getElementById('saleStockEdit').value);
+  const effectiveStock = (!isNaN(editedStock) && editedStock >= 0) ? editedStock : item.quantity;
+  if (qty > effectiveStock) { showNotification('Stock insuficiente', 'error'); return; }
+  item.quantity = effectiveStock - qty;
+  saveInventory();
 
   if (isCOD) { 
     const shipping = parseFloat(document.getElementById('codShipping').value) || 0, 
@@ -2601,8 +2620,6 @@ function processSale() {
       ? subtotal 
       : (subtotal - commission);
 
-    item.quantity = availableStock - qty;
-    saveInventory();
     const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); 
     pending.push({ 
       name: item.name, 
@@ -2633,8 +2650,6 @@ function processSale() {
     const commission = (subtotal * commissionPercent) / 100;
     const total = subtotal + shipping + commission;
 
-    item.quantity = availableStock - qty;
-    saveInventory();
     const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
     pendingDelivery.push({
       name: item.name,
@@ -2670,8 +2685,6 @@ function processSale() {
       return;
     }
 
-    item.quantity = availableStock - qty;
-    saveInventory();
     const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
     pendingPayment.push({
       name: item.name,
@@ -3015,7 +3028,7 @@ function confirmPaymentPending() {
     let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
 
     const finalTotal = item.totalToCollect || (item.price * item.quantity);
-    const effectivePrice = item.quantity > 0 ? finalTotal / item.quantity : 0;
+    const effectivePrice = item.quantity ? finalTotal / item.quantity : finalTotal;
     const netEarnings = item.netEarnings || (item.whoPaysCommission === 'client' ? item.price * item.quantity : (item.price * item.quantity) - (item.codCommissionAmount || 0));
 
     sales.push({ 
@@ -3330,10 +3343,12 @@ async function openEditDeliveryPendingModal(code, date) {
   currentEditDeliveryIndex = findPendingIndex(pending, code, date);
   const p = pending[currentEditDeliveryIndex];
   if (!p) return;
+  currentEditDeliveryCode = String(p.code ?? '');
+  currentEditDeliveryDate = String(p.date ?? '');
 
   document.getElementById('editDeliveryName').textContent = p.name;
   document.getElementById('editDeliveryQty').textContent = p.quantity;
-  document.getElementById('editDeliveryPrice').textContent = formatCurrency(p.price);
+  document.getElementById('editDeliveryPrice').textContent = (p.price || 0).toFixed(2);
 
   const imgUrl = await getProductImage(p.code);
   document.getElementById('editDeliveryImage').src = imgUrl || '';
@@ -3385,7 +3400,9 @@ function adjustPendingInventoryQuantity(code, oldQuantity, newQuantity) {
 function editDeliveryCalculate() {
   const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  const p = pending[currentEditDeliveryIndex];
+  let idxEditDelivery = findPendingIndex(pending, currentEditDeliveryCode, currentEditDeliveryDate);
+  if (idxEditDelivery < 0) idxEditDelivery = currentEditDeliveryIndex;
+  const p = pending[idxEditDelivery];
   if (!p) return;
 
   const shipping = parseFloat(document.getElementById('editDeliveryShipping').value) || 0;
@@ -3404,6 +3421,8 @@ function editDeliveryCalculate() {
 function saveEditDeliveryPending() {
   let pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  let idxSaveDelivery = findPendingIndex(pending, currentEditDeliveryCode, currentEditDeliveryDate);
+  if (idxSaveDelivery >= 0) currentEditDeliveryIndex = idxSaveDelivery;
   let p = pending[currentEditDeliveryIndex];
   if (!p) return;
 
@@ -3458,7 +3477,7 @@ async function openEditPendingModal(code, date, position = -1) {
   document.getElementById('editPendingName').textContent = p.name; 
   document.getElementById('editPendingQty').textContent = p.quantity;
   document.getElementById('editPendingQuantity').value = p.quantity || 1;
-  document.getElementById('editPendingPrice').textContent = formatCurrency(p.price);
+  document.getElementById('editPendingPrice').textContent = (p.price || 0).toFixed(2);
   const imgUrl = await getProductImage(p.code); 
   document.getElementById('editPendingImage').src = imgUrl || ''; 
   if (p.barcode) { 
@@ -3485,10 +3504,10 @@ function editSelectWhoPays(who) {
 function editCalculateCOD() { 
   const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  let idx = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
-  if (idx < 0) idx = currentEditPendingIndex;
-  const p = pending[idx];
-  if (!p) return;
+  let idxEditCOD = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
+  if (idxEditCOD < 0) idxEditCOD = currentEditPendingIndex;
+  const p = pending[idxEditCOD]; 
+  if (!p) return; 
   const whoPaysVal = document.querySelector('input[name="editWhoPays"]:checked').value, 
         shipping = parseFloat(document.getElementById('editShipping').value) || 0, 
         commissionType = document.getElementById('editCommissionType').value, 
@@ -3522,20 +3541,19 @@ function saveEditPending() {
   if (stableIndex < 0 && currentEditPendingPosition >= 0 && currentEditPendingPosition < pending.length) stableIndex = currentEditPendingPosition;
   if (stableIndex < 0) { showNotification('El pedido COD ya no está disponible', 'error'); return; }
   currentEditPendingIndex = stableIndex;
+  const newQuantity = parseInt(document.getElementById('editPendingQuantity').value, 10);
+  if (!Number.isInteger(newQuantity) || newQuantity < 1) {
+    showNotification('La cantidad debe ser un número entero mayor que cero', 'error');
+    return;
+  }
   let p = pending[stableIndex], 
       whoPaysVal = document.querySelector('input[name="editWhoPays"]:checked').value, 
       shipping = parseFloat(document.getElementById('editShipping').value) || 0, 
       commissionType = document.getElementById('editCommissionType').value, 
       commissionValue = parseFloat(document.getElementById('editCommission').value) || 0, 
-      insurance = parseFloat(document.getElementById('editInsurance').value) || 0,
-      newQuantity = parseInt(document.getElementById('editPendingQuantity').value, 10),
-      commission = 0;
-
-  if (!Number.isInteger(newQuantity) || newQuantity < 1) {
-    showNotification('La cantidad debe ser un número entero mayor que cero', 'error');
-    return;
-  }
-  const productTotal = (p.price || 0) * newQuantity; 
+      insurance = parseFloat(document.getElementById('editInsurance').value) || 0, 
+      productTotal = (p.price || 0) * newQuantity, 
+      commission = 0; 
 
   if (commissionType === 'percentage') commission = (productTotal * commissionValue) / 100; 
   else commission = commissionValue; 
@@ -3690,9 +3708,10 @@ function confirmCompletePayment() {
     if (!item || item.paymentStatus !== 'partial') { showNotification('Cobro no encontrado', 'error'); return; }
 
     item.paymentStatus = 'paid';
-    item.pendingAmount = 0;
     item.completedDate = new Date().toISOString();
     item.finalPayment = item.pendingAmount;
+    item.paidAmount = (item.paidAmount || 0) + (item.pendingAmount || 0);
+    item.pendingAmount = 0;
 
     let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
     sales.push({

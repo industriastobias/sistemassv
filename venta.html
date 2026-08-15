@@ -1527,7 +1527,13 @@
     <i class="fa-solid fa-chart-line"></i> Ingresos
   </button>
   <button class="btn btn-success" onclick="abrirCierreCaja()">
-    <i class="fa-solid fa-lock"></i> Cierre de Caja
+    <i class="fa-solid fa-lock"></i> Cierre por período
+  </button>
+  <button class="btn btn-info" onclick="abrirCierreGeneral()">
+    <i class="fa-solid fa-layer-group"></i> Cierre general
+  </button>
+  <button class="btn btn-warning" onclick="abrirCierreDiario()">
+    <i class="fa-solid fa-calendar-day"></i> Cierre diario
   </button>
 </div>
 
@@ -1661,6 +1667,14 @@
         </div>
       </div>
 
+      <div class="year-selector" id="cierreModoInfo" style="margin-bottom:12px;">
+        <strong id="cierreModoTitulo">Cierre por período</strong>
+      </div>
+      <div id="cierreFechaDiaria" style="display:none; margin-bottom:16px;">
+        <label for="fechaCierreDiario" style="font-size:0.8rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Fecha del cierre:</label>
+        <input type="date" id="fechaCierreDiario" class="control-select" onchange="actualizarCierreCaja()">
+      </div>
+      <div id="cierreSelectorPeriodo">
       <div class="year-selector">
         <label>Año:</label>
         <select id="anioSelect" class="control-select" onchange="actualizarCierreCaja()">
@@ -1674,6 +1688,7 @@
 
       <div class="selected-period" id="selectedPeriods">
         <strong>Período:</strong> Ninguno
+      </div>
       </div>
 
       <div class="stats-grid">
@@ -1772,6 +1787,7 @@
   let dateRangeFrom = null;
   let dateRangeTo = null;
   let viewMode = 'grid'; // 'grid' o 'list'
+  let cierreModo = 'periodo'; // 'periodo', 'general' o 'diario'
   let fechasSelectorInicializado = false;
   let filteredInventoryCache = null;
   let filteredInventoryCacheKey = '';
@@ -2436,12 +2452,13 @@
     const anio = document.getElementById('anioSelect').value;
     const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
     
-    let texto = '';
-    if (mesesArray.length === 0) {
+    let texto = cierreModo === 'general' ? 'Todos los productos vendidos' : cierreModo === 'diario' ? (document.getElementById('fechaCierreDiario').value || 'Ninguno') : '';
+    if (cierreModo === 'periodo' && mesesArray.length === 0) {
       texto = 'Ninguno';
-    } else if (mesesArray.length === 1) {
+    } else if (cierreModo === 'periodo' && mesesArray.length === 1) {
       texto = `${nombresMeses[mesesArray[0]]} ${anio}`;
-    } else {
+    } else if (cierreModo === 'periodo') {
+      const anio = document.getElementById('anioSelect').value;
       const nombres = mesesArray.map(m => nombresMeses[m]);
       texto = `${nombres.join(', ')} ${anio}`;
     }
@@ -2452,8 +2469,35 @@
     btn.disabled = mesesArray.length === 0 || ventasActuales.length === 0;
   }
 
+  function establecerModoCierre(modo) {
+    cierreModo = modo;
+    const selectorPeriodo = document.getElementById('cierreSelectorPeriodo');
+    const fechaDiaria = document.getElementById('cierreFechaDiaria');
+    const titulo = document.getElementById('cierreModoTitulo');
+    const fechaInput = document.getElementById('fechaCierreDiario');
+    selectorPeriodo.style.display = modo === 'periodo' ? 'block' : 'none';
+    fechaDiaria.style.display = modo === 'diario' ? 'block' : 'none';
+    titulo.textContent = modo === 'general' ? 'Cierre general: todos los productos vendidos' : modo === 'diario' ? 'Cierre diario' : 'Cierre por período';
+    if (modo === 'diario' && !fechaInput.value) {
+      fechaInput.value = new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function abrirCierreGeneral() {
+    document.getElementById('cierreModal').classList.add('show');
+    establecerModoCierre('general');
+    actualizarCierreCaja();
+  }
+
+  function abrirCierreDiario() {
+    document.getElementById('cierreModal').classList.add('show');
+    establecerModoCierre('diario');
+    actualizarCierreCaja();
+  }
+
   function abrirCierreCaja() {
     document.getElementById('cierreModal').classList.add('show');
+    establecerModoCierre('periodo');
     inicializarSelectorFechas();
     actualizarCierreCaja();
   }
@@ -2465,8 +2509,27 @@
   function obtenerVentasPorPeriodo(anio, meses) {
     const mesesSet = new Set(meses);
     return soldInventory.filter(item =>
-      item._year === anio && mesesSet.has(item._month)
+      !item.isCierreCaja && item._year === anio && mesesSet.has(item._month)
     );
+  }
+
+  function obtenerVentasParaCierre() {
+    if (cierreModo === 'general') {
+      return soldInventory.filter(item => !item.isCierreCaja);
+    }
+    if (cierreModo === 'diario') {
+      const fecha = document.getElementById('fechaCierreDiario').value;
+      if (!fecha) return [];
+      return soldInventory.filter(item => {
+        if (item.isCierreCaja || !item._dateTimestamp) return false;
+        const local = new Date(item._dateTimestamp);
+        const yyyyMmDd = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+        return yyyyMmDd === fecha;
+      });
+    }
+    const anio = parseInt(document.getElementById('anioSelect').value, 10);
+    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
+    return obtenerVentasPorPeriodo(anio, mesesArray);
   }
 
   function calcularEstadisticas(ventas) {
@@ -2498,10 +2561,7 @@
   }
 
   function actualizarCierreCaja() {
-    const anio = parseInt(document.getElementById('anioSelect').value);
-    const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
-    
-    ventasActuales = obtenerVentasPorPeriodo(anio, mesesArray);
+    ventasActuales = obtenerVentasParaCierre();
     const stats = calcularEstadisticas(ventasActuales);
     
     document.getElementById('cierreTotalVentas').textContent = `$${stats.totalVentas.toFixed(2)}`;
@@ -2544,21 +2604,25 @@
   }
 
   function ejecutarCierreCaja() {
-    const anio = parseInt(document.getElementById('anioSelect').value);
+    const anio = parseInt(document.getElementById('anioSelect').value, 10);
     const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
-    
-    if (mesesArray.length === 0) {
+    const fechaDiaria = document.getElementById('fechaCierreDiario').value;
+    if (cierreModo === 'periodo' && mesesArray.length === 0) {
       alert('Por favor selecciona al menos un mes');
       return;
     }
-    
+    if (cierreModo === 'diario' && !fechaDiaria) {
+      alert('Por favor selecciona una fecha');
+      return;
+    }
     if (ventasActuales.length === 0) {
       alert('No hay ventas en el período seleccionado para cerrar');
       return;
     }
     
     const stats = calcularEstadisticas(ventasActuales);
-    const nombresMesesSeleccionados = mesesArray.map(m => nombresMeses[m]).join(', ');
+    const nombresMesesSeleccionados = cierreModo === 'general' ? 'TODOS LOS PRODUCTOS VENDIDOS' : cierreModo === 'diario' ? `FECHA ${fechaDiaria}` : mesesArray.map(m => nombresMeses[m]).join(', ');
+    const etiquetaPeriodo = cierreModo === 'general' ? 'Todos los productos vendidos' : cierreModo === 'diario' ? `Día: ${fechaDiaria}` : `Período: ${nombresMesesSeleccionados} ${anio}`;
     
     const confirmacion = confirm(
       `¿ESTÁS SEGURO DE EJECUTAR EL CIERRE DE CAJA?\n\n` +
@@ -2574,7 +2638,7 @@
     
     const ventaConsolidada = {
       idVenta: 'CIERRE_' + Date.now(),
-      name: `CIERRE DE CAJA - ${nombresMesesSeleccionados} ${anio}`,
+      name: `CIERRE DE CAJA - ${nombresMesesSeleccionados}${cierreModo === 'periodo' ? ` ${anio}` : ''}`,
       price: stats.totalVentas,
       quantity: stats.totalUnidades,
       total: stats.totalVentas,
@@ -2582,6 +2646,8 @@
       date: new Date().toISOString(),
       isCierreCaja: true,
       detalleCierre: {
+        modo: cierreModo,
+        fecha: cierreModo === 'diario' ? fechaDiaria : null,
         meses: mesesArray,
         anio: anio,
         nombresMeses: nombresMesesSeleccionados,
@@ -2610,9 +2676,10 @@
   }
 
   function imprimirCierreCaja() {
-    const anio = parseInt(document.getElementById('anioSelect').value);
+    const anio = parseInt(document.getElementById('anioSelect').value, 10);
     const mesesArray = Array.from(mesesSeleccionados).sort((a, b) => a - b);
-    const nombresMesesSeleccionados = mesesArray.map(m => nombresMeses[m]).join(', ');
+    const fechaDiaria = document.getElementById('fechaCierreDiario').value;
+    const nombresMesesSeleccionados = cierreModo === 'general' ? 'TODOS LOS PRODUCTOS VENDIDOS' : cierreModo === 'diario' ? `FECHA ${fechaDiaria}` : mesesArray.map(m => nombresMeses[m]).join(', ');
     
     const stats = calcularEstadisticas(ventasActuales);
     
@@ -2631,7 +2698,7 @@
     ventana.document.write(`
       <html>
         <head>
-          <title>Cierre de Caja - ${escapeHTML(nombresMesesSeleccionados)} ${anio}</title>
+          <title>Cierre de Caja - ${escapeHTML(nombresMesesSeleccionados)}${cierreModo === 'periodo' ? ` ${anio}` : ''}</title>
           <style>
             body { font-family: 'Inter', sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; color: #333; }
             .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9d5dc; }
@@ -2653,7 +2720,7 @@
           <div class="header">
             <h1>KLOHESV</h1>
             <p style="font-size: 16px; font-weight: 600; color: #be185d; margin: 10px 0;">Cierre de Caja</p>
-            <p><strong>${escapeHTML(nombresMesesSeleccionados)} ${anio}</strong></p>
+            <p><strong>${escapeHTML(nombresMesesSeleccionados)}${cierreModo === 'periodo' ? ` ${anio}` : ''}</strong></p>
             <p>San Salvador, El Salvador</p>
           </div>
           

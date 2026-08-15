@@ -3475,8 +3475,12 @@ function editSelectWhoPays(who) {
   editCalculateCOD(); 
 }
 function editCalculateCOD() { 
-  const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'), p = pending[currentEditPendingIndex]; 
-  if (!p) return; 
+  const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  let idx = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
+  if (idx < 0) idx = currentEditPendingIndex;
+  const p = pending[idx];
+  if (!p) return;
   const whoPaysVal = document.querySelector('input[name="editWhoPays"]:checked').value, 
         shipping = parseFloat(document.getElementById('editShipping').value) || 0, 
         commissionType = document.getElementById('editCommissionType').value, 

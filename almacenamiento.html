@@ -1122,6 +1122,7 @@
             <div style="background:var(--bg);padding:1rem;border-radius:var(--radius-sm);"><div style="font-weight:600;margin-bottom:0.5rem;" id="editPendingName"></div><div style="color:var(--text-secondary);font-size:0.875rem;">Cantidad: <span id="editPendingQty"></span><br>Precio: $<span id="editPendingPrice"></span></div></div>
           </div>
           <div class="sale-form">
+            <div class="form-group"><label class="form-label">Cantidad del pedido</label><input type="number" class="form-input" id="editPendingQuantity" min="1" step="1" oninput="editCalculateCOD()"><small style="color:var(--text-secondary);">El stock se ajustará solo por la diferencia.</small></div>
             <div class="who-pays"><label id="editLabelClient" onclick="editSelectWhoPays('client')"><input type="radio" name="editWhoPays" value="client" onchange="editSelectWhoPays('client')"><span class="icon"><i class="fa-solid fa-user"></i></span><span>Paga Cliente</span></label><label id="editLabelWe" onclick="editSelectWhoPays('we')"><input type="radio" name="editWhoPays" value="we" onchange="editSelectWhoPays('we')"><span class="icon"><i class="fa-solid fa-store"></i></span><span>Pagamos Nosotros</span></label></div>
             <div class="form-row"><div class="form-group"><label class="form-label">Envio ($)</label><input type="number" class="form-input" id="editShipping" min="0" step="0.01" oninput="editCalculateCOD()"></div><div class="form-group"><label class="form-label">Tipo comision</label><select class="form-select" id="editCommissionType" onchange="editCalculateCOD()"><option value="percentage">Porcentaje (%)</option><option value="fixed">Monto fijo ($)</option></select></div></div>
             <div class="form-row"><div class="form-group"><label class="form-label" id="editCommissionLabel">Comision (%)</label><input type="number" class="form-input" id="editCommission" min="0" step="0.01" oninput="editCalculateCOD()"></div><div class="form-group"><label class="form-label">Seguro ($)</label><input type="number" class="form-input" id="editInsurance" min="0" step="0.01" oninput="editCalculateCOD()"></div></div>
@@ -1151,6 +1152,7 @@
             </div>
           </div>
           <div class="sale-form">
+            <div class="form-group"><label class="form-label">Cantidad del pedido</label><input type="number" class="form-input" id="editDeliveryQuantity" min="1" step="1" oninput="editDeliveryCalculate()"><small style="color:var(--text-secondary);">El stock se ajustará solo por la diferencia.</small></div>
             <div class="form-group">
               <label class="form-label">Metodo de Pago</label>
               <div class="payment-method-selector">
@@ -3315,6 +3317,7 @@ async function openEditDeliveryPendingModal(code, date) {
 
   editDeliverySelectPayment(p.paymentMethod || 'cash');
 
+  document.getElementById('editDeliveryQuantity').value = p.quantity || 1;
   document.getElementById('editDeliveryShipping').value = p.deliveryShipping || 0;
   document.getElementById('editDeliveryCommission').value = p.deliveryCommissionPercent || 0;
 
@@ -3334,6 +3337,22 @@ function editDeliverySelectPayment(method) {
   document.getElementById('editDeliveryBtnTransfer').classList.toggle('active', method === 'transfer');
 }
 
+function adjustPendingInventoryQuantity(code, oldQuantity, newQuantity) {
+  const oldQty = Number(oldQuantity) || 0;
+  const newQty = Number(newQuantity) || 0;
+  const difference = newQty - oldQty;
+  if (!difference) return true;
+  const invItem = inventory.find(item => item.code === code);
+  if (!invItem) { showNotification('Producto no encontrado en inventario', 'error'); return false; }
+  if (difference > 0 && (Number(invItem.quantity) || 0) < difference) {
+    showNotification(`Stock insuficiente. Solo quedan ${invItem.quantity} unidades disponibles.`, 'error');
+    return false;
+  }
+  invItem.quantity -= difference;
+  saveInventory();
+  return true;
+}
+
 function editDeliveryCalculate() {
   const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
   const p = pending[currentEditDeliveryIndex];
@@ -3341,7 +3360,8 @@ function editDeliveryCalculate() {
 
   const shipping = parseFloat(document.getElementById('editDeliveryShipping').value) || 0;
   const commissionPercent = parseFloat(document.getElementById('editDeliveryCommission').value) || 0;
-  const subtotal = (p.price || 0) * (p.quantity || 0);
+  const quantity = parseInt(document.getElementById('editDeliveryQuantity')?.value, 10) || p.quantity || 1;
+  const subtotal = (p.price || 0) * quantity;
   const commission = (subtotal * commissionPercent) / 100;
   const total = subtotal + shipping + commission;
 
@@ -3359,7 +3379,10 @@ function saveEditDeliveryPending() {
 
   const shipping = parseFloat(document.getElementById('editDeliveryShipping').value) || 0;
   const commissionPercent = parseFloat(document.getElementById('editDeliveryCommission').value) || 0;
-  const subtotal = (p.price || 0) * (p.quantity || 0);
+  const newQuantity = parseInt(document.getElementById('editDeliveryQuantity').value, 10);
+  if (!Number.isInteger(newQuantity) || newQuantity < 1) { showNotification('La cantidad debe ser un número entero mayor que cero', 'error'); return; }
+  if (!adjustPendingInventoryQuantity(p.code, p.quantity, newQuantity)) return;
+  const subtotal = (p.price || 0) * newQuantity;
   const commission = (subtotal * commissionPercent) / 100;
   const total = subtotal + shipping + commission;
 
@@ -3367,6 +3390,7 @@ function saveEditDeliveryPending() {
 
   pending[currentEditDeliveryIndex] = {
     ...p,
+    quantity: newQuantity,
     deliveryShipping: shipping,
     deliveryCommissionPercent: commissionPercent,
     deliveryCommissionAmount: commission,
@@ -3387,8 +3411,9 @@ async function openEditPendingModal(code, date) {
   currentEditPendingIndex = findPendingIndex(pending, code, date);
   const p = pending[currentEditPendingIndex]; 
   document.getElementById('editPendingName').textContent = p.name; 
-  document.getElementById('editPendingQty').textContent = p.quantity; 
-  document.getElementById('editPendingPrice').textContent = p.price; 
+  document.getElementById('editPendingQty').textContent = p.quantity;
+  document.getElementById('editPendingQuantity').value = p.quantity || 1;
+  document.getElementById('editPendingPrice').textContent = p.price;
   const imgUrl = await getProductImage(p.code); 
   document.getElementById('editPendingImage').src = imgUrl || ''; 
   if (p.barcode) { 
@@ -3421,7 +3446,8 @@ function editCalculateCOD() {
         commissionValue = parseFloat(document.getElementById('editCommission').value) || 0, 
         insurance = parseFloat(document.getElementById('editInsurance').value) || 0; 
   document.getElementById('editCommissionLabel').textContent = commissionType === 'percentage' ? 'Comision (%)' : 'Comision ($)'; 
-  const productTotal = (p.price || 0) * (p.quantity || 0); 
+  const quantity = parseInt(document.getElementById('editPendingQuantity')?.value, 10) || p.quantity || 1;
+  const productTotal = (p.price || 0) * quantity; 
   let commission = 0; 
   if (commissionType === 'percentage') commission = (productTotal * commissionValue) / 100; 
   else commission = commissionValue; 
@@ -3458,11 +3484,16 @@ function saveEditPending() {
   const totalToCollect = whoPaysVal === 'client' 
     ? productTotal + shipping + commission + insurance 
     : (productTotal - commission) + shipping + insurance;
-
+  const newQuantity = parseInt(document.getElementById('editPendingQuantity').value, 10);
+  if (!Number.isInteger(newQuantity) || newQuantity < 1) {
+    showNotification('La cantidad debe ser un número entero mayor que cero', 'error');
+    return;
+  }
   if (totalToCollect < 0) {
     showNotification('Error: La comision no puede ser mayor que el precio del producto', 'error');
     return;
   }
+  if (!adjustPendingInventoryQuantity(p.code, p.quantity, newQuantity)) return;
 
   const netEarnings = whoPaysVal === 'client' 
     ? productTotal 
@@ -3470,6 +3501,7 @@ function saveEditPending() {
 
   pending[currentEditPendingIndex] = { 
     ...p, 
+    quantity: newQuantity,
     codShipping: shipping, 
     codCommissionType: commissionType, 
     codCommission: commissionValue, 

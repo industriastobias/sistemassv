@@ -1537,7 +1537,7 @@ let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = n
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
 let currentPaymentMethod = 'cash';
-let currentEditDeliveryIndex = -1;
+let currentEditDeliveryIndex = -1, currentEditPendingCode = null, currentEditPendingDate = null;
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
 let currentCompletePaymentIndex = -1;
@@ -2858,7 +2858,7 @@ async function loadPendingList() {
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
           <td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
-          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal('${p.code}', '${p.date}')"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-trash"></i></button></div></td>
+          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModal(${JSON.stringify(p.code)}, ${JSON.stringify(p.date)})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-trash"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
@@ -2957,7 +2957,9 @@ async function loadPendingList() {
 
 // ===== FUNCIONES HELPER PARA INDICES CORRECTOS EN LISTAS PENDIENTES =====
 function findPendingIndex(array, code, date) {
-  return array.findIndex(p => p.code === code && p.date === date);
+  const targetCode = String(code ?? '');
+  const targetDate = String(date ?? '');
+  return array.findIndex(p => String(p.code ?? '') === targetCode && String(p.date ?? '') === targetDate);
 }
 // =========================================================================
 
@@ -3427,9 +3429,11 @@ function saveEditDeliveryPending() {
 
 async function openEditPendingModal(code, date) { 
   const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  currentEditPendingIndex = findPendingIndex(pending, code, date);
-  const p = pending[currentEditPendingIndex]; 
+  currentEditPendingCode = String(code ?? '');
+  currentEditPendingDate = String(date ?? '');
+  currentEditPendingIndex = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
+  const p = pending[currentEditPendingIndex];
+  if (!p) { showNotification('Pedido COD no encontrado', 'error'); return; }
   document.getElementById('editPendingName').textContent = p.name; 
   document.getElementById('editPendingQty').textContent = p.quantity;
   document.getElementById('editPendingQuantity').value = p.quantity || 1;
@@ -3488,8 +3492,10 @@ function editCalculateCOD() {
 }
 function saveEditPending() { 
   let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  let p = pending[currentEditPendingIndex], 
+  const stableIndex = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
+  if (stableIndex < 0) { showNotification('El pedido COD ya no está disponible', 'error'); return; }
+  currentEditPendingIndex = stableIndex;
+  let p = pending[stableIndex], 
       whoPaysVal = document.querySelector('input[name="editWhoPays"]:checked').value, 
       shipping = parseFloat(document.getElementById('editShipping').value) || 0, 
       commissionType = document.getElementById('editCommissionType').value, 
@@ -3519,7 +3525,7 @@ function saveEditPending() {
     ? productTotal 
     : (productTotal - commission);
 
-  pending[currentEditPendingIndex] = { 
+  pending[stableIndex] = { 
     ...p, 
     quantity: newQuantity,
     codShipping: shipping, 

@@ -718,7 +718,7 @@
 
     <!-- Panel de Pedidos Pendientes (COD + Pendientes de Entrega + Pendientes de Cobro) -->
     <div class="pending-panel" id="pendingPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-sm" onclick="requestPassword('deletePendingHistory', -1)" title="Limpiar historial sin devolver stock"><i class="fa-solid fa-trash-can"></i> Limpiar historial</button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-sm" onclick="selectPendingHistoryToDelete()" title="Seleccionar historial para limpiar sin devolver stock"><i class="fa-solid fa-trash-can"></i> Limpiar historial</button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
 
       <div class="tabs-container">
         <button class="tab-btn active" onclick="switchPendingTab('cod')"><i class="fa-solid fa-truck"></i> Contra Entrega</button>
@@ -3104,19 +3104,31 @@ function confirmDeleteDeliveryPending() {
   if (pendingDeliveryDeleteIndex === -1) return;
   requestPassword('deleteDeliveryPending', pendingDeliveryDeleteIndex);
 }
+let pendingHistorySelection = null;
+
+function selectPendingHistoryToDelete() {
+  const choice = prompt('¿Qué historial deseas eliminar?\n\n1 = Contra Entrega\n2 = Pendientes de Entrega\n3 = Pendientes de Cobro\n4 = Todas las opciones\n\nEscribe 1, 2, 3 o 4:');
+  const options = { '1': 'cod', '2': 'delivery', '3': 'payment', '4': 'all' };
+  if (!choice || !options[choice.trim()]) {
+    if (choice !== null) showNotification('Selección no válida. Escribe 1, 2, 3 o 4.', 'warning');
+    return;
+  }
+  pendingHistorySelection = options[choice.trim()];
+  requestPassword('deletePendingHistory', -1);
+}
+
 function executeDeletePendingHistory() {
-  const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
-  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
-  const total = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
-  if (!total) { showNotification('No hay pedidos pendientes para limpiar', 'warning'); return; }
-  if (!confirm(`¿Eliminar del historial los ${total} pedidos pendientes? El stock NO será devuelto.`)) return;
-  localStorage.setItem('pendingInventory', '[]');
-  localStorage.setItem('pendingDeliveryInventory', '[]');
-  localStorage.setItem('pendingPaymentInventory', '[]');
+  const selection = pendingHistorySelection;
+  pendingHistorySelection = null;
+  const keys = selection === 'cod' ? ['pendingInventory'] : selection === 'delivery' ? ['pendingDeliveryInventory'] : selection === 'payment' ? ['pendingPaymentInventory'] : ['pendingInventory', 'pendingDeliveryInventory', 'pendingPaymentInventory'];
+  const labels = { cod: 'Contra Entrega', delivery: 'Pendientes de Entrega', payment: 'Pendientes de Cobro', all: 'todas las listas' };
+  const total = keys.reduce((sum, key) => sum + JSON.parse(localStorage.getItem(key) || '[]').length, 0);
+  if (!total) { showNotification(`No hay pedidos en ${labels[selection] || 'la selección'}`, 'warning'); return; }
+  if (!confirm(`¿Eliminar ${total} pedido(s) de ${labels[selection]}? El stock NO será devuelto.`)) return;
+  keys.forEach(key => localStorage.setItem(key, '[]'));
   loadPendingList();
   updateStats();
-  showNotification('Historial de pedidos limpiado. El stock no fue devuelto.', 'success');
+  showNotification(`Historial eliminado: ${labels[selection]}. El stock no fue devuelto.`, 'success');
 }
 
 function executeDeleteAllDeliveryPending() {

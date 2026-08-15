@@ -141,6 +141,14 @@
     .modal-overlay.active { display: flex; }
     /* La contraseña debe quedar por encima del modal de confirmación de eliminación. */
     #passwordModal { z-index: 2100; }
+    #pendingHistorySelectorModal { z-index: 2050; }
+    .history-option-list { display:grid; gap:0.625rem; }
+    .history-option { width:100%; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; padding:0.875rem 1rem; border:2px solid var(--border); background:var(--surface); color:var(--text); border-radius:var(--radius-sm); cursor:pointer; text-align:left; font-size:0.875rem; transition:var(--transition); }
+    .history-option:hover { border-color:var(--accent); background:var(--accent-soft); }
+    .history-option.selected { border-color:var(--success); background:var(--success-soft); color:#4f7359; }
+    .history-option .check-mark { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--border-light); color:transparent; flex:0 0 auto; }
+    .history-option.selected .check-mark { background:var(--success); color:white; }
+    .history-option small { display:block; color:var(--text-secondary); font-size:0.6875rem; margin-top:0.125rem; }
     .modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 90vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15); animation: modalIn 0.25s ease; border: 1px solid var(--border); }
     .modal-lg { max-width: 900px; }
     @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -739,6 +747,23 @@
       <div id="paymentTab" class="tab-content">
         <div class="pending-payment-summary"><h3>Resumen de Cobros Pendientes</h3><div class="summary-grid"><div class="summary-item"><label>Total Productos</label><div class="amount" id="summaryProductsPayment">$0</div></div><div class="summary-item"><label>Total Abonado</label><div class="amount" id="summaryPaidPayment">$0</div></div><div class="summary-item"><label>Total por Cobrar</label><div class="amount" id="summaryPendingPayment">$0</div></div><div class="summary-item"><label>Clientes</label><div class="amount" id="summaryClientsPayment">0</div></div></div></div>
         <div class="table-container"><table class="data-table"><thead><tr><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Precio Original</th><th>Abonado</th><th>Debe</th><th>Acciones</th></tr></thead><tbody id="pendingListPayment"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Selector visual para limpiar una lista de pedidos sin devolver stock -->
+    <div class="modal-overlay" id="pendingHistorySelectorModal" onclick="if(event.target===this) closePendingHistorySelector()">
+      <div class="modal">
+        <div class="modal-header"><h3 class="modal-title"><i class="fa-solid fa-trash-can"></i> Limpiar historial</h3><button class="modal-close" onclick="closePendingHistorySelector()"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="modal-body">
+          <p style="margin-bottom:1rem;color:var(--text-secondary);">Selecciona qué lista deseas eliminar. El stock no será devuelto.</p>
+          <div class="history-option-list">
+            <button type="button" class="history-option" data-history-option="cod" onclick="choosePendingHistoryOption('cod')"><span><strong>Contra Entrega</strong><small>Eliminar solo los pedidos COD</small></span><span class="check-mark"><i class="fa-solid fa-check"></i></span></button>
+            <button type="button" class="history-option" data-history-option="delivery" onclick="choosePendingHistoryOption('delivery')"><span><strong>Pendientes de Entrega</strong><small>Eliminar solo las entregas pendientes</small></span><span class="check-mark"><i class="fa-solid fa-check"></i></span></button>
+            <button type="button" class="history-option" data-history-option="payment" onclick="choosePendingHistoryOption('payment')"><span><strong>Pendientes de Cobro</strong><small>Eliminar solo los cobros pendientes</small></span><span class="check-mark"><i class="fa-solid fa-check"></i></span></button>
+            <button type="button" class="history-option" data-history-option="all" onclick="choosePendingHistoryOption('all')"><span><strong>Todas las opciones</strong><small>Eliminar las tres listas pendientes</small></span><span class="check-mark"><i class="fa-solid fa-check"></i></span></button>
+          </div>
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="closePendingHistorySelector()">Cancelar</button><button class="btn btn-danger" onclick="confirmPendingHistorySelection()"><i class="fa-solid fa-arrow-right"></i> Continuar</button></div>
       </div>
     </div>
 
@@ -3107,13 +3132,31 @@ function confirmDeleteDeliveryPending() {
 let pendingHistorySelection = null;
 
 function selectPendingHistoryToDelete() {
-  const choice = prompt('¿Qué historial deseas eliminar?\n\n1 = Contra Entrega\n2 = Pendientes de Entrega\n3 = Pendientes de Cobro\n4 = Todas las opciones\n\nEscribe 1, 2, 3 o 4:');
-  const options = { '1': 'cod', '2': 'delivery', '3': 'payment', '4': 'all' };
-  if (!choice || !options[choice.trim()]) {
-    if (choice !== null) showNotification('Selección no válida. Escribe 1, 2, 3 o 4.', 'warning');
+  pendingHistorySelection = null;
+  document.querySelectorAll('#pendingHistorySelectorModal .history-option').forEach(option => option.classList.remove('selected'));
+  document.getElementById('pendingHistorySelectorModal').classList.add('active');
+  ensureKioscoMode();
+}
+
+function choosePendingHistoryOption(option) {
+  pendingHistorySelection = option;
+  document.querySelectorAll('#pendingHistorySelectorModal .history-option').forEach(button => {
+    button.classList.toggle('selected', button.dataset.historyOption === option);
+  });
+}
+
+function closePendingHistorySelector() {
+  document.getElementById('pendingHistorySelectorModal').classList.remove('active');
+  pendingHistorySelection = null;
+  ensureKioscoMode();
+}
+
+function confirmPendingHistorySelection() {
+  if (!pendingHistorySelection) {
+    showNotification('Selecciona una lista antes de continuar', 'warning');
     return;
   }
-  pendingHistorySelection = options[choice.trim()];
+  document.getElementById('pendingHistorySelectorModal').classList.remove('active');
   requestPassword('deletePendingHistory', -1);
 }
 

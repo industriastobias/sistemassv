@@ -1458,32 +1458,88 @@ function actualizarDashboard() {
   chart.update();
 }
 
-function cargarVentasComoIngresos() {
-  const ventas = JSON.parse(localStorage.getItem('soldInventory')) || [];
-  const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta));
-  
-  let nuevasVentas = 0;
-  ventas.forEach(v => {
-    const idVenta = `venta_${v.code}_${v.date || Date.now()}`;
-    if (!ventasExistentes.has(idVenta)) {
-      data.ingresos.push({
-        id: generarId(),
-        id_venta: idVenta,
-        fecha: v.date || new Date().toISOString().split('T')[0],
-        descripcion: `Venta: ${v.name} (Cód: ${v.code})`,
-        categoria: 'Venta',
-        monto: parseFloat(v.total),
-        metodo_pago: 'Efectivo',
-        responsable: 'Sistema',
-        observaciones: `Cantidad vendida: ${v.quantity}`
-      });
-      nuevasVentas++;
-    }
+function hashEstable(valor) {
+  const texto = JSON.stringify(valor);
+  let hash = 2166136261;
+  for (let i = 0; i < texto.length; i++) {
+    hash ^= texto.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function eliminarIngresosDuplicados() {
+  const vistos = new Set();
+  const originales = data.ingresos.length;
+  const unicos = data.ingresos.filter(ingreso => {
+    const esVentaSistema = ingreso.categoria === 'Venta' && ingreso.responsable === 'Sistema';
+    if (!esVentaSistema) return true;
+
+    const idVenta = String(ingreso.id_venta || '');
+    const idAntiguoInestable = /^venta_[^_]+_\d+$/.test(idVenta);
+    const firma = idVenta && !idAntiguoInestable ? idVenta : [
+      ingreso.fecha,
+      ingreso.descripcion,
+      Number(ingreso.monto) || 0,
+      ingreso.observaciones
+    ].join('|');
+
+    if (vistos.has(firma)) return false;
+    vistos.add(firma);
+    return true;
   });
-  
-  if (nuevasVentas > 0) {
+
+  if (unicos.length !== originales) {
+    data.ingresos.splice(0, data.ingresos.length, ...unicos);
+    return true;
+  }
+  return false;
+}
+
+function cargarVentasComoIngresos() {
+  let ventas = [];
+  try {
+    const valor = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    ventas = Array.isArray(valor) ? valor : [];
+  } catch (error) {
+    console.error('No se pudieron cargar las ventas', error);
+    return;
+  }
+
+  const huboLimpieza = eliminarIngresosDuplicados();
+  const ventasExistentes = new Set(data.ingresos.map(i => i.id_venta).filter(Boolean));
+  let nuevasVentas = 0;
+
+  ventas.forEach(v => {
+    const fecha = v.date || v.createdAt || new Date().toISOString().split('T')[0];
+    const idOriginal = v.id || v.saleId || v.transactionId || v.code;
+    const idVenta = `venta_${idOriginal || hashEstable({
+      code: v.code,
+      name: v.name,
+      total: v.total,
+      quantity: v.quantity
+    })}`;
+
+    if (ventasExistentes.has(idVenta)) return;
+
+    data.ingresos.push({
+      id: generarId(),
+      id_venta: idVenta,
+      fecha,
+      descripcion: `Venta: ${v.name || 'Sin nombre'} (Cód: ${v.code || 'N/D'})`,
+      categoria: 'Venta',
+      monto: parseFloat(v.total) || 0,
+      metodo_pago: 'Efectivo',
+      responsable: 'Sistema',
+      observaciones: `Cantidad vendida: ${v.quantity || 0}`
+    });
+    ventasExistentes.add(idVenta);
+    nuevasVentas++;
+  });
+
+  if (nuevasVentas > 0 || huboLimpieza) {
     saveData();
-    mostrarToast(`${nuevasVentas} ventas nuevas importadas`, 'success');
+    if (nuevasVentas > 0) mostrarToast(`${nuevasVentas} ventas nuevas importadas`, 'success');
   }
 }
 

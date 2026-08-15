@@ -1532,7 +1532,7 @@ function playSoftClick() {
 
 const CONFIG = { PASSWORD_EDIT: 'KLOHESV', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DELAY: 150, PAGE_SIZE_DEFAULT: 5000 };
 let inventory = [], filteredInventory = [], currentPage = 1, pageSize = parseInt(localStorage.getItem('pageSize')) || CONFIG.PAGE_SIZE_DEFAULT;
-let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentSaleCode = null, currentPriceIndex = -1, currentStockIndex = -1, currentEditPendingIndex = -1;
+let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentSaleCode = null, currentPriceIndex = -1, currentPriceCode = null, currentStockIndex = -1, currentStockCode = null, currentEditPendingIndex = -1;
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
@@ -1802,8 +1802,8 @@ async function renderTable(items, startIdx) {
       <td>${item.category || 'N/A'}</td>
       <td><div class="cell-actions">
         <button class="btn btn-sm btn-success" onclick="openSaleModal(${realIdx})"><i class="fa-solid fa-cart-plus"></i></button>
-        <button class="btn btn-sm" onclick="requestPassword('price', ${realIdx})"><i class="fa-solid fa-tag"></i></button>
-        <button class="btn btn-sm" onclick="requestPassword('stock', ${realIdx})"><i class="fa-solid fa-box"></i></button>
+        <button class="btn btn-sm" onclick="requestPassword('price', ${JSON.stringify(item.code)})"><i class="fa-solid fa-tag"></i></button>
+        <button class="btn btn-sm" onclick="requestPassword('stock', ${JSON.stringify(item.code)})"><i class="fa-solid fa-box"></i></button>
         <button class="btn btn-sm" onclick="openDescriptionModal(${realIdx})"><i class="fa-solid fa-eye"></i></button>
       </div></td>
     </tr>`; 
@@ -1838,8 +1838,8 @@ async function renderCards(items, startIdx) {
           <span class="card-price">${formatCurrency(finalPrice)}</span>
           <div class="cell-actions">
             <button class="btn btn-sm btn-success" onclick="openSaleModal(${realIdx})"><i class="fa-solid fa-cart-plus"></i></button>
-            <button class="btn btn-sm" onclick="requestPassword('price', ${realIdx})"><i class="fa-solid fa-tag"></i></button>
-            <button class="btn btn-sm" onclick="requestPassword('stock', ${realIdx})"><i class="fa-solid fa-box"></i></button>
+            <button class="btn btn-sm" onclick="requestPassword('price', ${JSON.stringify(item.code)})"><i class="fa-solid fa-tag"></i></button>
+            <button class="btn btn-sm" onclick="requestPassword('stock', ${JSON.stringify(item.code)})"><i class="fa-solid fa-box"></i></button>
           </div>
         </div>
       </div>
@@ -1913,15 +1913,16 @@ function closePasswordModal() { document.getElementById('passwordModal').classLi
 function verifyPassword() {
   const password = document.getElementById('passwordInput').value;
   const action = document.getElementById('passwordAction').value;
-  const index = parseInt(document.getElementById('passwordIndex').value);
+  const rawIndex = document.getElementById('passwordIndex').value;
+  const index = parseInt(rawIndex, 10);
   if (password !== CONFIG.PASSWORD_EDIT) {
     showNotification('Contrasena incorrecta', 'error');
     document.getElementById('passwordInput').value = '';
     return;
   }
   closePasswordModal();
-  if (action === 'price') openPriceModal(index);
-  else if (action === 'stock') openStockModal(index);
+  if (action === 'price') openPriceModal(rawIndex);
+  else if (action === 'stock') openStockModal(rawIndex);
   else if (action === 'unlockSaleFields') unlockSaleFields();
   else if (action === 'deletePending') executeDeletePending();
   else if (action === 'deleteDeliveryPending') executeDeleteDeliveryPending();
@@ -2708,9 +2709,17 @@ function processSale() {
   ensureKioscoMode();
 }
 
-function openPriceModal(index) { 
-  currentPriceIndex = index; 
-  const item = inventory[index]; 
+function findInventoryProduct(ref) {
+  const value = String(ref ?? '');
+  return inventory.find(item => String(item.code ?? '') === value) || inventory[Number(ref)];
+}
+
+function openPriceModal(ref) { 
+  const item = findInventoryProduct(ref);
+  if (!item) { showNotification('Producto no encontrado', 'error'); return; }
+  currentPriceCode = item.code;
+  currentPriceIndex = inventory.indexOf(item); 
+ 
   document.getElementById('priceProductName').value = item.name; 
   document.getElementById('priceCurrent').value = formatCurrency(item.price); 
   document.getElementById('priceNew').value = item.price; 
@@ -2720,8 +2729,10 @@ function closePriceModal() { document.getElementById('priceModal').classList.rem
 function savePrice() { 
   const newPrice = parseFloat(document.getElementById('priceNew').value); 
   if (isNaN(newPrice) || newPrice < 0) { showNotification('Precio invalido', 'error'); return; } 
-  const editedCode = inventory[currentPriceIndex].code;
-  inventory[currentPriceIndex].price = newPrice; 
+  const item = inventory.find(product => String(product.code ?? '') === String(currentPriceCode ?? ''));
+  if (!item) { showNotification('Producto no encontrado', 'error'); return; }
+  const editedCode = item.code;
+  item.price = newPrice; 
   saveInventory(); 
   applyFilters(); 
   const newPosition = filteredInventory.findIndex(item => item.code === editedCode) + 1;
@@ -2729,9 +2740,12 @@ function savePrice() {
   showNotification('Precio actualizado. Nueva posicion: fila #' + newPosition, 'success'); 
 }
 
-function openStockModal(index) { 
-  currentStockIndex = index; 
-  const item = inventory[index]; 
+function openStockModal(ref) { 
+  const item = findInventoryProduct(ref);
+  if (!item) { showNotification('Producto no encontrado', 'error'); return; }
+  currentStockCode = item.code;
+  currentStockIndex = inventory.indexOf(item); 
+ 
   document.getElementById('stockProductName').value = item.name; 
   document.getElementById('stockCurrent').value = item.quantity || 0; 
   document.getElementById('stockNew').value = item.quantity || 0; 
@@ -2739,10 +2753,12 @@ function openStockModal(index) {
 }
 function closeStockModal() { document.getElementById('stockModal').classList.remove('active'); ensureKioscoMode(); }
 function saveStock() { 
-  const newStock = parseInt(document.getElementById('stockNew').value); 
+  const newStock = parseInt(document.getElementById('stockNew').value, 10); 
   if (isNaN(newStock) || newStock < 0) { showNotification('Stock invalido', 'error'); return; } 
-  const editedCode = inventory[currentStockIndex].code;
-  inventory[currentStockIndex].quantity = newStock; 
+  const item = inventory.find(product => String(product.code ?? '') === String(currentStockCode ?? ''));
+  if (!item) { showNotification('Producto no encontrado', 'error'); return; }
+  const editedCode = item.code;
+  item.quantity = newStock; 
   saveInventory(); 
   applyFilters(); 
   const newPosition = filteredInventory.findIndex(item => item.code === editedCode) + 1;

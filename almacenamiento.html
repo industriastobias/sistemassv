@@ -1689,20 +1689,22 @@ function updateStats() {
   const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
   const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
   const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
-  const totalPending = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
+  const activeDelivery = pendingDelivery.filter(p => p.deliveryStatus === 'pending');
+  const activePayment = pendingPayment.filter(p => p.paymentStatus === 'partial');
+  const totalPending = pendingCOD.length + activeDelivery.length + activePayment.length;
 
   document.getElementById('pendingCount').textContent = totalPending;
   document.getElementById('pendingBadge').style.display = totalPending > 0 ? 'inline-flex' : 'none';
 
-  document.getElementById('pendingPaymentCount').textContent = pendingPayment.length;
-  document.getElementById('pendingPaymentBadge').style.display = pendingPayment.length > 0 ? 'inline-flex' : 'none';
+  document.getElementById('pendingPaymentCount').textContent = activePayment.length;
+  document.getElementById('pendingPaymentBadge').style.display = activePayment.length > 0 ? 'inline-flex' : 'none';
 
   updateDailySalesBadge();
   updateFixedTotal();
 }
 
 function updateDailySalesBadge() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateKey(new Date());
   const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
   const todaySales = sales.filter(s => {
     const saleDate = s.date ? localDateKey(s.date) : '';
@@ -1732,7 +1734,7 @@ function applyFilters() {
           stockMatch = !lowStockOnly || (item.quantity || 0) <= (item.stockMin || 0); 
     let dateMatch = true; 
     if (searchDate && item.date) { 
-      try { const itemDate = new Date(item.date).toISOString().split('T')[0]; dateMatch = itemDate === searchDate; } 
+      try { const itemDate = localDateKey(item.date); dateMatch = itemDate === searchDate; } 
       catch (e) { dateMatch = false; } 
     } 
     return nameMatch && catMatch && priceMatch && barcodeMatch && stockMatch && dateMatch; 
@@ -2208,6 +2210,9 @@ function processFastSale() {
 
   } else {
     // Venta inmediata - guardar en soldInventory
+    const stockBeforeSale = typeof availableStock !== 'undefined' ? availableStock : (Number(item.quantity) || 0);
+    item.quantity = stockBeforeSale - qty;
+    saveInventory();
     const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
     sales.push({
       ...saleRecord,
@@ -2552,14 +2557,11 @@ function processSale() {
         isPendingDelivery = document.getElementById('isPendingDelivery').checked,
         isPendingPayment = document.getElementById('isPendingPayment').checked; 
 
-  if (qty > item.quantity) { showNotification('Stock insuficiente', 'error'); return; } 
+  // Aplicar el stock editado antes de validar la cantidad.
+  const editedStock = parseInt(document.getElementById('saleStockEdit').value, 10);
+  const availableStock = !isNaN(editedStock) && editedStock >= 0 ? editedStock : (Number(item.quantity) || 0);
+  if (qty > availableStock) { showNotification('Stock insuficiente', 'error'); return; }
 
-  // Aplicar stock editado si es valido
-  const editedStock = parseInt(document.getElementById('saleStockEdit').value);
-  if (!isNaN(editedStock) && editedStock >= 0) {
-    item.quantity = editedStock;
-  }
-  item.quantity -= qty;
   // Actualizar precio unitario si fue editado (desde salePriceEdit o salePrice desbloqueado)
   const editedPriceFromEdit = parseFloat(document.getElementById('salePriceEdit').value);
   if (!isNaN(editedPriceFromEdit) && editedPriceFromEdit >= 0) {
@@ -2573,7 +2575,6 @@ function processSale() {
     }
   }
   price = parseFloat(document.getElementById('salePrice').value) || item.price || 0;
-  saveInventory(); 
 
   const subtotal = price * qty;
 
@@ -2600,6 +2601,8 @@ function processSale() {
       ? subtotal 
       : (subtotal - commission);
 
+    item.quantity = availableStock - qty;
+    saveInventory();
     const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); 
     pending.push({ 
       name: item.name, 
@@ -2630,6 +2633,8 @@ function processSale() {
     const commission = (subtotal * commissionPercent) / 100;
     const total = subtotal + shipping + commission;
 
+    item.quantity = availableStock - qty;
+    saveInventory();
     const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
     pendingDelivery.push({
       name: item.name,
@@ -2665,6 +2670,8 @@ function processSale() {
       return;
     }
 
+    item.quantity = availableStock - qty;
+    saveInventory();
     const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
     pendingPayment.push({
       name: item.name,
@@ -2874,7 +2881,7 @@ async function loadPendingList() {
     } else {
       document.querySelector('#deliveryTab .pending-summary').style.display = 'block';
       let totalProducts = 0, totalShipping = 0, totalCommission = 0, grandTotal = 0;
-      pendingDelivery.forEach(p => {
+      pendingDelivery.filter(p => p.deliveryStatus === 'pending').forEach(p => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         totalProducts += productTotal;
         totalShipping += p.deliveryShipping || 0;
@@ -2919,7 +2926,7 @@ async function loadPendingList() {
     } else {
       document.querySelector('#paymentTab .pending-payment-summary').style.display = 'block';
       let totalProducts = 0, totalPaid = 0, totalPending = 0;
-      pendingPayment.forEach(p => {
+      pendingPayment.filter(p => p.paymentStatus === 'partial').forEach(p => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         totalProducts += productTotal;
         totalPaid += p.paidAmount || 0;
@@ -2928,7 +2935,7 @@ async function loadPendingList() {
       document.getElementById('summaryProductsPayment').textContent = formatCurrency(totalProducts);
       document.getElementById('summaryPaidPayment').textContent = formatCurrency(totalPaid);
       document.getElementById('summaryPendingPayment').textContent = formatCurrency(totalPending);
-      document.getElementById('summaryClientsPayment').textContent = pendingPayment.length;
+      document.getElementById('summaryClientsPayment').textContent = pendingPayment.filter(p => p.paymentStatus === 'partial').length;
 
       tbodyPayment.innerHTML = await Promise.all(pendingPayment.map(async (p, idx) => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
@@ -3008,7 +3015,7 @@ function confirmPaymentPending() {
     let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
 
     const finalTotal = item.totalToCollect || (item.price * item.quantity);
-    const effectivePrice = finalTotal / item.quantity;
+    const effectivePrice = item.quantity > 0 ? finalTotal / item.quantity : 0;
     const netEarnings = item.netEarnings || (item.whoPaysCommission === 'client' ? item.price * item.quantity : (item.price * item.quantity) - (item.codCommissionAmount || 0));
 
     sales.push({ 
@@ -3326,7 +3333,7 @@ async function openEditDeliveryPendingModal(code, date) {
 
   document.getElementById('editDeliveryName').textContent = p.name;
   document.getElementById('editDeliveryQty').textContent = p.quantity;
-  document.getElementById('editDeliveryPrice').textContent = p.price;
+  document.getElementById('editDeliveryPrice').textContent = formatCurrency(p.price);
 
   const imgUrl = await getProductImage(p.code);
   document.getElementById('editDeliveryImage').src = imgUrl || '';
@@ -3377,6 +3384,7 @@ function adjustPendingInventoryQuantity(code, oldQuantity, newQuantity) {
 
 function editDeliveryCalculate() {
   const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const p = pending[currentEditDeliveryIndex];
   if (!p) return;
 
@@ -3450,7 +3458,7 @@ async function openEditPendingModal(code, date, position = -1) {
   document.getElementById('editPendingName').textContent = p.name; 
   document.getElementById('editPendingQty').textContent = p.quantity;
   document.getElementById('editPendingQuantity').value = p.quantity || 1;
-  document.getElementById('editPendingPrice').textContent = p.price;
+  document.getElementById('editPendingPrice').textContent = formatCurrency(p.price);
   const imgUrl = await getProductImage(p.code); 
   document.getElementById('editPendingImage').src = imgUrl || ''; 
   if (p.barcode) { 
@@ -3519,9 +3527,15 @@ function saveEditPending() {
       shipping = parseFloat(document.getElementById('editShipping').value) || 0, 
       commissionType = document.getElementById('editCommissionType').value, 
       commissionValue = parseFloat(document.getElementById('editCommission').value) || 0, 
-      insurance = parseFloat(document.getElementById('editInsurance').value) || 0, 
-      productTotal = (p.price || 0) * (p.quantity || 0), 
-      commission = 0; 
+      insurance = parseFloat(document.getElementById('editInsurance').value) || 0,
+      newQuantity = parseInt(document.getElementById('editPendingQuantity').value, 10),
+      commission = 0;
+
+  if (!Number.isInteger(newQuantity) || newQuantity < 1) {
+    showNotification('La cantidad debe ser un número entero mayor que cero', 'error');
+    return;
+  }
+  const productTotal = (p.price || 0) * newQuantity; 
 
   if (commissionType === 'percentage') commission = (productTotal * commissionValue) / 100; 
   else commission = commissionValue; 
@@ -3529,11 +3543,6 @@ function saveEditPending() {
   const totalToCollect = whoPaysVal === 'client' 
     ? productTotal + shipping + commission + insurance 
     : (productTotal - commission) + shipping + insurance;
-  const newQuantity = parseInt(document.getElementById('editPendingQuantity').value, 10);
-  if (!Number.isInteger(newQuantity) || newQuantity < 1) {
-    showNotification('La cantidad debe ser un número entero mayor que cero', 'error');
-    return;
-  }
   if (totalToCollect < 0) {
     showNotification('Error: La comision no puede ser mayor que el precio del producto', 'error');
     return;
@@ -3681,6 +3690,7 @@ function confirmCompletePayment() {
     if (!item || item.paymentStatus !== 'partial') { showNotification('Cobro no encontrado', 'error'); return; }
 
     item.paymentStatus = 'paid';
+    item.pendingAmount = 0;
     item.completedDate = new Date().toISOString();
     item.finalPayment = item.pendingAmount;
 
@@ -3901,7 +3911,7 @@ function toggleDailySalesPanel() {
     cards.style.display = 'none';
 
     if (!document.getElementById('dailySalesDate').value) {
-      document.getElementById('dailySalesDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('dailySalesDate').value = localDateKey(new Date());
     }
     loadDailySales();
   }
@@ -4083,8 +4093,8 @@ function applySalesHistoryFilter() {
         end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
     }
-    document.getElementById('historyDateStart').value = start.toISOString().split('T')[0];
-    document.getElementById('historyDateEnd').value = end.toISOString().split('T')[0];
+    document.getElementById('historyDateStart').value = localDateKey(start);
+    document.getElementById('historyDateEnd').value = localDateKey(end);
     startDate = document.getElementById('historyDateStart').value;
     endDate = document.getElementById('historyDateEnd').value;
   }
@@ -4337,8 +4347,8 @@ function applyDailyReportFilter() {
         end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
     }
-    document.getElementById('dailyReportDateStart').value = start.toISOString().split('T')[0];
-    document.getElementById('dailyReportDateEnd').value = end.toISOString().split('T')[0];
+    document.getElementById('dailyReportDateStart').value = localDateKey(start);
+    document.getElementById('dailyReportDateEnd').value = localDateKey(end);
     startDate = document.getElementById('dailyReportDateStart').value;
     endDate = document.getElementById('dailyReportDateEnd').value;
   }

@@ -343,7 +343,181 @@ const CATEGORY_ORDER = [
   "Carteras","Aritos","Billeteras","Chokers","Collares","Lentes de sol","Pulseras","Relojes","Anillos","Accesorios para el cabello","Otros","Case teléfonos","Case audífonos","General"
 ];
 
-let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+const INVENTORY_STORAGE_KEYS = ['inventory', 'inventario'];
+const INVENTORY_EVENT_NAME = 'daymar:inventory-changed';
+const INVENTORY_CHANNEL_NAME = 'daymar-inventory';
+
+function asProductArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object') return null;
+  if (Array.isArray(value.products)) return value.products;
+  if (Array.isArray(value.productos)) return value.productos;
+  if (Array.isArray(value.inventory)) return value.inventory;
+  if (Array.isArray(value.inventario)) return value.inventario;
+  return null;
+}
+
+function readStorageArray(key) {
+  try {
+    const value = localStorage.getItem(key);
+    if (!value) return null;
+    return asProductArray(JSON.parse(value));
+  } catch (error) {
+    console.error(`No se pudo leer la clave ${key}:`, error);
+    return null;
+  }
+}
+
+function firstValue(source, ...keys) {
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null && source[key] !== '') {
+      return source[key];
+    }
+  }
+  return undefined;
+}
+
+function toNumber(value, fallback = 0) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeProduct(raw, index = 0) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const barcode = String(firstValue(source, 'barcode', 'codigoBarras', 'codigo_barra', 'ean', 'barras') ?? '').trim();
+  const codeValue = firstValue(source, 'code', 'codigo', 'sku', 'referencia', 'id', 'productId') ?? barcode;
+  const code = String(codeValue ?? `PROD-${index + 1}`).trim() || `PROD-${index + 1}`;
+
+  const explicitQuantity = firstValue(
+    source,
+    'quantity', 'cantidad', 'stock', 'existencia', 'qty', 'unidades', 'units', 'cantidadTotal'
+  );
+  const lotCount = toNumber(firstValue(
+    source,
+    'lotQuantity', 'cantidadLote', 'cantidadLotes', 'lotes', 'batches', 'batchQuantity', 'numeroLotes'
+  ), NaN);
+  const unitsPerLot = toNumber(firstValue(
+    source,
+    'unitsPerLot', 'cantidadPorLote', 'cantidadPorPaquete', 'quantityPerLot',
+    'unidadesPorLote', 'piezasPorLote', 'unidadesPorPaquete', 'unitsPerBatch', 'packSize'
+  ), NaN);
+  const explicitStockUnits = firstValue(source, 'stockUnits', 'cantidadUnidades', 'unidadesDisponibles');
+  const unitType = String(firstValue(
+    source,
+    'unitType', 'tipoUnidad', 'saleType', 'tipoVenta', 'presentation', 'presentacion', 'unidad'
+  ) ?? (Number.isFinite(lotCount) ? 'lote' : 'unidad')).trim().toLowerCase();
+
+  const numericQuantity = toNumber(explicitQuantity, NaN);
+  let quantity = toNumber(explicitStockUnits, NaN);
+  if (!Number.isFinite(quantity) && Number.isFinite(lotCount) && Number.isFinite(unitsPerLot)) {
+    quantity = lotCount * unitsPerLot;
+  } else if (!Number.isFinite(quantity) && unitType === 'lote' && Number.isFinite(numericQuantity) && Number.isFinite(unitsPerLot)) {
+    quantity = numericQuantity * unitsPerLot;
+  } else if (!Number.isFinite(quantity)) {
+    quantity = numericQuantity;
+  }
+  if (!Number.isFinite(quantity)) quantity = 0;
+
+  return {
+    ...source,
+    id: String(firstValue(source, 'id', 'productId') ?? code),
+    name: String(firstValue(source, 'name', 'nombre', 'productName', 'producto') ?? 'Producto sin nombre').trim(),
+    code,
+    barcode,
+    category: String(firstValue(source, 'category', 'categoria', 'categoría') ?? 'General').trim(),
+    price: toNumber(firstValue(source, 'price', 'precio', 'cost', 'costo'), 0),
+    discount: toNumber(firstValue(source, 'discount', 'descuento'), 0),
+    description: String(firstValue(source, 'description', 'descripcion', 'descripción') ?? '').trim(),
+    quantity: Math.max(0, Math.trunc(quantity)),
+    stockUnits: Math.max(0, Math.trunc(quantity)),
+    unitType,
+    lotCount: Number.isFinite(lotCount) ? Math.max(0, Math.trunc(lotCount)) : 0,
+    unitsPerLot: Number.isFinite(unitsPerLot) ? Math.max(0, Math.trunc(unitsPerLot)) : 0
+  };
+}
+
+function normalizeInventory(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter(item => item && typeof item === 'object')
+    .map((item, index) => normalizeProduct(item, index));
+}
+
+function loadInventory() {
+  const primary = readStorageArray('inventory');
+  const legacy = readStorageArray('inventario');
+  const selected = primary && (primary.length > 0 || !legacy || legacy.length === 0)
+    ? primary
+    : (legacy || primary || []);
+  return normalizeInventory(selected);
+}
+
+function persistInventory(list, notify = true) {
+  const normalized = normalizeInventory(list);
+  const serialized = JSON.stringify(normalized);
+
+  try {
+    localStorage.setItem('inventory', serialized);
+    localStorage.setItem('inventario', serialized);
+
+    if (notify) {
+      const detail = { source: 'inventario.html', timestamp: Date.now() };
+      window.dispatchEvent(new CustomEvent(INVENTORY_EVENT_NAME, { detail }));
+      if (window.daymarInventoryChannel) {
+        window.daymarInventoryChannel.postMessage(detail);
+      }
+    }
+  } catch (error) {
+    console.error('No se pudo guardar el inventario:', error);
+    throw error;
+  }
+
+  return normalized;
+}
+
+function refreshInventory() {
+  inventory = loadInventory();
+  doFilter();
+}
+
+window.DaymarInventory = {
+  getAll: () => normalizeInventory(inventory),
+  reload: refreshInventory,
+  saveAll: list => {
+    inventory = persistInventory(list);
+    filtered = [...inventory];
+    doFilter();
+    return normalizeInventory(inventory);
+  },
+  upsert: product => {
+    const next = [...inventory];
+    const normalized = normalizeProduct(product, next.length);
+    const position = next.findIndex(item =>
+      (normalized.id && item.id === normalized.id) ||
+      (normalized.code && item.code === normalized.code) ||
+      (normalized.barcode && item.barcode === normalized.barcode)
+    );
+    if (position === -1) next.push(normalized);
+    else next[position] = { ...next[position], ...normalized };
+    inventory = persistInventory(next);
+    filtered = [...inventory];
+    doFilter();
+    return normalized;
+  },
+  remove: identifier => {
+    const next = inventory.filter(item =>
+      item.id !== identifier && item.code !== identifier && item.barcode !== identifier
+    );
+    inventory = persistInventory(next);
+    filtered = [...inventory];
+    doFilter();
+    return normalizeInventory(inventory);
+  }
+};
+
+let inventory = loadInventory();
 let filtered   = [...inventory];
 let searchTerm = '';
 
@@ -1192,26 +1366,33 @@ document.getElementById('searchInput').addEventListener('input',doFilter);
 document.getElementById('minPrice').addEventListener('input',doFilter);
 document.getElementById('maxPrice').addEventListener('input',doFilter);
 
-window.addEventListener('storage', e => {
-  if(e.key === 'inventory'){
-    inventory = JSON.parse(e.newValue) || [];
+function applyIncomingInventory(serializedValue) {
+  try {
+    const incoming = serializedValue ? JSON.parse(serializedValue) : [];
+    inventory = normalizeInventory(incoming);
     doFilter();
+  } catch (error) {
+    console.error('Datos de inventario recibidos con formato inválido:', error);
   }
+}
+
+window.addEventListener('storage', event => {
+  if (!INVENTORY_STORAGE_KEYS.includes(event.key)) return;
+  if (event.newValue === null) refreshInventory();
+  else applyIncomingInventory(event.newValue);
 });
-window.addEventListener('storage', e => {
-  if (e.key === 'inventario') {
-    inventory = JSON.parse(e.newValue) || [];
-    localStorage.setItem('inventory', JSON.stringify(inventory));
-    doFilter();
-  }
+
+window.addEventListener(INVENTORY_EVENT_NAME, () => {
+  // Este evento permite actualizar otras vistas abiertas en el mismo documento.
+  refreshInventory();
 });
-const originalSetItem = localStorage.setItem;
-localStorage.setItem = function(key, value) {
-  originalSetItem.call(this, key, value);
-  if (key === 'inventory') {
-    originalSetItem.call(this, 'inventario', value);
-  }
-};
+
+if ('BroadcastChannel' in window) {
+  window.daymarInventoryChannel = new BroadcastChannel(INVENTORY_CHANNEL_NAME);
+  window.daymarInventoryChannel.addEventListener('message', () => refreshInventory());
+} else {
+  window.daymarInventoryChannel = null;
+}
 
 async function downloadPDF() {
   const { jsPDF } = window.jspdf;
@@ -1846,7 +2027,20 @@ async function downloadCatalogPDF() {
   pdf.save(`catalogo_productos_daymar_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-window.addEventListener('DOMContentLoaded',()=> {
+window.addEventListener('DOMContentLoaded', () => {
+  const rawPrimary = readStorageArray('inventory') || [];
+  const rawLegacy = readStorageArray('inventario') || [];
+  const source = rawPrimary.length > 0 ? rawPrimary : rawLegacy;
+  const normalized = normalizeInventory(source);
+  const normalizedJSON = JSON.stringify(normalized);
+
+  // Migra formatos antiguos y garantiza que todas las páginas lean la misma fuente.
+  if (JSON.stringify(rawPrimary) !== normalizedJSON || JSON.stringify(rawLegacy) !== normalizedJSON) {
+    persistInventory(normalized, false);
+  }
+
+  inventory = normalized;
+  filtered = [...inventory];
   doFilter();
   updateCategorySelector();
 });

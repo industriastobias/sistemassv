@@ -724,7 +724,7 @@
 
     <!-- Panel de Pedidos Pendientes (COD + Pendientes de Entrega + Pendientes de Cobro) -->
     <div class="pending-panel" id="pendingPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-icon" onclick="openGlobalPendingDeleteMenu()" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash-can"></i></button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-icon" id="globalPendingDeleteButton" onclick="openGlobalPendingDeleteMenu()" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash-can"></i></button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
 
       <div class="tabs-container">
         <button class="tab-btn active" onclick="switchPendingTab('cod')"><i class="fa-solid fa-truck"></i> Contra Entrega</button>
@@ -1592,6 +1592,7 @@ let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), c
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
 let pendingDeleteKey = null, pendingPaymentKey = null, pendingDeliveryKey = null;
 let pendingDeleteMenuState = null;
+let pendingActiveTab = 'cod';
 let currentPaymentMethod = 'cash';
 let currentEditDeliveryIndex = -1, currentEditDeliveryCode = null, currentEditDeliveryDate = null, currentEditPendingCode = null, currentEditPendingDate = null, currentEditPendingPosition = -1;
 let pendingDeliveryDeleteIndex = -1;
@@ -2899,20 +2900,30 @@ function togglePendingPanel() {
   ensureKioscoMode();
 }
 
+function updatePendingDeleteButtonLabel() {
+  const button = document.getElementById('globalPendingDeleteButton');
+  const config = PENDING_DELETE_MENU_CONFIG[pendingActiveTab];
+  if (!button || !config) return;
+  button.title = `Opciones de eliminacion: ${config.label}`;
+  button.setAttribute('aria-label', `Opciones de eliminacion: ${config.label}`);
+}
+
 function switchPendingTab(tab) {
+  pendingActiveTab = ['cod', 'delivery', 'payment'].includes(tab) ? tab : 'cod';
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-  if (tab === 'cod') {
+  if (pendingActiveTab === 'cod') {
     document.querySelectorAll('.tab-btn')[0].classList.add('active');
     document.getElementById('codTab').classList.add('active');
-  } else if (tab === 'delivery') {
+  } else if (pendingActiveTab === 'delivery') {
     document.querySelectorAll('.tab-btn')[1].classList.add('active');
     document.getElementById('deliveryTab').classList.add('active');
   } else {
     document.querySelectorAll('.tab-btn')[2].classList.add('active');
     document.getElementById('paymentTab').classList.add('active');
   }
+  updatePendingDeleteButtonLabel();
   loadPendingList();
 }
 
@@ -3168,22 +3179,31 @@ function pendingDeleteMenuRecordId(type, record, index) {
 }
 
 function openGlobalPendingDeleteMenu() {
+  const config = PENDING_DELETE_MENU_CONFIG[pendingActiveTab];
+  if (!config) return;
+  const records = readStorageArray(config.key).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const options = [];
-  Object.entries(PENDING_DELETE_MENU_CONFIG).forEach(([type, config]) => {
-    const records = readStorageArray(config.key).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    records.forEach((record, index) => {
-      const completed = pendingRecordIsCompleted(type, record);
-      const label = pendingDeleteMenuRecordLabel(type, record);
-      const identity = encodeURIComponent(JSON.stringify({ type, code: String(record.code ?? ''), date: String(record.date ?? ''), completed }));
-      options.push(`<button type="button" class="pending-delete-option" data-delete-record-id="${pendingDeleteMenuRecordId(type, record, index)}" onclick="selectGlobalPendingDeleteOption('${identity}')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>${config.label}: ${record.name || 'Registro'}</strong><small>${label}${record.clientName ? ` · Cliente: ${record.clientName}` : ''} · ${record.date ? new Date(record.date).toLocaleDateString('es-ES') : 'Sin fecha'}${completed ? ' · No devuelve stock' : ' · Devuelve stock'}</small></span></button>`);
-    });
+
+  options.push(`<button type="button" class="pending-delete-option pending-delete-history-option" onclick="selectActivePendingHistoryOption()"><span class="option-icon"><i class="fa-solid fa-layer-group"></i></span><span class="option-copy"><strong>Eliminar historial de ${config.label}</strong><small>Vacía únicamente esta lista. No devuelve stock ni modifica el historial de ventas.</small></span></button>`);
+
+  records.forEach((record, index) => {
+    const completed = pendingRecordIsCompleted(pendingActiveTab, record);
+    const label = pendingDeleteMenuRecordLabel(pendingActiveTab, record);
+    const identity = encodeURIComponent(JSON.stringify({ type: pendingActiveTab, code: String(record.code ?? ''), date: String(record.date ?? ''), completed }));
+    options.push(`<button type="button" class="pending-delete-option" data-delete-record-id="${pendingDeleteMenuRecordId(pendingActiveTab, record, index)}" onclick="selectGlobalPendingDeleteOption('${identity}')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>${record.name || 'Registro'}</strong><small>${label}${record.clientName ? ` · Cliente: ${record.clientName}` : ''} · ${record.date ? new Date(record.date).toLocaleDateString('es-ES') : 'Sin fecha'}${completed ? ' · No devuelve stock' : ' · Devuelve stock'}</small></span></button>`);
   });
 
-  document.getElementById('pendingDeleteMenuTitle').innerHTML = '<i class="fa-solid fa-trash-can"></i> Seleccionar registro para eliminar';
-  document.getElementById('pendingDeleteMenuContext').textContent = options.length ? 'Selecciona un registro. Después se solicitará la contraseña para confirmar la eliminación.' : 'No hay registros disponibles para eliminar.';
-  document.getElementById('pendingDeleteMenuOptions').innerHTML = options.length ? options.join('') : '<div style="padding:1rem;text-align:center;color:var(--text-secondary);">No hay pedidos pendientes ni registros completados en estas listas.</div>';
+  document.getElementById('pendingDeleteMenuTitle').innerHTML = `<i class="fa-solid fa-trash-can"></i> ${config.label}`;
+  document.getElementById('pendingDeleteMenuContext').textContent = `Solo se muestran registros de ${config.label}, porque es la pestaña activa.`;
+  document.getElementById('pendingDeleteMenuOptions').innerHTML = options.join('');
   document.getElementById('pendingDeleteMenuModal').classList.add('active');
   ensureKioscoMode();
+}
+
+function selectActivePendingHistoryOption() {
+  pendingHistorySelection = pendingActiveTab;
+  closePendingDeleteMenu(false);
+  requestPassword('deletePendingHistory', -1);
 }
 
 function closePendingDeleteMenu(clearState = true) {
@@ -3403,17 +3423,20 @@ function confirmPendingHistorySelection() {
 }
 
 function executeDeletePendingHistory() {
-  const selection = pendingHistorySelection;
+  const selection = pendingHistorySelection || pendingActiveTab;
   pendingHistorySelection = null;
-  const keys = selection === 'cod' ? ['pendingInventory'] : selection === 'delivery' ? ['pendingDeliveryInventory'] : selection === 'payment' ? ['pendingPaymentInventory'] : ['pendingInventory', 'pendingDeliveryInventory', 'pendingPaymentInventory'];
-  const labels = { cod: 'Contra Entrega', delivery: 'Pendientes de Entrega', payment: 'Pendientes de Cobro', all: 'todas las listas' };
-  const total = keys.reduce((sum, key) => sum + JSON.parse(localStorage.getItem(key) || '[]').length, 0);
-  if (!total) { showNotification(`No hay pedidos en ${labels[selection] || 'la selección'}`, 'warning'); return; }
-  if (!confirm(`¿Eliminar ${total} pedido(s) de ${labels[selection]}? El stock NO será devuelto.`)) return;
-  keys.forEach(key => localStorage.setItem(key, '[]'));
+  const config = PENDING_DELETE_MENU_CONFIG[selection];
+  if (!config) return;
+  const records = readStorageArray(config.key);
+  if (!records.length) {
+    showNotification(`No hay registros en ${config.label}`, 'warning');
+    return;
+  }
+  if (!confirm(`¿Eliminar ${records.length} registro(s) de ${config.label}? El stock NO será devuelto.`)) return;
+  writeStorageArray(config.key, []);
   loadPendingList();
   updateStats();
-  showNotification(`Historial eliminado: ${labels[selection]}. El stock no fue devuelto.`, 'success');
+  showNotification(`Historial eliminado únicamente de ${config.label}. El stock no fue devuelto.`, 'success');
 }
 
 function executeDeleteAllDeliveryPending() {

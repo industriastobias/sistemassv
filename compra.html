@@ -6,6 +6,7 @@
   <title>Gestión de Inventario</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="daymar-inventory-sync.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2812,8 +2813,21 @@
         </div>
         
         <div class="form-group">
-          <label>Stock Inicial *</label>
-          <input type="number" id="quantity" name="quantity" required placeholder="0">
+          <label id="quantityLabel">Stock Inicial *</label>
+          <input type="number" id="quantity" name="quantity" required placeholder="0" min="0" step="1">
+          <small id="quantityHelp" style="color: var(--text-secondary);">Unidades disponibles.</small>
+        </div>
+
+        <div class="form-group" id="lotQuantityGroup" style="display: none;">
+          <label>Cantidad de lotes *</label>
+          <input type="number" id="lotQuantity" name="lotQuantity" min="0" step="1" placeholder="0">
+          <small style="color: var(--text-secondary);">Número de lotes comprados.</small>
+        </div>
+
+        <div class="form-group" id="unitsPerLotGroup" style="display: none;">
+          <label>Unidades por lote *</label>
+          <input type="number" id="unitsPerLot" name="unitsPerLot" min="1" step="1" placeholder="0">
+          <small style="color: var(--text-secondary);">Piezas contenidas en cada lote.</small>
         </div>
         
         <div class="form-group full-width">
@@ -3165,9 +3179,33 @@ async function generateAndSaveThumbnail(code, originalBlob) {
 // ============================================
 // VARIABLES GLOBALES
 // ============================================
-let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-let trash = JSON.parse(localStorage.getItem('trash')) || [];
+let inventory = DaymarInventorySync.getAll();
+let trash = JSON.parse(localStorage.getItem('trash') || '[]');
 let editIndex = -1;
+
+function guardarInventarioCentral(nextInventory = inventory) {
+  inventory = DaymarInventorySync.saveAll(nextInventory);
+  return inventory;
+}
+
+function recargarInventarioCentral() {
+  inventory = DaymarInventorySync.reload();
+  renderTable();
+  calculateTotal();
+  actualizarSelectoresCategorias();
+  aplicarFiltros();
+  return inventory;
+}
+
+DaymarInventorySync.subscribe(nextInventory => {
+  inventory = nextInventory;
+  if (document.getElementById('inventoryList')) {
+    renderTable();
+    calculateTotal();
+    actualizarSelectoresCategorias();
+    aplicarFiltros();
+  }
+});
 let loteTemporal = [];
 let fechaActualGlobal = new Date().toISOString().split('T')[0];
 let autoguardadoInterval;
@@ -3236,7 +3274,7 @@ function confirmarRegenerarCodigos() {
   cerrarModalRegenerar();
   setTimeout(() => {
     inventory.forEach(item => { item.barcode = generarCodigoBarras().toString(); });
-    localStorage.setItem('inventory', JSON.stringify(inventory));
+    guardarInventarioCentral(inventory);
     renderTable();
     document.getElementById('loadingOverlay').classList.remove('show');
     showToast('Codigos regenerados', 'success');
@@ -3410,7 +3448,7 @@ function confirmarEliminarStock() {
       cont++; 
     } 
   } 
-  localStorage.setItem('inventory', JSON.stringify(inventory)); 
+  guardarInventarioCentral(inventory); 
   localStorage.setItem('trash', JSON.stringify(trash)); 
   cerrarModalEliminarStock(); 
   renderTable(); 
@@ -3428,10 +3466,47 @@ document.addEventListener('click', e => {
   if (e.target === document.getElementById('eliminarStockModal')) cerrarModalEliminarStock(); 
 });
 
-function switchTab(type, btn) { 
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); 
-  btn.classList.add('active'); 
+function actualizarStockLote() {
+  const lotQuantity = Math.max(0, Math.trunc(Number(document.getElementById('lotQuantity')?.value) || 0));
+  const unitsPerLot = Math.max(0, Math.trunc(Number(document.getElementById('unitsPerLot')?.value) || 0));
+  const quantity = document.getElementById('quantity');
+  if (quantity) quantity.value = lotQuantity > 0 && unitsPerLot > 0 ? lotQuantity * unitsPerLot : '';
 }
+
+function switchTab(type, btn) {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+    tab.dataset.type = tab.textContent.toLowerCase().includes('lote') ? 'lote' : 'normal';
+  });
+  btn.classList.add('active');
+  btn.dataset.type = type;
+
+  const esLote = type === 'lote';
+  const quantity = document.getElementById('quantity');
+  const quantityLabel = document.getElementById('quantityLabel');
+  const quantityHelp = document.getElementById('quantityHelp');
+  const lotQuantityGroup = document.getElementById('lotQuantityGroup');
+  const unitsPerLotGroup = document.getElementById('unitsPerLotGroup');
+  const lotQuantity = document.getElementById('lotQuantity');
+  const unitsPerLot = document.getElementById('unitsPerLot');
+
+  lotQuantityGroup.style.display = esLote ? 'flex' : 'none';
+  unitsPerLotGroup.style.display = esLote ? 'flex' : 'none';
+  lotQuantity.required = esLote;
+  unitsPerLot.required = esLote;
+  quantity.readOnly = esLote;
+  quantityLabel.textContent = esLote ? 'Stock total calculado *' : 'Stock Inicial *';
+  quantityHelp.textContent = esLote ? 'Cantidad de lotes × unidades por lote.' : 'Unidades disponibles.';
+
+  if (esLote) actualizarStockLote();
+  else {
+    lotQuantity.value = '';
+    unitsPerLot.value = '';
+  }
+}
+
+document.getElementById('lotQuantity')?.addEventListener('input', actualizarStockLote);
+document.getElementById('unitsPerLot')?.addEventListener('input', actualizarStockLote);
 
 // ============================================
 // ATAJOS DE TECLADO
@@ -3535,7 +3610,10 @@ function guardarBorrador() {
     valorReal: document.getElementById('valorReal').value, 
     fechaCompra: document.getElementById('fechaCompra').value, 
     discount: document.getElementById('discount').value, 
-    quantity: document.getElementById('quantity').value, 
+    quantity: document.getElementById('quantity').value,
+    lotQuantity: document.getElementById('lotQuantity').value,
+    unitsPerLot: document.getElementById('unitsPerLot').value,
+    unitType: document.querySelector('.tab.active')?.dataset.type || 'normal',
     description: document.getElementById('description').value, 
     category: document.getElementById('category').value, 
     timestamp: new Date().toISOString() 
@@ -3562,7 +3640,14 @@ function recuperarBorrador() {
   document.getElementById('valorReal').value = b.valorReal || ''; 
   document.getElementById('fechaCompra').value = b.fechaCompra || fechaActualGlobal; 
   document.getElementById('discount').value = b.discount || '0'; 
-  document.getElementById('quantity').value = b.quantity || ''; 
+  document.getElementById('quantity').value = b.quantity || '';
+  document.getElementById('lotQuantity').value = b.lotQuantity || '';
+  document.getElementById('unitsPerLot').value = b.unitsPerLot || '';
+  const draftTab = [...document.querySelectorAll('.tab')].find(tab =>
+    b.unitType === 'lote' ? tab.textContent.toLowerCase().includes('lote') : !tab.textContent.toLowerCase().includes('lote')
+  );
+  if (draftTab) switchTab(b.unitType === 'lote' ? 'lote' : 'normal', draftTab);
+  if (b.unitType === 'lote') actualizarStockLote();
   document.getElementById('description').value = b.description || ''; 
   document.getElementById('category').value = b.category || ''; 
   if (b.barcode) generarBarcode(b.barcode); 
@@ -3699,21 +3784,43 @@ async function previewImage(evt) {
 // ============================================
 document.getElementById('purchaseForm').addEventListener('submit', async function(e) { 
   e.preventDefault(); 
-  const form = new FormData(e.target); 
-  const esLote = document.querySelector('.tab.active').textContent.includes('Lote'); 
-  const item = { 
-    name: form.get('name') || '', 
-    code: form.get('code') || '', 
-    barcode: form.get('barcode') || '', 
-    price: Number(form.get('price')) || 0, 
-    valorReal: Number(form.get('valorReal')) || 0, 
-    fechaCompra: form.get('fechaCompra') || '', 
-    discount: Number(form.get('discount')) || 0, 
-    quantity: Number(form.get('quantity')) || 0, 
-    description: form.get('description') || '', 
-    category: form.get('category') || '', 
-    addedAt: new Date().toLocaleString('es-ES'), 
-    tipoCompra: esLote ? 'lote' : 'normal' 
+  const form = new FormData(e.target);
+  const esLote = document.querySelector('.tab.active').dataset.type === 'lote' ||
+    document.querySelector('.tab.active').textContent.toLowerCase().includes('lote');
+  const lotQuantity = esLote ? Math.max(0, Math.trunc(Number(form.get('lotQuantity')) || 0)) : 0;
+  const unitsPerLot = esLote ? Math.max(0, Math.trunc(Number(form.get('unitsPerLot')) || 0)) : 0;
+  const unitQuantity = Math.max(0, Math.trunc(Number(form.get('quantity')) || 0));
+  const stockUnits = esLote ? lotQuantity * unitsPerLot : unitQuantity;
+  const previous = editIndex >= 0 ? inventory[editIndex] : null;
+
+  if (esLote && (lotQuantity < 1 || unitsPerLot < 1)) {
+    showToast('Indica la cantidad de lotes y las unidades por lote', 'warning');
+    return;
+  }
+  if (!esLote && unitQuantity < 1) {
+    showToast('La cantidad de unidades debe ser mayor que cero', 'warning');
+    return;
+  }
+
+  const item = {
+    id: previous?.id || (crypto.randomUUID ? crypto.randomUUID() : `prod-${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    name: String(form.get('name') || '').trim(),
+    code: String(form.get('code') || '').trim(),
+    barcode: String(form.get('barcode') || '').trim(),
+    price: Number(form.get('price')) || 0,
+    valorReal: Number(form.get('valorReal')) || 0,
+    fechaCompra: form.get('fechaCompra') || '',
+    discount: Number(form.get('discount')) || 0,
+    quantity: stockUnits,
+    stockUnits,
+    unitType: esLote ? 'lote' : 'unidad',
+    lotCount: lotQuantity,
+    unitsPerLot,
+    lotQuantity,
+    description: String(form.get('description') || '').trim(),
+    category: String(form.get('category') || '').trim(),
+    addedAt: new Date().toISOString(),
+    tipoCompra: esLote ? 'lote' : 'normal'
   }; 
   
   if (!validarAntesDeGuardar(item)) return; 
@@ -3726,9 +3833,18 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
       if (exists) { 
         if (!confirm('Codigo existe. Sumar stock?')) {
           item.code = `${item.code}_${Date.now().toString().slice(-4)}`; 
-        } else { 
-          exists.quantity = Number(exists.quantity) + Number(item.quantity); 
-          localStorage.setItem('inventory', JSON.stringify(inventory)); 
+        } else {
+          const previousQuantity = Number(exists.quantity) || 0;
+          const previousStockUnits = Number(exists.stockUnits ?? previousQuantity) || 0;
+          exists.quantity = previousQuantity + Number(item.quantity);
+          exists.stockUnits = previousStockUnits + Number(item.stockUnits);
+          if (item.unitType === 'lote') {
+            exists.unitType = 'lote';
+            exists.lotCount = Number(exists.lotCount || 0) + Number(item.lotCount || 0);
+            exists.lotQuantity = exists.lotCount;
+            exists.unitsPerLot = Number(exists.unitsPerLot || item.unitsPerLot || 0);
+          }
+          guardarInventarioCentral(inventory); 
           
           // Guardar imagen comprimida si existe
           if (imagenComprimidaTemp) {
@@ -3748,7 +3864,7 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
       editIndex = -1; 
     } 
     
-    localStorage.setItem('inventory', JSON.stringify(inventory)); 
+    guardarInventarioCentral(inventory); 
     
     // Usar la imagen ya comprimida en lugar de volver a comprimir
     if (imagenComprimidaTemp) {
@@ -3775,7 +3891,9 @@ function finalizarGuardado(form) {
   document.getElementById('btnSubmitText').textContent = 'Guardar Producto'; 
   document.getElementById('code').readOnly = false; 
   document.getElementById('code').style.background = ''; 
-  document.getElementById('fechaCompra').value = fechaActualGlobal; 
+  document.getElementById('fechaCompra').value = fechaActualGlobal;
+  const tabNormal = [...document.querySelectorAll('.tab')].find(tab => !tab.textContent.toLowerCase().includes('lote'));
+  if (tabNormal) switchTab('normal', tabNormal);
   localStorage.removeItem('draftProduct'); 
   document.getElementById('recoveryBanner').style.display = 'none'; 
   imagenComprimidaTemp = null;
@@ -3798,7 +3916,9 @@ function resetForm() {
   document.getElementById('btnSubmitText').textContent = 'Guardar Producto'; 
   document.getElementById('code').readOnly = false; 
   document.getElementById('code').style.background = ''; 
-  document.getElementById('fechaCompra').value = fechaActualGlobal; 
+  document.getElementById('fechaCompra').value = fechaActualGlobal;
+  const tabNormal = [...document.querySelectorAll('.tab')].find(tab => !tab.textContent.toLowerCase().includes('lote'));
+  if (tabNormal) switchTab('normal', tabNormal);
   imagenComprimidaTemp = null;
 }
 
@@ -3895,8 +4015,19 @@ function editProduct(idx) {
   document.getElementById('price').value = p.price; 
   document.getElementById('valorReal').value = p.valorReal || ''; 
   document.getElementById('fechaCompra').value = p.fechaCompra || ''; 
-  document.getElementById('discount').value = p.discount; 
-  document.getElementById('quantity').value = p.quantity; 
+  document.getElementById('discount').value = p.discount;
+  document.getElementById('quantity').value = p.quantity;
+  const esLote = p.unitType === 'lote' ||
+    (p.tipoCompra === 'lote' && Number(p.lotCount || p.lotQuantity || 0) > 0);
+  const tab = [...document.querySelectorAll('.tab')].find(button =>
+    esLote ? button.textContent.toLowerCase().includes('lote') : !button.textContent.toLowerCase().includes('lote')
+  );
+  if (tab) switchTab(esLote ? 'lote' : 'normal', tab);
+  if (esLote) {
+    document.getElementById('lotQuantity').value = p.lotCount || p.lotQuantity || 0;
+    document.getElementById('unitsPerLot').value = p.unitsPerLot || 0;
+    actualizarStockLote();
+  }
   document.getElementById('description').value = p.description; 
   document.getElementById('category').value = p.category; 
   calcularSugerencia(); 
@@ -3923,7 +4054,7 @@ function moverAPapelera(idx) {
   trash.push({ ...producto, deletedAt: new Date().toISOString() }); 
   localStorage.setItem('trash', JSON.stringify(trash)); 
   inventory.splice(idx, 1); 
-  localStorage.setItem('inventory', JSON.stringify(inventory)); 
+  guardarInventarioCentral(inventory); 
   renderTable(); 
   calculateTotal(); 
   showToast('Producto movido a papelera', 'warning'); 
@@ -3974,7 +4105,7 @@ function restaurarDePapelera(idx) {
   const item = trash[idx]; 
   delete item.deletedAt; 
   inventory.push(item); 
-  localStorage.setItem('inventory', JSON.stringify(inventory)); 
+  guardarInventarioCentral(inventory); 
   trash.splice(idx, 1); 
   localStorage.setItem('trash', JSON.stringify(trash)); 
   renderizarPapelera(); 
@@ -4028,7 +4159,7 @@ function vaciarInventario() {
     localforage.removeItem(`img_thumb_${p.code}`);
   }); 
   inventory = []; 
-  localStorage.setItem('inventory', JSON.stringify(inventory)); 
+  guardarInventarioCentral(inventory); 
   renderTable(); 
   calculateTotal(); 
   closeBulkModal(); 
@@ -4102,19 +4233,24 @@ async function procesarLote() {
       // Generar y guardar thumbnail
       await generateAndSaveThumbnail(codigo, compressedBlob);
       
-      loteTemporal.push({ 
-        name: '', 
-        code: codigo, 
-        barcode: barcode, 
-        price: 0, 
-        valorReal: 0, 
-        fechaCompra: fechaActualGlobal, 
-        discount: 0, 
-        quantity: 0, 
-        description: '', 
-        category: '', 
-        addedAt: new Date().toLocaleString('es-ES'), 
-        tipoCompra: 'lote' 
+      loteTemporal.push({
+        id: (crypto.randomUUID ? crypto.randomUUID() : `lote-${Date.now()}-${i}`),
+        name: '',
+        code: codigo,
+        barcode,
+        price: 0,
+        valorReal: 0,
+        fechaCompra: fechaActualGlobal,
+        discount: 0,
+        quantity: 0,
+        stockUnits: 0,
+        unitType: 'unidad',
+        lotCount: 0,
+        unitsPerLot: 0,
+        description: '',
+        category: '',
+        addedAt: new Date().toISOString(),
+        tipoCompra: 'lote'
       });
       
       // Liberar URL de objeto despues de un tiempo
@@ -4309,15 +4445,25 @@ function calcSugLote(i) {
 function guardarLoteCompleto() { 
   if (!confirm(`Guardar ${loteTemporal.length} productos?`)) return; 
   
-  for (let i = 0; i < loteTemporal.length; i++) { 
-    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0, 
-          precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0, 
-          fecha = document.getElementById(`loteFecha${i}`).value; 
-    if (costo > precio && !confirm(`Producto ${i + 1}: costo>precio. Continuar?`)) return; 
-    if (fecha > new Date().toISOString().slice(0, 10)) { 
-      alert(`Producto ${i + 1}: fecha futura`); 
-      return; 
-    } 
+  for (let i = 0; i < loteTemporal.length; i++) {
+    const nombre = document.getElementById(`loteName${i}`).value.trim();
+    const barcode = document.getElementById(`loteBarcode${i}`).value.trim();
+    const costo = parseFloat(document.getElementById(`loteValorReal${i}`).value) || 0;
+    const precio = parseFloat(document.getElementById(`lotePrice${i}`).value) || 0;
+    const quantity = Math.trunc(Number(document.getElementById(`loteQuantity${i}`).value) || 0);
+    const fecha = document.getElementById(`loteFecha${i}`).value;
+    const description = document.getElementById(`loteDescription${i}`).value.trim();
+    const category = document.getElementById(`loteCategory${i}`).value;
+
+    if (!nombre || !barcode || precio <= 0 || quantity < 1 || !fecha || !description || !category) {
+      alert(`Completa nombre, precio, stock, código de barras, fecha, descripción y categoría del producto ${i + 1}.`);
+      return;
+    }
+    if (costo > precio && !confirm(`Producto ${i + 1}: costo>precio. Continuar?`)) return;
+    if (fecha > new Date().toISOString().slice(0, 10)) {
+      alert(`Producto ${i + 1}: fecha futura`);
+      return;
+    }
   } 
   
   document.getElementById('loadingOverlay').classList.add('show'); 
@@ -4329,13 +4475,14 @@ function guardarLoteCompleto() {
       p.price = Number(document.getElementById(`lotePrice${i}`).value) || 0; 
       p.valorReal = Number(document.getElementById(`loteValorReal${i}`).value) || 0; 
       p.fechaCompra = document.getElementById(`loteFecha${i}`).value; 
-      p.quantity = Number(document.getElementById(`loteQuantity${i}`).value) || 0; 
+      p.quantity = Math.max(0, Math.trunc(Number(document.getElementById(`loteQuantity${i}`).value) || 0));
+      p.stockUnits = p.quantity;
       p.description = document.getElementById(`loteDescription${i}`).value.trim(); 
       p.category = document.getElementById(`loteCategory${i}`).value; 
     }); 
     
     inventory = inventory.concat(loteTemporal); 
-    localStorage.setItem('inventory', JSON.stringify(inventory)); 
+    guardarInventarioCentral(inventory); 
     localStorage.removeItem('loteTemporalData'); 
     loteTemporal = []; 
     
@@ -4474,9 +4621,10 @@ async function importFromZip(evt) {
     const json = zip.file('inventory.json'); 
     if (!json) { showToast('ZIP no valido', 'error'); return; } 
     
-    const imported = JSON.parse(await json.async('string')); 
+    const imported = JSON.parse(await json.async('string'));
+    const importedProducts = DaymarInventorySync.normalizeList(imported); 
     
-    for (const p of imported) { 
+    for (const p of importedProducts) { 
       const img = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`); 
       if (img) { 
         const blob = await img.async('blob'); 
@@ -4485,11 +4633,23 @@ async function importFromZip(evt) {
         await generateAndSaveThumbnail(p.code, blob);
       } 
       const idx = inventory.findIndex(x => x.code === p.code); 
-      if (idx > -1) inventory[idx].quantity += Number(p.quantity || 0); 
-      else inventory.push({ ...p, price: Number(p.price) || 0, quantity: Number(p.quantity) || 0, discount: Number(p.discount) || 0 }); 
+      if (idx > -1) {
+        const previousQuantity = Number(inventory[idx].quantity) || 0;
+        const previousStockUnits = Number(inventory[idx].stockUnits ?? previousQuantity) || 0;
+        inventory[idx].quantity = previousQuantity + Number(p.quantity || 0);
+        inventory[idx].stockUnits = previousStockUnits + Number(p.stockUnits ?? p.quantity ?? 0);
+        if (p.unitType === 'lote') {
+          inventory[idx].unitType = 'lote';
+          inventory[idx].lotCount = Number(inventory[idx].lotCount || 0) + Number(p.lotCount || 0);
+          inventory[idx].lotQuantity = inventory[idx].lotCount;
+          inventory[idx].unitsPerLot = Number(inventory[idx].unitsPerLot || p.unitsPerLot || 0);
+        }
+      } else {
+        inventory.push(p);
+      }
     } 
     
-    localStorage.setItem('inventory', JSON.stringify(inventory)); 
+    guardarInventarioCentral(inventory); 
     renderTable(); 
     calculateTotal(); 
     showToast('Importacion completada', 'success'); 

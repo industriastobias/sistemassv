@@ -11,6 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js     "></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js     "></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js     "></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -1377,6 +1378,7 @@
         </div>
         <div class="payment-confirm-actions">
           <button class="btn btn-primary" onclick="copyPaymentReminder()"><i class="fa-solid fa-copy"></i> Copiar datos</button>
+          <button type="button" id="copyPaymentReminderImageButton" class="btn btn-orange" onclick="copyPaymentReminderImage()" title="Copiar el recordatorio completo como imagen"><i class="fa-solid fa-image"></i> COPIAR IMAGEN</button>
           <button class="btn" onclick="closePaymentReminderModal()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
         </div>
       </div>
@@ -3738,7 +3740,7 @@ function copyPaymentReminder() {
     `Precio Original: ${getValue('paymentReminderOriginalPrice')}`,
     `Saldo Pendiente: ${getValue('paymentReminderPendingAmount')}`,
     `Pendiente desde: ${getValue('paymentReminderDate')}`
-  ].join('\\n');
+  ].join('\n');
 
   const copied = () => showNotification('Datos del recordatorio copiados', 'success');
   const fallbackCopy = () => {
@@ -3759,6 +3761,43 @@ function copyPaymentReminder() {
     navigator.clipboard.writeText(text).then(copied).catch(fallbackCopy);
   } else {
     fallbackCopy();
+  }
+}
+
+async function copyPaymentReminderImage() {
+  const modal = document.querySelector('#paymentReminderModal .payment-confirm-modal');
+  const actions = modal?.querySelector('.payment-confirm-actions');
+  if (!modal) { showNotification('No se encontró el recordatorio', 'error'); return; }
+  if (typeof html2canvas !== 'function') { showNotification('No se pudo cargar la función para copiar la imagen', 'error'); return; }
+
+  const previousDisplay = actions ? actions.style.display : '';
+  try {
+    if (actions) actions.style.display = 'none';
+    const canvas = await html2canvas(modal, {
+      backgroundColor: '#ffffff',
+      scale: Math.max(2, window.devicePixelRatio || 1),
+      useCORS: true,
+      logging: false
+    });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('No se pudo generar la imagen');
+
+    if (navigator.clipboard && window.ClipboardItem && window.isSecureContext) {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showNotification('Imagen del recordatorio copiada', 'success');
+    } else {
+      const link = document.createElement('a');
+      link.download = 'recordatorio-pago-pendiente.png';
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      showNotification('La imagen fue descargada; puedes pegarla o compartirla', 'warning');
+    }
+  } catch (error) {
+    console.error('Error al copiar imagen del recordatorio:', error);
+    showNotification('No se pudo copiar la imagen del recordatorio', 'error');
+  } finally {
+    if (actions) actions.style.display = previousDisplay;
   }
 }
 

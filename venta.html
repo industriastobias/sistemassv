@@ -600,6 +600,19 @@
       margin-top: 4px;
     }
 
+    .discount-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--rose-soft);
+      color: var(--rose-text);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
     .cards-grid.list-view .card-price {
       margin-top: 0;
       min-width: 80px;
@@ -1793,6 +1806,27 @@
   let filteredInventoryCacheKey = '';
   const dom = {};
 
+  // Importa los productos que almacenamiento.html dejó preparados para venta.html.
+  function importarProductosDesdeAlmacenamiento() {
+    const queued = safeJSONParse(localStorage.getItem('fastSaleProducts'), []);
+    if (!Array.isArray(queued) || queued.length === 0) return;
+
+    queued.forEach(item => {
+      soldInventory.push({
+        ...item,
+        discount: Number(item.discount) || 0,
+        saleType: item.saleType || 'immediate',
+        status: item.status || 'paid',
+        soldAt: item.soldAt || item.date || new Date().toISOString()
+      });
+    });
+
+    localStorage.setItem('soldInventory', JSON.stringify(soldInventory));
+    localStorage.removeItem('fastSaleProducts');
+  }
+
+  importarProductosDesdeAlmacenamiento();
+
   // ========== FUNCIONES AUXILIARES ==========
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
   function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
@@ -2170,6 +2204,15 @@
     cardTitle.className = 'card-title';
     cardTitle.textContent = item.name || '';
     cardContent.appendChild(cardTitle);
+
+    const discount = Number(item.discount) || 0;
+    if (discount > 0) {
+      const discountBadge = document.createElement('span');
+      discountBadge.className = 'discount-badge';
+      discountBadge.innerHTML = '<i class="fa-solid fa-percent"></i> ' + discount + '% de descuento';
+      cardContent.appendChild(discountBadge);
+    }
+
     if (item.barcode) {
       const cardBarcode = document.createElement('div');
       cardBarcode.className = 'card-barcode';

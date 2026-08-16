@@ -1756,7 +1756,13 @@ function updateCategories() {
 function updateStats() { 
   const total = inventory.length, 
         lowStock = inventory.filter(i => (i.quantity || 0) <= (i.stockMin || 0)).length, 
-        totalValue = inventory.reduce((sum, i) => sum + ((i.price || 0) * (i.quantity || 0)), 0); 
+        totalValue = inventory.reduce((sum, i) => {
+          const price = Number(i.price) || 0;
+          const quantity = Number(i.quantity) || 0;
+          const discount = Number(i.discount) || 0;
+          const finalPrice = price * (1 - discount / 100);
+          return sum + (finalPrice * quantity);
+        }, 0); 
   document.getElementById('totalProducts').textContent = total; 
   document.getElementById('totalValue').textContent = formatCurrency(totalValue); 
   const lowBadge = document.getElementById('lowStockBadge'); 
@@ -4608,7 +4614,13 @@ function toggleFixedTotalModal() {
 function updateFixedTotal() {
   const totalAmount = document.getElementById('fixedTotalAmount');
   if (!totalAmount) return;
-  const totalValue = inventory.reduce((sum, i) => sum + ((i.price || 0) * (i.quantity || 0)), 0);
+  const totalValue = inventory.reduce((sum, i) => {
+    const price = Number(i.price) || 0;
+    const quantity = Number(i.quantity) || 0;
+    const discount = Number(i.discount) || 0;
+    const finalPrice = price * (1 - discount / 100);
+    return sum + (finalPrice * quantity);
+  }, 0);
   totalAmount.textContent = formatCurrency(totalValue);
 }
 

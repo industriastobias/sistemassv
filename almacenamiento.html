@@ -724,7 +724,7 @@
 
     <!-- Panel de Pedidos Pendientes (COD + Pendientes de Entrega + Pendientes de Cobro) -->
     <div class="pending-panel" id="pendingPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-sm" onclick="selectPendingHistoryToDelete()" title="Seleccionar historial para limpiar sin devolver stock"><i class="fa-solid fa-trash-can"></i> Limpiar historial</button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap;"><h3><i class="fa-solid fa-truck-fast"></i> Pedidos Pendientes</h3><div style="display:flex;gap:0.5rem;align-items:center;"><button class="btn btn-danger btn-icon" onclick="openGlobalPendingDeleteMenu()" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash-can"></i></button><button class="btn" onclick="togglePendingPanel()"><i class="fa-solid fa-arrow-left"></i> Volver</button></div></div>
 
       <div class="tabs-container">
         <button class="tab-btn active" onclick="switchPendingTab('cod')"><i class="fa-solid fa-truck"></i> Contra Entrega</button>
@@ -2954,7 +2954,7 @@ async function loadPendingList() {
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
           <td><strong style="color:var(--success);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
-          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModalByPosition(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('cod', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button></div></td>
+          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModalByPosition(${idx})"><i class="fa-solid fa-pen"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
@@ -2999,7 +2999,6 @@ async function loadPendingList() {
           <td><strong style="color:var(--purple);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
           <td><div class="cell-actions">
             ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
-            <button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('delivery', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button>
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3042,7 +3041,7 @@ async function loadPendingList() {
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
           <td><strong style="color:#f97316;">${formatCurrency(p.pendingAmount)}</strong></td>
           <td><div class="cell-actions">
-            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm" onclick="openPaymentReminderModal('${p.code}', '${p.date}')" title="Recordatorio de Pago Pendiente" aria-label="Recordatorio de Pago Pendiente"><i class="fa-solid fa-bell"></i></button><button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}<button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('payment', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button>
+            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm" onclick="openPaymentReminderModal('${p.code}', '${p.date}')" title="Recordatorio de Pago Pendiente" aria-label="Recordatorio de Pago Pendiente"><i class="fa-solid fa-bell"></i></button><button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3164,23 +3163,25 @@ function pendingDeleteMenuRecordLabel(type, record) {
   return type === 'cod' ? 'Pedido COD pendiente' : type === 'delivery' ? 'Entrega pendiente' : 'Cobro parcial pendiente';
 }
 
-function openPendingDeleteMenu(type, code, date) {
-  const config = PENDING_DELETE_MENU_CONFIG[type];
-  if (!config) return;
-  const records = readStorageArray(config.key);
-  const record = records.find(item => String(item.code ?? '') === String(code ?? '') && String(item.date ?? '') === String(date ?? ''));
-  if (!record) {
-    showNotification('El registro ya no esta disponible', 'error');
-    return;
-  }
+function pendingDeleteMenuRecordId(type, record, index) {
+  return `${type}-${index}-${String(record.code ?? '').replace(/[^a-zA-Z0-9_-]/g, '')}-${String(record.date ?? '').replace(/[^a-zA-Z0-9_-]/g, '')}`;
+}
 
-  const completed = pendingRecordIsCompleted(type, record);
-  pendingDeleteMenuState = { type, code: String(code ?? ''), date: String(date ?? ''), completed };
-  document.getElementById('pendingDeleteMenuTitle').innerHTML = `<i class="fa-solid fa-trash-can"></i> Opciones de ${config.label}`;
-  document.getElementById('pendingDeleteMenuContext').textContent = `${record.name || 'Registro'} · ${pendingDeleteMenuRecordLabel(type, record)}${record.clientName ? ` · Cliente: ${record.clientName}` : ''}`;
-  document.getElementById('pendingDeleteMenuOptions').innerHTML = completed
-    ? `<button type="button" class="pending-delete-option" onclick="selectPendingDeleteMenuOption('deletePendingMenuRecord')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>Eliminar de esta lista</strong><small>El registro ya esta completado. No se devolvera stock ni se modificara el historial de ventas.</small></span></button>`
-    : `<button type="button" class="pending-delete-option" onclick="selectPendingDeleteMenuOption('deletePendingMenuRecord')"><span class="option-icon"><i class="fa-solid fa-box-archive"></i></span><span class="option-copy"><strong>Eliminar y devolver stock</strong><small>Quita solo este registro y devuelve su cantidad al inventario.</small></span></button>`;
+function openGlobalPendingDeleteMenu() {
+  const options = [];
+  Object.entries(PENDING_DELETE_MENU_CONFIG).forEach(([type, config]) => {
+    const records = readStorageArray(config.key).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    records.forEach((record, index) => {
+      const completed = pendingRecordIsCompleted(type, record);
+      const label = pendingDeleteMenuRecordLabel(type, record);
+      const identity = encodeURIComponent(JSON.stringify({ type, code: String(record.code ?? ''), date: String(record.date ?? ''), completed }));
+      options.push(`<button type="button" class="pending-delete-option" data-delete-record-id="${pendingDeleteMenuRecordId(type, record, index)}" onclick="selectGlobalPendingDeleteOption('${identity}')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>${config.label}: ${record.name || 'Registro'}</strong><small>${label}${record.clientName ? ` · Cliente: ${record.clientName}` : ''} · ${record.date ? new Date(record.date).toLocaleDateString('es-ES') : 'Sin fecha'}${completed ? ' · No devuelve stock' : ' · Devuelve stock'}</small></span></button>`);
+    });
+  });
+
+  document.getElementById('pendingDeleteMenuTitle').innerHTML = '<i class="fa-solid fa-trash-can"></i> Seleccionar registro para eliminar';
+  document.getElementById('pendingDeleteMenuContext').textContent = options.length ? 'Selecciona un registro. Después se solicitará la contraseña para confirmar la eliminación.' : 'No hay registros disponibles para eliminar.';
+  document.getElementById('pendingDeleteMenuOptions').innerHTML = options.length ? options.join('') : '<div style="padding:1rem;text-align:center;color:var(--text-secondary);">No hay pedidos pendientes ni registros completados en estas listas.</div>';
   document.getElementById('pendingDeleteMenuModal').classList.add('active');
   ensureKioscoMode();
 }
@@ -3191,10 +3192,16 @@ function closePendingDeleteMenu(clearState = true) {
   ensureKioscoMode();
 }
 
-function selectPendingDeleteMenuOption(action) {
-  if (!pendingDeleteMenuState || action !== 'deletePendingMenuRecord') return;
-  document.getElementById('pendingDeleteMenuModal').classList.remove('active');
-  requestPassword(action, -1);
+function selectGlobalPendingDeleteOption(identity) {
+  try {
+    const selected = JSON.parse(decodeURIComponent(identity));
+    pendingDeleteMenuState = selected;
+    document.getElementById('pendingDeleteMenuModal').classList.remove('active');
+    requestPassword('deletePendingMenuRecord', -1);
+  } catch (error) {
+    console.error('No se pudo seleccionar el registro para eliminar', error);
+    showNotification('No se pudo seleccionar el registro', 'error');
+  }
 }
 
 function executeDeletePendingMenuRecord() {

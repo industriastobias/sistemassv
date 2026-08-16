@@ -1376,6 +1376,7 @@
           </div>
         </div>
         <div class="payment-confirm-actions">
+          <button class="btn btn-primary" onclick="copyPaymentReminder()"><i class="fa-solid fa-copy"></i> Copiar datos</button>
           <button class="btn" onclick="closePaymentReminderModal()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
         </div>
       </div>
@@ -3723,6 +3724,42 @@ function closePaymentReminderModal() {
   document.getElementById('paymentReminderModal').classList.remove('active');
   currentPaymentReminderIndex = -1;
   ensureKioscoMode();
+}
+
+function copyPaymentReminder() {
+  const getValue = id => document.getElementById(id)?.textContent?.trim() || '-';
+  const text = [
+    'RECORDATORIO DE PAGO PENDIENTE',
+    '',
+    `Producto: ${getValue('paymentReminderName')}`,
+    `Código: ${getValue('paymentReminderCode')}`,
+    `Cliente: ${getValue('paymentReminderClient')}`,
+    `Cantidad: ${getValue('paymentReminderQty')}`,
+    `Precio Original: ${getValue('paymentReminderOriginalPrice')}`,
+    `Saldo Pendiente: ${getValue('paymentReminderPendingAmount')}`,
+    `Pendiente desde: ${getValue('paymentReminderDate')}`
+  ].join('\\n');
+
+  const copied = () => showNotification('Datos del recordatorio copiados', 'success');
+  const fallbackCopy = () => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    let success = false;
+    try { success = document.execCommand('copy'); } catch (e) {}
+    textarea.remove();
+    showNotification(success ? 'Datos del recordatorio copiados' : 'No se pudo copiar la información', success ? 'success' : 'error');
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(copied).catch(fallbackCopy);
+  } else {
+    fallbackCopy();
+  }
 }
 
 async function openCompletePaymentModal(code, date) {

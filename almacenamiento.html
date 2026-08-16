@@ -7,10 +7,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=1.0, user-scalable=no">
   <title>DAYMAR-SHOP</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css     ">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js     "></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js     "></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js     "></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -1212,7 +1212,7 @@
       <div class="delete-confirm-content">
         <div class="delete-confirm-header" style="background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);">
           <div class="delete-confirm-icon"><i class="fa-solid fa-box-open" style="color:var(--purple);"></i></div>
-          <h3 class="delete-confirm-title" style="color:var(--purple);">Eliminar Entrega Pendiente</h3>
+          <h3 class="delete-confirm-title" id="deleteDeliveryConfirmTitle" style="color:var(--purple);">Eliminar Entrega Pendiente</h3>
         </div>
         <div class="delete-confirm-body">
           <div class="confirm-product-layout">
@@ -1228,7 +1228,7 @@
               </div>
             </div>
           </div>
-          <div class="delete-confirm-warning"><i class="fa-solid fa-circle-info"></i><span>El stock sera devuelto automaticamente al inventario. Esta venta pendiente se eliminara permanentemente.</span></div>
+          <div class="delete-confirm-warning"><i class="fa-solid fa-circle-info"></i><span id="deleteDeliveryConfirmWarningText">El stock sera devuelto automaticamente al inventario. Esta venta pendiente se eliminara permanentemente.</span></div>
         </div>
         <div class="delete-confirm-actions">
           <button class="btn" onclick="closeDeleteDeliveryConfirmModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
@@ -1565,12 +1565,14 @@ let currentView = localStorage.getItem('preferredView') || 'table', currentSaleI
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
+let pendingDeleteKey = null, pendingPaymentKey = null, pendingDeliveryKey = null;
 let currentPaymentMethod = 'cash';
 let currentEditDeliveryIndex = -1, currentEditDeliveryCode = null, currentEditDeliveryDate = null, currentEditPendingCode = null, currentEditPendingDate = null, currentEditPendingPosition = -1;
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
-let currentCompletePaymentIndex = -1;
-let currentPaymentReminderIndex = -1;
+let pendingDeliveryDeleteKey = null, pendingPaymentDeleteKey = null;
+let currentCompletePaymentIndex = -1, currentCompletePaymentKey = null;
+let currentPaymentReminderIndex = -1, currentPaymentReminderKey = null;
 
 // Variables para Venta Rapida
 let fastSaleWhoPays = 'client';
@@ -1591,7 +1593,25 @@ function showNotification(message, type = 'success') {
   setTimeout(() => notif.remove(), 3000); 
 }
 function showLoading(show = true) { document.getElementById('loadingOverlay').classList.toggle('active', show); }
-function formatCurrency(amount) { return '$' + (amount || 0).toFixed(2); }
+function toNumber(value, fallback = 0) {
+  const number = typeof value === 'number' ? value : Number.parseFloat(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+function readStorageArray(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error(`No se pudo leer ${key} desde localStorage`, error);
+    return [];
+  }
+}
+function writeStorageArray(key, value) {
+  localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
+}
+function formatCurrency(amount) { return '$' + toNumber(amount).toFixed(2); }
 function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { return new Date(dateStr).toLocaleString('es-ES'); } catch { return 'N/A'; } }
 function localDateKey(value) {
   if (!value) return '';
@@ -1716,9 +1736,9 @@ function updateStats() {
   document.getElementById('lowStockCount').textContent = lowStock; 
   lowBadge.style.display = lowStock > 0 ? 'inline-flex' : 'none'; 
 
-  const pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
-  const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]').filter(p => p.deliveryStatus === 'pending');
-  const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]').filter(p => p.paymentStatus === 'partial');
+  const pendingCOD = readStorageArray('pendingInventory');
+  const pendingDelivery = readStorageArray('pendingDeliveryInventory').filter(p => p.deliveryStatus === 'pending');
+  const pendingPayment = readStorageArray('pendingPaymentInventory').filter(p => p.paymentStatus === 'partial');
   const totalPending = pendingCOD.length + pendingDelivery.length + pendingPayment.length;
 
   document.getElementById('pendingCount').textContent = totalPending;
@@ -1733,7 +1753,7 @@ function updateStats() {
 
 function updateDailySalesBadge() {
   const today = localDateKey(new Date());
-  const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+  const sales = readStorageArray('soldInventory');
   const todaySales = sales.filter(s => {
     const saleDate = s.date ? localDateKey(s.date) : '';
     return saleDate === today;
@@ -2181,7 +2201,7 @@ function processFastSale() {
       ? subtotal + shipping + commission + insurance 
       : (subtotal - commission) + shipping + insurance;
 
-    const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+    const pending = readStorageArray('pendingInventory');
     pending.push({
       ...saleRecord,
       isCOD: true,
@@ -2203,7 +2223,7 @@ function processFastSale() {
     const commission = (subtotal * commissionPercent) / 100;
     const total = subtotal + shipping + commission;
 
-    const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    const pendingDelivery = readStorageArray('pendingDeliveryInventory');
     pendingDelivery.push({
       ...saleRecord,
       isPendingDelivery: true,
@@ -2221,9 +2241,9 @@ function processFastSale() {
     const paidAmount = parseFloat(document.getElementById('fastSalePaidAmount').value) || 0;
 
     if (!clientName) { showNotification('Debe ingresar el nombre del cliente', 'error'); return; }
-    if (paidAmount >= subtotal) { showNotification('El monto abonado no puede ser igual o mayor al total', 'error'); return; }
+    if (paidAmount < 0 || paidAmount >= subtotal) { showNotification('El monto abonado debe ser mayor o igual a cero y menor que el total', 'error'); return; }
 
-    const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    const pendingPayment = readStorageArray('pendingPaymentInventory');
     pendingPayment.push({
       ...saleRecord,
       originalPrice: price,
@@ -2238,7 +2258,7 @@ function processFastSale() {
 
   } else {
     // Venta inmediata - guardar en soldInventory
-    const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    const sales = readStorageArray('soldInventory');
     sales.push({
       ...saleRecord,
       saleType: 'immediate',
@@ -2616,7 +2636,7 @@ function processSale() {
     const clientNameV = document.getElementById('pendingPaymentClientName').value.trim(),
           paidAmountV = parseFloat(document.getElementById('pendingPaymentAmount').value) || 0;
     if (!clientNameV) { showNotification('Debe ingresar el nombre del cliente', 'error'); return; }
-    if (paidAmountV >= subtotal) { showNotification('El monto abonado no puede ser igual o mayor al total', 'error'); return; }
+    if (paidAmountV < 0 || paidAmountV >= subtotal) { showNotification('El monto abonado debe ser mayor o igual a cero y menor que el total', 'error'); return; }
   }
 
   // Aplicar stock editado si es valido y validar contra el stock efectivo
@@ -2649,7 +2669,7 @@ function processSale() {
       ? subtotal 
       : (subtotal - commission);
 
-    const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]'); 
+    const pending = readStorageArray('pendingInventory'); 
     pending.push({ 
       name: item.name, 
       code: item.code, 
@@ -2679,7 +2699,7 @@ function processSale() {
     const commission = (subtotal * commissionPercent) / 100;
     const total = subtotal + shipping + commission;
 
-    const pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    const pendingDelivery = readStorageArray('pendingDeliveryInventory');
     pendingDelivery.push({
       name: item.name,
       code: item.code,
@@ -2709,12 +2729,12 @@ function processSale() {
       return;
     }
 
-    if (paidAmount >= subtotal) {
-      showNotification('El monto abonado no puede ser igual o mayor al total', 'error');
+    if (paidAmount < 0 || paidAmount >= subtotal) {
+      showNotification('El monto abonado debe ser mayor o igual a cero y menor que el total', 'error');
       return;
     }
 
-    const pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    const pendingPayment = readStorageArray('pendingPaymentInventory');
     pendingPayment.push({
       name: item.name,
       code: item.code,
@@ -2736,7 +2756,7 @@ function processSale() {
     showNotification(`Venta pendiente de cobro registrada. Cliente: ${clientName}. Abonado: ${formatCurrency(paidAmount)}. Debe: ${formatCurrency(subtotal - paidAmount)}`, 'success');
 
   } else { 
-    const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
+    const sales = readStorageArray('soldInventory'); 
     sales.push({ 
       name: item.name, 
       code: item.code, 
@@ -2873,7 +2893,7 @@ async function loadPendingList() {
   showLoading(true); 
   try { 
     // ===== COD - ordenado del mas reciente al mas antiguo =====
-    let pendingCOD = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+    let pendingCOD = readStorageArray('pendingInventory');
     pendingCOD.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const tbodyCOD = document.getElementById('pendingListCOD');
 
@@ -2886,9 +2906,9 @@ async function loadPendingList() {
       pendingCOD.forEach(p => { 
         const productTotal = (p.price || 0) * (p.quantity || 0); 
         totalProducts += productTotal; 
-        totalShipping += p.codShipping || 0; 
-        totalCommission += p.codCommissionAmount || 0; 
-        grandTotal += p.totalToCollect || productTotal; 
+        totalShipping += toNumber(p.codShipping);
+        totalCommission += toNumber(p.codCommissionAmount);
+        grandTotal += toNumber(p.totalToCollect, productTotal);
       }); 
       document.getElementById('summaryProductsCOD').textContent = formatCurrency(totalProducts); 
       document.getElementById('summaryShippingCOD').textContent = formatCurrency(totalShipping); 
@@ -2906,14 +2926,14 @@ async function loadPendingList() {
           <td>${formatCurrency(p.price)}</td>
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
-          <td><strong style="color:var(--success);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
+          <td><strong style="color:var(--success);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
           <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModalByPosition(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-trash"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
 
     // ===== PENDIENTES DE ENTREGA - ordenado del mas reciente al mas antiguo =====
-    let pendingDelivery = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    let pendingDelivery = readStorageArray('pendingDeliveryInventory');
     pendingDelivery.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const tbodyDelivery = document.getElementById('pendingListDelivery');
 
@@ -2926,9 +2946,9 @@ async function loadPendingList() {
       pendingDelivery.filter(p => p.deliveryStatus === 'pending').forEach(p => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         totalProducts += productTotal;
-        totalShipping += p.deliveryShipping || 0;
-        totalCommission += p.deliveryCommissionAmount || 0;
-        grandTotal += p.totalToCollect || productTotal;
+        totalShipping += toNumber(p.deliveryShipping);
+        totalCommission += toNumber(p.deliveryCommissionAmount);
+        grandTotal += toNumber(p.totalToCollect, productTotal);
       });
       document.getElementById('summaryProductsDelivery').textContent = formatCurrency(totalProducts);
       document.getElementById('summaryShippingDelivery').textContent = formatCurrency(totalShipping);
@@ -2949,16 +2969,17 @@ async function loadPendingList() {
           <td>${formatCurrency(p.price)}</td>
           <td><span class="badge ${p.paymentMethod === 'cash' ? 'badge-success' : 'badge-purple'}">${methodText}</span></td>
           <td>${statusText}</td>
-          <td><strong style="color:var(--purple);">${formatCurrency(p.totalToCollect || productTotal)}</strong></td>
+          <td><strong style="color:var(--purple);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
           <td><div class="cell-actions">
-            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            <button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending('${p.code}', '${p.date}')" title="${p.deliveryStatus === 'delivered' ? 'Eliminar registro completado' : 'Eliminar entrega pendiente'}"><i class="fa-solid fa-trash"></i></button>
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
     }
 
     // ===== PENDIENTES DE COBRO - ordenado del mas reciente al mas antiguo =====
-    let pendingPayment = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    let pendingPayment = readStorageArray('pendingPaymentInventory');
     pendingPayment.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const tbodyPayment = document.getElementById('pendingListPayment');
 
@@ -2971,8 +2992,8 @@ async function loadPendingList() {
       pendingPayment.filter(p => p.paymentStatus === 'partial').forEach(p => {
         const productTotal = (p.price || 0) * (p.quantity || 0);
         totalProducts += productTotal;
-        totalPaid += p.paidAmount || 0;
-        totalPending += p.pendingAmount || 0;
+        totalPaid += toNumber(p.paidAmount);
+        totalPending += toNumber(p.pendingAmount);
       });
       document.getElementById('summaryProductsPayment').textContent = formatCurrency(totalProducts);
       document.getElementById('summaryPaidPayment').textContent = formatCurrency(totalPaid);
@@ -3013,9 +3034,10 @@ function findPendingIndex(array, code, date) {
 // =========================================================================
 
 async function openPaymentConfirmModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  const pending = readStorageArray('pendingInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   pendingPaymentIndex = findPendingIndex(pending, code, date);
+  pendingPaymentKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[pendingPaymentIndex];
   if (!p) { showNotification('Pedido no encontrado', 'error'); return; }
 
@@ -3025,9 +3047,9 @@ async function openPaymentConfirmModal(code, date) {
   document.getElementById('paymentConfirmCode').textContent = p.code;
   document.getElementById('paymentConfirmPrice').textContent = formatCurrency(p.price);
   document.getElementById('paymentConfirmQty').textContent = p.quantity;
-  document.getElementById('paymentConfirmProductTotal').textContent = formatCurrency(p.price * p.quantity);
+  document.getElementById('paymentConfirmProductTotal').textContent = formatCurrency(toNumber(p.price) * toNumber(p.quantity));
 
-  const amountToShow = p.totalToCollect || (p.price * p.quantity);
+  const amountToShow = toNumber(p.totalToCollect, toNumber(p.price) * toNumber(p.quantity));
   document.getElementById('paymentConfirmAmount').textContent = formatCurrency(amountToShow);
 
   const barcodeContainer = document.getElementById('paymentConfirmBarcodeContainer');
@@ -3042,63 +3064,66 @@ async function openPaymentConfirmModal(code, date) {
 function closePaymentConfirmModal() {
   document.getElementById('paymentConfirmModal').classList.remove('active');
   pendingPaymentIndex = -1;
+  pendingPaymentKey = null;
   ensureKioscoMode();
 }
 
 function confirmPaymentPending() {
-  if (pendingPaymentIndex === -1) return;
-  showLoading(true); 
-  try { 
-    let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  if (!pendingPaymentKey) return;
+  showLoading(true);
+  try {
+    const pending = readStorageArray('pendingInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[pendingPaymentIndex]; 
-    if (!item) { showNotification('Pedido no encontrado', 'error'); return; } 
+    const itemIndex = findPendingIndex(pending, pendingPaymentKey.code, pendingPaymentKey.date);
+    const item = pending[itemIndex];
+    if (!item) { showNotification('Pedido no encontrado', 'error'); return; }
 
-    let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]'); 
+    const sales = readStorageArray('soldInventory');
+    const finalTotal = toNumber(item.totalToCollect, toNumber(item.price) * toNumber(item.quantity));
+    const productTotal = toNumber(item.price) * toNumber(item.quantity);
+    const netEarnings = toNumber(item.netEarnings, item.whoPaysCommission === 'client' ? productTotal : productTotal - toNumber(item.codCommissionAmount));
 
-    const finalTotal = item.totalToCollect || (item.price * item.quantity);
-    const effectivePrice = item.quantity ? finalTotal / item.quantity : finalTotal;
-    const netEarnings = item.netEarnings || (item.whoPaysCommission === 'client' ? item.price * item.quantity : (item.price * item.quantity) - (item.codCommissionAmount || 0));
-
-    sales.push({ 
-      ...item, 
-      price: effectivePrice,
-      originalPrice: item.price,
+    sales.push({
+      ...item,
+      price: toNumber(item.quantity) ? finalTotal / toNumber(item.quantity) : finalTotal,
+      originalPrice: toNumber(item.price),
       total: finalTotal,
-      netEarnings: netEarnings,
+      netEarnings,
       isCOD: true,
       codDetails: {
-        shipping: item.codShipping,
-        commission: item.codCommissionAmount,
-        insurance: item.codInsurance,
+        shipping: toNumber(item.codShipping),
+        commission: toNumber(item.codCommissionAmount),
+        insurance: toNumber(item.codInsurance),
         whoPaysCommission: item.whoPaysCommission,
-        originalTotal: item.price * item.quantity
+        originalTotal: productTotal
       },
-      status: 'paid', 
+      status: 'paid',
       paidDate: new Date().toISOString(),
       saleType: 'cod',
       paymentMethod: item.paymentMethod || 'cash'
-    }); 
+    });
 
-    localStorage.setItem('soldInventory', JSON.stringify(sales)); 
-    pending.splice(pendingPaymentIndex, 1); 
-    localStorage.setItem('pendingInventory', JSON.stringify(pending)); 
+    writeStorageArray('soldInventory', sales);
+    pending.splice(itemIndex, 1);
+    writeStorageArray('pendingInventory', pending);
     closePaymentConfirmModal();
-    loadPendingList(); 
-    updateStats(); 
-    showNotification(`Pedido cobrado: ${formatCurrency(finalTotal)}`, 'success'); 
-  } catch (e) { 
-    showNotification('Error al procesar el cobro', 'error'); 
-  } finally { 
-    showLoading(false); 
+    loadPendingList();
+    updateStats();
+    showNotification(`Pedido cobrado: ${formatCurrency(finalTotal)}`, 'success');
+  } catch (error) {
+    console.error('Error al procesar el cobro', error);
+    showNotification('Error al procesar el cobro', 'error');
+  } finally {
+    showLoading(false);
     ensureKioscoMode();
   }
 }
 
 async function openDeleteConfirmModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  const pending = readStorageArray('pendingInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   pendingDeleteIndex = findPendingIndex(pending, code, date);
+  pendingDeleteKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[pendingDeleteIndex];
   if (!p) { showNotification('Pedido no encontrado', 'error'); return; }
 
@@ -3122,50 +3147,53 @@ async function openDeleteConfirmModal(code, date) {
 function closeDeleteConfirmModal() {
   document.getElementById('deleteConfirmModal').classList.remove('active');
   pendingDeleteIndex = -1;
+  pendingDeleteKey = null;
   ensureKioscoMode();
 }
 
 function confirmDeletePending() {
-  if (pendingDeleteIndex === -1) return;
-  requestPassword('deletePending', pendingDeleteIndex);
+  if (!pendingDeleteKey) return;
+  requestPassword('deletePending', -1);
 }
 function executeDeletePending() {
-  if (pendingDeleteIndex === -1) return;
-  showLoading(true); 
-  try { 
-    let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  if (!pendingDeleteKey) return;
+  showLoading(true);
+  try {
+    const pending = readStorageArray('pendingInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[pendingDeleteIndex];
+    const itemIndex = findPendingIndex(pending, pendingDeleteKey.code, pendingDeleteKey.date);
+    const item = pending[itemIndex];
     if (!item) { showNotification('Pedido no encontrado', 'error'); return; }
 
-    let invItem = inventory.find(i => i.code === item.code);
-    if (invItem) { 
-      invItem.quantity += item.quantity; 
-      saveInventory(); 
+    const invItem = inventory.find(i => String(i.code ?? '') === String(item.code ?? ''));
+    if (invItem) {
+      invItem.quantity = toNumber(invItem.quantity) + toNumber(item.quantity);
+      saveInventory();
     } else {
       showNotification('Producto no encontrado en inventario. El pedido se eliminara pero el stock no se pudo devolver.', 'warning');
     }
 
-    pending.splice(pendingDeleteIndex, 1); 
-    localStorage.setItem('pendingInventory', JSON.stringify(pending)); 
+    pending.splice(itemIndex, 1);
+    writeStorageArray('pendingInventory', pending);
     closeDeleteConfirmModal();
-    loadPendingList(); 
-    updateStats(); 
-    applyFilters(); 
-    showNotification('Pedido eliminado y stock devuelto', 'success'); 
-  } catch (e) { 
-    console.error(e);
-    showNotification('Error al eliminar pedido', 'error'); 
-  } finally { 
-    showLoading(false); 
+    loadPendingList();
+    updateStats();
+    applyFilters();
+    showNotification(invItem ? 'Pedido eliminado y stock devuelto' : 'Pedido eliminado sin poder devolver el stock', invItem ? 'success' : 'warning');
+  } catch (error) {
+    console.error('Error al eliminar pedido COD', error);
+    showNotification('Error al eliminar pedido', 'error');
+  } finally {
+    showLoading(false);
     ensureKioscoMode();
   }
 }
 
 async function openDeleteDeliveryConfirmModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  const pending = readStorageArray('pendingDeliveryInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   pendingDeliveryDeleteIndex = findPendingIndex(pending, code, date);
+  pendingDeliveryDeleteKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[pendingDeliveryDeleteIndex];
   if (!p) { showNotification('Entrega no encontrada', 'error'); return; }
 
@@ -3175,7 +3203,12 @@ async function openDeleteDeliveryConfirmModal(code, date) {
   document.getElementById('deleteDeliveryConfirmCode').textContent = p.code;
   document.getElementById('deleteDeliveryConfirmPrice').textContent = formatCurrency(p.price);
   document.getElementById('deleteDeliveryConfirmQty').textContent = p.quantity;
-  document.getElementById('deleteDeliveryConfirmMethod').textContent = p.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo';
+  const isCompletedDelivery = p.deliveryStatus === 'delivered';
+  document.getElementById('deleteDeliveryConfirmMethod').textContent = `${p.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'} / ${isCompletedDelivery ? 'Completado' : 'Pendiente'}`;
+  document.getElementById('deleteDeliveryConfirmTitle').textContent = isCompletedDelivery ? 'Eliminar Entrega Completada' : 'Eliminar Entrega Pendiente';
+  document.getElementById('deleteDeliveryConfirmWarningText').textContent = isCompletedDelivery
+    ? 'La entrega ya esta completada. Se eliminara solo de esta lista; no se devolvera stock ni se modificara el historial de ventas.'
+    : 'El stock sera devuelto automaticamente al inventario. Esta venta pendiente se eliminara permanentemente.';
 
   const barcodeContainer = document.getElementById('deleteDeliveryConfirmBarcodeContainer');
   if (p.barcode) {
@@ -3190,6 +3223,7 @@ async function openDeleteDeliveryConfirmModal(code, date) {
 function closeDeleteDeliveryConfirmModal() {
   document.getElementById('deleteDeliveryConfirmModal').classList.remove('active');
   pendingDeliveryDeleteIndex = -1;
+  pendingDeliveryDeleteKey = null;
   ensureKioscoMode();
 }
 
@@ -3199,8 +3233,8 @@ function deleteDeliveryPending(code, date) {
 
 // ===== CORRECCION CRITICA: Se agrega pending.sort() para sincronizar el indice =====
 function confirmDeleteDeliveryPending() {
-  if (pendingDeliveryDeleteIndex === -1) return;
-  requestPassword('deleteDeliveryPending', pendingDeliveryDeleteIndex);
+  if (!pendingDeliveryDeleteKey) return;
+  requestPassword('deleteDeliveryPending', -1);
 }
 let pendingHistorySelection = null;
 
@@ -3248,51 +3282,68 @@ function executeDeletePendingHistory() {
 }
 
 function executeDeleteAllDeliveryPending() {
-  const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
-  if (!pending.length) { showNotification('No hay entregas pendientes para eliminar', 'warning'); return; }
-  if (!confirm(`¿Eliminar las ${pending.length} entregas pendientes y devolver el stock?`)) return;
-  pending.forEach(item => {
-    const invItem = inventory.find(i => i.code === item.code);
-    if (invItem) invItem.quantity += item.quantity || 0;
+  const allDelivery = readStorageArray('pendingDeliveryInventory');
+  if (!allDelivery.length) { showNotification('No hay entregas pendientes para eliminar', 'warning'); return; }
+  const stillPending = allDelivery.filter(item => item.deliveryStatus === 'pending');
+  const completed = allDelivery.length - stillPending.length;
+  const message = `¿Eliminar ${allDelivery.length} registro(s) de entrega?
+${stillPending.length} pendiente(s) devolveran stock.
+${completed} completado(s) solo se quitaran de esta lista.`;
+  if (!confirm(message)) return;
+
+  stillPending.forEach(item => {
+    const invItem = inventory.find(i => String(i.code ?? '') === String(item.code ?? ''));
+    if (invItem) invItem.quantity = toNumber(invItem.quantity) + toNumber(item.quantity);
   });
   saveInventory();
-  localStorage.setItem('pendingDeliveryInventory', '[]');
+  writeStorageArray('pendingDeliveryInventory', []);
   loadPendingList();
   updateStats();
   applyFilters();
-  showNotification('Todas las entregas pendientes fueron eliminadas y el stock fue devuelto', 'success');
+  showNotification('Registros de entrega eliminados; el stock solo fue devuelto para los pendientes', 'success');
 }
 
 function executeDeleteDeliveryPending() {
-  if (pendingDeliveryDeleteIndex === -1) return;
-
+  if (!pendingDeliveryDeleteKey) return;
   showLoading(true);
   try {
-    let pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    const pending = readStorageArray('pendingDeliveryInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[pendingDeliveryDeleteIndex];
-    if (!item) { 
-      showNotification('Item no encontrado', 'error'); 
+    const itemIndex = findPendingIndex(pending, pendingDeliveryDeleteKey.code, pendingDeliveryDeleteKey.date);
+    const item = pending[itemIndex];
+    if (!item) {
+      showNotification('Entrega no encontrada', 'error');
       closeDeleteDeliveryConfirmModal();
-      return; 
+      return;
     }
 
-    let invItem = inventory.find(i => i.code === item.code);
-    if (invItem) {
-      invItem.quantity += item.quantity;
-      saveInventory();
+    const isPending = item.deliveryStatus === 'pending';
+    let invItem = null;
+    if (isPending) {
+      invItem = inventory.find(i => String(i.code ?? '') === String(item.code ?? ''));
+      if (invItem) {
+        invItem.quantity = toNumber(invItem.quantity) + toNumber(item.quantity);
+        saveInventory();
+      }
     }
 
-    pending.splice(pendingDeliveryDeleteIndex, 1);
-    localStorage.setItem('pendingDeliveryInventory', JSON.stringify(pending));
-
+    pending.splice(itemIndex, 1);
+    writeStorageArray('pendingDeliveryInventory', pending);
     closeDeleteDeliveryConfirmModal();
     loadPendingList();
     updateStats();
     applyFilters();
-    showNotification('Venta pendiente eliminada y stock devuelto', 'success');
-  } catch (e) {
-    showNotification('Error al eliminar', 'error');
+
+    if (!isPending) {
+      showNotification('Registro de entrega completada eliminado de la lista. El stock y las ventas no fueron modificados.', 'success');
+    } else if (invItem) {
+      showNotification('Venta pendiente eliminada y stock devuelto', 'success');
+    } else {
+      showNotification('Venta pendiente eliminada; el producto no estaba disponible para devolver stock', 'warning');
+    }
+  } catch (error) {
+    console.error('Error al eliminar entrega', error);
+    showNotification('Error al eliminar entrega', 'error');
   } finally {
     showLoading(false);
     ensureKioscoMode();
@@ -3300,9 +3351,10 @@ function executeDeleteDeliveryPending() {
 }
 
 async function openDeliveryConfirmModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  const pending = readStorageArray('pendingDeliveryInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   pendingDeliveryIndex = findPendingIndex(pending, code, date);
+  pendingDeliveryKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[pendingDeliveryIndex];
   if (!p || p.deliveryStatus !== 'pending') { showNotification('Entrega no encontrada o ya completada', 'error'); return; }
 
@@ -3313,7 +3365,7 @@ async function openDeliveryConfirmModal(code, date) {
   document.getElementById('deliveryConfirmPrice').textContent = formatCurrency(p.price);
   document.getElementById('deliveryConfirmQty').textContent = p.quantity;
   document.getElementById('deliveryConfirmMethod').textContent = p.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia';
-  document.getElementById('deliveryConfirmAmount').textContent = formatCurrency(p.totalToCollect || (p.price * p.quantity));
+  document.getElementById('deliveryConfirmAmount').textContent = formatCurrency(toNumber(p.totalToCollect, toNumber(p.price) * toNumber(p.quantity)));
 
   const barcodeContainer = document.getElementById('deliveryConfirmBarcodeContainer');
   if (p.barcode) {
@@ -3328,37 +3380,40 @@ async function openDeliveryConfirmModal(code, date) {
 function closeDeliveryConfirmModal() {
   document.getElementById('deliveryConfirmModal').classList.remove('active');
   pendingDeliveryIndex = -1;
+  pendingDeliveryKey = null;
   ensureKioscoMode();
 }
 
 function confirmDeliveryPending() {
-  if (pendingDeliveryIndex === -1) return;
+  if (!pendingDeliveryKey) return;
   showLoading(true);
   try {
-    let pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+    const pending = readStorageArray('pendingDeliveryInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[pendingDeliveryIndex];
-    if (!item || item.deliveryStatus !== 'pending') { showNotification('Entrega no encontrada', 'error'); return; }
+    const itemIndex = findPendingIndex(pending, pendingDeliveryKey.code, pendingDeliveryKey.date);
+    const item = pending[itemIndex];
+    if (!item || item.deliveryStatus !== 'pending') { showNotification('Entrega no encontrada o ya completada', 'error'); return; }
 
     item.deliveryStatus = 'delivered';
     item.deliveredDate = new Date().toISOString();
 
-    let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    const sales = readStorageArray('soldInventory');
     sales.push({
       ...item,
       status: 'delivered',
       saleType: 'pending_delivery',
-      total: item.totalToCollect || (item.price * item.quantity)
+      total: toNumber(item.totalToCollect, toNumber(item.price) * toNumber(item.quantity))
     });
 
-    localStorage.setItem('soldInventory', JSON.stringify(sales));
-    localStorage.setItem('pendingDeliveryInventory', JSON.stringify(pending));
+    writeStorageArray('soldInventory', sales);
+    writeStorageArray('pendingDeliveryInventory', pending);
 
     closeDeliveryConfirmModal();
     loadPendingList();
     updateStats();
     showNotification('Entrega confirmada y venta registrada', 'success');
-  } catch (e) {
+  } catch (error) {
+    console.error('Error al confirmar entrega', error);
     showNotification('Error al confirmar entrega', 'error');
   } finally {
     showLoading(false);
@@ -3367,7 +3422,7 @@ function confirmDeliveryPending() {
 }
 
 async function openEditDeliveryPendingModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  const pending = readStorageArray('pendingDeliveryInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   currentEditDeliveryIndex = findPendingIndex(pending, code, date);
   const p = pending[currentEditDeliveryIndex];
@@ -3377,7 +3432,7 @@ async function openEditDeliveryPendingModal(code, date) {
 
   document.getElementById('editDeliveryName').textContent = p.name;
   document.getElementById('editDeliveryQty').textContent = p.quantity;
-  document.getElementById('editDeliveryPrice').textContent = (p.price || 0).toFixed(2);
+  document.getElementById('editDeliveryPrice').textContent = toNumber(p.price).toFixed(2);
 
   const imgUrl = await getProductImage(p.code);
   document.getElementById('editDeliveryImage').src = imgUrl || '';
@@ -3415,7 +3470,7 @@ function adjustPendingInventoryQuantity(code, oldQuantity, newQuantity) {
   const newQty = Number(newQuantity) || 0;
   const difference = newQty - oldQty;
   if (!difference) return true;
-  const invItem = inventory.find(item => item.code === code);
+  const invItem = inventory.find(item => String(item.code ?? '') === String(code ?? ''));
   if (!invItem) { showNotification('Producto no encontrado en inventario', 'error'); return false; }
   if (difference > 0 && (Number(invItem.quantity) || 0) < difference) {
     showNotification(`Stock insuficiente. Solo quedan ${invItem.quantity} unidades disponibles.`, 'error');
@@ -3427,7 +3482,7 @@ function adjustPendingInventoryQuantity(code, oldQuantity, newQuantity) {
 }
 
 function editDeliveryCalculate() {
-  const pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  const pending = readStorageArray('pendingDeliveryInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   let idxEditDelivery = findPendingIndex(pending, currentEditDeliveryCode, currentEditDeliveryDate);
   if (idxEditDelivery < 0) idxEditDelivery = currentEditDeliveryIndex;
@@ -3448,7 +3503,7 @@ function editDeliveryCalculate() {
 }
 
 function saveEditDeliveryPending() {
-  let pending = JSON.parse(localStorage.getItem('pendingDeliveryInventory') || '[]');
+  let pending = readStorageArray('pendingDeliveryInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   let idxSaveDelivery = findPendingIndex(pending, currentEditDeliveryCode, currentEditDeliveryDate);
   if (idxSaveDelivery >= 0) currentEditDeliveryIndex = idxSaveDelivery;
@@ -3488,7 +3543,7 @@ function openEditPendingModalByPosition(position) {
 }
 
 async function openEditPendingModal(code, date, position = -1) { 
-  let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  let pending = readStorageArray('pendingInventory');
   if (Number.isInteger(position) && position >= 0) {
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     currentEditPendingPosition = position;
@@ -3506,7 +3561,7 @@ async function openEditPendingModal(code, date, position = -1) {
   document.getElementById('editPendingName').textContent = p.name; 
   document.getElementById('editPendingQty').textContent = p.quantity;
   document.getElementById('editPendingQuantity').value = p.quantity || 1;
-  document.getElementById('editPendingPrice').textContent = (p.price || 0).toFixed(2);
+  document.getElementById('editPendingPrice').textContent = toNumber(p.price).toFixed(2);
   const imgUrl = await getProductImage(p.code); 
   document.getElementById('editPendingImage').src = imgUrl || ''; 
   if (p.barcode) { 
@@ -3531,7 +3586,7 @@ function editSelectWhoPays(who) {
   editCalculateCOD(); 
 }
 function editCalculateCOD() { 
-  const pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  const pending = readStorageArray('pendingInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   let idxEditCOD = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
   if (idxEditCOD < 0) idxEditCOD = currentEditPendingIndex;
@@ -3564,7 +3619,7 @@ function editCalculateCOD() {
   document.getElementById('editCalcNet').textContent = formatCurrency(net); 
 }
 function saveEditPending() { 
-  let pending = JSON.parse(localStorage.getItem('pendingInventory') || '[]');
+  let pending = readStorageArray('pendingInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   let stableIndex = findPendingIndex(pending, currentEditPendingCode, currentEditPendingDate);
   if (stableIndex < 0 && currentEditPendingPosition >= 0 && currentEditPendingPosition < pending.length) stableIndex = currentEditPendingPosition;
@@ -3620,9 +3675,10 @@ function saveEditPending() {
 }
 
 async function openDeletePaymentConfirmModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  const pending = readStorageArray('pendingPaymentInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   pendingPaymentDeleteIndex = findPendingIndex(pending, code, date);
+  pendingPaymentDeleteKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[pendingPaymentDeleteIndex];
   if (!p) { showNotification('Cobro no encontrado', 'error'); return; }
 
@@ -3647,6 +3703,7 @@ async function openDeletePaymentConfirmModal(code, date) {
 function closeDeletePaymentConfirmModal() {
   document.getElementById('deletePaymentConfirmModal').classList.remove('active');
   pendingPaymentDeleteIndex = -1;
+  pendingPaymentDeleteKey = null;
   ensureKioscoMode();
 }
 
@@ -3656,39 +3713,39 @@ function deletePaymentPending(code, date) {
 
 // ===== CORRECCION CRITICA: Se agrega pending.sort() para sincronizar el indice =====
 function confirmDeletePaymentPending() {
-  if (pendingPaymentDeleteIndex === -1) return;
-  requestPassword('deletePaymentPending', pendingPaymentDeleteIndex);
+  if (!pendingPaymentDeleteKey) return;
+  requestPassword('deletePaymentPending', -1);
 }
 function executeDeletePaymentPending() {
-  if (pendingPaymentDeleteIndex === -1) return;
-
+  if (!pendingPaymentDeleteKey) return;
   showLoading(true);
   try {
-    let pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    const pending = readStorageArray('pendingPaymentInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[pendingPaymentDeleteIndex];
-    if (!item) { 
-      showNotification('Item no encontrado', 'error'); 
+    const itemIndex = findPendingIndex(pending, pendingPaymentDeleteKey.code, pendingPaymentDeleteKey.date);
+    const item = pending[itemIndex];
+    if (!item) {
+      showNotification('Cobro pendiente no encontrado', 'error');
       closeDeletePaymentConfirmModal();
-      return; 
+      return;
     }
 
-    let invItem = inventory.find(i => i.code === item.code);
+    const invItem = inventory.find(i => String(i.code ?? '') === String(item.code ?? ''));
     if (invItem) {
-      invItem.quantity += item.quantity;
+      invItem.quantity = toNumber(invItem.quantity) + toNumber(item.quantity);
       saveInventory();
     }
 
-    pending.splice(pendingPaymentDeleteIndex, 1);
-    localStorage.setItem('pendingPaymentInventory', JSON.stringify(pending));
-
+    pending.splice(itemIndex, 1);
+    writeStorageArray('pendingPaymentInventory', pending);
     closeDeletePaymentConfirmModal();
     loadPendingList();
     updateStats();
     applyFilters();
-    showNotification('Cobro pendiente eliminado y stock devuelto', 'success');
-  } catch (e) {
-    showNotification('Error al eliminar', 'error');
+    showNotification(invItem ? 'Cobro pendiente eliminado y stock devuelto' : 'Cobro pendiente eliminado sin poder devolver el stock', invItem ? 'success' : 'warning');
+  } catch (error) {
+    console.error('Error al eliminar cobro pendiente', error);
+    showNotification('Error al eliminar cobro pendiente', 'error');
   } finally {
     showLoading(false);
     ensureKioscoMode();
@@ -3696,9 +3753,10 @@ function executeDeletePaymentPending() {
 }
 
 async function openPaymentReminderModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  const pending = readStorageArray('pendingPaymentInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   currentPaymentReminderIndex = findPendingIndex(pending, code, date);
+  currentPaymentReminderKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[currentPaymentReminderIndex];
   if (!p || p.paymentStatus !== 'partial') { showNotification('Cobro no encontrado o ya completado', 'error'); return; }
 
@@ -3802,9 +3860,10 @@ async function copyPaymentReminderImage() {
 }
 
 async function openCompletePaymentModal(code, date) {
-  const pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  const pending = readStorageArray('pendingPaymentInventory');
   pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   currentCompletePaymentIndex = findPendingIndex(pending, code, date);
+  currentCompletePaymentKey = { code: String(code ?? ''), date: String(date ?? '') };
   const p = pending[currentCompletePaymentIndex];
   if (!p || p.paymentStatus !== 'partial') { showNotification('Cobro no encontrado o ya completado', 'error'); return; }
 
@@ -3830,49 +3889,52 @@ async function openCompletePaymentModal(code, date) {
 function closeCompletePaymentModal() {
   document.getElementById('completePaymentModal').classList.remove('active');
   currentCompletePaymentIndex = -1;
+  currentCompletePaymentKey = null;
   ensureKioscoMode();
 }
 
 function confirmCompletePayment() {
-  if (currentCompletePaymentIndex === -1) return;
+  if (!currentCompletePaymentKey) return;
   showLoading(true);
   try {
-    let pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+    const pending = readStorageArray('pendingPaymentInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    let item = pending[currentCompletePaymentIndex];
+    const itemIndex = findPendingIndex(pending, currentCompletePaymentKey.code, currentCompletePaymentKey.date);
+    const item = pending[itemIndex];
     if (!item || item.paymentStatus !== 'partial') { showNotification('Cobro no encontrado', 'error'); return; }
 
+    const pendingAmount = toNumber(item.pendingAmount);
     item.paymentStatus = 'paid';
     item.completedDate = new Date().toISOString();
-    item.finalPayment = item.pendingAmount;
-    item.paidAmount = (item.paidAmount || 0) + (item.pendingAmount || 0);
+    item.finalPayment = pendingAmount;
+    item.paidAmount = toNumber(item.paidAmount) + pendingAmount;
     item.pendingAmount = 0;
 
-    let sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    const sales = readStorageArray('soldInventory');
     sales.push({
       ...item,
       status: 'paid',
       saleType: 'pending_payment',
-      total: item.total,
-      finalTotal: item.total
+      total: toNumber(item.total, toNumber(item.price) * toNumber(item.quantity)),
+      finalTotal: toNumber(item.total, toNumber(item.price) * toNumber(item.quantity))
     });
 
-    localStorage.setItem('soldInventory', JSON.stringify(sales));
-    localStorage.setItem('pendingPaymentInventory', JSON.stringify(pending));
+    writeStorageArray('soldInventory', sales);
+    pending.splice(itemIndex, 1);
+    writeStorageArray('pendingPaymentInventory', pending);
 
     closeCompletePaymentModal();
     loadPendingList();
     updateStats();
     showNotification(`Pago completado. Cliente: ${item.clientName}. Total: ${formatCurrency(item.total)}`, 'success');
-  } catch (e) {
+  } catch (error) {
+    console.error('Error al confirmar pago', error);
     showNotification('Error al confirmar pago', 'error');
   } finally {
     showLoading(false);
     ensureKioscoMode();
   }
 }
-
-let lastScannedBarcode = '';
 
 function startCameraScan() { 
   if (html5QrCode) return; 
@@ -4078,7 +4140,7 @@ async function loadDailySales() {
 
   showLoading(true);
   try {
-    const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+    const sales = readStorageArray('soldInventory');
     const daySales = sales.filter(s => {
       const saleDate = s.date ? localDateKey(s.date) : '';
       return saleDate === selectedDate;
@@ -4255,7 +4317,7 @@ function applySalesHistoryFilter() {
 
   if (!startDate || !endDate) return;
 
-  const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+  const sales = readStorageArray('soldInventory');
 
   let filteredSales = sales.filter(s => {
     if (!s.date) return false;
@@ -4516,7 +4578,7 @@ function applyDailyReportFilter() {
 
   if (!startDate || !endDate) return;
 
-  const sales = JSON.parse(localStorage.getItem('soldInventory') || '[]');
+  const sales = readStorageArray('soldInventory');
 
   let filteredSales = sales.filter(s => {
     if (!s.date) return false;

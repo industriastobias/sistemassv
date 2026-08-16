@@ -491,19 +491,6 @@
   <div class="image-overlay" id="imageOverlay" onclick="closeImageOverlay()"><img src="" alt="" id="overlayImage"></div>
   <div class="barcode-large-overlay" id="barcodeLargeOverlay" onclick="closeBarcodeLarge()"><div class="barcode-large-content" onclick="event.stopPropagation()"><img src="" alt="" id="barcodeLargeImg"><div class="barcode-large-text" id="barcodeLargeText"></div></div></div>
 
-  <!-- MODAL FIJO DE VALOR TOTAL -->
-  <div class="fixed-total-modal" id="fixedTotalModal">
-    <div class="total-header">
-      <span class="total-title">Valor Total Inventario</span>
-      <button class="btn btn-icon btn-sm" onclick="toggleFixedTotalModal()" style="width:32px;height:32px;"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="total-amount" id="fixedTotalAmount">$0.00</div>
-    <div class="total-actions">
-      <button class="btn btn-sm btn-toggle" id="btnHideValue" onclick="toggleValueVisibility()"><i class="fa-solid fa-eye-slash"></i> Ocultar</button>
-      <button class="btn btn-sm btn-primary btn-toggle" onclick="refreshFixedTotal()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-    </div>
-  </div>
-
   <header class="header">
     <div class="header-content">
       <div class="logo"><i class="fa-solid fa-shop" style="color:var(--accent);"></i><span>DAYMAR-SHOP</span></div>
@@ -520,7 +507,6 @@
       <div class="config-buttons">
         <button class="btn btn-config" id="btnDailyReport" onclick="toggleDailyReportPanel()" title="Reporte por Dia"><i class="fa-solid fa-chart-bar"></i><span class="mobile-hide"> Reporte</span></button>
         <button class="btn btn-config" id="btnSalesHistory" onclick="toggleSalesHistoryPanel()" title="Historial de Ventas"><i class="fa-solid fa-chart-line"></i><span class="mobile-hide"> Historial</span></button>
-        <button class="btn btn-config" id="btnFixedTotal" onclick="toggleFixedTotalModal()" title="Mostrar Total"><i class="fa-solid fa-dollar-sign"></i></button>
       </div>
     </div>
   </header>
@@ -1357,6 +1343,45 @@
     </div>
   </div>
 
+  <!-- Recordatorio de Pago Pendiente Modal -->
+  <div class="modal-overlay" id="paymentReminderModal" onclick="if(event.target===this) closePaymentReminderModal()">
+    <div class="modal payment-confirm-modal">
+      <div class="payment-confirm-content">
+        <div class="payment-confirm-header" style="background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);">
+          <div class="payment-confirm-icon"><i class="fa-solid fa-bell" style="color:#f97316;"></i></div>
+          <h3 class="payment-confirm-title" style="color:#c2410c;">Recordatorio de Pago Pendiente</h3>
+        </div>
+        <div class="payment-confirm-body">
+          <div class="confirm-product-layout">
+            <img src="" alt="" class="confirm-product-image" id="paymentReminderImage">
+            <div class="confirm-product-info">
+              <div class="confirm-product-name" id="paymentReminderName">-</div>
+              <div class="confirm-product-code" id="paymentReminderCode">-</div>
+              <div class="confirm-product-barcode" id="paymentReminderBarcodeContainer"></div>
+              <div class="confirm-product-details">
+                <div class="confirm-detail-item"><div class="label">Cliente</div><div class="value" id="paymentReminderClient">-</div></div>
+                <div class="confirm-detail-item"><div class="label">Cantidad</div><div class="value qty" id="paymentReminderQty">-</div></div>
+                <div class="confirm-detail-item"><div class="label">Precio Original</div><div class="value price" id="paymentReminderOriginalPrice">-</div></div>
+                <div class="confirm-detail-item"><div class="label">Pendiente desde</div><div class="value" id="paymentReminderDate">-</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="payment-confirm-amount" style="border-color:#f97316; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);">
+            <div class="amount-label">Saldo Pendiente</div>
+            <div class="amount-value" id="paymentReminderPendingAmount" style="color:#f97316;">$0.00</div>
+          </div>
+          <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:var(--radius-sm);padding:0.875rem;display:flex;align-items:flex-start;gap:0.75rem;">
+            <i class="fa-solid fa-info-circle" style="color:#d97706;margin-top:0.125rem;"></i>
+            <span style="font-size:0.812rem;color:#92400e;">Este pedido mantiene un saldo pendiente de cobro. La fecha indica desde cuándo se encuentra pendiente el pago.</span>
+          </div>
+        </div>
+        <div class="payment-confirm-actions">
+          <button class="btn" onclick="closePaymentReminderModal()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal para confirmar entrega de venta pendiente -->
   <div class="modal-overlay" id="deliveryConfirmModal" onclick="if(event.target===this) event.stopPropagation()">
     <div class="modal payment-confirm-modal">
@@ -1542,6 +1567,7 @@ let currentEditDeliveryIndex = -1, currentEditDeliveryCode = null, currentEditDe
 let pendingDeliveryDeleteIndex = -1;
 let pendingPaymentDeleteIndex = -1;
 let currentCompletePaymentIndex = -1;
+let currentPaymentReminderIndex = -1;
 
 // Variables para Venta Rapida
 let fastSaleWhoPays = 'client';
@@ -2965,7 +2991,7 @@ async function loadPendingList() {
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
           <td><strong style="color:#f97316;">${formatCurrency(p.pendingAmount)}</strong></td>
           <td><div class="cell-actions">
-            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm" onclick="openPaymentReminderModal('${p.code}', '${p.date}')" title="Recordatorio de Pago Pendiente" aria-label="Recordatorio de Pago Pendiente"><i class="fa-solid fa-bell"></i></button><button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3664,6 +3690,39 @@ function executeDeletePaymentPending() {
     showLoading(false);
     ensureKioscoMode();
   }
+}
+
+async function openPaymentReminderModal(code, date) {
+  const pending = JSON.parse(localStorage.getItem('pendingPaymentInventory') || '[]');
+  pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  currentPaymentReminderIndex = findPendingIndex(pending, code, date);
+  const p = pending[currentPaymentReminderIndex];
+  if (!p || p.paymentStatus !== 'partial') { showNotification('Cobro no encontrado o ya completado', 'error'); return; }
+
+  const imgUrl = await getProductImage(p.code);
+  document.getElementById('paymentReminderImage').src = imgUrl || '';
+  document.getElementById('paymentReminderName').textContent = p.name;
+  document.getElementById('paymentReminderCode').textContent = p.code;
+  document.getElementById('paymentReminderClient').textContent = p.clientName;
+  document.getElementById('paymentReminderQty').textContent = p.quantity;
+  document.getElementById('paymentReminderOriginalPrice').textContent = formatCurrency(p.originalPrice);
+  document.getElementById('paymentReminderPendingAmount').textContent = formatCurrency(p.pendingAmount);
+  document.getElementById('paymentReminderDate').textContent = p.date ? new Date(p.date).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : 'No disponible';
+
+  const barcodeContainer = document.getElementById('paymentReminderBarcodeContainer');
+  if (p.barcode) {
+    const barcodeUrl = generateBarcodeDataUrl(p.barcode);
+    barcodeContainer.innerHTML = `<img src="${barcodeUrl}" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')" alt="">`;
+  } else { barcodeContainer.innerHTML = ''; }
+
+  document.getElementById('paymentReminderModal').classList.add('active');
+  ensureKioscoMode();
+}
+
+function closePaymentReminderModal() {
+  document.getElementById('paymentReminderModal').classList.remove('active');
+  currentPaymentReminderIndex = -1;
+  ensureKioscoMode();
 }
 
 async function openCompletePaymentModal(code, date) {

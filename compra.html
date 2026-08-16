@@ -2203,7 +2203,7 @@
     }
 
     .app-content {
-      display: none;
+      display: block;
     }
 
     .app-content.show {
@@ -2239,7 +2239,7 @@
 <!-- ============================================
      LOGIN MINIMALISTA
      ============================================ -->
-<div class="login-overlay" id="loginOverlay">
+<div class="login-overlay hidden" id="loginOverlay">
   <div class="login-container">
     <div class="login-header">
       <div class="login-logo">
@@ -3179,6 +3179,37 @@ async function generateAndSaveThumbnail(code, originalBlob) {
 // ============================================
 // VARIABLES GLOBALES
 // ============================================
+// Fallback local para permitir que la aplicación funcione aunque
+// daymar-inventory-sync.js no esté disponible.
+if (!window.DaymarInventorySync) {
+  window.DaymarInventorySync = (() => {
+    const KEY = 'inventory';
+    const listeners = [];
+    const read = () => {
+      try {
+        const value = JSON.parse(localStorage.getItem(KEY) || '[]');
+        return Array.isArray(value) ? value : [];
+      } catch (error) {
+        console.warn('No se pudo leer el inventario local:', error);
+        return [];
+      }
+    };
+    const write = (value) => {
+      const list = Array.isArray(value) ? value : [];
+      localStorage.setItem(KEY, JSON.stringify(list));
+      listeners.forEach(listener => listener(list));
+      return list;
+    };
+    return {
+      getAll: read,
+      reload: read,
+      saveAll: write,
+      subscribe: listener => listeners.push(listener),
+      normalizeList: value => Array.isArray(value) ? value : []
+    };
+  })();
+}
+
 let inventory = DaymarInventorySync.getAll();
 let trash = JSON.parse(localStorage.getItem('trash') || '[]');
 let editIndex = -1;
@@ -4780,11 +4811,12 @@ function crearNuevaCategoria() {
 // ============================================
 const LOGIN = { username: 'KLOHE', password: 'KLOHE2025' };
 
-document.addEventListener('DOMContentLoaded', () => { 
-  document.getElementById('loginOverlay').classList.remove('hidden'); 
-  document.getElementById('appContent').classList.remove('show'); 
-  actualizarSelectoresCategorias(); 
-  setTimeout(() => document.getElementById('loginUser')?.focus(), 100); 
+document.addEventListener('DOMContentLoaded', () => {
+  // Acceso directo: no se solicita usuario ni contraseña.
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appContent').classList.add('show');
+  actualizarSelectoresCategorias();
+  initApp();
 });
 
 function handleLogin(e) { 

@@ -144,6 +144,16 @@
     /* La contraseña debe quedar por encima del modal de confirmación de eliminación. */
     #passwordModal { z-index: 2100; }
     #pendingHistorySelectorModal { z-index: 2050; }
+    #pendingDeleteMenuModal { z-index: 2200; }
+    .pending-delete-menu-modal { max-width: 560px; }
+    .pending-delete-options { display: grid; gap: 0.625rem; }
+    .pending-delete-option { width: 100%; display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--radius-sm); cursor: pointer; text-align: left; transition: var(--transition); }
+    .pending-delete-option:hover { border-color: var(--danger); background: var(--danger-soft); }
+    .pending-delete-option .option-icon { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--danger-soft); color: #A66058; flex: 0 0 auto; }
+    .pending-delete-option .option-copy { display: flex; flex-direction: column; gap: 0.125rem; }
+    .pending-delete-option strong { font-size: 0.875rem; }
+    .pending-delete-option small { color: var(--text-secondary); font-size: 0.75rem; line-height: 1.35; }
+    .pending-delete-context { padding: 0.75rem; margin-bottom: 0.875rem; background: var(--bg); border: 1px solid var(--border-light); border-radius: var(--radius-sm); color: var(--text-secondary); }
     .history-option-list { display:grid; gap:0.625rem; }
     .history-option { width:100%; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; padding:0.875rem 1rem; border:2px solid var(--border); background:var(--surface); color:var(--text); border-radius:var(--radius-sm); cursor:pointer; text-align:left; font-size:0.875rem; transition:var(--transition); }
     .history-option:hover { border-color:var(--accent); background:var(--accent-soft); }
@@ -728,7 +738,7 @@
       </div>
 
       <div id="deliveryTab" class="tab-content">
-        <div class="pending-summary" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><h3 style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;"><span>Resumen de Entregas Pendientes</span><button class="btn btn-sm btn-danger" onclick="requestPassword('deleteAllDeliveryPending', -1)" title="Eliminar todas las entregas pendientes" aria-label="Eliminar todas las entregas pendientes"><i class="fa-solid fa-trash"></i></button></h3><div class="summary-grid"><div class="summary-item"><label>Productos</label><div class="amount" id="summaryProductsDelivery">$0</div></div><div class="summary-item"><label>Envios</label><div class="amount" id="summaryShippingDelivery">$0</div></div><div class="summary-item"><label>Comisiones</label><div class="amount" id="summaryCommissionDelivery">$0</div></div><div class="summary-item"><label>Total</label><div class="amount" id="summaryTotalDelivery">$0</div></div></div></div>
+        <div class="pending-summary" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><h3>Resumen de Entregas Pendientes</h3><div class="summary-grid"><div class="summary-item"><label>Productos</label><div class="amount" id="summaryProductsDelivery">$0</div></div><div class="summary-item"><label>Envios</label><div class="amount" id="summaryShippingDelivery">$0</div></div><div class="summary-item"><label>Comisiones</label><div class="amount" id="summaryCommissionDelivery">$0</div></div><div class="summary-item"><label>Total</label><div class="amount" id="summaryTotalDelivery">$0</div></div></div></div>
         <div class="table-container"><table class="data-table"><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Metodo Pago</th><th>Estado</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="pendingListDelivery"></tbody></table></div>
       </div>
 
@@ -752,6 +762,21 @@
           </div>
         </div>
         <div class="modal-footer"><button class="btn" onclick="closePendingHistorySelector()">Cancelar</button><button class="btn btn-danger" onclick="confirmPendingHistorySelection()"><i class="fa-solid fa-arrow-right"></i> Continuar</button></div>
+      </div>
+    </div>
+
+    <!-- Menu unico de eliminacion individual -->
+    <div class="modal-overlay" id="pendingDeleteMenuModal" onclick="if(event.target===this) closePendingDeleteMenu()">
+      <div class="modal pending-delete-menu-modal" role="dialog" aria-modal="true" aria-labelledby="pendingDeleteMenuTitle">
+        <div class="modal-header">
+          <h3 class="modal-title" id="pendingDeleteMenuTitle"><i class="fa-solid fa-trash-can"></i> Opciones de eliminacion</h3>
+          <button class="modal-close" onclick="closePendingDeleteMenu()" aria-label="Cerrar opciones de eliminacion"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="pending-delete-context" id="pendingDeleteMenuContext">Selecciona una accion para este registro.</div>
+          <div class="pending-delete-options" id="pendingDeleteMenuOptions"></div>
+        </div>
+        <div class="modal-footer"><button class="btn" onclick="closePendingDeleteMenu()">Cancelar</button></div>
       </div>
     </div>
 
@@ -1566,6 +1591,7 @@ let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = n
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
 let pendingDeleteKey = null, pendingPaymentKey = null, pendingDeliveryKey = null;
+let pendingDeleteMenuState = null;
 let currentPaymentMethod = 'cash';
 let currentEditDeliveryIndex = -1, currentEditDeliveryCode = null, currentEditDeliveryDate = null, currentEditPendingCode = null, currentEditPendingDate = null, currentEditPendingPosition = -1;
 let pendingDeliveryDeleteIndex = -1;
@@ -1979,6 +2005,7 @@ function verifyPassword() {
   else if (action === 'deletePaymentPending') executeDeletePaymentPending();
   else if (action === 'deleteAllDeliveryPending') executeDeleteAllDeliveryPending();
   else if (action === 'deletePendingHistory') executeDeletePendingHistory();
+  else if (action === 'deletePendingMenuRecord') executeDeletePendingMenuRecord();
 }
 
 // ===== FUNCIONES VENTA RAPIDA =====
@@ -2927,7 +2954,7 @@ async function loadPendingList() {
           <td>${formatCurrency(p.codShipping || 0)}</td>
           <td>${formatCurrency(p.codCommissionAmount || 0)}<br><small style="color:var(--text-secondary);">${p.whoPaysCommission === 'client' ? 'Paga cliente' : 'Pagamos nosotros'}</small></td>
           <td><strong style="color:var(--success);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
-          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModalByPosition(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openDeleteConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-trash"></i></button></div></td>
+          <td><div class="cell-actions"><button class="btn btn-sm btn-success" onclick="openPaymentConfirmModal('${p.code}', '${p.date}')"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditPendingModalByPosition(${idx})"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('cod', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button></div></td>
         </tr>`; 
       })).then(html => html.join(''));
     }
@@ -2972,7 +2999,7 @@ async function loadPendingList() {
           <td><strong style="color:var(--purple);">${formatCurrency(toNumber(p.totalToCollect, productTotal))}</strong></td>
           <td><div class="cell-actions">
             ${p.deliveryStatus === 'pending' ? `<button class="btn btn-sm btn-success" onclick="openDeliveryConfirmModal('${p.code}', '${p.date}')" title="Confirmar Entrega"><i class="fa-solid fa-check"></i></button><button class="btn btn-sm" onclick="openEditDeliveryPendingModal('${p.code}', '${p.date}')" title="Editar"><i class="fa-solid fa-pen"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
-            <button class="btn btn-sm btn-danger" onclick="deleteDeliveryPending('${p.code}', '${p.date}')" title="${p.deliveryStatus === 'delivered' ? 'Eliminar registro completado' : 'Eliminar entrega pendiente'}"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('delivery', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button>
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3015,7 +3042,7 @@ async function loadPendingList() {
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
           <td><strong style="color:#f97316;">${formatCurrency(p.pendingAmount)}</strong></td>
           <td><div class="cell-actions">
-            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm" onclick="openPaymentReminderModal('${p.code}', '${p.date}')" title="Recordatorio de Pago Pendiente" aria-label="Recordatorio de Pago Pendiente"><i class="fa-solid fa-bell"></i></button><button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button><button class="btn btn-sm btn-danger" onclick="deletePaymentPending('${p.code}', '${p.date}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}
+            ${p.paymentStatus === 'partial' ? `<button class="btn btn-sm" onclick="openPaymentReminderModal('${p.code}', '${p.date}')" title="Recordatorio de Pago Pendiente" aria-label="Recordatorio de Pago Pendiente"><i class="fa-solid fa-bell"></i></button><button class="btn btn-sm btn-orange" onclick="openCompletePaymentModal('${p.code}', '${p.date}')" title="Confirmar Pago Completo"><i class="fa-solid fa-money-check-dollar"></i></button>` : '<span style="color:var(--text-secondary);font-size:0.75rem;">Completado</span>'}<button class="btn btn-sm btn-danger" onclick="openPendingDeleteMenu('payment', '${p.code}', '${p.date}')" title="Opciones de eliminacion" aria-label="Opciones de eliminacion"><i class="fa-solid fa-trash"></i></button>
           </div></td>
         </tr>`;
       })).then(html => html.join(''));
@@ -3113,6 +3140,107 @@ function confirmPaymentPending() {
   } catch (error) {
     console.error('Error al procesar el cobro', error);
     showNotification('Error al procesar el cobro', 'error');
+  } finally {
+    showLoading(false);
+    ensureKioscoMode();
+  }
+}
+
+const PENDING_DELETE_MENU_CONFIG = {
+  cod: { key: 'pendingInventory', label: 'Contra Entrega' },
+  delivery: { key: 'pendingDeliveryInventory', label: 'Pendientes de Entrega' },
+  payment: { key: 'pendingPaymentInventory', label: 'Pendientes de Cobro' }
+};
+
+function pendingRecordIsCompleted(type, record) {
+  if (!record) return false;
+  if (type === 'delivery') return record.deliveryStatus === 'delivered';
+  if (type === 'payment') return record.paymentStatus === 'paid';
+  return false;
+}
+
+function pendingDeleteMenuRecordLabel(type, record) {
+  if (pendingRecordIsCompleted(type, record)) return 'Registro completado';
+  return type === 'cod' ? 'Pedido COD pendiente' : type === 'delivery' ? 'Entrega pendiente' : 'Cobro parcial pendiente';
+}
+
+function openPendingDeleteMenu(type, code, date) {
+  const config = PENDING_DELETE_MENU_CONFIG[type];
+  if (!config) return;
+  const records = readStorageArray(config.key);
+  const record = records.find(item => String(item.code ?? '') === String(code ?? '') && String(item.date ?? '') === String(date ?? ''));
+  if (!record) {
+    showNotification('El registro ya no esta disponible', 'error');
+    return;
+  }
+
+  const completed = pendingRecordIsCompleted(type, record);
+  pendingDeleteMenuState = { type, code: String(code ?? ''), date: String(date ?? ''), completed };
+  document.getElementById('pendingDeleteMenuTitle').innerHTML = `<i class="fa-solid fa-trash-can"></i> Opciones de ${config.label}`;
+  document.getElementById('pendingDeleteMenuContext').textContent = `${record.name || 'Registro'} · ${pendingDeleteMenuRecordLabel(type, record)}${record.clientName ? ` · Cliente: ${record.clientName}` : ''}`;
+  document.getElementById('pendingDeleteMenuOptions').innerHTML = completed
+    ? `<button type="button" class="pending-delete-option" onclick="selectPendingDeleteMenuOption('deletePendingMenuRecord')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>Eliminar de esta lista</strong><small>El registro ya esta completado. No se devolvera stock ni se modificara el historial de ventas.</small></span></button>`
+    : `<button type="button" class="pending-delete-option" onclick="selectPendingDeleteMenuOption('deletePendingMenuRecord')"><span class="option-icon"><i class="fa-solid fa-box-archive"></i></span><span class="option-copy"><strong>Eliminar y devolver stock</strong><small>Quita solo este registro y devuelve su cantidad al inventario.</small></span></button>`;
+  document.getElementById('pendingDeleteMenuModal').classList.add('active');
+  ensureKioscoMode();
+}
+
+function closePendingDeleteMenu(clearState = true) {
+  document.getElementById('pendingDeleteMenuModal').classList.remove('active');
+  if (clearState) pendingDeleteMenuState = null;
+  ensureKioscoMode();
+}
+
+function selectPendingDeleteMenuOption(action) {
+  if (!pendingDeleteMenuState || action !== 'deletePendingMenuRecord') return;
+  document.getElementById('pendingDeleteMenuModal').classList.remove('active');
+  requestPassword(action, -1);
+}
+
+function executeDeletePendingMenuRecord() {
+  if (!pendingDeleteMenuState) return;
+  const state = pendingDeleteMenuState;
+  const config = PENDING_DELETE_MENU_CONFIG[state.type];
+  if (!config) return;
+
+  showLoading(true);
+  try {
+    const records = readStorageArray(config.key);
+    const itemIndex = findPendingIndex(records, state.code, state.date);
+    const item = records[itemIndex];
+    if (!item) {
+      showNotification('El registro ya no esta disponible', 'error');
+      pendingDeleteMenuState = null;
+      return;
+    }
+
+    const completed = pendingRecordIsCompleted(state.type, item);
+    let invItem = null;
+    if (!completed) {
+      invItem = inventory.find(i => String(i.code ?? '') === String(item.code ?? ''));
+      if (invItem) {
+        invItem.quantity = toNumber(invItem.quantity) + toNumber(item.quantity);
+        saveInventory();
+      }
+    }
+
+    records.splice(itemIndex, 1);
+    writeStorageArray(config.key, records);
+    pendingDeleteMenuState = null;
+    loadPendingList();
+    updateStats();
+    applyFilters();
+
+    if (completed) {
+      showNotification(`Registro completado eliminado de ${config.label}. No se modificaron stock ni ventas.`, 'success');
+    } else if (invItem) {
+      showNotification(`Registro eliminado de ${config.label} y stock devuelto`, 'success');
+    } else {
+      showNotification(`Registro eliminado de ${config.label}; no se pudo localizar el producto para devolver stock`, 'warning');
+    }
+  } catch (error) {
+    console.error('Error al eliminar desde el menu', error);
+    showNotification('Error al eliminar el registro', 'error');
   } finally {
     showLoading(false);
     ensureKioscoMode();

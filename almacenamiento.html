@@ -1640,6 +1640,49 @@ function writeStorageArray(key, value) {
   localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
 }
 function formatCurrency(amount) { return '$' + toNumber(amount).toFixed(2); }
+
+// Modelo de precios: `price` y `originalPrice` siempre representan el precio base;
+// `finalPrice` es el precio unitario que se cobra después de aplicar el descuento.
+// Nunca se vuelve a aplicar el descuento sobre `finalPrice`.
+function getProductPricing(item) {
+  const originalPrice = toNumber(
+    Object.prototype.hasOwnProperty.call(item || {}, 'originalPrice')
+      ? item.originalPrice
+      : item?.price,
+    0
+  );
+  const discount = Math.min(100, Math.max(0, toNumber(item?.discount, 0)));
+  const finalPrice = Math.max(0, originalPrice * (1 - discount / 100));
+  return { originalPrice, discount, finalPrice };
+}
+
+function normalizeInventoryPricing(item) {
+  const pricing = getProductPricing(item);
+  item.originalPrice = pricing.originalPrice;
+  item.finalPrice = pricing.finalPrice;
+  item.price = pricing.originalPrice;
+  item.discount = pricing.discount;
+  return pricing;
+}
+
+function setProductFinalPrice(item, finalPrice) {
+  const safeFinalPrice = Math.max(0, toNumber(finalPrice, 0));
+  const discount = Math.min(100, Math.max(0, toNumber(item?.discount, 0)));
+  const originalPrice = discount >= 100
+    ? safeFinalPrice
+    : safeFinalPrice / (1 - discount / 100);
+  item.originalPrice = originalPrice;
+  item.finalPrice = safeFinalPrice;
+  item.price = originalPrice;
+}
+
+function getSaleUnitPrice(record) {
+  return toNumber(
+    record?.finalPrice,
+    toNumber(record?.price, toNumber(record?.total) / Math.max(1, toNumber(record?.quantity, 1)))
+  );
+}
+
 function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { return new Date(dateStr).toLocaleString('es-ES'); } catch { return 'N/A'; } }
 function localDateKey(value) {
   if (!value) return '';
@@ -1734,9 +1777,17 @@ async function getProductImage(code) {
 function loadInventory() { 
   try { 
     const stored = localStorage.getItem('inventory'); 
-    inventory = stored ? JSON.parse(stored) : []; 
-    inventory.forEach(item => { if (!item.date) item.date = new Date().toISOString(); }); 
-    updateCategories(); 
+    inventory = stored ? JSON.parse(stored) : [];
+    let pricingChanged = false;
+    inventory.forEach(item => {
+      if (!item.date) item.date = new Date().toISOString();
+      const before = JSON.stringify({ price: item.price, originalPrice: item.originalPrice, finalPrice: item.finalPrice, discount: item.discount });
+      normalizeInventoryPricing(item);
+      const after = JSON.stringify({ price: item.price, originalPrice: item.originalPrice, finalPrice: item.finalPrice, discount: item.discount });
+      if (before !== after) pricingChanged = true;
+    });
+    if (pricingChanged) localStorage.setItem('inventory', JSON.stringify(inventory));
+    updateCategories();
     updateStats(); 
     filteredInventory = [...inventory];
     filteredInventory.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
@@ -1758,10 +1809,8 @@ function updateStats() {
   const total = inventory.length, 
         lowStock = inventory.filter(i => (i.quantity || 0) <= (i.stockMin || 0)).length, 
         totalValue = inventory.reduce((sum, i) => {
-          const price = Number(i.price) || 0;
+          const { finalPrice } = getProductPricing(i);
           const quantity = Number(i.quantity) || 0;
-          const discount = Number(i.discount) || 0;
-          const finalPrice = price * (1 - discount / 100);
           return sum + (finalPrice * quantity);
         }, 0); 
   document.getElementById('totalProducts').textContent = total; 
@@ -1810,7 +1859,7 @@ function applyFilters() {
   filteredInventory = inventory.filter(item => { 
     const nameMatch = !query || fuzzyMatch(item.name, query), 
           catMatch = !category || item.category === category, 
-          finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100), 
+          finalPrice = getProductPricing(item).finalPrice, 
           priceMatch = finalPrice >= minPrice && finalPrice <= maxPrice, 
           barcodeMatch = !barcode || (item.barcode || '').toLowerCase().includes(barcode), 
           stockMatch = !lowStockOnly || (item.quantity || 0) <= (item.stockMin || 0); 
@@ -1868,7 +1917,7 @@ async function renderTable(items, startIdx) {
   tbody.innerHTML = items.map((item, idx) => { 
     const realIdx = inventory.indexOf(item), 
           displayIdx = startIdx + idx + 1, 
-          finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100), 
+          finalPrice = getProductPricing(item).finalPrice, 
           isLowStock = (item.quantity || 0) <= (item.stockMin || 0), 
           imgUrl = images[item.code], 
           barcodeUrl = barcodes[item.barcode], 
@@ -1902,7 +1951,7 @@ async function renderCards(items, startIdx) {
   })); 
   container.innerHTML = items.map((item, idx) => { 
     const realIdx = inventory.indexOf(item), 
-          finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100), 
+          finalPrice = getProductPricing(item).finalPrice, 
           isLowStock = (item.quantity || 0) <= (item.stockMin || 0), 
           imgUrl = images[item.code], 
           barcodeUrl = barcodes[item.barcode], 
@@ -2214,7 +2263,7 @@ function processFastSale() {
   // Crear el objeto venta
   let saleRecord = {
     name, code, barcode: barcode || '',
-    price, discount: 0, quantity: qty, total: subtotal,
+    price, originalPrice: price, finalPrice: price, discount: 0, quantity: qty, total: subtotal,
     date: now, seller: 'Sistema',
     category: category || 'Venta Rapida',
     description: description || '',
@@ -2309,7 +2358,7 @@ function processFastSale() {
   if (sendToVenta) {
     const fastSaleProducts = JSON.parse(localStorage.getItem('fastSaleProducts') || '[]');
     fastSaleProducts.push({
-      name, code, barcode: barcode || '', price, discount: 0, quantity: qty, total: subtotal,
+      name, code, barcode: barcode || '', price, originalPrice: price, finalPrice: price, discount: 0, quantity: qty, total: subtotal,
       category: category || 'Venta Rapida', description: description || '',
       paymentMethod: fastSalePaymentMethod, date: now,
       imageDataUrl: fastSaleImageDataUrl || ''
@@ -2412,16 +2461,11 @@ function saveSaleChangesOnly() {
     item.quantity = editedStock;
   }
 
-  // Update unit price from salePrice (works whether locked or unlocked)
-  const editedPrice = parseFloat(document.getElementById('salePrice').value);
-  if (!isNaN(editedPrice) && editedPrice >= 0) {
-    item.price = editedPrice;
-  }
-
-  // Also update from salePriceEdit if it has a different value
+  // El campo de venta contiene el precio final. Al guardar cambios se convierte
+  // de nuevo al precio original para que el descuento no se acumule.
   const priceEditVal = parseFloat(document.getElementById('salePriceEdit').value);
   if (!isNaN(priceEditVal) && priceEditVal >= 0) {
-    item.price = priceEditVal;
+    setProductFinalPrice(item, priceEditVal);
   }
 
   saveInventory();
@@ -2438,18 +2482,19 @@ async function openSaleModal(index) {
   currentSaleCode = selectedItem ? selectedItem.code : null;
   currentPaymentMethod = 'cash';
 
-  const item = inventory.find(product => product.code === currentSaleCode) || selectedItem, finalPrice = (item.price || 0) * (1 - (item.discount || 0) / 100); 
-  document.getElementById('salePrice').value = finalPrice.toFixed(2); 
+  const item = inventory.find(product => product.code === currentSaleCode) || selectedItem;
+  const pricing = getProductPricing(item);
+  document.getElementById('salePrice').value = pricing.finalPrice.toFixed(2); 
   document.getElementById('saleQuantity').value = 1; 
-  document.getElementById('saleDisplayPrice').textContent = formatCurrency(finalPrice); 
+  document.getElementById('saleDisplayPrice').textContent = formatCurrency(pricing.finalPrice); 
   document.getElementById('saleDisplayStock').textContent = item.quantity || 0;
-  const saleDiscount = Number(item.discount) || 0;
+  const saleDiscount = pricing.discount;
   const saleDiscountRow = document.getElementById('saleDisplayDiscount');
   const saleDiscountValue = document.getElementById('saleDiscountValue');
   saleDiscountValue.textContent = saleDiscount > 0 ? `${saleDiscount}%` : '';
   saleDiscountRow.style.display = saleDiscount > 0 ? 'flex' : 'none';
   document.getElementById('saleStockEdit').value = item.quantity || 0;
-  document.getElementById('salePriceEdit').value = finalPrice.toFixed(2);
+  document.getElementById('salePriceEdit').value = pricing.finalPrice.toFixed(2);
   const imgUrl = await getProductImage(item.code); 
   document.getElementById('saleProductImage').src = imgUrl || ''; 
   if (item.barcode) { 
@@ -2643,20 +2688,22 @@ function processSale() {
         isPendingDelivery = document.getElementById('isPendingDelivery').checked,
         isPendingPayment = document.getElementById('isPendingPayment').checked; 
 
-  // Actualizar precio unitario si fue editado (desde salePriceEdit o salePrice desbloqueado)
-  const editedPriceFromEdit = parseFloat(document.getElementById('salePriceEdit').value);
-  if (!isNaN(editedPriceFromEdit) && editedPriceFromEdit >= 0) {
-    item.price = editedPriceFromEdit;
-  }
-  // Si el campo salePrice fue desbloqueado y editado, tambien actualizar
+  const pricing = getProductPricing(item);
+  price = parseFloat(document.getElementById('salePrice').value);
+  if (!Number.isFinite(price) || price < 0) price = pricing.finalPrice;
+
+  // Solo se modifica el precio del inventario cuando el usuario desbloqueó
+  // explícitamente los campos. Una venta normal jamás altera el precio base.
   if (!saleFieldsLocked) {
-    const editedPriceFromSale = parseFloat(document.getElementById('salePrice').value);
-    if (!isNaN(editedPriceFromSale) && editedPriceFromSale >= 0) {
-      item.price = editedPriceFromSale;
+    const editedFinalPrice = parseFloat(document.getElementById('salePrice').value);
+    if (Number.isFinite(editedFinalPrice) && editedFinalPrice >= 0) {
+      setProductFinalPrice(item, editedFinalPrice);
     }
   }
-  price = parseFloat(document.getElementById('salePrice').value) || item.price || 0;
+  const salePricing = getProductPricing(item);
+  price = !saleFieldsLocked ? salePricing.finalPrice : price;
   const subtotal = price * qty;
+  const saleOriginalPrice = salePricing.originalPrice;
 
   // ===== CORRECCION: validar ANTES de descontar stock o guardar =====
   if (isCOD) {
@@ -2715,8 +2762,10 @@ function processSale() {
       name: item.name, 
       code: item.code, 
       barcode: item.barcode, 
-      price: price, 
-      discount: Number(item.discount) || 0,
+      price: price,
+      originalPrice: saleOriginalPrice,
+      finalPrice: price,
+      discount: salePricing.discount,
       quantity: qty, 
       total: subtotal,
       date: new Date().toISOString(), 
@@ -2747,7 +2796,9 @@ function processSale() {
       code: item.code,
       barcode: item.barcode,
       price: price,
-      discount: Number(item.discount) || 0,
+      originalPrice: saleOriginalPrice,
+      finalPrice: price,
+      discount: salePricing.discount,
       quantity: qty,
       total: subtotal,
       date: new Date().toISOString(),
@@ -2783,8 +2834,9 @@ function processSale() {
       code: item.code,
       barcode: item.barcode,
       price: price,
-      discount: Number(item.discount) || 0,
-      originalPrice: item.price,
+      discount: salePricing.discount,
+      originalPrice: saleOriginalPrice,
+      finalPrice: price,
       quantity: qty,
       total: subtotal,
       date: new Date().toISOString(),
@@ -2805,8 +2857,10 @@ function processSale() {
       name: item.name, 
       code: item.code, 
       barcode: item.barcode, 
-      price: price, 
-      discount: Number(item.discount) || 0,
+      price: price,
+      originalPrice: saleOriginalPrice,
+      finalPrice: price,
+      discount: salePricing.discount,
       quantity: qty, 
       total: subtotal, 
       date: new Date().toISOString(), 
@@ -2846,7 +2900,9 @@ function savePrice() {
   const item = inventory.find(product => String(product.code ?? '') === String(currentPriceCode ?? ''));
   if (!item) { showNotification('Producto no encontrado', 'error'); return; }
   const editedCode = item.code;
-  item.price = newPrice; 
+  item.originalPrice = newPrice;
+  item.price = newPrice;
+  item.finalPrice = getProductPricing(item).finalPrice;
   saveInventory(); 
   applyFilters(); 
   const newPosition = filteredInventory.findIndex(item => item.code === editedCode) + 1;
@@ -3139,8 +3195,9 @@ function confirmPaymentPending() {
 
     sales.push({
       ...item,
-      price: toNumber(item.quantity) ? finalTotal / toNumber(item.quantity) : finalTotal,
-      originalPrice: toNumber(item.price),
+      price: getSaleUnitPrice(item),
+      originalPrice: toNumber(item.originalPrice, item.price),
+      finalPrice: getSaleUnitPrice(item),
       total: finalTotal,
       netEarnings,
       isCOD: true,
@@ -4572,7 +4629,7 @@ async function renderSalesHistoryTable(filteredSales) {
 
     const imgUrl = await getProductImage(s.code);
     const barcodeUrl = s.barcode ? generateBarcodeDataUrl(s.barcode) : null;
-    const unitPrice = s.price || (s.total / (s.quantity || 1));
+    const unitPrice = getSaleUnitPrice(s);
 
     return {
       fullDateTime, dateStr, timeStr, typeBadge, methodBadge, imgUrl, barcodeUrl, barcode: s.barcode,
@@ -4626,10 +4683,8 @@ function updateFixedTotal() {
   const totalAmount = document.getElementById('fixedTotalAmount');
   if (!totalAmount) return;
   const totalValue = inventory.reduce((sum, i) => {
-    const price = Number(i.price) || 0;
+    const { finalPrice } = getProductPricing(i);
     const quantity = Number(i.quantity) || 0;
-    const discount = Number(i.discount) || 0;
-    const finalPrice = price * (1 - discount / 100);
     return sum + (finalPrice * quantity);
   }, 0);
   totalAmount.textContent = formatCurrency(totalValue);
@@ -4838,7 +4893,7 @@ async function renderDailyReportTable(filteredSales) {
     const imgUrl = await getProductImage(s.code);
     const barcodeUrl = s.barcode ? generateBarcodeDataUrl(s.barcode) : null;
 
-    const unitPrice = s.price || (s.total / (s.quantity || 1));
+    const unitPrice = getSaleUnitPrice(s);
 
     return {
       dateStr, timeStr, typeClass, typeText, paymentClass, paymentIcon, paymentText,

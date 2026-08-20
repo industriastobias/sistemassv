@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -329,12 +330,38 @@
       border-color: var(--accent);
       background: rgba(212, 165, 154, 0.05);
     }
+
+    .image-upload-area:focus {
+      outline: 3px solid rgba(212, 165, 154, 0.35);
+      outline-offset: 2px;
+    }
     
-    #imagePreview {
-      max-width: 100%;
-      max-height: 200px;
-      border-radius: 8px;
+    #imagePreviewContainer {
       display: none;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+      text-align: left;
+    }
+
+    #imagePreviewContainer.has-images {
+      display: grid;
+    }
+
+    .image-preview-item {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .image-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     
     .btn {
@@ -2862,14 +2889,14 @@
         </div>
         
         <div class="form-group full-width">
-          <label>Imagen del Producto</label>
-          <div class="image-upload-area" onclick="document.getElementById('imageFile').click()">
-            <input type="file" id="imageFile" accept="image/*" style="display: none;" onchange="previewImage(event)">
+          <label>Imágenes del Producto</label>
+          <div class="image-upload-area" tabindex="0" role="button" onclick="this.focus(); document.getElementById('imageFile').click()">
+            <input type="file" id="imageFile" accept="image/*" multiple style="display: none;" onchange="previewImage(event)">
             <div id="uploadPlaceholder">
               <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i>
-              <p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir imagen</p>
+              <p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir imágenes o enfoca aquí y pega con Ctrl+V</p>
             </div>
-            <img id="imagePreview" alt="Vista previa">
+            <div id="imagePreviewContainer" aria-label="Vista previa de imágenes"></div>
           </div>
         </div>
       </div>
@@ -3122,15 +3149,8 @@ async function loadProductImage(code, elementId, useThumbnail = true) {
     }
 
     // Intentar cargar thumbnail primero si esta disponible
-    let blob = null;
-    if (useThumbnail) {
-      blob = await localforage.getItem(`img_thumb_${code}`);
-    }
-    
-    // Si no hay thumbnail, cargar imagen original
-    if (!blob) {
-      blob = await localforage.getItem(`img_${code}`);
-    }
+    const blobs = await obtenerImagenesProducto(code, useThumbnail);
+    const blob = blobs[0];
 
     if (blob) {
       const objectUrl = URL.createObjectURL(blob);
@@ -3161,20 +3181,73 @@ function cleanupImageUrls() {
 }
 
 /**
- * Genera y guarda un thumbnail para un producto existente
- * @param {string} code - Codigo del producto
- * @param {Blob} originalBlob - Blob de la imagen original
- */
-async function generateAndSaveThumbnail(code, originalBlob) {
-  try {
-    const thumbBlob = await imageCompressor.compressForThumbnail(originalBlob);
-    await localforage.setItem(`img_thumb_${code}`, thumbBlob);
-    return thumbBlob;
-  } catch (error) {
-    console.warn('Error generando thumbnail:', error);
-    return null;
+ * Obtiene todas las imágenes guardadas de un producto.
+   * Mantiene compatibilidad con productos antiguos que solo tenían img_<codigo>.
+   */
+async function obtenerImagenesProducto(code, useThumbnail = false) {
+    const count = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+    const suffix = useThumbnail ? 'img_thumb_' : 'img_';
+    const images = [];
+
+    if (count > 0) {
+      for (let i = 0; i < count; i++) {
+        const blob = await localforage.getItem(`${suffix}${code}_${i}`);
+        if (blob) images.push(blob);
+      }
+    }
+
+    // Compatibilidad con el formato anterior de una sola imagen.
+    if (!images.length) {
+      const legacy = await localforage.getItem(`${suffix}${code}`);
+      if (legacy) images.push(legacy);
+    }
+    return images;
   }
-}
+
+async function eliminarImagenesProducto(code) {
+    const count = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+    const keys = [`img_${code}`, `img_thumb_${code}`, `img_count_${code}`];
+    for (let i = 0; i < count; i++) {
+      keys.push(`img_${code}_${i}`, `img_thumb_${code}_${i}`);
+    }
+    await Promise.all(keys.map(key => localforage.removeItem(key)));
+  }
+
+async function guardarImagenesProducto(code, blobs) {
+    const validBlobs = (blobs || []).filter(Boolean);
+    if (!validBlobs.length) return;
+
+    await eliminarImagenesProducto(code);
+    await localforage.setItem(`img_count_${code}`, validBlobs.length);
+
+    for (let i = 0; i < validBlobs.length; i++) {
+      await localforage.setItem(`img_${code}_${i}`, validBlobs[i]);
+      await generateAndSaveThumbnail(code, validBlobs[i], i);
+    }
+
+    // También se conserva la primera imagen en las claves antiguas.
+    await localforage.setItem(`img_${code}`, validBlobs[0]);
+    const firstThumbnail = await localforage.getItem(`img_thumb_${code}_0`);
+    if (firstThumbnail) await localforage.setItem(`img_thumb_${code}`, firstThumbnail);
+  }
+
+/**
+ * Genera y guarda un thumbnail para un producto existente.
+   * @param {string} code - Codigo del producto
+   * @param {Blob} originalBlob - Blob de la imagen original
+   * @param {number} index - Posicion de la imagen dentro del producto
+   */
+async function generateAndSaveThumbnail(code, originalBlob, index = 0) {
+    try {
+      const thumbBlob = await imageCompressor.compressForThumbnail(originalBlob);
+      await localforage.setItem(`img_thumb_${code}_${index}`, thumbBlob);
+      if (index === 0) await localforage.setItem(`img_thumb_${code}`, thumbBlob);
+      return thumbBlob;
+    } catch (error) {
+      console.warn('Error generando thumbnail:', error);
+      return null;
+    }
+  }
 
 // ============================================
 // VARIABLES GLOBALES
@@ -3243,7 +3316,8 @@ let autoguardadoInterval;
 let lastSearch = '';
 let barcodeLengthMode = 'mixed';
 let productosStockCeroTemp = [];
-let imagenComprimidaTemp = null; // Almacena la imagen comprimida temporalmente
+let imagenComprimidaTemp = null; // Compatibilidad con código antiguo
+let imagenesComprimidasTemp = []; // Imágenes seleccionadas para el producto actual
 
 const DIAS_PAPELERA = 30;
 const LIMITE_STOCK_BAJO = 5;
@@ -3771,43 +3845,87 @@ function validarAntesDeGuardar(item) {
 // ============================================
 // VISTA PREVIA DE IMAGEN - VERSION ASYNC OPTIMIZADA
 // ============================================
-async function previewImage(evt) { 
-  const file = evt.target.files[0]; 
-  if (!file) return;
-  
+async function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function renderImagePreviews(dataUrls) {
+  const container = document.getElementById('imagePreviewContainer');
+  if (!container) return;
+  container.innerHTML = dataUrls.map((src, index) => `
+    <div class="image-preview-item" title="Imagen ${index + 1}">
+      <img src="${src}" alt="Vista previa ${index + 1}">
+    </div>
+  `).join('');
+  container.classList.toggle('has-images', dataUrls.length > 0);
+  document.getElementById('uploadPlaceholder').style.display = dataUrls.length ? 'none' : 'block';
+}
+
+async function mostrarImagenesGuardadas(code) {
+  const blobs = await obtenerImagenesProducto(code, false);
+  const dataUrls = await Promise.all(blobs.map(blobToDataUrl));
+  renderImagePreviews(dataUrls);
+}
+
+// ============================================
+// VISTA PREVIA DE IMAGENES - VERSION ASYNC OPTIMIZADA
+// ============================================
+async function procesarArchivosImagenes(files, acumular = false) {
+  const imageFiles = Array.from(files || []).filter(file => file && file.type && file.type.startsWith('image/'));
+  if (!imageFiles.length) return false;
+
+  const placeholder = document.getElementById('uploadPlaceholder');
+  placeholder.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i><p style="color: var(--text-secondary); font-size: 0.875rem;">Comprimiendo imágenes...</p>';
+  placeholder.style.display = 'block';
+  document.getElementById('imagePreviewContainer').classList.remove('has-images');
+
   try {
-    // Mostrar loading
-    document.getElementById('uploadPlaceholder').innerHTML = 
-      '<i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i><p style="color: var(--text-secondary); font-size: 0.875rem;">Comprimiendo...</p>';
-    
-    // Comprimir imagen para preview (calidad baja, rapido)
-    const compressedBlob = await imageCompressor.compressForPreview(file);
-    
-    // Crear URL para preview
-    const reader = new FileReader(); 
-    reader.onload = e => { 
-      document.getElementById('imagePreview').src = e.target.result; 
-      document.getElementById('imagePreview').style.display = 'block'; 
-      document.getElementById('uploadPlaceholder').style.display = 'none'; 
-    }; 
-    reader.readAsDataURL(compressedBlob);
-    
-    // Guardar la imagen comprimida para storage temporalmente
-    imagenComprimidaTemp = await imageCompressor.compressForStorage(file);
-    
+    const nuevasImagenes = [];
+    for (const file of imageFiles) {
+      nuevasImagenes.push(await imageCompressor.compressForStorage(file));
+    }
+
+    imagenesComprimidasTemp = acumular
+      ? imagenesComprimidasTemp.concat(nuevasImagenes)
+      : nuevasImagenes;
+
+    renderImagePreviews(await Promise.all(imagenesComprimidasTemp.map(blobToDataUrl)));
+    return true;
   } catch (error) {
-    console.error('Error comprimiendo imagen:', error);
-    showToast('Error al comprimir imagen', 'error');
-    // Fallback: mostrar imagen original
-    const reader = new FileReader(); 
-    reader.onload = e => { 
-      document.getElementById('imagePreview').src = e.target.result; 
-      document.getElementById('imagePreview').style.display = 'block'; 
-      document.getElementById('uploadPlaceholder').style.display = 'none'; 
-    }; 
-    reader.readAsDataURL(file);
-    imagenComprimidaTemp = file;
+    console.error('Error comprimiendo imágenes:', error);
+    showToast('Error al comprimir una imagen', 'error');
+    if (!acumular) imagenesComprimidasTemp = imageFiles;
+    else imagenesComprimidasTemp = imagenesComprimidasTemp.concat(imageFiles);
+    renderImagePreviews(await Promise.all(imagenesComprimidasTemp.map(blobToDataUrl)));
+    return true;
   }
+}
+
+async function previewImage(evt) {
+  await procesarArchivosImagenes(evt.target.files, false);
+}
+
+async function handleImagePaste(event) {
+  const items = Array.from(event.clipboardData?.items || []);
+  const files = items
+    .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+    .map(item => item.getAsFile())
+    .filter(Boolean);
+
+  if (!files.length) return;
+  event.preventDefault();
+  const pasted = await procesarArchivosImagenes(files, true);
+  if (pasted) showToast(`${files.length} imagen(es) pegada(s)`, 'success');
+}
+
+const imageUploadArea = document.querySelector('.image-upload-area');
+if (imageUploadArea) {
+  imageUploadArea.addEventListener('paste', handleImagePaste);
 }
 
 // ============================================
@@ -3877,12 +3995,10 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
           }
           guardarInventarioCentral(inventory); 
           
-          // Guardar imagen comprimida si existe
-          if (imagenComprimidaTemp) {
-            await localforage.setItem(`img_${item.code}`, imagenComprimidaTemp);
-            // Generar y guardar thumbnail
-            await generateAndSaveThumbnail(item.code, imagenComprimidaTemp);
-            imagenComprimidaTemp = null;
+          // Guardar todas las imágenes seleccionadas si existen
+          if (imagenesComprimidasTemp.length) {
+            await guardarImagenesProducto(item.code, imagenesComprimidasTemp);
+            imagenesComprimidasTemp = [];
           }
           
           finalizarGuardado(e.target); 
@@ -3897,12 +4013,10 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
     
     guardarInventarioCentral(inventory); 
     
-    // Usar la imagen ya comprimida en lugar de volver a comprimir
-    if (imagenComprimidaTemp) {
-      await localforage.setItem(`img_${item.code}`, imagenComprimidaTemp);
-      // Generar y guardar thumbnail
-      await generateAndSaveThumbnail(item.code, imagenComprimidaTemp);
-      imagenComprimidaTemp = null;
+    // Usar las imágenes ya comprimidas en lugar de volver a comprimirlas
+    if (imagenesComprimidasTemp.length) {
+      await guardarImagenesProducto(item.code, imagenesComprimidasTemp);
+      imagenesComprimidasTemp = [];
     }
     
     finalizarGuardado(e.target); 
@@ -3910,11 +4024,8 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
 });
 
 function finalizarGuardado(form) { 
-  form.reset(); 
-  document.getElementById('imagePreview').style.display = 'none'; 
-  document.getElementById('uploadPlaceholder').style.display = 'block'; 
-  document.getElementById('uploadPlaceholder').innerHTML = 
-    '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i><p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir imagen</p>';
+  form.reset();
+  limpiarVistaPreviaImagenes();
   document.getElementById('barcodeCanvas').style.display = 'none'; 
   document.getElementById('okSound').play(); 
   document.getElementById('editModeFlag').style.display = 'none'; 
@@ -3935,11 +4046,8 @@ function finalizarGuardado(form) {
 }
 
 function resetForm() { 
-  document.getElementById('purchaseForm').reset(); 
-  document.getElementById('imagePreview').style.display = 'none'; 
-  document.getElementById('uploadPlaceholder').style.display = 'block'; 
-  document.getElementById('uploadPlaceholder').innerHTML = 
-    '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i><p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir imagen</p>';
+  document.getElementById('purchaseForm').reset();
+  limpiarVistaPreviaImagenes();
   document.getElementById('barcodeCanvas').style.display = 'none'; 
   editIndex = -1; 
   document.getElementById('editModeFlag').style.display = 'none'; 
@@ -3951,6 +4059,24 @@ function resetForm() {
   const tabNormal = [...document.querySelectorAll('.tab')].find(tab => !tab.textContent.toLowerCase().includes('lote'));
   if (tabNormal) switchTab('normal', tabNormal);
   imagenComprimidaTemp = null;
+  imagenesComprimidasTemp = [];
+}
+
+function limpiarVistaPreviaImagenes() {
+  const container = document.getElementById('imagePreviewContainer');
+  if (container) {
+    container.innerHTML = '';
+    container.classList.remove('has-images');
+  }
+  const placeholder = document.getElementById('uploadPlaceholder');
+  if (placeholder) {
+    placeholder.style.display = 'block';
+    placeholder.innerHTML = '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i><p style="color: var(--text-secondary); font-size: 0.875rem;">Haz clic para subir una o varias imágenes</p>';
+  }
+  const input = document.getElementById('imageFile');
+  if (input) input.value = '';
+  imagenComprimidaTemp = null;
+  imagenesComprimidasTemp = [];
 }
 
 function calculateTotal() { 
@@ -4067,14 +4193,8 @@ function editProduct(idx) {
   document.getElementById('btnSubmitText').textContent = 'Actualizar Producto'; 
   document.getElementById('editModeFlag').style.display = 'flex'; 
   
-  // Cargar imagen para edicion (imagen completa, no thumbnail)
-  loadProductImage(p.code, 'imagePreview', false);
-  localforage.getItem(`img_${p.code}`).then(blob => { 
-    if (blob) { 
-      document.getElementById('imagePreview').style.display = 'block'; 
-      document.getElementById('uploadPlaceholder').style.display = 'none'; 
-    } 
-  }); 
+  // Cargar todas las imágenes para edición (imágenes completas, no thumbnails)
+  mostrarImagenesGuardadas(p.code);
   
   generarBarcode(p.barcode); 
 }
@@ -4147,8 +4267,7 @@ function restaurarDePapelera(idx) {
 
 function eliminarPermanente(idx) { 
   if (!confirm('Eliminar permanentemente?')) return; 
-  localforage.removeItem(`img_${trash[idx].code}`);
-  localforage.removeItem(`img_thumb_${trash[idx].code}`);
+  eliminarImagenesProducto(trash[idx].code);
   trash.splice(idx, 1); 
   localStorage.setItem('trash', JSON.stringify(trash)); 
   renderizarPapelera(); 
@@ -4158,8 +4277,7 @@ function eliminarPermanente(idx) {
 function vaciarPapelera() { 
   if (!confirm('Vaciar papelera?')) return; 
   trash.forEach(i => {
-    localforage.removeItem(`img_${i.code}`);
-    localforage.removeItem(`img_thumb_${i.code}`);
+    eliminarImagenesProducto(i.code);
   }); 
   trash = []; 
   localStorage.setItem('trash', JSON.stringify(trash)); 
@@ -4186,8 +4304,7 @@ function limpiarPapeleraVieja() {
 function vaciarInventario() { 
   if (!confirm('Vaciar TODO el inventario?')) return; 
   inventory.forEach(p => {
-    localforage.removeItem(`img_${p.code}`);
-    localforage.removeItem(`img_thumb_${p.code}`);
+    eliminarImagenesProducto(p.code);
   }); 
   inventory = []; 
   guardarInventarioCentral(inventory); 
@@ -4625,10 +4742,12 @@ async function exportToZip() {
     zip.file('inventory.json', JSON.stringify(inventory, null, 2)); 
     const img = zip.folder('images'); 
     
-    for (const p of inventory) { 
-      const blob = await localforage.getItem(`img_${p.code}`); 
-      if (blob) img.file(`${p.code}.jpg`, blob); 
-    } 
+    for (const p of inventory) {
+      const blobs = await obtenerImagenesProducto(p.code, false);
+      blobs.forEach((imageBlob, index) => {
+        img.file(`${p.code}_${index + 1}.jpg`, imageBlob);
+      });
+    }
     
     const blobZip = await zip.generateAsync({ type: 'blob' }); 
     const a = document.createElement('a'); 
@@ -4655,14 +4774,26 @@ async function importFromZip(evt) {
     const imported = JSON.parse(await json.async('string'));
     const importedProducts = DaymarInventorySync.normalizeList(imported); 
     
-    for (const p of importedProducts) { 
-      const img = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`); 
-      if (img) { 
-        const blob = await img.async('blob'); 
-        await localforage.setItem(`img_${p.code}`, blob);
-        // Generar thumbnail para imagen importada
-        await generateAndSaveThumbnail(p.code, blob);
-      } 
+    for (const p of importedProducts) {
+      const imageEntries = [];
+      zip.folder('images')?.forEach((relativePath, entry) => {
+        if (!entry.dir && relativePath.toLowerCase().startsWith(`${p.code.toLowerCase()}_`) && /\.(jpg|jpeg|png|webp)$/i.test(relativePath)) {
+          imageEntries.push({ relativePath, entry });
+        }
+      });
+      imageEntries.sort((a, b) => a.relativePath.localeCompare(b.relativePath, undefined, { numeric: true }));
+
+      // También acepta ZIP antiguos con una sola imagen llamada codigo.jpg/jpeg.
+      if (!imageEntries.length) {
+        const legacyImage = zip.file(`images/${p.code}.jpg`) || zip.file(`images/${p.code}.jpeg`);
+        if (legacyImage) imageEntries.push({ relativePath: legacyImage.name, entry: legacyImage });
+      }
+
+      if (imageEntries.length) {
+        const blobs = [];
+        for (const image of imageEntries) blobs.push(await image.entry.async('blob'));
+        await guardarImagenesProducto(p.code, blobs);
+      }
       const idx = inventory.findIndex(x => x.code === p.code); 
       if (idx > -1) {
         const previousQuantity = Number(inventory[idx].quantity) || 0;

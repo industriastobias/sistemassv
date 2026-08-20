@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Catálogo – Klohe</title>
+  <title>Catálogo – DAYMARSV</title>
 
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-  <header class="header-fixed"><h1>CATÁLOGO KLOHE</h1></header>
+  <header class="header-fixed"><h1>CATÁLOGO DAYMARSV</h1></header>
 
   <div class="catalogo" id="catalogo"></div>
 
@@ -210,7 +210,7 @@
         }
       }
 
-      doc.save('catalogo_klohe.pdf');
+      doc.save('catalogo_DAYMARSV.pdf');
     }
 
     function blobToBase64(blob) {
@@ -221,6 +221,27 @@
       });
     }
 
+    async function obtenerImagenesProductoParaZIP(code) {
+      const imagenes = [];
+      const cantidad = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+
+      // Formato actual para varias imágenes: img_<codigo>_0, img_<codigo>_1, etc.
+      if (cantidad > 0) {
+        for (let i = 0; i < cantidad; i++) {
+          const blob = await localforage.getItem(`img_${code}_${i}`);
+          if (blob) imagenes.push(blob);
+        }
+      }
+
+      // Compatibilidad con productos antiguos que tienen una sola imagen.
+      if (!imagenes.length) {
+        const imagenAnterior = await localforage.getItem(`img_${code}`);
+        if (imagenAnterior) imagenes.push(imagenAnterior);
+      }
+
+      return imagenes;
+    }
+
     async function descargarZIP() {
       const lista = JSON.parse(localStorage.getItem('inventory')) || [];
       if (!lista.length) { alert('No hay productos'); return; }
@@ -229,11 +250,19 @@
       let c = 0;
 
       for (const p of lista) {
-        const blob = await localforage.getItem(`img_${p.code}`);
-        if (blob) {
+        const imagenes = await obtenerImagenesProductoParaZIP(p.code);
+        if (!imagenes.length) continue;
+
+        const nombreBase = p.barcode || p.code;
+
+        imagenes.forEach((blob, index) => {
+          // Conserva el nombre anterior cuando el producto tiene una sola imagen.
+          const nombre = imagenes.length === 1
+            ? `${nombreBase}.jpg`
+            : `${nombreBase}_${index + 1}.jpg`;
+          zip.file(nombre, blob);
           c++;
-          zip.file(`${p.barcode || p.code}.jpg`, blob);
-        }
+        });
       }
 
       if (!c) { alert('No hay imágenes para descargar'); return; }
@@ -241,8 +270,9 @@
       const content = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(content);
-      a.download = 'klohe_imagenes.zip';
+      a.download = 'DAYMARSV_imagenes.zip';
       a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
 
     /* ---------- WIX CSV 91 COLUMNAS ---------- */

@@ -113,6 +113,10 @@
     .data-table tbody tr.highlight { background: rgba(212,180,114,0.15); }
     .cell-img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
     .cell-img:hover { transform: scale(1.05); }
+    .inventory-image-gallery { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; align-items: center; }
+    .inventory-image-gallery .gallery-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer; transition: var(--transition); }
+    .inventory-image-gallery .gallery-thumb:hover { transform: scale(1.08); z-index: 1; }
+    .inventory-image-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9999px; background: var(--accent); color: white; font-size: 0.625rem; font-weight: 700; }
     .cell-barcode { height: 32px; cursor: pointer; transition: var(--transition); }
     .cell-barcode:hover { transform: scale(1.05); }
     .cell-price { font-weight: 600; color: var(--success); }
@@ -126,6 +130,10 @@
     .product-card.highlight { border-color: #D4B472; background: rgba(212,180,114,0.06); }
     .card-image { width: 100%; height: 150px; object-fit: cover; cursor: pointer; transition: var(--transition); }
     .card-image:hover { opacity: 0.9; }
+    .card-image-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; height: 150px; padding: 4px; background: var(--border-light); }
+    .card-image-gallery .gallery-thumb { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
+    .card-image-gallery .gallery-thumb:hover { opacity: 0.85; transform: scale(1.03); }
+    .card-image-gallery.more-than-six { grid-template-columns: repeat(4, 1fr); }
     .card-content { padding: 0.75rem; }
     .card-title { font-weight: 600; font-size: 0.875rem; margin-bottom: 0.375rem; line-height: 1.35; font-family: 'Outfit', sans-serif; }
     .card-meta { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
@@ -1761,17 +1769,63 @@ function generateBarcodeDataUrl(barcode) {
     return dataUrl; 
   } catch (e) { return ''; } 
 }
-async function getProductImage(code) { 
-  if (imageCache.has(code)) return imageCache.get(code); 
-  try { 
-    const blob = await localforage.getItem(`img_${code}`); 
-    if (blob) { 
-      const url = URL.createObjectURL(blob); 
-      imageCache.set(code, url); 
-      return url; 
-    } 
-  } catch (e) {} 
-  return null; 
+async function getProductImages(code) {
+  const cacheKey = `gallery:${code}`;
+  if (imageCache.has(cacheKey)) return imageCache.get(cacheKey);
+
+  const urls = [];
+  try {
+    const storedCount = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+    const maxImages = storedCount > 0 ? storedCount : 50;
+
+    // Formato de varias imágenes: img_<codigo>_0, img_<codigo>_1, etc.
+    for (let i = 0; i < maxImages; i++) {
+      const blob = await localforage.getItem(`img_${code}_${i}`);
+      if (blob) {
+        urls.push(URL.createObjectURL(blob));
+      } else if (storedCount === 0) {
+        // Si no existe contador, se detiene al encontrar el primer índice vacío.
+        break;
+      }
+    }
+
+    // Compatibilidad con productos antiguos de una sola imagen.
+    if (!urls.length) {
+      const legacyBlob = await localforage.getItem(`img_${code}`);
+      if (legacyBlob) urls.push(URL.createObjectURL(legacyBlob));
+    }
+  } catch (e) {}
+
+  imageCache.set(cacheKey, urls);
+  return urls;
+}
+
+// Las demás vistas siguen recibiendo solo la primera imagen, sin cambios de comportamiento.
+async function getProductImage(code) {
+  const urls = await getProductImages(code);
+  return urls[0] || null;
+}
+
+function renderInventoryImageGallery(urls, view = 'table') {
+  const validUrls = (urls || []).filter(Boolean);
+  if (!validUrls.length) {
+    return view === 'table'
+      ? '<div style="width:48px;height:48px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:0.625rem;">Sin img</div>'
+      : '<div style="width:100%;height:150px;background:var(--border-light);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">Sin imagen</div>';
+  }
+
+  const openImageCall = url => `openImage(${JSON.stringify(url)})`;
+  if (validUrls.length === 1) {
+    const className = view === 'table' ? 'cell-img' : 'card-image';
+    return `<img src="${validUrls[0]}" class="${className}" onclick='${openImageCall(validUrls[0])}' alt="">`;
+  }
+
+  if (view === 'table') {
+    return `<div class="inventory-image-gallery" title="${validUrls.length} imágenes">${validUrls.map((url, index) => `<img src="${url}" class="gallery-thumb" onclick='${openImageCall(url)}' alt="Imagen ${index + 1}">`).join('')}<span class="inventory-image-count">${validUrls.length}</span></div>`;
+  }
+
+  const extraClass = validUrls.length > 6 ? ' more-than-six' : '';
+  return `<div class="card-image-gallery${extraClass}" title="${validUrls.length} imágenes">${validUrls.map((url, index) => `<img src="${url}" class="gallery-thumb" onclick='${openImageCall(url)}' alt="Imagen ${index + 1}">`).join('')}</div>`;
 }
 
 function loadInventory() { 
@@ -1911,20 +1965,20 @@ async function renderInventory() {
 }
 
 async function renderTable(items, startIdx) { 
-  const tbody = document.getElementById('inventoryTable'), barcodes = {}, images = {}; 
+  const tbody = document.getElementById('inventoryTable'), barcodes = {}, imageLists = {}; 
   items.forEach(item => { if (item.barcode) barcodes[item.barcode] = generateBarcodeDataUrl(item.barcode); }); 
-  await Promise.all(items.map(async item => { images[item.code] = await getProductImage(item.code); })); 
+  await Promise.all(items.map(async item => { imageLists[item.code] = await getProductImages(item.code); })); 
   tbody.innerHTML = items.map((item, idx) => { 
     const realIdx = inventory.indexOf(item), 
           displayIdx = startIdx + idx + 1, 
           finalPrice = getProductPricing(item).finalPrice, 
           isLowStock = (item.quantity || 0) <= (item.stockMin || 0), 
-          imgUrl = images[item.code], 
+          imageUrls = imageLists[item.code], 
           barcodeUrl = barcodes[item.barcode], 
           dateStr = formatDate(item.date); 
     return `<tr id="row-${displayIdx}" data-index="${realIdx}">
       <td>${displayIdx}</td>
-      <td>${imgUrl ? `<img src="${imgUrl}" class="cell-img" onclick="openImage('${imgUrl}')" alt="">` : '<div style="width:48px;height:48px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:0.625rem;">Sin img</div>'}</td>
+      <td>${renderInventoryImageGallery(imageUrls, 'table')}</td>
       <td>${highlightText(item.name, document.getElementById('searchInput').value)}</td>
       <td>${barcodeUrl ? `<img src="${barcodeUrl}" class="cell-barcode" onclick="openBarcodeModal('${barcodeUrl}', '${item.barcode}')" alt="">` : '<span style="color:var(--text-secondary);">N/A</span>'}</td>
       <td class="cell-price">${formatCurrency(item.price)}</td>
@@ -1944,20 +1998,20 @@ async function renderTable(items, startIdx) {
 }
 
 async function renderCards(items, startIdx) { 
-  const container = document.getElementById('cardsView'), barcodes = {}, images = {}; 
+  const container = document.getElementById('cardsView'), barcodes = {}, imageLists = {}; 
   await Promise.all(items.map(async item => { 
     if (item.barcode) barcodes[item.barcode] = generateBarcodeDataUrl(item.barcode); 
-    images[item.code] = await getProductImage(item.code); 
+    imageLists[item.code] = await getProductImages(item.code); 
   })); 
   container.innerHTML = items.map((item, idx) => { 
     const realIdx = inventory.indexOf(item), 
           finalPrice = getProductPricing(item).finalPrice, 
           isLowStock = (item.quantity || 0) <= (item.stockMin || 0), 
-          imgUrl = images[item.code], 
+          imageUrls = imageLists[item.code], 
           barcodeUrl = barcodes[item.barcode], 
           dateStr = formatDate(item.date); 
     return `<div class="product-card" id="card-${startIdx + idx + 1}" data-index="${realIdx}">
-      ${imgUrl ? `<img src="${imgUrl}" class="card-image" onclick="openImage('${imgUrl}')" alt="">` : '<div style="width:100%;height:180px;background:var(--border-light);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">Sin imagen</div>'}
+      ${renderInventoryImageGallery(imageUrls, 'cards')}
       <div class="card-content">
         <div class="card-title">${highlightText(item.name, document.getElementById('searchInput').value)}</div>
         ${Number(item.discount) > 0 ? `<div style="margin-bottom:0.45rem;"><span class="discount-badge"><i class="fa-solid fa-percent"></i> ${Number(item.discount)}% de descuento</span></div>` : ''}

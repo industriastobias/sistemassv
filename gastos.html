@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
   <style>
     :root {
@@ -75,7 +76,60 @@
     .producto-galeria img:only-child {
       grid-column: 1 / -1;
     }
-    .producto h3 { margin: .8rem 0 .3rem; font-size: 1rem; }
+    .producto-info {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: .4rem;
+      text-align: left;
+    }
+    .producto h3, .producto-nombre {
+      margin: .8rem 0 .2rem;
+      font-size: 1rem;
+      line-height: 1.25;
+      text-align: center;
+      min-height: 2.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .producto-dato {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      min-height: 1.5rem;
+      padding: .3rem .45rem;
+      border-bottom: 1px solid var(--line);
+      font-size: .8rem;
+    }
+    .producto-dato span { color: #666; }
+    .producto-dato strong { color: #222; text-align: right; word-break: break-word; }
+    .producto-barcode {
+      width: 100%;
+      height: 42px;
+      display: block;
+      margin: .15rem 0 .25rem;
+    }
+    .producto-precio {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .15rem;
+      margin-top: .25rem;
+      padding: .55rem .4rem;
+      background: #fff8df;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .producto-precio strong { font-size: 1.05rem; color: #222; }
+    .producto-precio small {
+      color: #6b5b22;
+      font-size: .7rem;
+      line-height: 1.25;
+      text-transform: lowercase;
+    }
     .producto p { margin: .2rem 0; font-size: .8rem; }
 
     .modal {
@@ -121,6 +175,52 @@
       'Accesorios para el cabello','Lentes de sol','Chokers','Relojes',
       'Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
+
+    const unidadesLetras = [
+      'cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve',
+      'diez','once','doce','trece','catorce','quince','dieciséis','diecisiete',
+      'dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés',
+      'veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve'
+    ];
+    const decenasLetras = ['', '', 'treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+    const centenasLetras = ['', 'ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+
+    function numeroEnteroALetras(numero) {
+      let n = Math.max(0, Math.floor(Number(numero) || 0));
+      if (n < 30) return unidadesLetras[n];
+      if (n < 100) {
+        const decena = Math.floor(n / 10);
+        const unidad = n % 10;
+        return unidad ? `${decenasLetras[decena]} y ${unidadesLetras[unidad]}` : decenasLetras[decena];
+      }
+      if (n < 1000) {
+        if (n === 100) return 'cien';
+        const centena = Math.floor(n / 100);
+        const resto = n % 100;
+        return resto ? `${centenasLetras[centena]} ${numeroEnteroALetras(resto)}` : centenasLetras[centena];
+      }
+      if (n < 1000000) {
+        const miles = Math.floor(n / 1000);
+        const resto = n % 1000;
+        const prefijo = miles === 1 ? 'mil' : `${numeroEnteroALetras(miles)} mil`;
+        return resto ? `${prefijo} ${numeroEnteroALetras(resto)}` : prefijo;
+      }
+      if (n < 1000000000) {
+        const millones = Math.floor(n / 1000000);
+        const resto = n % 1000000;
+        const prefijo = millones === 1 ? 'un millón' : `${numeroEnteroALetras(millones)} millones`;
+        return resto ? `${prefijo} ${numeroEnteroALetras(resto)}` : prefijo;
+      }
+      return String(n);
+    }
+
+    function precioEnLetras(valor) {
+      const totalCentavos = Math.max(0, Math.round((Number(valor) || 0) * 100));
+      const enteros = Math.floor(totalCentavos / 100);
+      const centavos = totalCentavos % 100;
+      const moneda = enteros === 1 ? 'dólar' : 'dólares';
+      return `${numeroEnteroALetras(enteros)} ${moneda} con ${String(centavos).padStart(2, '0')} centavos`;
+    }
 
     function escaparHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -183,6 +283,7 @@
       }
 
       let delay = 0;
+      let barcodeCounter = 0;
       for (const cat of categoriasConProductos(porCat)) {
         const productos = porCat[cat] || [];
         for (const prod of productos) {
@@ -194,9 +295,12 @@
           const srcs = imagenes.map(obtenerSrcImagen).filter(Boolean);
           const nombre = escaparHtml(prod.name || 'Producto');
           const codigo = escaparHtml(prod.barcode || '');
+          const stock = Number(prod.stockUnits ?? prod.quantity ?? prod.stock ?? 0);
           const precio = (prod.discount && prod.discount > 0)
             ? (Number(prod.price || 0) * (1 - Number(prod.discount) / 100)).toFixed(2)
             : Number(prod.price || 0).toFixed(2);
+          const precioLetras = escaparHtml(precioEnLetras(precio));
+          const barcodeId = `producto-barcode-${barcodeCounter++}`;
 
           const galeria = srcs.length
             ? `<div class="producto-galeria">${srcs.map((src, index) => `<img src="${src}" alt="${nombre} - imagen ${index + 1}" onclick="openModal(${JSON.stringify(src)})">`).join('')}</div>`
@@ -204,11 +308,27 @@
 
           div.innerHTML = `
             ${galeria}
-            <h3>${nombre}</h3>
-            <p><strong>Código:</strong> ${codigo}</p>
-            <p><strong>Precio:</strong> $${precio}</p>
+            <div class="producto-info">
+              <h3 class="producto-nombre">${nombre}</h3>
+              <div class="producto-dato"><span>Código de barras</span><strong>${codigo || 'N/A'}</strong></div>
+              ${codigo ? `<svg id="${barcodeId}" class="producto-barcode" aria-label="Código de barras ${codigo}"></svg>` : ''}
+              <div class="producto-dato"><span>Stock</span><strong>${stock}</strong></div>
+              <div class="producto-precio">
+                <span>Precio</span>
+                <strong>$${precio}</strong>
+                <small>${precioLetras}</small>
+              </div>
+            </div>
           `;
           catalogo.appendChild(div);
+
+          if (codigo && typeof JsBarcode === 'function') {
+            try {
+              JsBarcode(`#${barcodeId}`, codigo, { format: 'CODE128', width: 1.35, height: 34, displayValue: false, margin: 0 });
+            } catch (error) {
+              console.warn('No se pudo generar el código de barras', codigo, error);
+            }
+          }
           delay += 0.05;
         }
       }
@@ -289,9 +409,13 @@
           doc.setFontSize(8);
           doc.setFont(undefined, 'normal');
           doc.text(`Cód: ${p.barcode || ''}`, x + 8, ty + 14);
+          doc.text(`Stock: ${Number(p.stockUnits ?? p.quantity ?? p.stock ?? 0)}`, x + 8, ty + 26);
           doc.setFontSize(10);
           doc.setFont(undefined, 'bold');
-          doc.text(`$${precio}`, x + 8, ty + 28);
+          doc.text(`$${precio}`, x + 8, ty + 38);
+          doc.setFontSize(6.5);
+          doc.setFont(undefined, 'normal');
+          doc.text(precioEnLetras(precio).substring(0, 42), x + 8, ty + 50);
           x += tarjAncho + gap;
         }
       }

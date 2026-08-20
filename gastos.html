@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Catálogo – DAYMARSV</title>
+  <title>Catálogo – Klohe</title>
 
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -59,6 +59,22 @@
       object-fit: cover; border-radius: 4px;
       cursor: pointer;
     }
+    .producto-galeria {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .producto-galeria img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .producto-galeria img:only-child {
+      grid-column: 1 / -1;
+    }
     .producto h3 { margin: .8rem 0 .3rem; font-size: 1rem; }
     .producto p { margin: .2rem 0; font-size: .8rem; }
 
@@ -81,7 +97,7 @@
 </head>
 <body>
 
-  <header class="header-fixed"><h1>CATÁLOGO DAYMARSV</h1></header>
+  <header class="header-fixed"><h1>CATÁLOGO KLOHE</h1></header>
 
   <div class="catalogo" id="catalogo"></div>
 
@@ -125,15 +141,19 @@
           div.className = 'producto';
           div.style.animationDelay = `${delay}s`;
 
-          const blob   = await localforage.getItem(`img_${prod.code}`);
-          const imgSrc = blob ? URL.createObjectURL(blob) : '';
+          const imagenes = await obtenerImagenesProductoParaZIP(prod.code);
+          const imgSrcs = imagenes.map(blob => URL.createObjectURL(blob));
 
           const precio = (prod.discount && prod.discount > 0)
             ? (prod.price * (1 - prod.discount / 100)).toFixed(2)
             : Number(prod.price).toFixed(2);
 
+          const galeria = imgSrcs.length
+            ? `<div class="producto-galeria">${imgSrcs.map((src, index) => `<img src="${src}" alt="${prod.name} - imagen ${index + 1}" onclick="openModal('${src}')">`).join('')}</div>`
+            : '<div style="width:100%;aspect-ratio:1/1;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#777;font-size:.8rem;">Sin imagen</div>';
+
           div.innerHTML = `
-            <img src="${imgSrc}" alt="${prod.name}" onclick="openModal('${imgSrc}')">
+            ${galeria}
             <h3>${prod.name}</h3>
             <p><strong>Código:</strong> ${prod.barcode}</p>
             <p><strong>Precio:</strong> $${precio}</p>
@@ -143,7 +163,9 @@
         }
       }
 
-      const hayImagenes = lista.some(p => localforage.getItem(`img_${p.code}`));
+      const hayImagenes = (await Promise.all(
+        lista.map(p => obtenerImagenesProductoParaZIP(p.code))
+      )).some(imagenes => imagenes.length > 0);
       document.getElementById('btnZip').style.display = hayImagenes ? 'block' : 'none';
     }
 
@@ -182,13 +204,12 @@
           if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + gap; }
           if (y + tarjAlto > altoPag - marg)   { doc.addPage(); y = 60; x = marg; }
 
-          const blob = await localforage.getItem(`img_${p.code}`);
+          const imagenes = await obtenerImagenesProductoParaZIP(p.code);
           const precio = (p.discount && p.discount > 0)
             ? (p.price * (1 - p.discount / 100)).toFixed(2)
             : Number(p.price).toFixed(2);
 
-          let imgData = '';
-          if (blob) imgData = await blobToBase64(blob);
+          const imgData = imagenes.length ? await blobToBase64(imagenes[0]) : '';
 
           doc.setDrawColor(229, 229, 229);
           doc.setFillColor(255, 255, 255);
@@ -210,7 +231,7 @@
         }
       }
 
-      doc.save('catalogo_DAYMARSV.pdf');
+      doc.save('catalogo_klohe.pdf');
     }
 
     function blobToBase64(blob) {
@@ -270,7 +291,7 @@
       const content = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(content);
-      a.download = 'DAYMARSV_imagenes.zip';
+      a.download = 'klohe_imagenes.zip';
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }

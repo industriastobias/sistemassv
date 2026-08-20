@@ -366,13 +366,51 @@
       if (!jsPDF) { alert('No se pudo cargar el generador PDF'); return; }
 
       const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const marg = 40;
-      const anchoPag = doc.internal.pageSize.getWidth();
-      const altoPag = doc.internal.pageSize.getHeight();
-      const gap = 18;
-      const tarjAncho = (anchoPag - 2 * marg - 3 * gap) / 4;
-      const tarjAlto = tarjAncho + 70;
-      let x = marg, y = 60;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 34;
+      const cardX = margin;
+      const cardWidth = pageWidth - margin * 2;
+      const imageColumnWidth = 220;
+      const infoXOffset = imageColumnWidth + 18;
+      const infoWidth = cardWidth - infoXOffset - 16;
+      const cardGap = 16;
+      let y = 48;
+
+      function dibujarEncabezado() {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(30, 30, 30);
+        doc.text('CATÁLOGO KLOHE', margin, 26);
+        doc.setDrawColor(220, 220, 220);
+        doc.line(margin, 34, pageWidth - margin, 34);
+        y = 48;
+      }
+
+      function nuevaPagina() {
+        doc.addPage();
+        dibujarEncabezado();
+      }
+
+      function textoProducto(value, fallback = 'N/A') {
+        const result = String(value ?? '').trim();
+        return result || fallback;
+      }
+
+      function precioFinalProducto(producto) {
+        const base = Number(producto.price || 0);
+        const descuento = Number(producto.discount || 0);
+        return descuento > 0 ? base * (1 - descuento / 100) : base;
+      }
+
+      function formatoFechaProducto(producto) {
+        const raw = producto.fechaCompra || producto.date || producto.addedAt;
+        if (!raw) return 'N/A';
+        const fecha = new Date(raw);
+        return Number.isNaN(fecha.getTime()) ? String(raw) : fecha.toLocaleDateString('es-ES');
+      }
+
+      dibujarEncabezado();
 
       const porCat = {};
       for (const p of lista) {
@@ -384,47 +422,121 @@
       for (const cat of categoriasConProductos(porCat)) {
         const prods = porCat[cat] || [];
         for (const p of prods) {
-          if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + gap; }
-          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 60; x = marg; }
-
           const imagenes = await obtenerImagenesProducto(p.code);
-          const precio = (p.discount && p.discount > 0)
-            ? (Number(p.price || 0) * (1 - Number(p.discount) / 100)).toFixed(2)
-            : Number(p.price || 0).toFixed(2);
+          const columnasImagen = Math.min(4, Math.max(1, imagenes.length));
+          const tamanoMiniatura = 48;
+          const espacioMiniatura = 6;
+          const filasImagen = Math.max(1, Math.ceil(imagenes.length / columnasImagen));
+          const altoGaleria = Math.max(112, filasImagen * (tamanoMiniatura + espacioMiniatura) + 14);
 
-          doc.setDrawColor(229, 229, 229);
+          const nombre = textoProducto(p.name, 'Producto');
+          const descripcion = textoProducto(p.description, 'Sin descripción');
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          const lineasDescripcion = doc.splitTextToSize(descripcion, infoWidth);
+          const altoInformacion = 206 + lineasDescripcion.length * 11;
+          const altoTarjeta = Math.max(altoGaleria + 20, altoInformacion);
+
+          if (y + altoTarjeta > pageHeight - margin) nuevaPagina();
+
+          doc.setDrawColor(215, 215, 215);
           doc.setFillColor(255, 255, 255);
-          doc.setLineWidth(1);
-          doc.roundedRect(x, y, tarjAncho, tarjAlto, 4, 4, 'FD');
+          doc.setLineWidth(0.8);
+          doc.roundedRect(cardX, y, cardWidth, altoTarjeta, 7, 7, 'FD');
 
+          // Galería: se incluyen todas las imágenes del producto como miniaturas legibles.
+          const galleryX = cardX + 10;
+          const galleryY = y + 10;
           if (imagenes.length) {
-            try {
-              const imgData = await blobToBase64(imagenes[0]);
-              if (imgData) {
-                const formato = /^data:image\/png/i.test(imgData) ? 'PNG' : 'JPEG';
-                doc.addImage(imgData, formato, x + 8, y + 8, tarjAncho - 16, tarjAncho - 16);
+            for (let i = 0; i < imagenes.length; i++) {
+              try {
+                const data = await blobToBase64(imagenes[i]);
+                if (!data) continue;
+                const formato = /^data:image\/png/i.test(data) ? 'PNG' : 'JPEG';
+                const columna = i % columnasImagen;
+                const fila = Math.floor(i / columnasImagen);
+                const ix = galleryX + columna * (tamanoMiniatura + espacioMiniatura);
+                const iy = galleryY + fila * (tamanoMiniatura + espacioMiniatura);
+                doc.addImage(data, formato, ix, iy, tamanoMiniatura, tamanoMiniatura);
+              } catch (error) {
+                console.warn('No se pudo insertar una imagen del producto', p.code, error);
               }
+            }
+          } else {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(120, 120, 120);
+            doc.text('Sin imagen', galleryX + 70, galleryY + 54);
+          }
+
+          const infoX = cardX + infoXOffset;
+          let infoY = y + 18;
+          const label = (title, value, options = {}) => {
+            const fontSize = options.fontSize || 8.5;
+            const lineHeight = options.lineHeight || 11;
+            doc.setFont('helvetica', options.bold ? 'bold' : 'normal');
+            doc.setFontSize(fontSize);
+            doc.setTextColor(45, 45, 45);
+            const lines = doc.splitTextToSize(`${title}: ${textoProducto(value)}`, infoWidth);
+            doc.text(lines, infoX, infoY);
+            infoY += lines.length * lineHeight + 4;
+          };
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.setTextColor(25, 25, 25);
+          const nombreLineas = doc.splitTextToSize(nombre, infoWidth);
+          doc.text(nombreLineas, infoX, infoY);
+          infoY += nombreLineas.length * 15 + 7;
+
+          const barcode = textoProducto(p.barcode, 'N/A');
+          const stock = Number(p.stockUnits ?? p.quantity ?? p.stock ?? 0);
+          const precioBase = Number(p.price || 0);
+          const descuento = Number(p.discount || 0);
+          const precioFinal = precioFinalProducto(p).toFixed(2);
+
+          label('Código de barras', barcode, { bold: true });
+          label('Código interno', textoProducto(p.code));
+          label('Categoría', textoProducto(p.category));
+          label('Stock', stock, { bold: true });
+          label('Precio de venta', `$${precioFinal}`, { bold: true, fontSize: 10 });
+          if (descuento > 0) {
+            label('Precio original', `$${precioBase.toFixed(2)}`);
+            label('Descuento', `${descuento}%`);
+          }
+          label('Precio en letras', precioEnLetras(precioFinal));
+          if (p.valorReal !== undefined || p.cost !== undefined) {
+            label('Costo', `$${Number(p.valorReal ?? p.cost ?? 0).toFixed(2)}`);
+          }
+          label('Fecha', formatoFechaProducto(p));
+          if (p.unitType || p.tipoCompra) label('Tipo', textoProducto(p.unitType || p.tipoCompra));
+          if (p.lotQuantity || p.lotCount || p.unitsPerLot) {
+            label('Lote', `${p.lotQuantity || p.lotCount || 0} lote(s), ${p.unitsPerLot || 0} unidad(es) por lote`);
+          }
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.setTextColor(45, 45, 45);
+          doc.text('Descripción:', infoX, infoY);
+          infoY += 11;
+          doc.setFont('helvetica', 'normal');
+          const descripcionVisible = doc.splitTextToSize(descripcion, infoWidth);
+          doc.text(descripcionVisible, infoX, infoY);
+
+          // Código de barras visual, además del código numérico.
+          if (p.barcode && typeof JsBarcode === 'function') {
+            try {
+              const canvas = document.createElement('canvas');
+              JsBarcode(canvas, String(p.barcode), { format: 'CODE128', width: 1.2, height: 30, displayValue: false, margin: 0 });
+              const barcodeData = canvas.toDataURL('image/png');
+              const barcodeY = y + altoTarjeta - 43;
+              doc.addImage(barcodeData, 'PNG', infoX, barcodeY, Math.min(185, infoWidth), 30);
             } catch (error) {
-              console.warn('No se pudo insertar la imagen en el PDF', p.code, error);
+              console.warn('No se pudo generar el código de barras en PDF', p.barcode, error);
             }
           }
 
-          doc.setFontSize(9);
-          doc.setTextColor(34, 34, 34);
-          const nombre = String(p.name || 'Producto');
-          const ty = y + tarjAncho + 20;
-          doc.text(nombre.substring(0, 26) + (nombre.length > 26 ? '…' : ''), x + 8, ty);
-          doc.setFontSize(8);
-          doc.setFont(undefined, 'normal');
-          doc.text(`Cód: ${p.barcode || ''}`, x + 8, ty + 14);
-          doc.text(`Stock: ${Number(p.stockUnits ?? p.quantity ?? p.stock ?? 0)}`, x + 8, ty + 26);
-          doc.setFontSize(10);
-          doc.setFont(undefined, 'bold');
-          doc.text(`$${precio}`, x + 8, ty + 38);
-          doc.setFontSize(6.5);
-          doc.setFont(undefined, 'normal');
-          doc.text(precioEnLetras(precio).substring(0, 42), x + 8, ty + 50);
-          x += tarjAncho + gap;
+          y += altoTarjeta + cardGap;
         }
       }
 

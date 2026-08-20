@@ -122,10 +122,59 @@
       'Billeteras','Case teléfonos','Case audífonos','General','Otros'
     ];
 
-    async function renderCatalogo() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
-      catalogo.innerHTML = '';
+    function escaparHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[char]));
+    }
 
+    function obtenerSrcImagen(blob) {
+      if (!blob) return '';
+      if (typeof blob === 'string') return blob;
+      try { return URL.createObjectURL(blob); } catch (e) { return ''; }
+    }
+
+    async function obtenerImagenesProducto(code) {
+      const imagenes = [];
+      try {
+        const cantidad = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+
+        // Formato de múltiples imágenes utilizado por el inventario.
+        if (cantidad > 0) {
+          for (let i = 0; i < cantidad; i++) {
+            const imagen = await localforage.getItem(`img_${code}_${i}`);
+            if (imagen) imagenes.push(imagen);
+          }
+        }
+
+        // Compatibilidad con el formato antiguo de una sola imagen.
+        if (!imagenes.length) {
+          const imagenAnterior = await localforage.getItem(`img_${code}`);
+          if (imagenAnterior) imagenes.push(imagenAnterior);
+        }
+      } catch (error) {
+        console.warn('No se pudieron cargar las imágenes del producto', code, error);
+      }
+      return imagenes;
+    }
+
+    function categoriasConProductos(porCat) {
+      const restantes = Object.keys(porCat).filter(cat => !ordenCategorias.includes(cat));
+      return [...ordenCategorias, ...restantes];
+    }
+
+    async function renderCatalogo() {
+      let lista = [];
+      try {
+        const almacenado = localStorage.getItem('inventory');
+        lista = almacenado ? JSON.parse(almacenado) : [];
+        if (!Array.isArray(lista)) lista = [];
+      } catch (error) {
+        console.error('No se pudo leer el inventario', error);
+        lista = [];
+      }
+
+      catalogo.innerHTML = '';
       const porCat = {};
       for (const p of lista) {
         const c = p.category || 'Otros';
@@ -134,28 +183,29 @@
       }
 
       let delay = 0;
-      for (const cat of ordenCategorias) {
+      for (const cat of categoriasConProductos(porCat)) {
         const productos = porCat[cat] || [];
         for (const prod of productos) {
           const div = document.createElement('div');
           div.className = 'producto';
           div.style.animationDelay = `${delay}s`;
 
-          const imagenes = await obtenerImagenesProductoParaZIP(prod.code);
-          const imgSrcs = imagenes.map(blob => URL.createObjectURL(blob));
-
+          const imagenes = await obtenerImagenesProducto(prod.code);
+          const srcs = imagenes.map(obtenerSrcImagen).filter(Boolean);
+          const nombre = escaparHtml(prod.name || 'Producto');
+          const codigo = escaparHtml(prod.barcode || '');
           const precio = (prod.discount && prod.discount > 0)
-            ? (prod.price * (1 - prod.discount / 100)).toFixed(2)
-            : Number(prod.price).toFixed(2);
+            ? (Number(prod.price || 0) * (1 - Number(prod.discount) / 100)).toFixed(2)
+            : Number(prod.price || 0).toFixed(2);
 
-          const galeria = imgSrcs.length
-            ? `<div class="producto-galeria">${imgSrcs.map((src, index) => `<img src="${src}" alt="${prod.name} - imagen ${index + 1}" onclick="openModal('${src}')">`).join('')}</div>`
+          const galeria = srcs.length
+            ? `<div class="producto-galeria">${srcs.map((src, index) => `<img src="${src}" alt="${nombre} - imagen ${index + 1}" onclick="openModal(${JSON.stringify(src)})">`).join('')}</div>`
             : '<div style="width:100%;aspect-ratio:1/1;background:#f0f0f0;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#777;font-size:.8rem;">Sin imagen</div>';
 
           div.innerHTML = `
             ${galeria}
-            <h3>${prod.name}</h3>
-            <p><strong>Código:</strong> ${prod.barcode}</p>
+            <h3>${nombre}</h3>
+            <p><strong>Código:</strong> ${codigo}</p>
             <p><strong>Precio:</strong> $${precio}</p>
           `;
           catalogo.appendChild(div);
@@ -163,9 +213,8 @@
         }
       }
 
-      const hayImagenes = (await Promise.all(
-        lista.map(p => obtenerImagenesProductoParaZIP(p.code))
-      )).some(imagenes => imagenes.length > 0);
+      const hayImagenes = (await Promise.all(lista.map(p => obtenerImagenesProducto(p.code))))
+        .some(imagenes => imagenes.length > 0);
       document.getElementById('btnZip').style.display = hayImagenes ? 'block' : 'none';
     }
 
@@ -174,19 +223,27 @@
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
     async function descargarPDF() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      let lista = [];
+      try {
+        const almacenado = localStorage.getItem('inventory');
+        lista = almacenado ? JSON.parse(almacenado) : [];
+        if (!Array.isArray(lista)) lista = [];
+      } catch (error) {
+        alert('No se pudo leer el inventario');
+        return;
+      }
       if (!lista.length) { alert('No hay productos'); return; }
 
-      const { jsPDF } = window.jspdf;
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) { alert('No se pudo cargar el generador PDF'); return; }
+
       const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-
-      const marg     = 40;
+      const marg = 40;
       const anchoPag = doc.internal.pageSize.getWidth();
-      const altoPag  = doc.internal.pageSize.getHeight();
-
-      const gap      = 18;
+      const altoPag = doc.internal.pageSize.getHeight();
+      const gap = 18;
       const tarjAncho = (anchoPag - 2 * marg - 3 * gap) / 4;
-      const tarjAlto  = tarjAncho + 70;
+      const tarjAlto = tarjAncho + 70;
       let x = marg, y = 60;
 
       const porCat = {};
@@ -196,37 +253,45 @@
         porCat[c].push(p);
       }
 
-      for (const cat of ordenCategorias) {
+      for (const cat of categoriasConProductos(porCat)) {
         const prods = porCat[cat] || [];
-        for (let i = 0; i < prods.length; i++) {
-          const p = prods[i];
-
+        for (const p of prods) {
           if (x + tarjAncho > anchoPag - marg) { x = marg; y += tarjAlto + gap; }
-          if (y + tarjAlto > altoPag - marg)   { doc.addPage(); y = 60; x = marg; }
+          if (y + tarjAlto > altoPag - marg) { doc.addPage(); y = 60; x = marg; }
 
-          const imagenes = await obtenerImagenesProductoParaZIP(p.code);
+          const imagenes = await obtenerImagenesProducto(p.code);
           const precio = (p.discount && p.discount > 0)
-            ? (p.price * (1 - p.discount / 100)).toFixed(2)
-            : Number(p.price).toFixed(2);
-
-          const imgData = imagenes.length ? await blobToBase64(imagenes[0]) : '';
+            ? (Number(p.price || 0) * (1 - Number(p.discount) / 100)).toFixed(2)
+            : Number(p.price || 0).toFixed(2);
 
           doc.setDrawColor(229, 229, 229);
           doc.setFillColor(255, 255, 255);
           doc.setLineWidth(1);
           doc.roundedRect(x, y, tarjAncho, tarjAlto, 4, 4, 'FD');
 
-          if (imgData) doc.addImage(imgData, 'JPEG', x + 8, y + 8, tarjAncho - 16, tarjAncho - 16);
+          if (imagenes.length) {
+            try {
+              const imgData = await blobToBase64(imagenes[0]);
+              if (imgData) {
+                const formato = /^data:image\/png/i.test(imgData) ? 'PNG' : 'JPEG';
+                doc.addImage(imgData, formato, x + 8, y + 8, tarjAncho - 16, tarjAncho - 16);
+              }
+            } catch (error) {
+              console.warn('No se pudo insertar la imagen en el PDF', p.code, error);
+            }
+          }
 
           doc.setFontSize(9);
           doc.setTextColor(34, 34, 34);
+          const nombre = String(p.name || 'Producto');
           const ty = y + tarjAncho + 20;
-          doc.text(p.name.substring(0, 26) + (p.name.length > 26 ? '…' : ''), x + 8, ty);
+          doc.text(nombre.substring(0, 26) + (nombre.length > 26 ? '…' : ''), x + 8, ty);
           doc.setFontSize(8);
-          doc.text(`Cód: ${p.barcode}`, x + 8, ty + 14);
-          doc.setFontSize(10); doc.setFont(undefined, 'bold');
+          doc.setFont(undefined, 'normal');
+          doc.text(`Cód: ${p.barcode || ''}`, x + 8, ty + 14);
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
           doc.text(`$${precio}`, x + 8, ty + 28);
-
           x += tarjAncho + gap;
         }
       }
@@ -235,58 +300,45 @@
     }
 
     function blobToBase64(blob) {
-      return new Promise((resolve, _) => {
+      if (typeof blob === 'string') return Promise.resolve(blob);
+      return new Promise((resolve, reject) => {
         const r = new FileReader();
         r.onloadend = () => resolve(r.result);
+        r.onerror = reject;
         r.readAsDataURL(blob);
       });
     }
 
-    async function obtenerImagenesProductoParaZIP(code) {
-      const imagenes = [];
-      const cantidad = Number(await localforage.getItem(`img_count_${code}`)) || 0;
-
-      // Formato actual para varias imágenes: img_<codigo>_0, img_<codigo>_1, etc.
-      if (cantidad > 0) {
-        for (let i = 0; i < cantidad; i++) {
-          const blob = await localforage.getItem(`img_${code}_${i}`);
-          if (blob) imagenes.push(blob);
-        }
-      }
-
-      // Compatibilidad con productos antiguos que tienen una sola imagen.
-      if (!imagenes.length) {
-        const imagenAnterior = await localforage.getItem(`img_${code}`);
-        if (imagenAnterior) imagenes.push(imagenAnterior);
-      }
-
-      return imagenes;
-    }
-
     async function descargarZIP() {
-      const lista = JSON.parse(localStorage.getItem('inventory')) || [];
+      let lista = [];
+      try {
+        const almacenado = localStorage.getItem('inventory');
+        lista = almacenado ? JSON.parse(almacenado) : [];
+        if (!Array.isArray(lista)) lista = [];
+      } catch (error) {
+        alert('No se pudo leer el inventario');
+        return;
+      }
       if (!lista.length) { alert('No hay productos'); return; }
 
       const zip = new JSZip();
-      let c = 0;
+      let totalImagenes = 0;
 
       for (const p of lista) {
-        const imagenes = await obtenerImagenesProductoParaZIP(p.code);
+        const imagenes = await obtenerImagenesProducto(p.code);
         if (!imagenes.length) continue;
+        const nombreBase = p.barcode || p.code || 'producto';
 
-        const nombreBase = p.barcode || p.code;
-
-        imagenes.forEach((blob, index) => {
-          // Conserva el nombre anterior cuando el producto tiene una sola imagen.
+        imagenes.forEach((imagen, index) => {
           const nombre = imagenes.length === 1
             ? `${nombreBase}.jpg`
             : `${nombreBase}_${index + 1}.jpg`;
-          zip.file(nombre, blob);
-          c++;
+          zip.file(nombre, imagen);
+          totalImagenes++;
         });
       }
 
-      if (!c) { alert('No hay imágenes para descargar'); return; }
+      if (!totalImagenes) { alert('No hay imágenes para descargar'); return; }
 
       const content = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');

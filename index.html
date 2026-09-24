@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SISTEMA DAYMARSV</title>
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .container {
+      display: none;
+      background: rgba(255,255,255,.9);
+      padding: 2em 1em;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.2);
+      width: 90%;
+      max-width: 300px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+      animation: fadeIn .5s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from {opacity:0;transform:translateY(-20px);}
+      to {opacity:1;transform:translateY(0);}
+    }
+    .header { text-align: center; margin-bottom: 1em; }
+    h1 { color: #4a6a41; font-size: 2.5em; margin: 0; }
+    h3 { color: #2c3e50; font-size: 1.5em; margin: 0 0 1em; }
+    input {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin-bottom: 1em;
+      border: 2px solid #4a6a41;
+      border-radius: 10px;
+      font-size: 1em;
+      transition: border-color .3s;
+    }
+    input:focus { border-color: #00796b; outline: none; }
+    .button {
+      background-color: #4a6a41;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 1.1em;
+      transition: background-color .3s, transform .2s;
+    }
+    .button:hover { background-color: #3b5e38; transform: scale(1.05); }
+    .logo { max-width: 80px; margin-bottom: .5em; margin-top: -30px; }
+
+    /* Botón modo kiosko */
+    #kioskBtn {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 9999;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      background: #00796b;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Overlay de carga */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      flex-direction: column;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>INDUSTRIAS TOBÍAS</h1>
+  <h3>A FAMILY COMPANY</h3>
+</div>
+<img src="logo.jpg" alt="Logo de Industrias Tobias" class="logo">
+
+<div class="container">
+  <h2>Welcome</h2>
+  <input type="text" id="userID" placeholder="ID de Usuario" required autofocus>
+  <input type="password" id="userClave" placeholder="Contraseña" required>
+  <button class="button" onclick="login()">Login</button>
+</div>
+
+<!-- Botón modo kiosko (siempre visible) -->
+<button id="kioskBtn">Modo kiosko</button>
+
+<!-- Overlay de carga -->
+<div id="loadingOverlay">
+  <div style="border: 6px solid #f3f3f3; border-top: 6px solid #4a6a41; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
+  <p style="margin-top: 20px; font-size: 1.2em;">INICIANDO SESIÓN, POR FAVOR ESPERE 5 SEGUNDOS...</p>
+</div>
+
+<script>
+/* ----------  IndexedDB  ---------- */
+const DB_NAME = 'sessionDB', STORE_NAME = 'sessions';
+let db;
+
+async function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onerror = () => rej(req.error);
+    req.onsuccess = () => res(db = req.result);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME))
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    };
+  });
+}
+
+async function guardarSesion(user) {
+  const tx = db.transaction([STORE_NAME], 'readwrite');
+  tx.objectStore(STORE_NAME).put(user);
+}
+
+/* ----------  Usuarios  ---------- */
+const users = [
+  { id: '2005', clave: 'admin2024', nombre: 'ERNESTO TOBIAS', foto: 'user2005.jpg' },
+  { id: '1001', clave: 'viewer2024', nombre: 'PAOLA PALACIOS', foto: 'userpaola.jpg' }
+];
+
+/* ----------  Login  ---------- */
+async function login() {
+  const userID = document.getElementById('userID').value.trim();
+  const userClave = document.getElementById('userClave').value.trim();
+  const user = users.find(u => u.id === userID && u.clave === userClave);
+
+  if (!user) { alert('ID o contraseña incorrectos.'); return; }
+
+  await guardarSesion(user);
+  sessionStorage.setItem('loggedIn', 'true');
+  sessionStorage.setItem('userID', user.id);
+  sessionStorage.setItem('nombre', user.nombre);
+  sessionStorage.setItem('foto', user.foto);
+
+  // Mostrar overlay
+  document.getElementById('loadingOverlay').style.display = 'flex';
+
+  // Esperar 5 segundos antes de redirigir
+  setTimeout(() => {
+    location.href = 'menu.html';
+  }, 5000);
+}
+
+/* ----------  Inicialización  ---------- */
+window.addEventListener('DOMContentLoaded', async () => {
+  await openDB();
+  document.querySelector('.container').style.display = 'block';
+});
+
+document.addEventListener('keypress', e => {
+  if (e.key === 'Enter') {
+    const active = document.activeElement;
+    if (active.id === 'userID') document.getElementById('userClave').focus();
+    else if (active.id === 'userClave') login();
+  }
+});
+
+/* ----------  Modo Kiosko  ---------- */
+(() => {
+  const btn = document.getElementById('kioskBtn');
+  const KIOSK_KEY = 'kioskActivo';
+
+  function estaEnFullscreen() {
+    return !!(document.fullscreenElement ||
+              document.webkitFullscreenElement ||
+              document.mozFullScreenElement ||
+              document.msFullscreenElement);
+  }
+
+  function toggleFullscreen() {
+    if (!estaEnFullscreen()) {
+      const el = document.documentElement;
+      (el.requestFullscreen ||
+       el.webkitRequestFullscreen ||
+       el.mozRequestFullScreen ||
+       el.msRequestFullscreen).call(el);
+    } else {
+      (document.exitFullscreen ||
+       document.webkitExitFullscreen ||
+       document.mozCancelFullScreen ||
+       document.msExitFullscreen).call(document);
+    }
+  }
+
+  function actualizaUI() {
+    const activo = estaEnFullscreen();
+    btn.textContent = activo ? 'Salir kiosko' : 'Modo kiosko';
+    localStorage.setItem(KIOSK_KEY, activo ? '1' : '0');
+  }
+
+  btn.addEventListener('click', () => {
+    toggleFullscreen();
+    actualizaUI();
+  });
+
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','msfullscreenchange']
+    .forEach(ev => document.addEventListener(ev, actualizaUI));
+
+  if (localStorage.getItem(KIOSK_KEY) === '1') {
+    toggleFullscreen();
+    actualizaUI();
+  }
+})();
+</script>
+
+</body>
+</html>

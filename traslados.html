@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotización de Productos KLOHESV</title>
+    <title>Cotización de Productos DAYMARSV</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js "></script>
@@ -683,7 +683,7 @@
 
         .summary-bar {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 2px;
             background: #d0d0d0;
             transition: all 0.3s ease;
@@ -1734,7 +1734,7 @@
 <body>
     <div class="app">
         <header class="header">
-            <h1>📦 COTIZACIÓN DE PRODUCTOS KLOHESV</h1>
+            <h1>📦 COTIZACIÓN DE PRODUCTOS DAYMARSV</h1>
             <div class="header-actions">
                 <button class="btn-sm kiosko-btn" id="kioskoBtn" onclick="toggleKiosko()" title="Modo kiosco (pantalla completa)">
                     🖥️ MODO KIOSCO
@@ -1859,7 +1859,7 @@
                         <label>CANTIDAD DE UNIDADES</label>
                         <div class="units-input-group">
                             <button class="units-btn" onclick="adjustUnits(-1)">−</button>
-                            <input type="number" id="productUnits" class="units-input" value="1" min="1" onchange="calculateProduct()">
+                            <input type="number" id="productUnits" class="units-input" value="1" min="1" step="1" oninput="calculateProduct()">
                             <button class="units-btn" onclick="adjustUnits(1)">+</button>
                         </div>
                     </div>
@@ -1894,6 +1894,21 @@
 
                     <div class="input-row">
                         <div class="form-group">
+                            <label>UNIDADES VENDIDAS (INCLUYE DEVOLUCIONES)</label>
+                            <input type="number" id="productUnitsSold" min="0" step="1" value="0" oninput="calculateProduct()">
+                        </div>
+                        <div class="form-group">
+                            <label>UNIDADES DEVUELTAS</label>
+                            <input type="number" id="productUnitsReturned" min="0" step="1" value="0" oninput="calculateProduct()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>PRECIO PROMEDIO REAL DE VENTA ($/unidad; refleja descuentos)</label>
+                        <input type="number" id="productActualUnitPrice" min="0" step="0.01" placeholder="Si se deja vacío, usa el precio proyectado" oninput="calculateProduct()">
+                        <small style="display:block; margin-top:5px; color:#666; font-weight:600;">Las unidades devueltas se descuentan como reembolso completo. El precio real promedio debe reflejar descuentos y el precio de las unidades que conservó el cliente.</small>
+                    </div>
+                    <div class="input-row">
+                        <div class="form-group">
                             <label>MARGEN (%)</label>
                             <input type="text" id="productMargin" class="calculated" readonly>
                         </div>
@@ -1909,8 +1924,12 @@
                     </button>
 
                     <div class="form-group">
-                        <label>GANANCIA NETA TOTAL</label>
+                        <label>GANANCIA NETA PROYECTADA (SI SE VENDE TODO)</label>
                         <input type="text" id="productNet" class="calculated" readonly style="font-weight: 900; font-size: 15px;">
+                    </div>
+                    <div class="form-group">
+                        <label>GANANCIA REALIZADA (VENTAS NETAS DE DEVOLUCIONES)</label>
+                        <input type="text" id="productActualNet" class="calculated" readonly style="font-weight: 900; font-size: 15px;">
                     </div>
 
                     <button class="btn-submit" id="saveBtn" onclick="saveProduct()">➕ AGREGAR PRODUCTO AL LOTE</button>
@@ -1939,12 +1958,24 @@
                         <div class="summary-value" id="totalSales">$0.00</div>
                     </div>
                     <div class="summary-item">
-                        <div class="summary-label">GANANCIA BRUTA</div>
+                        <div class="summary-label">GANANCIA BRUTA PROYECTADA</div>
                         <div class="summary-value" id="totalGross">$0.00</div>
                     </div>
                     <div class="summary-item">
-                        <div class="summary-label">GANANCIA NETA</div>
+                        <div class="summary-label">GANANCIA NETA PROYECTADA</div>
                         <div class="summary-value" id="totalNet">$0.00</div>
+                    </div>
+                    <div class="summary-item" style="background: #f8f0f2;">
+                        <div class="summary-label">UNIDADES VENDIDAS NETAS</div>
+                        <div class="summary-value" id="totalUnitsSold">0</div>
+                    </div>
+                    <div class="summary-item" style="background: #f8f0f2;">
+                        <div class="summary-label">VENTAS REALES</div>
+                        <div class="summary-value" id="totalActualSales">$0.00</div>
+                    </div>
+                    <div class="summary-item" style="background: #f8f0f2;">
+                        <div class="summary-label">GANANCIA REALIZADA</div>
+                        <div class="summary-value" id="totalRealizedProfit">$0.00</div>
                     </div>
                 </div>
 
@@ -1963,13 +1994,16 @@
                                 <th class="numeric">COSTO REAL</th>
                                 <th class="numeric">VENTA UNIT</th>
                                 <th class="numeric">VENTA TOTAL</th>
-                                <th class="numeric">GANANCIA</th>
+                                <th class="numeric">GANANCIA PROY.</th>
+                                <th class="numeric">VENDIDAS NETAS</th>
+                                <th class="numeric">VENTA REAL</th>
+                                <th class="numeric">GANANCIA REAL</th>
                                 <th style="width: 70px;"></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
                             <tr class="empty-row">
-                                <td colspan="13">
+                                <td colspan="16">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
@@ -2742,7 +2776,7 @@
                 });
             }
             
-            return `IMÁGENES DE PRODUCTOS - KLOHESV
+            return `IMÁGENES DE PRODUCTOS - DAYMARSV
 ================================
 Fecha de exportación: ${date}
 Tipo de exportación: ${typeText}
@@ -2758,7 +2792,7 @@ NOTAS:
 - Las imágenes están en su formato original
 - Este archivo README.txt contiene la lista completa de imágenes
 
-Para más información: KLOHESV Cotización System
+Para más información: DAYMARSV Cotización System
 `;
         }
 
@@ -3159,9 +3193,14 @@ Para más información: KLOHESV Cotización System
             const totalCompra = lote.products.reduce((sum, p) => sum + p.cost, 0);
             const totalInversion = totalCompra + lote.vendorShipping + lote.shipping + lote.taxes;
             const gananciaNeta = totalVentas - totalInversion;
+            const loteSalesMetrics = lote.products.map(getSalesMetrics);
+            const ventasReales = loteSalesMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
+            const gananciaRealizada = loteSalesMetrics.reduce((sum, m) => sum + m.realizedProfit, 0);
+            const unidadesVendidasNetas = loteSalesMetrics.reduce((sum, m) => sum + m.netSold, 0);
             
             let productosHtml = '';
             lote.products.forEach((p, i) => {
+                const salesMetrics = getSalesMetrics(p);
                 productosHtml += `
                     <tr>
                         <td>${i + 1}</td>
@@ -3170,6 +3209,9 @@ Para más información: KLOHESV Cotización System
                         <td class="numeric">$${p.unitCost.toFixed(2)}</td>
                         <td class="numeric">$${p.unitPrice.toFixed(2)}</td>
                         <td class="numeric">$${(p.unitPrice - p.unitCost).toFixed(2)}</td>
+                        <td class="numeric">${salesMetrics.netSold}</td>
+                        <td class="numeric">$${salesMetrics.actualRevenue.toFixed(2)}</td>
+                        <td class="numeric">$${salesMetrics.realizedProfit.toFixed(2)}</td>
                     </tr>
                 `;
             });
@@ -3190,8 +3232,20 @@ Para más información: KLOHESV Cotización System
                             <div style="font-size: 20px; font-weight: 900;">$${totalInversion.toFixed(2)}</div>
                         </div>
                         <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 11px; color: #666;">VENTAS</div>
+                            <div style="font-size: 11px; color: #666;">VENTAS PROYECTADAS</div>
                             <div style="font-size: 20px; font-weight: 900;">$${totalVentas.toFixed(2)}</div>
+                        </div>
+                        <div style="background: #f8f0f2; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">UNIDADES VENDIDAS NETAS</div>
+                            <div style="font-size: 20px; font-weight: 900;">${unidadesVendidasNetas}</div>
+                        </div>
+                        <div style="background: #f8f0f2; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">VENTAS REALES</div>
+                            <div style="font-size: 20px; font-weight: 900;">$${ventasReales.toFixed(2)}</div>
+                        </div>
+                        <div style="background: #f8f0f2; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">GANANCIA REALIZADA</div>
+                            <div style="font-size: 20px; font-weight: 900;">$${gananciaRealizada.toFixed(2)}</div>
                         </div>
                     </div>
                     
@@ -3228,6 +3282,9 @@ Para más información: KLOHESV Cotización System
                                 <th style="padding: 8px;" class="numeric">COSTO UNIT</th>
                                 <th style="padding: 8px;" class="numeric">VENTA UNIT</th>
                                 <th style="padding: 8px;" class="numeric">GANANCIA UNIT</th>
+                                <th style="padding: 8px;" class="numeric">VENDIDAS NETAS</th>
+                                <th style="padding: 8px;" class="numeric">VENTA REAL</th>
+                                <th style="padding: 8px;" class="numeric">GANANCIA REAL</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -3555,6 +3612,33 @@ Para más información: KLOHESV Cotización System
             
             if (savedAll) allLotes = savedAll;
             if (savedCounter) loteCounter = savedCounter;
+
+            // Migración transparente de lotes antiguos: se conservan sus cantidades/precios.
+            normalizeLoteSalesData(currentLote);
+            allLotes.forEach(normalizeLoteSalesData);
+            await saveData();
+        }
+
+        function normalizeLoteSalesData(lote) {
+            if (!lote || !Array.isArray(lote.products)) return;
+            lote.products.forEach(p => {
+                p.unitsSold = Number.isFinite(Number(p.unitsSold)) ? Number(p.unitsSold) : 0;
+                p.unitsReturned = Number.isFinite(Number(p.unitsReturned)) ? Number(p.unitsReturned) : 0;
+                p.actualUnitPrice = Number.isFinite(Number(p.actualUnitPrice))
+                    ? Number(p.actualUnitPrice)
+                    : (Number(p.unitPrice) || 0);
+            });
+        }
+
+        function getSalesMetrics(p) {
+            const units = Math.max(0, Number(p.units) || 0);
+            const sold = Math.max(0, Math.min(units, Number(p.unitsSold) || 0));
+            const returned = Math.max(0, Math.min(sold, Number(p.unitsReturned) || 0));
+            const netSold = sold - returned;
+            const actualUnitPrice = Math.max(0, Number(p.actualUnitPrice ?? p.unitPrice) || 0);
+            const actualRevenue = netSold * actualUnitPrice;
+            const realizedProfit = actualRevenue - netSold * (Number(p.realCost) || Number(p.unitCost) || 0);
+            return { sold, returned, netSold, actualUnitPrice, actualRevenue, realizedProfit };
         }
 
         async function clearAll() {
@@ -3813,17 +3897,17 @@ Para más información: KLOHESV Cotización System
         function openBreakdownModal() {
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
-            const units = parseInt(document.getElementById('productUnits').value) || 1;
+            const units = Number(document.getElementById('productUnits').value) || 1;
             
             if (cost <= 0) {
                 showAlert('Primero ingresa el costo de compra');
                 return;
             }
             
-            const newCount = currentLote.products.length + 1;
-            const vendorPerUnit = currentLote.vendorShipping / newCount;
-            const shipPerUnit = currentLote.shipping / newCount;
-            const taxPerUnit = currentLote.taxes / newCount;
+            const productCountForPreview = Math.max(1, currentLote.products.length + (editingProductId ? 0 : 1));
+            const vendorPerUnit = currentLote.vendorShipping / productCountForPreview;
+            const shipPerUnit = currentLote.shipping / productCountForPreview;
+            const taxPerUnit = currentLote.taxes / productCountForPreview;
             
             const grossProfitPerUnit = price - cost;
             const realCost = cost + vendorPerUnit + shipPerUnit + taxPerUnit;
@@ -3885,7 +3969,7 @@ Para más información: KLOHESV Cotización System
         function calculateProduct() {
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
             const price = parseFloat(document.getElementById('productPrice').value) || 0;
-            const units = parseInt(document.getElementById('productUnits').value) || 1;
+            const units = Number(document.getElementById('productUnits').value) || 1;
             
             document.getElementById('displayTotalUnits').textContent = units;
             
@@ -3899,10 +3983,16 @@ Para más información: KLOHESV Cotización System
                 priceUnitDisplay.style.display = 'none';
             }
             
-            const newCount = currentLote.products.length + 1;
-            const vendorPerUnit = currentLote.vendorShipping / newCount;
-            const shipPerUnit = currentLote.shipping / newCount;
-            const taxPerUnit = currentLote.taxes / newCount;
+            const productCountForPreview = Math.max(1, currentLote.products.length + (editingProductId ? 0 : 1));
+            const vendorPerUnit = currentLote.vendorShipping / productCountForPreview;
+            const shipPerUnit = currentLote.shipping / productCountForPreview;
+            const taxPerUnit = currentLote.taxes / productCountForPreview;
+            
+            const actualPriceInput = document.getElementById('productActualUnitPrice').value;
+            const actualUnitPrice = actualPriceInput === '' ? price : (parseFloat(actualPriceInput) || 0);
+            const enteredSold = parseInt(document.getElementById('productUnitsSold').value, 10) || 0;
+            const enteredReturned = parseInt(document.getElementById('productUnitsReturned').value, 10) || 0;
+            const netUnitsSold = Math.max(0, Math.min(units, enteredSold) - Math.min(enteredSold, enteredReturned));
             
             if (cost > 0) {
                 const margin = ((price - cost) / cost) * 100;
@@ -3917,10 +4007,14 @@ Para más información: KLOHESV Cotización System
                 document.getElementById('productGross').value = '$' + grossProfitTotal.toFixed(2);
                 document.getElementById('productNet').value = '$' + netProfitTotal.toFixed(2);
                 document.getElementById('productNet').style.color = netProfitTotal >= 0 ? '#2e7d32' : '#c62828';
+                const realizedNet = netUnitsSold * (actualUnitPrice - realCost);
+                document.getElementById('productActualNet').value = '$' + realizedNet.toFixed(2);
+                document.getElementById('productActualNet').style.color = realizedNet >= 0 ? '#2e7d32' : '#c62828';
             } else {
                 document.getElementById('productMargin').value = '';
                 document.getElementById('productGross').value = '';
                 document.getElementById('productNet').value = '';
+                document.getElementById('productActualNet').value = '';
             }
         }
 
@@ -3935,17 +4029,29 @@ Para más información: KLOHESV Cotización System
             const cost = parseFloat(document.getElementById('productCost').value) || 0;
             const priceInput = document.getElementById('productPrice').value;
             const price = priceInput === '' ? -1 : parseFloat(priceInput);
-            const units = parseInt(document.getElementById('productUnits').value) || 1;
+            const units = Number(document.getElementById('productUnits').value) || 1;
+            const unitsSold = Number(document.getElementById('productUnitsSold').value) || 0;
+            const unitsReturned = Number(document.getElementById('productUnitsReturned').value) || 0;
+            const actualPriceInput = document.getElementById('productActualUnitPrice').value;
+            const actualUnitPrice = actualPriceInput === '' ? price : Number(actualPriceInput);
             
-            if (!name || cost <= 0 || price < 0) {
-                showAlert('COMPLETA: NOMBRE, COSTO DE COMPRA Y PRECIO DE VENTA (PUEDE SER $0)');
+            if (!name || !Number.isFinite(cost) || cost <= 0 || !Number.isFinite(price) || price < 0 || !Number.isInteger(units) || units < 1) {
+                showAlert('VERIFICA: NOMBRE, COSTO MAYOR A $0, PRECIO VÁLIDO Y UNIDADES ENTERAS MAYORES A 0.');
+                return;
+            }
+            if (!Number.isInteger(unitsSold) || !Number.isInteger(unitsReturned) || unitsSold < 0 || unitsReturned < 0 || unitsSold > units || unitsReturned > unitsSold) {
+                showAlert('LAS UNIDADES VENDIDAS DEBEN ESTAR ENTRE 0 Y LAS UNIDADES COMPRADAS; LAS DEVUELTAS NO PUEDEN SUPERAR LAS VENDIDAS.');
+                return;
+            }
+            if (!Number.isFinite(actualUnitPrice) || actualUnitPrice < 0) {
+                showAlert('EL PRECIO PROMEDIO REAL DE VENTA DEBE SER UN NÚMERO MAYOR O IGUAL A $0.');
                 return;
             }
             
-            const newCount = currentLote.products.length + 1;
-            const vendorPerUnit = currentLote.vendorShipping / newCount;
-            const shipPerUnit = currentLote.shipping / newCount;
-            const taxPerUnit = currentLote.taxes / newCount;
+            const productCountForSave = Math.max(1, currentLote.products.length + (editingProductId ? 0 : 1));
+            const vendorPerUnit = currentLote.vendorShipping / productCountForSave;
+            const shipPerUnit = currentLote.shipping / productCountForSave;
+            const taxPerUnit = currentLote.taxes / productCountForSave;
             
             const margin = cost > 0 ? ((price - cost) / cost) * 100 : 0;
             const grossProfitPerUnit = price - cost;
@@ -3958,6 +4064,9 @@ Para más información: KLOHESV Cotización System
                 name: name,
                 image: currentImage,
                 units: units,
+                unitsSold: unitsSold,
+                unitsReturned: unitsReturned,
+                actualUnitPrice: actualUnitPrice,
                 unitCost: cost,
                 unitPrice: price,
                 cost: cost * units,
@@ -3994,6 +4103,10 @@ Para más información: KLOHESV Cotización System
             document.getElementById('productCost').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productUnits').value = '1';
+            document.getElementById('productUnitsSold').value = '0';
+            document.getElementById('productUnitsReturned').value = '0';
+            document.getElementById('productActualUnitPrice').value = '';
+            document.getElementById('productActualNet').value = '';
             document.getElementById('displayTotalUnits').textContent = '1';
             document.getElementById('productMargin').value = '';
             document.getElementById('productGross').value = '';
@@ -4016,7 +4129,7 @@ Para más información: KLOHESV Cotización System
             if (products.length === 0) {
                 tbody.innerHTML = `
                     <tr class="empty-row">
-                        <td colspan="13">
+                        <td colspan="16">
                             <div class="empty-state">
                                 <div class="empty-icon">📦</div>
                                 <div>NO HAY PRODUCTOS EN ESTE LOTE</div>
@@ -4036,6 +4149,7 @@ Para más información: KLOHESV Cotización System
             let html = '';
             products.forEach((p, index) => {
                 const highlightClass = highlight ? 'updated' : '';
+                const salesMetrics = getSalesMetrics(p);
                 html += `
                     <tr class="${highlightClass}">
                         <td><span class="badge">${index + 1}</span></td>
@@ -4059,6 +4173,9 @@ Para más información: KLOHESV Cotización System
                         <td class="numeric ${p.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}" style="font-size: 14px;">
                             $${p.netProfit.toFixed(2)}
                         </td>
+                        <td class="numeric">${salesMetrics.netSold}</td>
+                        <td class="numeric">$${salesMetrics.actualRevenue.toFixed(2)}</td>
+                        <td class="numeric ${salesMetrics.realizedProfit >= 0 ? 'profit-positive' : 'profit-negative'}">$${salesMetrics.realizedProfit.toFixed(2)}</td>
                         <td>
                             <div class="actions">
                                 <button class="btn-icon" onclick="editProduct(${p.id})" title="EDITAR">✏️</button>
@@ -4089,10 +4206,19 @@ Para más información: KLOHESV Cotización System
             const totalSales = products.reduce((a, p) => a + p.price, 0);
             const totalGross = products.reduce((a, p) => a + (p.unitPrice - p.unitCost) * p.units, 0);
             const totalNet = totalSales - totalInvestment;
+            const salesMetrics = products.map(getSalesMetrics);
+            const totalUnitsSold = salesMetrics.reduce((sum, m) => sum + m.netSold, 0);
+            const totalActualSales = salesMetrics.reduce((sum, m) => sum + m.actualRevenue, 0);
+            const totalRealizedProfit = salesMetrics.reduce((sum, m) => sum + m.realizedProfit, 0);
             
             document.getElementById('totalInvestment').textContent = '$' + totalInvestment.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('totalSales').textContent = '$' + totalSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('totalGross').textContent = '$' + totalGross.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('totalUnitsSold').textContent = totalUnitsSold.toLocaleString('en-US');
+            document.getElementById('totalActualSales').textContent = '$' + totalActualSales.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const realizedEl = document.getElementById('totalRealizedProfit');
+            realizedEl.textContent = '$' + totalRealizedProfit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            realizedEl.className = 'summary-value ' + (totalRealizedProfit >= 0 ? 'positive' : 'negative');
             
             const netEl = document.getElementById('totalNet');
             netEl.textContent = '$' + totalNet.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -4107,6 +4233,9 @@ Para más información: KLOHESV Cotización System
             document.getElementById('productCost').value = p.unitCost;
             document.getElementById('productPrice').value = p.unitPrice;
             document.getElementById('productUnits').value = p.units;
+            document.getElementById('productUnitsSold').value = p.unitsSold || 0;
+            document.getElementById('productUnitsReturned').value = p.unitsReturned || 0;
+            document.getElementById('productActualUnitPrice').value = (p.actualUnitPrice ?? p.unitPrice ?? 0);
             document.getElementById('displayTotalUnits').textContent = p.units;
             
             document.getElementById('priceUnitDisplay').style.display = 'block';
@@ -4173,9 +4302,12 @@ Para más información: KLOHESV Cotización System
             const totalSales = currentLote.products.reduce((a, p) => a + p.price, 0);
             const totalNet = totalSales - totalInvestment;
             const totalUnits = currentLote.products.reduce((a, p) => a + p.units, 0);
+            const totalUnitsSoldNet = currentLote.products.reduce((sum, p) => sum + getSalesMetrics(p).netSold, 0);
+            const totalActualSales = currentLote.products.reduce((sum, p) => sum + getSalesMetrics(p).actualRevenue, 0);
+            const totalRealizedProfit = currentLote.products.reduce((sum, p) => sum + getSalesMetrics(p).realizedProfit, 0);
             
             doc.setFillColor(240, 240, 240);
-            doc.rect(15, y, 260, 20, 'F');
+            doc.rect(15, y, 260, 34, 'F');
             
             doc.setTextColor(0);
             doc.setFontSize(10);
@@ -4201,6 +4333,21 @@ Para más información: KLOHESV Cotización System
                 doc.text(value, x, y + 15);
                 x += 36;
             });
+            const actualMetrics = [
+                ['UNID. VENDIDAS NETAS:', totalUnitsSoldNet.toString()],
+                ['VENTAS REALES:', `$${totalActualSales.toFixed(2)}`],
+                ['GANANCIA REALIZADA:', `$${totalRealizedProfit.toFixed(2)}`]
+            ];
+            actualMetrics.forEach(([label, value], i) => {
+                const metricX = 20 + i * 85;
+                doc.setTextColor(100);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.text(label, metricX, y + 23);
+                doc.setTextColor(0);
+                doc.setFontSize(10);
+                doc.text(value, metricX, y + 30);
+            });
             
             const data = currentLote.products.map((p, i) => [
                 (i + 1).toString(),
@@ -4213,12 +4360,15 @@ Para más información: KLOHESV Cotización System
                 `$${p.totalRealCost.toFixed(2)}`,
                 `$${p.unitPrice.toFixed(2)}`,
                 `$${p.price.toFixed(2)}`,
-                `$${p.netProfit.toFixed(2)}`
+                `$${p.netProfit.toFixed(2)}`,
+                getSalesMetrics(p).netSold.toString(),
+                `$${getSalesMetrics(p).actualRevenue.toFixed(2)}`,
+                `$${getSalesMetrics(p).realizedProfit.toFixed(2)}`
             ]);
             
             doc.autoTable({
-                startY: y + 28,
-                head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'P.UNIT', 'VENTA', 'GANANCIA']],
+                startY: y + 40,
+                head: [['#', 'PRODUCTO', 'UNID', 'COMPRA', 'ENV.PRV', 'ENV.TRA', 'IMPUEST', 'COSTO REAL', 'P.UNIT', 'VENTA PROY.', 'GANANCIA PROY.', 'VENDIDAS NETAS', 'VENTA REAL', 'GANANCIA REAL']],
                 body: data,
                 theme: 'plain',
                 headStyles: { 
@@ -4245,7 +4395,10 @@ Para más información: KLOHESV Cotización System
                     7: { cellWidth: 20, halign: 'right' },
                     8: { cellWidth: 18, halign: 'right' },
                     9: { cellWidth: 20, halign: 'right' },
-                    10: { cellWidth: 20, halign: 'right' }
+                    10: { cellWidth: 20, halign: 'right' },
+                    11: { cellWidth: 18, halign: 'right' },
+                    12: { cellWidth: 20, halign: 'right' },
+                    13: { cellWidth: 22, halign: 'right' }
                 }
             });
             

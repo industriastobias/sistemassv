@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F5E6E6">
+  <title>DAYMARSHOP | Sistema empresarial</title>
+  <link rel="icon" type="image/png" href="isotipo.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --rosa-vieja: #D4A5A5;
+      --rosa-vieja-claro: #EDD5D5;
+      --rosa-suave: #F5E6E6;
+      --negro: #1a1a1a;
+      --blanco: #fff;
+      --gris: #777;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        radial-gradient(ellipse at 8% 6%, rgba(212,165,165,.31), transparent 31%),
+        radial-gradient(ellipse at 94% 93%, rgba(237,213,213,.95), transparent 35%),
+        var(--rosa-suave);
+      color: var(--negro);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    .portal {
+      width: min(100%, 1120px);
+      overflow: hidden;
+      border: 1px solid rgba(26,26,26,.055);
+      border-radius: 26px;
+      background: var(--blanco);
+      box-shadow: 0 30px 90px rgba(77,48,48,.15);
+    }
+
+    .topbar {
+      min-height: 94px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 34px;
+      border-bottom: 1px solid #f0e8e8;
+      background: rgba(255,255,255,.95);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .isotipo-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      overflow: hidden;
+      background: var(--rosa-vieja-claro);
+    }
+    .brand .isotipo-wrap {
+      width: 58px;
+      height: 58px;
+      border: 1px solid rgba(212,165,165,.42);
+      border-radius: 18px;
+      box-shadow: 0 7px 16px rgba(92,55,55,.10);
+    }
+    .isotipo-wrap img { display: block; width: 100%; height: 100%; padding: 8px; object-fit: contain; }
+    .isotipo-wrap.logo-loaded .logo-fallback { display: none; }
+    .logo-fallback {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      inset: 0;
+      color: var(--negro);
+      font-family: Georgia, serif;
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .brand-name { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .14em; }
+    .brand-tagline { display: block; margin-top: 5px; color: #826f6f; font-size: 9px; font-weight: 700; letter-spacing: .22em; }
+    .access-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 14px;
+      border: 1px solid #f0e4e4;
+      border-radius: 999px;
+      background: #fffafa;
+      color: #705b5b;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .access-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--rosa-vieja); box-shadow: 0 0 0 4px rgba(212,165,165,.15); }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.18fr .82fr;
+      min-height: 540px;
+    }
+    .overview {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 42px 38px;
+      overflow: hidden;
+      background: linear-gradient(145deg, #fff 0%, #fffafa 58%, #fbf2f2 100%);
+    }
+    .overview::before {
+      content: "";
+      position: absolute;
+      top: -185px;
+      left: -180px;
+      width: 420px;
+      height: 420px;
+      border: 1px solid rgba(212,165,165,.19);
+      border-radius: 50%;
+      box-shadow: 0 0 0 30px rgba(212,165,165,.045), 0 0 0 64px rgba(212,165,165,.035);
+      pointer-events: none;
+    }
+    .overview-copy { position: relative; z-index: 1; margin-bottom: 25px; }
+    .section-kicker {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 12px;
+      color: #967171;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .19em;
+      text-transform: uppercase;
+    }
+    .section-kicker::before { content: ""; width: 20px; height: 2px; border-radius: 2px; background: var(--rosa-vieja); }
+    .overview h1 { margin: 0; font-size: clamp(27px, 3.2vw, 37px); font-weight: 650; letter-spacing: -.045em; }
+    .overview-copy p { margin: 8px 0 0; color: #817777; font-size: 12px; }
+
+    /* Vista ilustrativa del panel: no muestra métricas ni datos inventados. */
+    .admin-window {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 590px);
+      padding: 17px;
+      border: 1px solid #eee4e4;
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 17px 40px rgba(83,53,53,.10);
+      transform: perspective(1000px) rotateY(-3deg) rotateX(1deg);
+    }
+    .window-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+    .window-brand { display: flex; align-items: center; gap: 8px; }
+    .window-icon { width: 25px; height: 25px; border-radius: 8px; background: var(--rosa-vieja-claro); position: relative; }
+    .window-icon::before, .window-icon::after { content: ""; position: absolute; left: 7px; width: 11px; height: 3px; border-radius: 3px; background: var(--rosa-vieja); }
+    .window-icon::before { top: 8px; }
+    .window-icon::after { top: 14px; width: 7px; }
+    .window-title-lines { display: grid; gap: 4px; }
+    .window-title-lines i { width: 75px; height: 4px; border-radius: 4px; background: #d9cece; }
+    .window-title-lines i:last-child { width: 46px; background: #eee7e7; }
+    .window-controls { display: flex; gap: 4px; }
+    .window-controls i { width: 5px; height: 5px; border-radius: 50%; background: #d9c8c8; }
+    .window-layout { display: grid; grid-template-columns: 42px 1fr; gap: 12px; }
+    .window-sidebar { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 10px 0; border-radius: 9px; background: #faf4f4; }
+    .window-sidebar i { width: 15px; height: 15px; border-radius: 5px; background: #eadada; }
+    .window-sidebar i:first-child { background: var(--rosa-vieja); box-shadow: 0 3px 7px rgba(212,165,165,.3); }
+    .window-content { display: grid; gap: 10px; min-width: 0; }
+    .skeleton-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .skeleton-card { height: 49px; padding: 9px; border: 1px solid #f0e8e8; border-radius: 8px; background: #fff; }
+    .skeleton-card i { display: block; width: 48%; height: 4px; margin-bottom: 8px; border-radius: 4px; background: #e6dede; }
+    .skeleton-card b { display: block; width: 75%; height: 8px; border-radius: 5px; background: var(--rosa-vieja-claro); }
+    .data-visuals { display: grid; grid-template-columns: 1.3fr .7fr; gap: 9px; }
+    .chart-card, .list-card { height: 116px; padding: 10px; border: 1px solid #f0e8e8; border-radius: 9px; background: linear-gradient(180deg,#fff,#fdfafa); }
+    .mini-label { display: block; width: 46px; height: 4px; margin-bottom: 13px; border-radius: 4px; background: #d8cccc; }
+    .chart { display: flex; align-items: end; justify-content: space-around; gap: 7px; height: 72px; padding: 0 6px; border-bottom: 1px solid #eadfdf; background: repeating-linear-gradient(to bottom, transparent 0 17px, #f4eeee 18px 19px); }
+    .chart i { width: 10%; border-radius: 4px 4px 0 0; background: var(--rosa-vieja-claro); }
+    .chart i:nth-child(1) { height: 37%; }
+    .chart i:nth-child(2) { height: 61%; }
+    .chart i:nth-child(3) { height: 47%; background: var(--rosa-vieja); }
+    .chart i:nth-child(4) { height: 80%; }
+    .chart i:nth-child(5) { height: 57%; background: var(--rosa-vieja); }
+    .chart i:nth-child(6) { height: 92%; }
+    .list-card { display: grid; align-content: start; gap: 9px; }
+    .list-card .mini-label { margin-bottom: 4px; }
+    .list-row { display: flex; align-items: center; gap: 6px; }
+    .list-row i { width: 13px; height: 13px; border-radius: 4px; background: #f1e6e6; }
+    .list-row b { flex: 1; height: 4px; border-radius: 4px; background: #e7dddd; }
+    .list-row em { width: 14px; height: 4px; border-radius: 4px; background: var(--rosa-vieja-claro); }
+
+    .login-area {
+      display: grid;
+      place-items: center;
+      padding: 44px 38px;
+      border-left: 1px solid #f1e9e9;
+      background: #fff;
+    }
+    .login-card { width: min(100%, 340px); }
+    .login-card .section-kicker { margin-bottom: 13px; }
+    .login-card h2 { margin: 0; font-size: 29px; font-weight: 650; letter-spacing: -.04em; }
+    .login-subtitle { margin: 8px 0 29px; color: var(--gris); font-size: 12px; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; margin-bottom: 8px; color: #393333; font-size: 12px; font-weight: 650; }
+    .input-wrap { position: relative; }
+    .input-wrap svg { position: absolute; top: 50%; left: 13px; width: 17px; height: 17px; color: #987b7b; transform: translateY(-50%); pointer-events: none; }
+    input {
+      width: 100%;
+      height: 49px;
+      padding: 0 13px 0 41px;
+      border: 1px solid #e7dddd;
+      border-radius: 9px;
+      outline: none;
+      background: #fff;
+      color: var(--negro);
+      font: inherit;
+      font-size: 13px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input::placeholder { color: #b4a8a8; }
+    input:focus { border-color: var(--rosa-vieja); box-shadow: 0 0 0 4px rgba(212,165,165,.16); }
+    .submit-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 50px;
+      margin-top: 9px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--negro);
+      color: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      cursor: pointer;
+      box-shadow: 0 8px 17px rgba(26,26,26,.13);
+      transition: background .2s, transform .2s, box-shadow .2s;
+    }
+    .submit-button:hover { background: #383232; transform: translateY(-1px); box-shadow: 0 11px 22px rgba(26,26,26,.18); }
+    .submit-button:focus-visible { outline: 3px solid var(--rosa-vieja); outline-offset: 3px; }
+    .submit-button svg { width: 17px; height: 17px; }
+
+    #loadingOverlay { position: fixed; inset: 0; z-index: 5; display: none; place-items: center; background: rgba(245,230,230,.88); }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--rosa-vieja-claro); border-top-color: var(--rosa-vieja); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 780px) {
+      body { padding: 18px; }
+      .portal { width: min(100%, 540px); border-radius: 22px; }
+      .topbar { min-height: 78px; padding: 13px 20px; }
+      .brand .isotipo-wrap { width: 48px; height: 48px; border-radius: 14px; }
+      .brand-name { font-size: 14px; }
+      .brand-tagline { font-size: 8px; }
+      .access-badge { padding: 8px 10px; font-size: 8px; }
+      .main-grid { grid-template-columns: 1fr; }
+      .overview { padding: 28px 24px 25px; }
+      .overview-copy { margin-bottom: 18px; }
+      .overview h1 { font-size: 27px; }
+      .overview-copy p { font-size: 11px; }
+      .admin-window { width: 100%; max-width: 480px; margin: 0 auto; padding: 12px; transform: none; }
+      .window-layout { grid-template-columns: 34px 1fr; gap: 9px; }
+      .window-sidebar { gap: 7px; }
+      .window-sidebar i { width: 13px; height: 13px; }
+      .skeleton-card { height: 42px; padding: 7px; }
+      .data-visuals { grid-template-columns: 1.25fr .75fr; gap: 7px; }
+      .chart-card, .list-card { height: 98px; padding: 8px; }
+      .chart { height: 57px; }
+      .login-area { padding: 31px 24px 36px; border-top: 1px solid #f1e9e9; border-left: 0; }
+      .login-card { width: min(100%, 390px); }
+      .login-card h2 { font-size: 25px; }
+      .login-subtitle { margin-bottom: 22px; }
+    }
+    @media (max-width: 390px) {
+      body { padding: 10px; }
+      .topbar { padding: 11px 14px; }
+      .access-badge { gap: 6px; padding: 7px 8px; letter-spacing: .04em; }
+      .overview { padding: 23px 17px 20px; }
+      .login-area { padding: 27px 18px 30px; }
+      .data-visuals { grid-template-columns: 1fr; }
+      .list-card { display: none; }
+      .chart-card { height: 91px; }
+      .chart { height: 54px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="portal">
+    <header class="topbar">
+      <div class="brand">
+        <div class="isotipo-wrap">
+          <span class="logo-fallback" aria-hidden="true">D</span>
+          <img src="isotipo.png" alt="Isotipo de DAYMARSHOP" onload="this.parentElement.classList.add('logo-loaded')" onerror="this.style.display='none'">
+        </div>
+        <div>
+          <p class="brand-name">DAYMARSHOP</p>
+          <span class="brand-tagline">A FAMILY COMPANY</span>
+        </div>
+      </div>
+      <div class="access-badge">Acceso interno</div>
+    </header>
+
+    <div class="main-grid">
+      <section class="overview" aria-label="Panel administrativo de DAYMARSHOP">
+        <div class="overview-copy">
+          <p class="section-kicker">Panel de administración</p>
+          <h1>Gestión empresarial</h1>
+          <p>Información de la empresa, en un solo lugar.</p>
+        </div>
+
+        <div class="admin-window" aria-hidden="true">
+          <div class="window-head">
+            <div class="window-brand">
+              <span class="window-icon"></span>
+              <span class="window-title-lines"><i></i><i></i></span>
+            </div>
+            <div class="window-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="window-layout">
+            <div class="window-sidebar"><i></i><i></i><i></i><i></i></div>
+            <div class="window-content">
+              <div class="skeleton-cards"><div class="skeleton-card"><i></i><b></b></div><div class="skeleton-card"><i></i><b></b></div><div class="skeleton-card"><i></i><b></b></div></div>
+              <div class="data-visuals">
+                <div class="chart-card"><span class="mini-label"></span><div class="chart"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+                <div class="list-card"><span class="mini-label"></span><span class="list-row"><i></i><b></b><em></em></span><span class="list-row"><i></i><b></b><em></em></span><span class="list-row"><i></i><b></b><em></em></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="login-area" aria-labelledby="loginTitle">
+        <div class="login-card">
+          <p class="section-kicker">Acceso</p>
+          <h2 id="loginTitle">Iniciar sesión</h2>
+          <p class="login-subtitle">Ingresa tus credenciales para continuar.</p>
+
+          <form id="loginForm" autocomplete="on">
+            <div class="field">
+              <label for="userID">Usuario</label>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.7"/><path d="M5 20c.6-3.3 3.1-5 7-5s6.4 1.7 7 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                <input type="text" id="userID" name="username" placeholder="Ingresa tu usuario" autocomplete="username" required autofocus>
+              </div>
+            </div>
+            <div class="field">
+              <label for="userClave">Contraseña</label>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                <input type="password" id="userClave" name="password" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
+              </div>
+            </div>
+            <button class="submit-button" type="submit">
+              Entrar
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="loadingOverlay" role="status" aria-label="Ingresando"><div class="spinner" aria-hidden="true"></div></div>
+
+  <script>
+    /* ---------- IndexedDB ---------- */
+    const DB_NAME = 'sessionDB', STORE_NAME = 'sessions';
+    let db;
+
+    async function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(db = request.result);
+        request.onupgradeneeded = () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+      });
+    }
+
+    async function guardarSesion(user) {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      transaction.objectStore(STORE_NAME).put(user);
+    }
+
+    /* ---------- Usuarios ---------- */
+    const users = [
+      { id: '2005', clave: 'admin2024', nombre: 'ERNESTO TOBIAS', foto: 'user2005.jpg' },
+      { id: '1001', clave: 'viewer2024', nombre: 'PAOLA PALACIOS', foto: 'userpaola.jpg' }
+    ];
+
+    /* ---------- Login ---------- */
+    async function login() {
+      const userID = document.getElementById('userID').value.trim();
+      const userClave = document.getElementById('userClave').value.trim();
+      const user = users.find(item => item.id === userID && item.clave === userClave);
+
+      if (!user) {
+        alert('ID o contraseña incorrectos.');
+        return;
+      }
+
+      try {
+        if (!db) await openDB();
+        await guardarSesion(user);
+      } catch (error) {
+        console.error('No se pudo guardar la sesión:', error);
+        alert('No se pudo iniciar el sistema. Intenta de nuevo.');
+        return;
+      }
+
+      sessionStorage.setItem('loggedIn', 'true');
+      sessionStorage.setItem('userID', user.id);
+      sessionStorage.setItem('nombre', user.nombre);
+      sessionStorage.setItem('foto', user.foto);
+
+      document.getElementById('loadingOverlay').style.display = 'grid';
+      location.href = 'menu.html';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', event => {
+      event.preventDefault();
+      login();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      openDB().catch(error => console.error('No se pudo abrir la base de datos de sesión:', error));
+    });
+  </script>
+</body>
+</html>

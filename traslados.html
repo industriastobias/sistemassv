@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotización de Productos DAYMARSV</title>
+    <title>Dashboard – DAYMAR-SHOP | Cotización de Productos</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js "></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js "></script>
@@ -1728,13 +1728,177 @@
         body.simplified-view .simplified-mode-indicator {
             display: block;
         }
+
+        /* Navegación principal DAYMAR-SHOP */
+        .header {
+            position: relative;
+            z-index: 1200;
+            gap: 12px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .header-brand h1 {
+            white-space: nowrap;
+            font-size: 16px;
+        }
+
+        .menu-toggle {
+            display: inline-flex;
+            flex: 0 0 38px;
+            width: 38px;
+            height: 36px;
+            padding: 7px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: #fff;
+            background: transparent;
+            border: 2px solid rgba(255,255,255,.55);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .menu-toggle:hover,
+        .menu-toggle:focus-visible {
+            background: rgba(255,255,255,.16);
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 19px;
+            height: 2px;
+            border-radius: 2px;
+            background: currentColor;
+        }
+
+        .dashboard-menu {
+            position: fixed;
+            z-index: 1202;
+            top: 50px;
+            left: 0;
+            width: min(320px, 88vw);
+            height: calc(100vh - 50px);
+            overflow-y: auto;
+            padding: 18px 14px 24px;
+            color: #1a1a1a;
+            background: #fff;
+            box-shadow: 8px 0 26px rgba(0,0,0,.2);
+            transform: translateX(-105%);
+            transition: transform .22s ease;
+            visibility: hidden;
+        }
+
+        .dashboard-menu.open {
+            transform: translateX(0);
+            visibility: visible;
+        }
+
+        .dashboard-menu-title {
+            margin: 0 8px 14px;
+            color: #8f626d;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: .2px;
+        }
+
+        .dashboard-menu nav {
+            display: grid;
+            gap: 4px;
+        }
+
+        .dashboard-menu a {
+            display: block;
+            padding: 11px 12px;
+            color: #252126;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 750;
+            text-decoration: none;
+            transition: background .15s ease, color .15s ease;
+        }
+
+        .dashboard-menu a:hover,
+        .dashboard-menu a:focus-visible {
+            color: #754b55;
+            background: #f6eaed;
+            outline: none;
+        }
+
+        .menu-backdrop {
+            position: fixed;
+            z-index: 1201;
+            inset: 50px 0 0;
+            background: rgba(20,14,16,.36);
+            opacity: 0;
+            transition: opacity .22s ease;
+        }
+
+        .menu-backdrop.active {
+            opacity: 1;
+        }
+
+        @media (max-width: 760px) {
+            .header {
+                padding: 0 9px;
+                gap: 8px;
+            }
+
+            .header-brand {
+                gap: 8px;
+            }
+
+            .header-brand h1 {
+                overflow: hidden;
+                max-width: 38vw;
+                font-size: 12px;
+                letter-spacing: 0;
+                text-overflow: ellipsis;
+            }
+
+            .header-actions {
+                gap: 5px;
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+
+            .header-actions::-webkit-scrollbar {
+                display: none;
+            }
+
+            .header-actions .btn-sm {
+                flex: 0 0 auto;
+                padding: 5px 8px;
+                font-size: 10px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .dashboard-menu,
+            .menu-backdrop {
+                transition: none;
+            }
+        }
     </style>
-<base target="_blank">
+<base target="_self">
 </head>
 <body>
     <div class="app">
         <header class="header">
-            <h1>📦 COTIZACIÓN DE PRODUCTOS DAYMARSV</h1>
+            <div class="header-brand">
+                <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menú" aria-controls="dashboardMenu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+                <h1>Dashboard – DAYMAR-SHOP</h1>
+            </div>
             <div class="header-actions">
                 <button class="btn-sm kiosko-btn" id="kioskoBtn" onclick="toggleKiosko()" title="Modo kiosco (pantalla completa)">
                     🖥️ MODO KIOSCO
@@ -1760,6 +1924,26 @@
                 <button class="btn-sm" onclick="clearAll()" style="color: #ffebee; border-color: rgba(255,255,255,0.4);">🗑️ LIMPIAR TODO</button>
             </div>
         </header>
+
+        <aside class="dashboard-menu" id="dashboardMenu" aria-label="Menú principal" aria-hidden="true">
+            <div class="dashboard-menu-title">Dashboard – DAYMAR-SHOP</div>
+            <nav aria-label="Páginas internas">
+                <a href="menu.html" target="_self">INICIO</a>
+                <a href="compra.html" target="_self">Compra</a>
+                <a href="almacenamiento.html" target="_self">Almacenamiento</a>
+                <a href="lista.html" target="_self">Finanzas</a>
+                <a href="inventario.html" target="_self">Inventario</a>
+                <a href="gastos.html" target="_self">Catálogo</a>
+                <a href="clientes.html" target="_self">Clientes</a>
+                <a href="descuentos.html" target="_self">Descuentos</a>
+                <a href="facturas.html" target="_self">Facturas</a>
+                <a href="traslados.html" target="_self">Cotización</a>
+                <a href="venta.html" target="_self">Venta</a>
+                <a href="Verificasion.html" target="_self">Reservas</a>
+                <a href="electronica.html" target="_self">Electrónica</a>
+            </nav>
+        </aside>
+        <div class="menu-backdrop" id="menuBackdrop" hidden></div>
 
         <!-- Indicador de modo vista simplificada -->
         <div class="simplified-mode-indicator" id="simplifiedIndicator">
@@ -4426,6 +4610,38 @@ Para más información: DAYMARSV Cotización System
                 }
             }
         });
-    </script>
+    
+
+        // Menú hamburguesa: todos los enlaces permanecen en la pestaña actual.
+        (function setupDashboardMenu() {
+            const toggle = document.getElementById('menuToggle');
+            const menu = document.getElementById('dashboardMenu');
+            const backdrop = document.getElementById('menuBackdrop');
+            if (!toggle || !menu || !backdrop) return;
+
+            function setMenuOpen(isOpen) {
+                toggle.setAttribute('aria-expanded', String(isOpen));
+                toggle.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
+                menu.setAttribute('aria-hidden', String(!isOpen));
+                menu.classList.toggle('open', isOpen);
+                backdrop.hidden = !isOpen;
+                backdrop.classList.toggle('active', isOpen);
+            }
+
+            toggle.addEventListener('click', function () {
+                setMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+            });
+            backdrop.addEventListener('click', function () { setMenuOpen(false); });
+            menu.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () { setMenuOpen(false); });
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+                    setMenuOpen(false);
+                    toggle.focus();
+                }
+            });
+        })();
+</script>
 </body>
 </html>

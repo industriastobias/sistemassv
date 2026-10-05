@@ -30,9 +30,56 @@
     .notification.show{opacity:1;transform:none}
     .history{max-height:200px;overflow-y:auto;font-size:.85rem;margin-top:1rem}
     #btn-borrar-historial{background:var(--error);color:#fff}
+  
+    /* Menú principal DAYMAR-SHOP */
+    .hamburger-toggle{position:fixed;top:1rem;left:1rem;z-index:1200;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);box-shadow:0 4px 14px rgba(15,23,42,.12);display:grid;place-content:center;gap:5px;cursor:pointer}
+    .hamburger-toggle:hover{background:#f3f4f6}
+    .hamburger-toggle span{display:block;width:21px;height:2px;background:currentColor;border-radius:2px}
+    .site-nav-backdrop{position:fixed;inset:0;z-index:1290;border:0;border-radius:0;background:rgba(15,23,42,.48);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,visibility .22s}
+    .site-nav{position:fixed;inset:0 auto 0 0;z-index:1300;width:min(340px,86vw);padding:1.25rem;overflow-y:auto;background:#fff;box-shadow:12px 0 32px rgba(15,23,42,.18);transform:translateX(-105%);transition:transform .24s ease}
+    .site-nav.is-open{transform:translateX(0)}
+    .site-nav-backdrop.is-open{opacity:1;visibility:visible;pointer-events:auto}
+    .site-nav-head{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin:0 0 1.25rem;padding:2.9rem 0 1rem;border-bottom:1px solid var(--border)}
+    .site-nav-title{font-size:1.15rem;line-height:1.4;font-weight:700;color:var(--text)}
+    .site-nav-close{flex:0 0 38px;width:38px;height:38px;padding:0;border-radius:8px;background:#f3f4f6;color:var(--text);font-size:1.35rem}
+    .site-nav-close:hover{background:#e5e7eb}
+    .site-nav-links{display:grid;gap:.35rem;list-style:none}
+    .site-nav-links a{display:block;padding:.75rem .85rem;border-radius:8px;color:var(--text);text-decoration:none;font-size:.98rem;font-weight:500}
+    .site-nav-links a:hover,.site-nav-links a:focus-visible{background:#eef2ff;color:var(--primary);outline:none}
+    body.menu-open{overflow:hidden}
+    .left{padding-top:4.5rem}
+    .right{padding-top:4.5rem}
+    @media(max-width:700px){.split{height:auto;min-height:100%;flex-direction:column}.left,.right{flex:1 1 auto;width:100%;overflow:visible;padding:4.5rem 1rem 1.5rem}.right{padding-top:1rem}.filters{flex-direction:column!important;gap:0!important}table{display:block;overflow-x:auto;white-space:nowrap}}
+
   </style>
 </head>
 <body>
+
+<button class="hamburger-toggle" id="menu-toggle" type="button" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="site-menu">
+  <span></span><span></span><span></span>
+</button>
+<button class="site-nav-backdrop" id="site-nav-backdrop" type="button" aria-label="Cerrar menú"></button>
+<nav class="site-nav" id="site-menu" aria-label="Navegación principal" inert>
+  <div class="site-nav-head">
+    <h2 class="site-nav-title">Dashboard – DAYMAR-SHOP</h2>
+    <button class="site-nav-close" id="menu-close" type="button" aria-label="Cerrar menú">×</button>
+  </div>
+  <ul class="site-nav-links">
+    <li><a href="compra.html" target="_self">Compra</a></li>
+    <li><a href="almacenamiento.html" target="_self">Almacenamiento</a></li>
+    <li><a href="lista.html" target="_self">Finanzas</a></li>
+    <li><a href="inventario.html" target="_self">Inventario</a></li>
+    <li><a href="gastos.html" target="_self">Catálogo</a></li>
+    <li><a href="clientes.html" target="_self">Clientes</a></li>
+    <li><a href="descuentos.html" target="_self">Descuentos</a></li>
+    <li><a href="facturas.html" target="_self">Facturas</a></li>
+    <li><a href="traslados.html" target="_self">Cotización</a></li>
+    <li><a href="venta.html" target="_self">Venta</a></li>
+    <li><a href="Verificasion.html" target="_self">Reservas</a></li>
+    <li><a href="electronica.html" target="_self">Electrónica</a></li>
+  </ul>
+</nav>
+
 <div class="split">
   <div class="left">
     <h1>Agregar</h1>
@@ -228,5 +275,43 @@
   render();
 })();
 </script>
+
+<script>
+(() => {
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('site-menu');
+  const close = document.getElementById('menu-close');
+  const backdrop = document.getElementById('site-nav-backdrop');
+  function setMenu(open) {
+    menu.classList.toggle('is-open', open);
+    backdrop.classList.toggle('is-open', open);
+    document.body.classList.toggle('menu-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Cerrar menú de navegación' : 'Abrir menú de navegación');
+    menu.toggleAttribute('inert', !open);
+    if (open) close.focus(); else toggle.focus();
+  }
+  toggle.addEventListener('click', () => setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+  close.addEventListener('click', () => setMenu(false));
+  backdrop.addEventListener('click', () => setMenu(false));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') setMenu(false);
+  });
+  // Regla global de esta página: todos los enlaces, también los creados después, usan la pestaña actual.
+  function enforceSameTab(root = document) {
+    if (root.matches?.('a[href]')) root.setAttribute('target', '_self');
+    root.querySelectorAll?.('a[href]').forEach(link => link.setAttribute('target', '_self'));
+  }
+  enforceSameTab();
+  new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+    if (node.nodeType === Node.ELEMENT_NODE) enforceSameTab(node);
+  }))).observe(document.documentElement, {childList:true, subtree:true});
+  document.addEventListener('click', event => {
+    const link = event.target.closest?.('a[href]');
+    if (link) link.setAttribute('target', '_self');
+  }, true);
+})();
+</script>
+
 </body>
 </html>

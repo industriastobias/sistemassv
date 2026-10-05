@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Reservas Pro - Verificación</title>
+    <title>RESERVAS– DAYMAR-SHOP | Reservas</title>
     <style>
         /* ============================================
            VARIABLES CSS Y CONFIGURACIÓN BASE
@@ -131,6 +131,48 @@
 
         .close-sidebar:hover {
             background: rgba(0,0,0,0.1);
+        }
+
+        /* Navegación del sitio */
+        .site-nav {
+            padding: 14px;
+            border-radius: var(--radius-md);
+            background: rgba(255,255,255,0.55);
+            border: 1px solid rgba(255,255,255,0.7);
+        }
+        .site-nav-title {
+            margin-bottom: 10px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: var(--color-texto);
+        }
+        .site-nav-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+            list-style: none;
+        }
+        .site-nav-list a {
+            display: flex;
+            min-height: 38px;
+            align-items: center;
+            padding: 7px 9px;
+            border-radius: var(--radius-sm);
+            color: var(--color-texto);
+            background: rgba(255,255,255,0.72);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 650;
+            transition: var(--transition-base);
+        }
+        .site-nav-list a:hover, .site-nav-list a:focus-visible {
+            color: white;
+            background: var(--color-texto);
+            outline: none;
+        }
+        .site-nav-list a[aria-current="page"] {
+            box-shadow: inset 0 0 0 2px var(--color-texto);
         }
 
         /* ============================================
@@ -1771,11 +1813,30 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <h1>🛍️ Reservas</h1>
+                    <h1>RESERVAS– DAYMAR-SHOP</h1>
                     <p>Sistema de Verificación Pro</p>
                 </div>
                 <button class="close-sidebar" onclick="toggleSidebar()" aria-label="Cerrar menú">×</button>
             </div>
+
+            <nav class="site-nav" aria-label="Navegación principal">
+                <div class="site-nav-title">PÁGINAS</div>
+                <ul class="site-nav-list">
+                    <li><a href="menu.html" target="_self">INICIO</a></li>
+                    <li><a href="compra.html" target="_self">Compra</a></li>
+                    <li><a href="almacenamiento.html" target="_self">Almacenamiento</a></li>
+                    <li><a href="lista.html" target="_self">Finanzas</a></li>
+                    <li><a href="inventario.html" target="_self">Inventario</a></li>
+                    <li><a href="gastos.html" target="_self">Catálogo</a></li>
+                    <li><a href="clientes.html" target="_self">Clientes</a></li>
+                    <li><a href="descuentos.html" target="_self">Descuentos</a></li>
+                    <li><a href="facturas.html" target="_self">Facturas</a></li>
+                    <li><a href="traslados.html" target="_self">Cotización</a></li>
+                    <li><a href="venta.html" target="_self">Venta</a></li>
+                    <li><a href="Verificasion.html" target="_self" aria-current="page">Reservas</a></li>
+                    <li><a href="electronica.html" target="_self">Electrónica</a></li>
+                </ul>
+            </nav>
 
             <form id="reservaForm">
                 <input type="hidden" id="reservaId">
@@ -2987,6 +3048,41 @@
             });
         }
 
+        function obtenerFuenteImagen(imagen) {
+            if (!imagen) return '';
+            if (typeof imagen === 'string') {
+                const value = imagen.trim();
+                if (!value) return '';
+                // Acepta URL, data URL y Base64 sin prefijo (formatos usados en backups antiguos).
+                if (/^(data:image\/|https?:\/\/|blob:|\.\.?\/|\/)/i.test(value)) return value;
+                if (/^[A-Za-z0-9+/]+=*$/.test(value)) return `data:image/jpeg;base64,${value}`;
+                return value;
+            }
+            if (typeof imagen === 'object') {
+                const nested = imagen.url || imagen.src || imagen.dataUrl || imagen.data || imagen.base64;
+                if (typeof nested === 'string') {
+                    if (nested.startsWith('data:')) return nested;
+                    if (imagen.mimeType && /^[A-Za-z0-9.+-]+\/[A-Za-z0-9.+-]+$/.test(imagen.mimeType)) {
+                        return `data:${imagen.mimeType};base64,${nested}`;
+                    }
+                    return obtenerFuenteImagen(nested);
+                }
+                if (imagen instanceof Blob) return URL.createObjectURL(imagen);
+            }
+            return '';
+        }
+
+        function abrirModalDesdeMiniatura(event) {
+            const imagen = event.currentTarget;
+            abrirModal(imagen.currentSrc || imagen.src, imagen.alt || 'Producto');
+        }
+
+        function imagenProductoNoDisponible(imagen) {
+            const contenedor = imagen.parentElement;
+            if (!contenedor) return;
+            contenedor.innerHTML = '<div class="no-image" role="img" aria-label="Imagen no disponible">No disponible</div>';
+        }
+
         function mostrarTabla(reservas, total) {
             const container = document.getElementById('tablaContainer');
             
@@ -3026,8 +3122,9 @@
             reservas.forEach(r => {
                 const completado = r.estado === 'completado';
                 const avatar = r.nombre ? r.nombre.charAt(0).toUpperCase() : '?';
-                const imgHtml = r.imagen 
-                    ? `<div class="img-cell-container"><img src="${r.imagen}" class="img-cell" onclick="abrirModal('${r.imagen}', '${escapeHtml(r.producto)}')" loading="lazy" alt="Producto"></div>`
+                const imageSource = obtenerFuenteImagen(r.imagen);
+                const imgHtml = imageSource
+                    ? `<div class="img-cell-container"><img src="${escapeHtml(imageSource)}" class="img-cell" onclick="abrirModalDesdeMiniatura(event)" onerror="imagenProductoNoDisponible(this)" loading="lazy" decoding="async" alt="${escapeHtml(r.producto || 'Producto')}"></div>`
                     : `<div class="no-image">Sin img</div>`;
                 
                 const tagsHtml = r.categorias ? r.categorias.map(c => `<span class="tag">${escapeHtml(c)}</span>`).join('') : '';

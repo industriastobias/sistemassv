@@ -139,7 +139,19 @@
 
     #sideMenu.show { right: 0; }
 
-    #sideMenu a {
+    .side-menu-brand {
+      padding: 0 16px 16px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      line-height: 1.35;
+    }
+
+    #sideMenu a,
+    #sideMenu .side-menu-action {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -153,12 +165,23 @@
       touch-action: manipulation;
     }
 
-    #sideMenu a:hover {
+    #sideMenu a:hover,
+    #sideMenu .side-menu-action:hover {
       background: var(--rose-pale);
       color: var(--rose-text);
     }
 
-    #sideMenu a i {
+    #sideMenu .side-menu-action {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    #sideMenu a i,
+    #sideMenu .side-menu-action i {
       width: 20px;
       text-align: center;
     }
@@ -1229,8 +1252,6 @@
       }
     }
   </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -1258,29 +1279,31 @@
       <span>DAYMAR SHOP - Sistema de Facturación</span>
     </div>
   </div>
-  <button id="menuToggle" onclick="toggleMenu()">
+  <button id="menuToggle" type="button" aria-label="Abrir menú" aria-controls="sideMenu" aria-expanded="false" onclick="toggleMenu()">
     <i class="fa-solid fa-bars"></i>
   </button>
 </header>
 
-<nav id="sideMenu">
-  <a href="menu.html"><i class="fa fa-home"></i> Menú</a>
-  <a href="compra.html"><i class="fa fa-shopping-cart"></i> Compra</a>
-  <a href="almacenamiento.html"><i class="fa fa-warehouse"></i> Almacenamiento</a>
-  <a href="lista.html"><i class="fa fa-list"></i> Lista</a>
-  <a href="inventario.html"><i class="fa fa-boxes"></i> Inventario</a>
-  <a href="gastos.html"><i class="fa fa-money-bill-wave"></i> Gastos</a>
-  <a href="clientes.html"><i class="fa fa-users"></i> Clientes</a>
-  <a href="descuentos.html"><i class="fa fa-tags"></i> Descuentos</a>
-  <a href="facturas.html"><i class="fa fa-file-invoice"></i> Facturas</a>
-  <a href="traslados.html"><i class="fa fa-truck"></i> Traslados</a>
-  <a href="venta.html"><i class="fa fa-cash-register"></i> Venta</a>
-  <a href="electronica.html" style="background: var(--rose-pale); color: var(--rose-text);"><i class="fa fa-receipt"></i> Factura Electrónica</a>
-  <a href="#" onclick="toggleKiosk(); return false;"><i class="fa fa-expand"></i> Pantalla completa</a>
+<nav id="sideMenu" aria-label="Navegación principal">
+  <div class="side-menu-brand">ELECTRONICA– DAYMAR-SHOP</div>
+  <a href="menu.html" target="_self"><i class="fa fa-home"></i> INICIO</a>
+  <a href="compra.html" target="_self"><i class="fa fa-shopping-cart"></i> Compra</a>
+  <a href="almacenamiento.html" target="_self"><i class="fa fa-warehouse"></i> Almacenamiento</a>
+  <a href="lista.html" target="_self"><i class="fa fa-list"></i> Finanzas</a>
+  <a href="inventario.html" target="_self"><i class="fa fa-boxes"></i> Inventario</a>
+  <a href="gastos.html" target="_self"><i class="fa fa-money-bill-wave"></i> Catálogo</a>
+  <a href="clientes.html" target="_self"><i class="fa fa-users"></i> Clientes</a>
+  <a href="descuentos.html" target="_self"><i class="fa fa-tags"></i> Descuentos</a>
+  <a href="facturas.html" target="_self"><i class="fa fa-file-invoice"></i> Facturas</a>
+  <a href="traslados.html" target="_self"><i class="fa fa-truck"></i> Cotización</a>
+  <a href="venta.html" target="_self"><i class="fa fa-cash-register"></i> Venta</a>
+  <a href="Verificasion.html" target="_self"><i class="fa fa-calendar-check"></i> Reservas</a>
+  <a href="electronica.html" target="_self" aria-current="page" style="background: var(--rose-pale); color: var(--rose-text);"><i class="fa fa-receipt"></i> Electrónica</a>
+  <button type="button" class="side-menu-action" onclick="toggleKiosk()"><i class="fa fa-expand"></i> Pantalla completa</button>
 </nav>
 
 <div class="controls-bar">
-  <a href="venta.html" class="btn btn-outline">
+  <a target="_self" href="venta.html" class="btn btn-outline">
     <i class="fa-solid fa-arrow-left"></i> Volver a Ventas
   </a>
   <button class="btn btn-success" onclick="seleccionarTodos()">
@@ -1746,9 +1769,14 @@
   function showSpinner() { document.getElementById('spinner').style.display = 'grid'; }
   function hideSpinner() { document.getElementById('spinner').style.display = 'none'; }
 
-  function toggleMenu() {
-    document.getElementById('sideMenu').classList.toggle('show');
-    document.getElementById('menuOverlay').classList.toggle('show');
+  function toggleMenu(forceOpen) {
+    const menu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('menuOverlay');
+    const button = document.getElementById('menuToggle');
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !menu.classList.contains('show');
+    menu.classList.toggle('show', shouldOpen);
+    overlay.classList.toggle('show', shouldOpen);
+    if (button) button.setAttribute('aria-expanded', String(shouldOpen));
   }
 
   // ========== PANTALLA COMPLETA - SOLUCIÓN ROBUSTA PARA TABLETS ==========
@@ -2015,45 +2043,111 @@ function cambiarTab(tab) {
     }
   }
 
-  // ========== CARGAR IMÁGENES DESDE LOCALFORAGE ==========
-  async function cargarImagenesLocalForage() {
-    if (!productosFiltrados || productosFiltrados.length === 0) return;
-    
-    for (let i = 0; i < productosFiltrados.length; i++) {
-      const item = productosFiltrados[i];
-      
-      const imagenActual = item.image || item.imagen || item.img || '';
-      if (imagenActual && (
-        imagenActual.startsWith('data:image') || 
-        imagenActual.startsWith('http://') || 
-        imagenActual.startsWith('https://') ||
-        imagenActual.startsWith('blob:')
-      )) {
+  // ========== RECUPERAR IMÁGENES DE INVENTARIO / ALMACENAMIENTO ==========
+  function normalizarClaveProducto(value) {
+    return value == null ? '' : String(value).trim().toLocaleLowerCase();
+  }
+
+  function clavesProducto(item) {
+    if (!item) return [];
+    return ['code', 'barcode', 'codigo', 'sku', 'id', 'productId', 'idProducto']
+      .map(key => item[key])
+      .filter(value => value != null && String(value).trim() !== '')
+      .map(value => String(value).trim());
+  }
+
+  function buscarProductoEnInventario(item, inventory) {
+    const productos = Array.isArray(inventory) ? inventory : [];
+    const claves = new Set(clavesProducto(item).map(normalizarClaveProducto));
+    const nombre = normalizarClaveProducto(item && (item.name || item.nombre));
+    return productos.find(product => {
+      const productKeys = clavesProducto(product).map(normalizarClaveProducto);
+      if (productKeys.some(key => claves.has(key))) return true;
+      const productName = normalizarClaveProducto(product && (product.name || product.nombre));
+      return !!nombre && productName === nombre;
+    }) || null;
+  }
+
+  function fuenteImagenProducto(item) {
+    if (!item) return '';
+    const fields = ['image', 'imagen', 'img', 'imageUrl', 'imagenUrl', 'imageData', 'foto', 'photo', 'src'];
+    for (const field of fields) {
+      const value = item[field];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+      if (value && typeof Blob !== 'undefined' && value instanceof Blob) return value;
+      if (value && typeof value === 'object') {
+        const nested = value.dataUrl || value.dataURL || value.url || value.src || value.image || value.imagen;
+        if (typeof nested === 'string' && nested.trim()) return nested.trim();
+        if (nested && typeof Blob !== 'undefined' && nested instanceof Blob) return nested;
+      }
+    }
+    return '';
+  }
+
+  function imagenSeguraComoURL(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    const url = value.trim();
+    if (/^(data:image\/|https?:\/\/|blob:|\/|\.\.?\/)/i.test(url)) return url;
+    // Relative file names used by older versions are valid on the same site.
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url) && !url.startsWith('//')) return url;
+    return '';
+  }
+
+  async function cargarImagenesLocalForage(inventory = safeJSONParse(localStorage.getItem('inventory'), [])) {
+    if (!Array.isArray(productosFiltrados) || productosFiltrados.length === 0) return;
+
+    for (const item of productosFiltrados) {
+      const original = buscarProductoEnInventario(item, inventory);
+      const mediaCandidates = [fuenteImagenProducto(item), fuenteImagenProducto(original)].filter(Boolean);
+      let media = mediaCandidates.find(candidate => imagenSeguraComoURL(candidate))
+        || mediaCandidates.find(candidate => typeof Blob !== 'undefined' && candidate instanceof Blob)
+        || '';
+      let url = imagenSeguraComoURL(media);
+      if (url) {
+        item.image = item.imagen = item.img = url;
         continue;
       }
-      
-      let blob = null;
-      const productCode = item.code || item.barcode;
-      
-      if (productCode) {
+      if (media && typeof Blob !== 'undefined' && media instanceof Blob) {
+        const objectUrl = URL.createObjectURL(media);
+        item.image = item.imagen = item.img = objectUrl;
+        continue;
+      }
+
+      const keys = [...new Set([...clavesProducto(item), ...clavesProducto(original)])];
+      const storageKeys = keys.flatMap(key => [`img_${key}`, `image_${key}`, `imagen_${key}`]);
+      let recovered = '';
+
+      // Almacenamiento puede guardar fotos en localStorage o en IndexedDB mediante localForage.
+      for (const storageKey of storageKeys) {
         try {
-          blob = await localforage.getItem(`img_${productCode}`);
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = (() => { try { return JSON.parse(stored); } catch (_) { return stored; } })();
+            recovered = imagenSeguraComoURL(typeof parsed === 'string' ? parsed : fuenteImagenProducto(parsed));
+            if (recovered) break;
+          }
         } catch (err) {
-          console.error('Error cargando imagen de localforage:', err);
-          blob = null;
+          console.warn('No se pudo leer la imagen desde localStorage:', storageKey, err);
         }
       }
-      
-      if (blob) {
-        try {
-          const imagenUrl = URL.createObjectURL(blob);
-          productosFiltrados[i].image = imagenUrl;
-          productosFiltrados[i].imagen = imagenUrl;
-          productosFiltrados[i].img = imagenUrl;
-        } catch (err) {
-          console.error('Error creando URL de imagen:', err);
+
+      if (!recovered && window.localforage) {
+        for (const storageKey of storageKeys) {
+          try {
+            const stored = await localforage.getItem(storageKey);
+            recovered = imagenSeguraComoURL(typeof stored === 'string' ? stored : fuenteImagenProducto({ image: stored }));
+            if (recovered) break;
+            if (stored && typeof Blob !== 'undefined' && stored instanceof Blob) {
+              recovered = URL.createObjectURL(stored);
+              break;
+            }
+          } catch (err) {
+            console.warn('No se pudo leer la imagen desde localForage:', storageKey, err);
+          }
         }
       }
+
+      if (recovered) item.image = item.imagen = item.img = recovered;
     }
   }
 
@@ -2097,24 +2191,17 @@ function cambiarTab(tab) {
     
     const inventory = safeJSONParse(localStorage.getItem('inventory'), []);
     productosFiltrados = productosFiltrados.map(item => {
-      if (!item.code) {
-        if (item.barcode) {
-          const original = inventory.find(p => p.barcode === item.barcode);
-          if (original && original.code) {
-            return { ...item, code: original.code };
-          }
-        }
-        if (item.name) {
-          const original = inventory.find(p => p.name === item.name);
-          if (original && original.code) {
-            return { ...item, code: original.code };
-          }
-        }
-      }
-      return item;
+      const original = buscarProductoEnInventario(item, inventory);
+      if (!original) return item;
+      return {
+        ...original,
+        ...item,
+        code: item.code || original.code || original.codigo || '',
+        barcode: item.barcode || original.barcode || original.codigo || ''
+      };
     });
     
-    await cargarImagenesLocalForage();
+    await cargarImagenesLocalForage(inventory);
     
     productosFiltrados.sort((a, b) => {
       const dateA = new Date(a.soldAt || a.date || a.fecha || 0);
@@ -2221,12 +2308,8 @@ function cambiarTab(tab) {
       
       let imagen = item.image || item.imagen || item.img || '';
       
-      const tieneImagenValida = imagen && (
-        imagen.startsWith('data:image') || 
-        imagen.startsWith('http://') || 
-        imagen.startsWith('https://') ||
-        imagen.startsWith('blob:')
-      );
+      const imagenURL = imagenSeguraComoURL(imagen);
+      const tieneImagenValida = !!imagenURL;
       
       const fechaRaw = item.soldAt || item.date || item.fecha || new Date();
       const fecha = new Date(fechaRaw).toLocaleDateString('es-SV', {
@@ -2240,7 +2323,7 @@ function cambiarTab(tab) {
       div.innerHTML = `
         <input type="checkbox" class="product-checkbox" ${isSelected ? 'checked' : ''} ${isInFactura ? 'disabled' : ''}>
         ${tieneImagenValida ? 
-          `<img src="${escapeHTML(imagen)}" class="product-image" alt="${escapeHTML(nombre)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
+          `<img src="${escapeHTML(imagenURL)}" class="product-image" alt="${escapeHTML(nombre)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` +
           `<div class="product-image-placeholder" style="display:none;"><i class="fa-solid fa-box"></i></div>` :
           `<div class="product-image-placeholder"><i class="fa-solid fa-box"></i></div>`
         }
@@ -2900,180 +2983,8 @@ function cambiarTab(tab) {
   // ========== IMPRESIÓN ==========
   function imprimirTicket() {
     actualizarVistaPrevia();
-    
-    const contenido = document.getElementById('facturaTicket').outerHTML;
-    const ventana = window.open('', '', 'width=400,height=800');
-    ventana.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <title>Factura - DAYMAR SHOP</title>
-  <style>
-    @page { size: 80mm auto; margin: 0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Courier New', monospace; 
-      font-size: 10px; 
-      line-height: 1.4; 
-      color: #000; 
-      background: #fff;
-      padding: 5mm;
-      width: 80mm;
-    }
-    .factura-container {
-      background: #fff;
-      padding: 0;
-      font-family: 'Courier New', monospace;
-      font-size: 10px;
-      line-height: 1.4;
-      color: #000;
-      width: 70mm;
-    }
-    .factura-header {
-      text-align: center;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px dashed #999;
-    }
-    .factura-logo {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      margin-bottom: 4px;
-    }
-    .factura-giro {
-      font-size: 9px;
-      font-style: italic;
-      margin-bottom: 4px;
-    }
-    .factura-info {
-      color: #333;
-      font-size: 8px;
-      margin-bottom: 1px;
-      line-height: 1.2;
-    }
-    .factura-section-title {
-      font-weight: 700;
-      font-size: 9px;
-      margin: 8px 0 4px 0;
-      text-transform: uppercase;
-      border-bottom: 1px solid #000;
-      padding-bottom: 2px;
-    }
-    .factura-datos { margin-bottom: 8px; }
-    .factura-dato {
-      display: flex;
-      margin-bottom: 1px;
-      line-height: 1.3;
-      font-size: 9px;
-    }
-    .factura-dato-label {
-      font-weight: 600;
-      min-width: 60px;
-      flex-shrink: 0;
-    }
-    .factura-tabla {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 8px 0;
-      font-size: 8px;
-    }
-    .factura-tabla thead th {
-      text-align: left;
-      padding: 4px 2px;
-      border-bottom: 1px solid #000;
-      border-top: 1px solid #000;
-      font-weight: 700;
-      background: #f5f5f5;
-    }
-    .factura-tabla thead th:nth-child(2),
-    .factura-tabla thead th:nth-child(3) { text-align: center; }
-    .factura-tabla thead th:last-child { text-align: right; }
-    .factura-tabla tbody td {
-      padding: 3px 2px;
-      border-bottom: 1px dotted #ccc;
-      vertical-align: top;
-    }
-    .factura-tabla tbody td:nth-child(2),
-    .factura-tabla tbody td:nth-child(3) { text-align: center; }
-    .factura-tabla tbody td:last-child { text-align: right; }
-    .factura-desglose {
-      margin: 8px 0;
-      font-size: 9px;
-    }
-    .factura-desglose-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2px;
-    }
-    .factura-desglose-label { font-weight: 600; }
-    .factura-desglose-value { text-align: right; }
-    .factura-total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      border-top: 2px solid #000;
-      border-bottom: 1px dashed #999;
-      font-size: 12px;
-      font-weight: 700;
-      margin-top: 6px;
-    }
-    .factura-qr {
-      text-align: center;
-      margin: 10px 0;
-      padding: 8px;
-    }
-    .factura-qr img { max-width: 80px; height: auto; }
-    .factura-qr-label {
-      font-size: 7px;
-      color: #666;
-      margin-top: 2px;
-    }
-    .factura-codigo-validacion {
-      font-size: 6px;
-      color: #666;
-      text-align: center;
-      margin-top: 2px;
-      word-break: break-all;
-      padding: 0 5px;
-    }
-    .factura-footer {
-      text-align: center;
-      margin-top: 10px;
-      padding-top: 8px;
-      font-size: 7px;
-      color: #555;
-      line-height: 1.3;
-    }
-    .factura-footer-titulo {
-      font-weight: 700;
-      margin-bottom: 3px;
-      font-size: 9px;
-    }
-    .factura-footer-instagram {
-      margin-top: 4px;
-      font-size: 8px;
-    }
-    .factura-footer-version {
-      margin-top: 6px;
-      font-size: 6px;
-      color: #888;
-    }
-  </style>
-</head>
-<body>
-  ${contenido}
-  <script>
-    window.onload = function() { 
-      setTimeout(function() { 
-        window.print(); 
-        setTimeout(function() { window.close(); }, 500);
-      }, 300);
-    };
-  <\/script>
-</body>
-</html>`);
-    ventana.document.close();
+    // La hoja de estilos @media print ya aísla el recibo; se imprime en la pestaña actual.
+    window.print();
   }
 
   // ========== DESCARGAR PDF ==========
@@ -3350,6 +3261,7 @@ function cambiarTab(tab) {
     const link = document.createElement('a');
     link.href = url;
     link.download = `factura_${document.getElementById('fSerie').value}_${document.getElementById('fNum').value}.pdf`;
+    link.target = '_self';
     
     document.body.appendChild(link);
     link.click();

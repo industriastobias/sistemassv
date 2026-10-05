@@ -4,7 +4,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Catálogo – Klohe</title>
+  <title>Dashboard – DAYMAR-SHOP | Catálogo</title>
 
   <!-- Librerías -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -33,6 +33,50 @@
       margin-bottom: 2rem; border-bottom: 1px solid var(--line);
       text-align: center; font-weight: 600;
     }
+    .header-fixed {
+      position: sticky; top: 0; z-index: 1000;
+      background: var(--line); padding: 1rem 0;
+      margin-bottom: 2rem; border-bottom: 1px solid var(--line);
+      text-align: center; font-weight: 600;
+    }
+    .header-fixed h1 { font-size: 1.2rem; }
+    .header-subtitle { margin-top: .25rem; font-size: .85rem; color: #555; }
+    .menu-toggle {
+      position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border: 1px solid #d5d5d5; border-radius: 8px;
+      background: #fff; display: grid; place-content: center; gap: 5px;
+      cursor: pointer; z-index: 1001;
+    }
+    .menu-toggle span { display: block; width: 21px; height: 2px; border-radius: 2px; background: #222; }
+    .menu-backdrop {
+      position: fixed; inset: 0; z-index: 2500; border: 0;
+      background: rgba(20, 24, 31, .48); cursor: pointer;
+    }
+    .menu-backdrop[hidden] { display: none; }
+    .menu-panel {
+      position: fixed; inset: 0 auto 0 0; z-index: 2501;
+      width: min(88vw, 340px); padding: 1.25rem;
+      background: #fff; box-shadow: 8px 0 32px rgba(0,0,0,.18);
+      overflow-y: auto; transform: translateX(-105%); visibility: hidden;
+      transition: transform .22s ease, visibility .22s ease;
+    }
+    .menu-panel[aria-hidden="false"] { transform: translateX(0); visibility: visible; }
+    .menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .menu-heading h2 { font-size: 1.05rem; }
+    .menu-close { width: 38px; height: 38px; border: 0; border-radius: 7px; background: #f2f2f2; font-size: 1.5rem; cursor: pointer; }
+    .menu-links { display: grid; gap: .35rem; }
+    .menu-links a {
+      display: block; padding: .8rem .9rem; border-radius: 7px;
+      color: #222; text-decoration: none; font-weight: 550;
+    }
+    .menu-links a:hover, .menu-links a:focus-visible { background: #fff3cc; outline: none; }
+    body.menu-open { overflow: hidden; }
+    @media (max-width: 480px) {
+      .header-fixed { padding-left: 3.5rem; padding-right: .5rem; }
+      .header-fixed h1 { font-size: 1rem; }
+      .menu-toggle { left: .65rem; }
+    }
+
     .catalogo {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -153,7 +197,35 @@
 </head>
 <body>
 
-  <header class="header-fixed"><h1>CATÁLOGO KLOHE</h1></header>
+  <header class="header-fixed">
+    <button id="menuToggle" class="menu-toggle" type="button" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="menuPanel">
+      <span></span><span></span><span></span>
+    </button>
+    <h1>Dashboard – DAYMAR-SHOP</h1>
+    <p class="header-subtitle">Catálogo KLOHE</p>
+  </header>
+
+  <button id="menuBackdrop" class="menu-backdrop" type="button" aria-label="Cerrar menú" hidden></button>
+  <aside id="menuPanel" class="menu-panel" aria-hidden="true" aria-label="Navegación principal">
+    <div class="menu-heading">
+      <h2>DAYMAR-SHOP</h2>
+      <button id="menuClose" class="menu-close" type="button" aria-label="Cerrar menú">&times;</button>
+    </div>
+    <nav class="menu-links" aria-label="Páginas internas">
+      <a href="compra.html" target="_self">Compra</a>
+      <a href="almacenamiento.html" target="_self">Almacenamiento</a>
+      <a href="lista.html" target="_self">Finanzas</a>
+      <a href="inventario.html" target="_self">Inventario</a>
+      <a href="gastos.html" target="_self">Catálogo</a>
+      <a href="clientes.html" target="_self">Clientes</a>
+      <a href="descuentos.html" target="_self">Descuentos</a>
+      <a href="facturas.html" target="_self">Facturas</a>
+      <a href="traslados.html" target="_self">Cotización</a>
+      <a href="venta.html" target="_self">Venta</a>
+      <a href="Verificasion.html" target="_self">Reservas</a>
+      <a href="electronica.html" target="_self">Electrónica</a>
+    </nav>
+  </aside>
 
   <div class="catalogo" id="catalogo"></div>
 
@@ -167,6 +239,44 @@
   <button id="btnWix" class="btn-fixed" onclick="descargarWixCSV()">Descargar Wix CSV</button>
 
   <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const menuPanel = document.getElementById('menuPanel');
+    const menuBackdrop = document.getElementById('menuBackdrop');
+    const menuClose = document.getElementById('menuClose');
+
+    function setMenuOpen(open) {
+      menuPanel.setAttribute('aria-hidden', String(!open));
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Cerrar menú de navegación' : 'Abrir menú de navegación');
+      menuBackdrop.hidden = !open;
+      document.body.classList.toggle('menu-open', open);
+      if (open) menuClose.focus();
+      else menuToggle.focus();
+    }
+
+    menuToggle.addEventListener('click', () => setMenuOpen(menuPanel.getAttribute('aria-hidden') === 'true'));
+    menuClose.addEventListener('click', () => setMenuOpen(false));
+    menuBackdrop.addEventListener('click', () => setMenuOpen(false));
+    menuPanel.addEventListener('click', event => {
+      if (event.target.closest('a[href]')) setMenuOpen(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && menuPanel.getAttribute('aria-hidden') === 'false') setMenuOpen(false);
+    });
+
+    function forceSameTab(root = document) {
+      if (root.matches && root.matches('a[href]')) root.setAttribute('target', '_self');
+      if (root.querySelectorAll) root.querySelectorAll('a[href]').forEach(link => link.setAttribute('target', '_self'));
+    }
+    forceSameTab();
+    new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) forceSameTab(node);
+    }))).observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('click', event => {
+      const link = event.target.closest && event.target.closest('a[href]');
+      if (link) link.setAttribute('target', '_self');
+    });
+
     /* ---------- CATALOGO / MODAL / PDF / ZIP (igual que antes) ---------- */
     const catalogo = document.getElementById('catalogo');
     const modal    = document.getElementById('modal');
@@ -614,6 +724,7 @@
 
       const content = await zip.generateAsync({ type: 'blob' });
       const a = document.createElement('a');
+      a.target = '_self';
       a.href = URL.createObjectURL(content);
       a.download = 'klohe.imagenes.zip';
       a.click();
@@ -673,6 +784,7 @@
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
+      a.target = '_self';
       a.href = URL.createObjectURL(blob);
       a.download = 'wix_products.csv';
       a.click();

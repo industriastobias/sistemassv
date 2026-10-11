@@ -618,6 +618,74 @@
       white-space: nowrap;
       border-width: 0;
     }
+
+
+    /* Tabletas en orientación vertical: mostrar etiquetas y todo el menú */
+    @media (min-width: 600px) and (max-width: 768px) {
+      body {
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: none;
+        flex-direction: column;
+        overflow-x: hidden;
+        padding: 0.75rem;
+        position: sticky;
+        top: 0;
+      }
+
+      .nav {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.35rem;
+        width: 100%;
+        padding: 0;
+        overflow: visible;
+      }
+
+      .nav-link {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        padding: 0.45rem 0.5rem;
+        gap: 0.45rem;
+        font-size: 0.82rem;
+        white-space: normal;
+      }
+
+      .nav-link span:last-child {
+        display: inline;
+      }
+
+      .system-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.35rem;
+        width: 100%;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+      }
+
+      .system-actions .nav-link {
+        width: 100%;
+        min-height: 38px;
+        padding: 0.35rem;
+        justify-content: center;
+        font-size: 0.78rem;
+        white-space: normal;
+      }
+
+      .center-content {
+        min-height: calc(100vh - 300px);
+        padding: 1.25rem;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -764,11 +832,16 @@
     const dateStr = now.toLocaleDateString('es-ES', dateOptions);
 
     // Formato de hora
-    const timeStr = now.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
+    const timeParts = new Intl.DateTimeFormat('es-ES', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: false
-    });
+      second: '2-digit',
+      hour12: true
+    }).formatToParts(now);
+    const timeStr = timeParts
+      .filter(part => ['hour', 'minute', 'second'].includes(part.type))
+      .map(part => part.value)
+      .join(':');
 
     document.getElementById('currentDate').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
     document.getElementById('currentTime').textContent = timeStr;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Finanzas · A Family Company</title>
+  <title>DAYMAR · Control financiero</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -68,8 +68,8 @@ body.menu-open{overflow:hidden}
   <aside class="sidebar" id="appSidebar" aria-label="Menú principal" aria-hidden="true">
     <div class="drawer-topline">
       <div class="brand">
-        <img class="brand-mark" id="brandLogo" src="isotipo.png" alt="Isotipo de A Family Company" width="42" height="42">
-        <div class="brand-copy"><small>Control financiero</small><strong>A Family Company</strong></div>
+        <img class="brand-mark" id="brandLogo" src="isotipo.png" alt="Logotipo de DAYMAR" width="42" height="42">
+        <div class="brand-copy"><small>Control financiero</small><strong>DAYMAR</strong></div>
       </div>
       <button class="sidebar-close" id="menuClose" type="button" aria-label="Cerrar menú">&times;</button>
     </div>
@@ -382,7 +382,7 @@ body.menu-open{overflow:hidden}
     <div id="paginationCuentas" class="pagination"></div>
   </section>
 </main>
-    <footer>© 2025 Panel Financiero Empresarial</footer>
+    <footer>© 2026 DAYMAR · Panel Financiero Empresarial · Uso interno</footer>
   </div>
 </div>
 <script>
@@ -618,47 +618,41 @@ function actualizarTablaConPaginacion(tipo) {
 /* ---------- 5. Empty States + 14. Animaciones ---------- */
 function renderTable(id, arr, keys, keyName, wrapperId, estaVacio = false) {
   const tbody = document.querySelector(`#${id} tbody`);
+  const table = document.getElementById(id);
   const wrapper = document.getElementById(wrapperId);
-  
+  if (!tbody || !table || !wrapper) return;
+  const emptyId = `empty-${id}`;
+  const oldEmpty = document.getElementById(emptyId);
+  if (oldEmpty) oldEmpty.remove();
   if (estaVacio || arr.length === 0) {
-    wrapper.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📋</div>
-        <h3>No hay registros</h3>
-        <p>Comience agregando su primer ${keyName === 'ingresos' ? 'ingreso' : keyName === 'gastos' ? 'gasto' : keyName === 'proveedores' ? 'proveedor' : keyName === 'cuentas' ? 'cuenta' : 'registro'}</p>
-      </div>
-    `;
+    table.style.display = 'none';
+    const labels = { ingresos: 'ingreso', gastos: 'gasto', gastosDesdeIngresos: 'costo directo', proveedores: 'proveedor', cuentas: 'cuenta' };
+    const empty = document.createElement('div');
+    empty.id = emptyId;
+    empty.className = 'empty-state';
+    empty.innerHTML = `<div class="empty-state-icon">📋</div><h3>No hay registros</h3><p>Comience agregando su primer ${escapeHtml(labels[keyName] || 'registro')}</p>`;
+    wrapper.appendChild(empty);
     return;
   }
-  
-  // Restaurar tabla si estaba en empty state
-  if (!document.querySelector(`#${id}`)) {
-    location.reload(); // Fallback simple
-    return;
-  }
-  
-  tbody.innerHTML = arr.map((it, i) => `
+  table.style.display = '';
+  tbody.innerHTML = arr.map(it => `
     <tr class="fila-dato" data-id="${escapeHtml(it.id)}">
-      ${keys.map(k => `<td>${k === 'monto' ? '$' + parseFloat(it[k] || 0).toFixed(2) : escapeHtml(it[k])}</td>`).join('')}
+      ${keys.map(k => `<td>${k === 'monto' ? '$' + (Number(it[k]) || 0).toFixed(2) : escapeHtml(it[k])}</td>`).join('')}
       <td class="acciones">${keyName === 'ingresos' ? '<span style="color:#9ca3af;font-size:0.75rem;">Sistema</span>' : `
         <button class="editar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Editar">✏️</button>
         <button class="clonar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Duplicar">📋</button>
-        <button class="eliminar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Eliminar">🗑️</button>`}
-      </td>
+        <button class="eliminar" data-key="${keyName}" data-id="${escapeHtml(it.id)}" title="Eliminar">🗑️</button>`}</td>
     </tr>`).join('');
-    
-  // Animar nuevas filas (últimas agregadas)
   const filas = tbody.querySelectorAll('tr');
-  if (filas.length > 0) {
-    filas[filas.length - 1].classList.add('nueva-fila');
-    setTimeout(() => {
-      filas[filas.length - 1].classList.remove('nueva-fila');
-    }, 300);
+  if (filas.length) {
+    const ultima = filas[filas.length - 1];
+    ultima.classList.add('nueva-fila');
+    setTimeout(() => ultima.classList.remove('nueva-fila'), 300);
   }
 }
-
 function renderPaginacion(tipo, totalPaginas, totalItems) {
-  const container = document.getElementById(`pagination${tipo.charAt(0).toUpperCase() + tipo.slice(1).replace(/s$/, 's')}`);
+  const ids = { ingresos: 'paginationIngresos', gastos: 'paginationGastos', gastosDesdeIngresos: 'paginationGDI', proveedores: 'paginationProveedores', cuentas: 'paginationCuentas' };
+  const container = document.getElementById(ids[tipo]);
   if (!container) return;
   
   if (totalPaginas <= 1) {
@@ -777,7 +771,7 @@ tabs.forEach(btn => {
 });
 
 const data = {
-  ingresos: [],
+  ingresos: JSON.parse(localStorage.getItem('ingresos') || '[]'),
   gastos: JSON.parse(localStorage.getItem('gastos') || '[]'),
   proveedores: JSON.parse(localStorage.getItem('proveedores') || '[]'),
   cuentas: JSON.parse(localStorage.getItem('cuentas') || '[]')
@@ -1242,6 +1236,122 @@ actualizarDashboard();
     actualizarTablaConPaginacion(tipo);
   }
 });
+</script>
+<script>
+/* Extensión contable modular para DAYMAR. Añadida sin alterar el formato de los datos existentes. */
+(() => {
+  'use strict';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = (v) => new Intl.NumberFormat('es-MX', { style:'currency', currency:'USD', minimumFractionDigits:2 }).format(Number(v) || 0);
+  const today = () => new Date().toISOString().slice(0,10);
+  const from = (id) => document.getElementById(id)?.value || '';
+  const sum = (arr) => arr.reduce((n, x) => n + (Number(x.monto) || 0), 0);
+  const inRange = (x, start, end) => (!start || (x.fecha || '') >= start) && (!end || (x.fecha || '') <= end);
+  const existing = (k, fallback) => { try { return JSON.parse(localStorage.getItem(k) || 'null') || fallback; } catch { return fallback; } };
+  const bankKey='daymar_bank_settings_v1', balanceKey='daymar_balance_inputs_v1', matchedKey='daymar_reconciled_ids_v1';
+  const bankSettings=existing(bankKey,{inicio:'',fin:today(),saldoInicial:0,saldoExtracto:0,banco:''});
+  const balanceInputs=existing(balanceKey,{fecha:today(),efectivo:0,bancos:0,inventario:0,activoFijo:0,otrosActivos:0,prestamosCorto:0,impuestos:0,otrosPasivos:0,prestamosLargo:0,capital:0,resultados:0});
+  let conciliados=new Set(existing(matchedKey,[]));
+
+  const css=document.createElement('style'); css.textContent=`
+  .acct-section{display:none}.acct-section.active{display:block}.acct-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0}.acct-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 18px rgba(22,34,55,.035)}.acct-panel h3{margin:0 0 12px;font-size:1rem}.acct-panel p,.acct-note{color:var(--muted);font-size:.8rem;line-height:1.6}.acct-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0}.acct-kpi{background:#f7f9fc;border:1px solid var(--line);border-radius:13px;padding:15px}.acct-kpi small{display:block;color:var(--muted);font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.acct-kpi strong{display:block;margin-top:5px;font-size:1.25rem;letter-spacing:-.04em}.acct-good{color:#087a58}.acct-bad{color:#b9382d}.acct-warn{background:#fff8e8;border:1px solid #f1d28b;border-radius:11px;padding:12px 14px;margin:12px 0;color:#765318;font-size:.79rem}.acct-goodbox{background:#ecf8f1;border:1px solid #bfe6cf;border-radius:11px;padding:12px 14px;margin:12px 0;color:#17633f;font-size:.79rem}.acct-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:13px 0}.acct-form label{font-size:.74rem;font-weight:750;color:#566174;display:flex;flex-direction:column;gap:5px}.acct-form input{min-width:0}.acct-actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.acct-btn{border:0;border-radius:9px;padding:10px 14px;background:var(--blue);color:white;font-weight:800;cursor:pointer}.acct-btn.secondary{background:#eef2ff;color:#263c9d;border:1px solid #d8dfff}.acct-btn:disabled{opacity:.6;cursor:wait}.acct-table{width:100%;min-width:650px}.acct-table td:last-child,.acct-table th:last-child{text-align:right}.acct-status{font-weight:800}.acct-status.ok{color:#087a58}.acct-status.bad{color:#b9382d}.acct-print-head{display:none}.acct-insight{padding:14px;border-left:3px solid var(--blue);background:#f6f8ff;border-radius:0 10px 10px 0;margin:9px 0;font-size:.82rem;line-height:1.55}.acct-subhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.acct-nav-btn{color:#aab7cc!important}.acct-nav-btn.active{color:#17202a!important}
+  @media(max-width:760px){.acct-grid{grid-template-columns:1fr}.acct-form{grid-template-columns:1fr 1fr}}
+  @media print{body{background:white!important}.sidebar,.menu-backdrop,.menu-toggle,.header-meta,#toastContainer,.sync-indicator,.acct-actions,.date-filter-bar{display:none!important}.main-area{width:100%}main{padding:0!important;max-width:none!important}header.content-header{height:auto;padding:10px 0 14px;border-bottom:2px solid #1e293b}.content-header h1{font-size:16pt}.eyebrow{color:#1d3f9e!important}.acct-print-head{display:block!important;border-bottom:1px solid #cbd5e1;padding:0 0 12px;margin-bottom:16px}.acct-print-head h2{margin:0!important}.acct-print-head p{font-size:9pt;color:#64748b}.acct-section.active{display:block!important}section{display:none!important}section.active{display:block!important}.acct-panel,.acct-kpi{box-shadow:none;break-inside:avoid}.table-wrapper{overflow:visible!important;min-height:0!important}table{min-width:0!important;font-size:8pt!important}th,td{padding:6px!important}button{display:none!important}footer{display:none!important}}
+  `; document.head.appendChild(css);
+
+  const nav=document.querySelector('.sidebar nav[aria-label="Secciones del panel"]');
+  const main=document.querySelector('main');
+  if(!nav||!main) return;
+  const sections=[
+    ['estadoResultados','Estado de resultados'],['balanceGeneral','Balance general'],['conciliacion','Conciliación bancaria'],['analisisFinanciero','Análisis financiero']
+  ];
+  for(const [id,label] of sections){
+    const b=document.createElement('button');b.type='button';b.className='tab acct-nav-btn';b.dataset.acctTab=id;b.textContent=label;nav.appendChild(b);
+    const s=document.createElement('section');s.id=id;s.className='acct-section';s.innerHTML=`<div class="acct-print-head"><h2>DAYMAR · ${label}</h2><p>Reporte interno · Generado el ${new Date().toLocaleDateString('es-MX')} · Moneda: USD</p></div><div class="acct-subhead"><div><h2>${label}</h2><p class="acct-note">DAYMAR · Control financiero y soporte para decisiones</p></div><div class="acct-actions"><button class="acct-btn secondary" data-print="${id}">Imprimir / Guardar como PDF</button></div></div><div id="${id}Content"></div>`;main.appendChild(s);
+    b.addEventListener('click',()=>activate(id,b));
+  }
+  function activate(id,button){
+    document.querySelectorAll('.sidebar nav .tab').forEach(x=>{x.classList.remove('active');x.removeAttribute('aria-current')});
+    button.classList.add('active');button.setAttribute('aria-current','page');
+    document.querySelectorAll('main section').forEach(x=>x.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(typeof setNavigationOpen==='function')setNavigationOpen(false,true);
+    render(id);
+  }
+  document.addEventListener('click',e=>{const p=e.target.closest('[data-print]');if(p){document.title='DAYMAR - '+p.dataset.print;window.print();}});
+
+  function reportRows(){
+    const start=from('daymarStart'),end=from('daymarEnd');
+    const incomes=(data?.ingresos||[]).filter(x=>inRange(x,start,end));
+    const direct=(gastosDesdeIngresos||[]).filter(x=>inRange(x,start,end));
+    const expenses=(data?.gastos||[]).filter(x=>inRange(x,start,end));
+    return {start,end,incomes,direct,expenses,revenue:sum(incomes),cost:sum(direct),opex:sum(expenses)};
+  }
+  function dateBar(){return `<div class="date-filter-bar"><div class="date-input-group"><label for="daymarStart">Desde</label><input id="daymarStart" type="date" value="${esc(bankSettings.start || '')}"></div><div class="date-input-group"><label for="daymarEnd">Hasta</label><input id="daymarEnd" type="date" value="${today()}"></div><button class="btn-filter" id="daymarApply">Actualizar periodo</button><span class="acct-note">Las cifras se calculan con los registros guardados en este navegador.</span></div>`;}
+  function renderIncome(){
+    const root=document.getElementById('estadoResultadosContent');root.innerHTML=dateBar()+`<div id="incomeStatement"></div><div class="acct-warn"><b>Alcance:</b> el resultado es gerencial y preliminar. No incluye impuestos, depreciación, ajustes de inventario, intereses ni gastos no registrados. No equivale a estados financieros oficiales.</div>`;
+    document.getElementById('daymarApply').onclick=()=>drawIncome();drawIncome();
+  }
+  function drawIncome(){
+    const r=reportRows(),gross=r.revenue-r.cost,operating=gross-r.opex,margin=r.revenue?operating/r.revenue:null;
+    document.getElementById('incomeStatement').innerHTML=`<div class="acct-panel"><h3>Estado de resultados · ${esc(r.start||'Inicio')} al ${esc(r.end||'Hoy')}</h3><div class="table-wrapper"><table class="acct-table"><thead><tr><th>Concepto</th><th>Importe</th></tr></thead><tbody><tr><td>Ingresos por ventas registrados</td><td>${money(r.revenue)}</td></tr><tr><td>(−) Costos directos registrados</td><td>${money(-r.cost)}</td></tr><tr><td><b>Utilidad bruta estimada</b></td><td><b>${money(gross)}</b></td></tr><tr><td>(−) Gastos operativos registrados</td><td>${money(-r.opex)}</td></tr><tr><td><b>Resultado operativo estimado</b></td><td><b>${money(operating)}</b></td></tr><tr><td>Margen operativo preliminar</td><td>${margin===null?'No calculable':(margin*100).toFixed(1)+'%'}</td></tr></tbody></table></div></div><div class="acct-kpis"><div class="acct-kpi"><small>Ingresos</small><strong>${money(r.revenue)}</strong></div><div class="acct-kpi"><small>Utilidad bruta</small><strong>${money(gross)}</strong></div><div class="acct-kpi"><small>Resultado operativo</small><strong class="${operating<0?'acct-bad':'acct-good'}">${money(operating)}</strong></div></div>`;
+  }
+  function openAccounts(type){return (data?.cuentas||[]).filter(c=>c.tipo===type&&c.estado==='Pendiente').reduce((n,c)=>n+(Number(c.monto)||0),0);}
+  function renderBalance(){
+    const root=document.getElementById('balanceGeneralContent');
+    root.innerHTML=`<div class="acct-warn">Captura saldos al corte desde libros y soportes. Cuentas por cobrar y por pagar se toman de <b>Cuentas pendientes</b>; evita duplicarlas en los campos manuales. Si el descuadre no es cero, no se presentará como balance cuadrado.</div><form class="acct-panel" id="balanceForm"><h3>Saldos capturados al corte</h3><div class="acct-form"><label>Fecha de corte<input type="date" name="fecha" value="${esc(balanceInputs.fecha||today())}" required></label><label>Efectivo<input type="number" step="0.01" min="0" name="efectivo" value="${esc(balanceInputs.efectivo)}"></label><label>Bancos<input type="number" step="0.01" min="0" name="bancos" value="${esc(balanceInputs.bancos)}"></label><label>Inventario<input type="number" step="0.01" min="0" name="inventario" value="${esc(balanceInputs.inventario)}"></label><label>Activo fijo neto<input type="number" step="0.01" min="0" name="activoFijo" value="${esc(balanceInputs.activoFijo)}"></label><label>Otros activos<input type="number" step="0.01" min="0" name="otrosActivos" value="${esc(balanceInputs.otrosActivos)}"></label><label>Préstamos corto plazo<input type="number" step="0.01" min="0" name="prestamosCorto" value="${esc(balanceInputs.prestamosCorto)}"></label><label>Impuestos por pagar<input type="number" step="0.01" min="0" name="impuestos" value="${esc(balanceInputs.impuestos)}"></label><label>Otros pasivos corrientes<input type="number" step="0.01" min="0" name="otrosPasivos" value="${esc(balanceInputs.otrosPasivos)}"></label><label>Préstamos largo plazo<input type="number" step="0.01" min="0" name="prestamosLargo" value="${esc(balanceInputs.prestamosLargo)}"></label><label>Capital aportado<input type="number" step="0.01" name="capital" value="${esc(balanceInputs.capital)}"></label><label>Resultados acumulados / del periodo<input type="number" step="0.01" name="resultados" value="${esc(balanceInputs.resultados)}"></label></div><button class="acct-btn" type="submit">Guardar saldos y actualizar balance</button></form><div id="balanceReport"></div>`;
+    const form=document.getElementById('balanceForm');form.onsubmit=e=>{e.preventDefault();for(const [k,v] of new FormData(form))balanceInputs[k]=k==='fecha'?v:(Number(v)||0);localStorage.setItem(balanceKey,JSON.stringify(balanceInputs));drawBalance();};drawBalance();
+  }
+  function drawBalance(){
+    const x=balanceInputs,ar=openAccounts('Por cobrar'),ap=openAccounts('Por pagar');
+    const currentAssets=(+x.efectivo||0)+(+x.bancos||0)+ar+(+x.inventario||0),assets=currentAssets+(+x.activoFijo||0)+(+x.otrosActivos||0);
+    const currentLiab=ap+(+x.prestamosCorto||0)+(+x.impuestos||0)+(+x.otrosPasivos||0),liab=currentLiab+(+x.prestamosLargo||0),equity=(+x.capital||0)+(+x.resultados||0),diff=assets-liab-equity;
+    const status=Math.abs(diff)<0.01?`<div class="acct-goodbox"><b>Cuadrado:</b> activos = pasivos + patrimonio en los saldos capturados.</div>`:`<div class="acct-warn"><b>Descuadre:</b> ${money(diff)}. Verifica omisiones, clasificación y saldos; el estado aún no cuadra.</div>`;
+    document.getElementById('balanceReport').innerHTML=`${status}<div class="acct-panel"><h3>Balance general · ${esc(x.fecha||today())}</h3><div class="table-wrapper"><table class="acct-table"><thead><tr><th>Cuenta / rubro</th><th>Importe</th></tr></thead><tbody><tr><td><b>ACTIVOS</b></td><td></td></tr><tr><td>Efectivo y bancos</td><td>${money((+x.efectivo||0)+(+x.bancos||0))}</td></tr><tr><td>Cuentas por cobrar pendientes</td><td>${money(ar)}</td></tr><tr><td>Inventario</td><td>${money(x.inventario)}</td></tr><tr><td><b>Total activo corriente</b></td><td><b>${money(currentAssets)}</b></td></tr><tr><td>Activo fijo neto + otros activos</td><td>${money((+x.activoFijo||0)+(+x.otrosActivos||0))}</td></tr><tr><td><b>Total activos</b></td><td><b>${money(assets)}</b></td></tr><tr><td><b>PASIVOS</b></td><td></td></tr><tr><td>Cuentas por pagar pendientes</td><td>${money(ap)}</td></tr><tr><td>Deuda corta, impuestos y otros pasivos corrientes</td><td>${money((+x.prestamosCorto||0)+(+x.impuestos||0)+(+x.otrosPasivos||0))}</td></tr><tr><td><b>Total pasivo corriente</b></td><td><b>${money(currentLiab)}</b></td></tr><tr><td>Préstamos largo plazo</td><td>${money(x.prestamosLargo)}</td></tr><tr><td><b>Total pasivos</b></td><td><b>${money(liab)}</b></td></tr><tr><td><b>PATRIMONIO</b></td><td></td></tr><tr><td>Capital y resultados acumulados/del período</td><td>${money(equity)}</td></tr><tr><td><b>Total pasivo + patrimonio</b></td><td><b>${money(liab+equity)}</b></td></tr><tr><td><b>Comprobación (activos − pasivos − patrimonio)</b></td><td class="${Math.abs(diff)<.01?'acct-good':'acct-bad'}"><b>${money(diff)}</b></td></tr></tbody></table></div></div>`;
+  }
+  function periodMovements(){
+    const a=(data?.ingresos||[]).map(x=>({...x,_kind:'Ingreso',_signed:Number(x.monto)||0,_label:x.descripcion||x.categoria||'Ingreso'}));
+    const b=(data?.gastos||[]).map(x=>({...x,_kind:'Gasto operativo',_signed:-(Number(x.monto)||0),_label:x.descripcion||x.proveedor||'Gasto'}));
+    const c=(gastosDesdeIngresos||[]).map(x=>({...x,_kind:'Costo directo',_signed:-(Number(x.monto)||0),_label:x.descripcion||'Costo directo'}));
+    return [...a,...b,...c].filter(x=>inRange(x,bankSettings.inicio,bankSettings.fin)).sort((x,y)=>(x.fecha||'').localeCompare(y.fecha||''));
+  }
+  function esMovimientoBancario(x){
+    const metodo=String(x.metodo_pago||'').toLocaleLowerCase('es');
+    if(!metodo||/efectivo|caja|cash/.test(metodo))return false;
+    return /banco|bank|transfer|cheque|tarjeta|dep[oó]sito|deposit|wire/.test(metodo)||Boolean(bankSettings.banco&&metodo.includes(bankSettings.banco.toLocaleLowerCase('es')));
+  }
+  function allBankTx(){return periodMovements().filter(esMovimientoBancario);}
+  function renderBank(){
+    const root=document.getElementById('conciliacionContent');
+    root.innerHTML=`<div class="acct-warn"><b>Conciliación asistida:</b> introduce el saldo del extracto y marca cada registro del libro que confirmaste contra el banco. La marca es manual; esta versión no importa automáticamente el archivo bancario ni concilia por similitud. Para evitar sumar caja, solo se incluyen medios reconocidos como banco, transferencia, cheque, tarjeta o depósito; efectivo y medios vacíos/no reconocidos quedan excluidos y se cuentan aparte.</div><div class="acct-panel"><h3>Datos del período bancario</h3><div class="acct-form"><label>Banco / cuenta<input id="bankName" value="${esc(bankSettings.banco)}" placeholder="Ej. Banco y últimos 4 dígitos"></label><label>Desde<input type="date" id="bankStart" value="${esc(bankSettings.inicio)}"></label><label>Hasta<input type="date" id="bankEnd" value="${esc(bankSettings.fin||today())}"></label><label>Saldo inicial según libros<input type="number" id="bankOpening" step="0.01" value="${esc(bankSettings.saldoInicial)}"></label><label>Saldo final del extracto<input type="number" id="bankClosing" step="0.01" value="${esc(bankSettings.saldoExtracto)}"></label></div><div class="acct-actions"><button class="acct-btn" id="saveBank">Guardar y conciliar</button><button class="acct-btn secondary" id="markAll">Marcar todos verificados</button></div></div><div id="bankReport"></div>`;
+    document.getElementById('saveBank').onclick=()=>{Object.assign(bankSettings,{banco:from('bankName'),inicio:from('bankStart'),fin:from('bankEnd'),saldoInicial:Number(from('bankOpening'))||0,saldoExtracto:Number(from('bankClosing'))||0});localStorage.setItem(bankKey,JSON.stringify(bankSettings));drawBank();};
+    document.getElementById('markAll').onclick=()=>{allBankTx().forEach(x=>conciliados.add(String(x.id)));localStorage.setItem(matchedKey,JSON.stringify([...conciliados]));drawBank();};drawBank();
+  }
+  function drawBank(){
+    const tx=allBankTx(),excluded=periodMovements().filter(x=>!esMovimientoBancario(x)).length,net=tx.reduce((n,x)=>n+x._signed,0),book=(Number(bankSettings.saldoInicial)||0)+net,diff=(Number(bankSettings.saldoExtracto)||0)-book;
+    const verified=tx.filter(x=>conciliados.has(String(x.id))).length,unmatched=tx.length-verified;
+    document.getElementById('bankReport').innerHTML=`<div class="acct-kpis"><div class="acct-kpi"><small>Saldo final libros calculado</small><strong>${money(book)}</strong></div><div class="acct-kpi"><small>Saldo final extracto</small><strong>${money(bankSettings.saldoExtracto)}</strong></div><div class="acct-kpi"><small>Diferencia extracto − libros</small><strong class="${Math.abs(diff)<.01?'acct-good':'acct-bad'}">${money(diff)}</strong></div><div class="acct-kpi"><small>Registros pendientes de verificar</small><strong>${unmatched}</strong></div></div><div class="acct-warn"><b>Movimientos excluidos por no tener medio bancario reconocido (incluye efectivo y medios vacíos):</b> ${excluded}. Completa el método de pago y revisa estos registros antes del cierre.</div><div class="acct-panel"><h3>${esc(bankSettings.banco||'Cuenta bancaria')} · Movimientos del libro</h3><p>Marca solo después de cotejar el importe y la fecha con el extracto. Los movimientos no registrados (comisiones, intereses, depósitos) explican parte de las diferencias.</p><div class="table-wrapper"><table class="acct-table"><thead><tr><th>Verificado</th><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Forma de pago</th><th>Importe</th></tr></thead><tbody>${tx.length?tx.map(x=>`<tr><td><input type="checkbox" data-match="${esc(x.id)}" ${conciliados.has(String(x.id))?'checked':''} aria-label="Movimiento verificado"></td><td>${esc(x.fecha)}</td><td>${esc(x._kind)}</td><td>${esc(x._label)}</td><td>${esc(x.metodo_pago||'No especificado')}</td><td>${money(x._signed)}</td></tr>`).join(''):'<tr><td colspan="6">No hay movimientos bancarios reconocidos en el período.</td></tr>'}</tbody></table></div></div><div class="${Math.abs(diff)<.01?'acct-goodbox':'acct-warn'}"><b>${Math.abs(diff)<.01?'Diferencia cero en el corte introducido.':'Partida de conciliación pendiente:'}</b> ${money(diff)}. Confirmar que las fechas coincidan y registrar comisiones, intereses, depósitos y cheques pendientes antes de cerrar el mes.</div>`;
+    document.querySelectorAll('[data-match]').forEach(el=>el.onchange=()=>{const id=String(el.dataset.match);el.checked?conciliados.add(id):conciliados.delete(id);localStorage.setItem(matchedKey,JSON.stringify([...conciliados]));drawBank();});
+  }
+  function renderAnalysis(){
+    const root=document.getElementById('analisisFinancieroContent');root.innerHTML=dateBar()+`<div id="analysisReport"></div><div class="acct-warn">Los indicadores son de gestión, dependen de los saldos capturados y no sustituyen revisión de un contador. Si falta información o el denominador es cero, se muestra “No calculable”.</div>`;
+    document.getElementById('daymarApply').onclick=()=>drawAnalysis();drawAnalysis();
+  }
+  function drawAnalysis(){
+    const r=reportRows(),x=balanceInputs,ar=openAccounts('Por cobrar'),ap=openAccounts('Por pagar');
+    const currentAssets=(+x.efectivo||0)+(+x.bancos||0)+ar+(+x.inventario||0),currentLiab=ap+(+x.prestamosCorto||0)+(+x.impuestos||0)+(+x.otrosPasivos||0),assets=currentAssets+(+x.activoFijo||0)+(+x.otrosActivos||0),liab=currentLiab+(+x.prestamosLargo||0),margin=r.revenue?(r.revenue-r.cost-r.opex)/r.revenue:null,liquidity=currentLiab?currentAssets/currentLiab:null,debt=assets?liab/assets:null;
+    const fmt=(n,unit='')=>n===null?'No calculable':n.toFixed(2)+unit;
+    const advice=[];
+    if(liquidity===null)advice.push('Captura pasivos corrientes para evaluar liquidez corriente; el indicador no se estima con denominador cero.');else if(liquidity<1)advice.push('La liquidez corriente es menor a 1: prioriza cobranza, caja semanal y negociación de vencimientos.');else advice.push('Liquidez corriente de '+liquidity.toFixed(2)+'x: monitorea vencimientos y disponibilidad real, no solo el saldo contable.');
+    if(margin===null)advice.push('Registra ventas del período para evaluar margen operativo.');else if(margin<0)advice.push('El resultado operativo es negativo: revisa precios, costos directos y gastos recurrentes por categoría.');else advice.push('Margen operativo preliminar '+(margin*100).toFixed(1)+'%: vigila su tendencia mensual y el margen por producto/servicio.');
+    if(debt===null)advice.push('Completa los activos y pasivos para estimar el apalancamiento.');else advice.push('Pasivos representan '+(debt*100).toFixed(1)+'% de activos capturados; valida clasificación, intereses y vencimientos.');
+    document.getElementById('analysisReport').innerHTML=`<div class="acct-kpis"><div class="acct-kpi"><small>Margen operativo preliminar</small><strong>${fmt(margin===null?null:margin*100,'%')}</strong></div><div class="acct-kpi"><small>Liquidez corriente</small><strong>${fmt(liquidity,'x')}</strong></div><div class="acct-kpi"><small>Pasivos / activos</small><strong>${fmt(debt===null?null:debt*100,'%')}</strong></div><div class="acct-kpi"><small>Capital de trabajo</small><strong>${money(currentAssets-currentLiab)}</strong></div></div><div class="acct-panel"><h3>Lectura para decisiones de DAYMAR</h3>${advice.map(a=>`<div class="acct-insight">${esc(a)}</div>`).join('')}<div class="acct-insight"><b>Control recomendado:</b> cierre mensual con corte de ventas, compras/gastos, bancos, cuentas por cobrar/pagar, inventario y aprobación de ajustes; conserva factura/recibo y responsable por cada movimiento.</div></div>`;
+  }
+  function render(id){if(id==='estadoResultados')renderIncome();if(id==='balanceGeneral')renderBalance();if(id==='conciliacion')renderBank();if(id==='analisisFinanciero')renderAnalysis();}
+  // Re-render cuando cambian registros existentes mientras las nuevas pestañas están abiertas.
+  window.addEventListener('storage',()=>{const active=document.querySelector('.acct-section.active');if(active)render(active.id);});
+})();
+
 </script>
 </body>
 </html>

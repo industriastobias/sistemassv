@@ -1339,7 +1339,7 @@ actualizarDashboard();
   };
   nav.querySelectorAll('.tab[data-tab]').forEach(b=>b.addEventListener('click',()=>overviewCard?.classList.toggle('is-dashboard',b.dataset.tab==='dashboard')));
   const sections=[
-    ['estadoResultados','Estado de resultados'],['balanceGeneral','Balance general'],['conciliacion','Conciliación bancaria'],['analisisFinanciero','Análisis financiero']
+    ['estadoResultados','Estado de resultados']
   ];
   for(const [id,label] of sections){
     const b=document.createElement('button');b.type='button';b.className='tab acct-nav-btn';b.dataset.acctTab=id;b.textContent=label;nav.appendChild(b);
@@ -1355,10 +1355,33 @@ actualizarDashboard();
     if(typeof setNavigationOpen==='function')setNavigationOpen(false,true);
     render(id);
   }
-  const printLabels={estadoResultados:'Estado de resultados',balanceGeneral:'Balance general',conciliacion:'Conciliación bancaria',analisisFinanciero:'Análisis financiero'};
+  const printLabels={estadoResultados:'Estado de resultados'};
+  function imprimirReporteLimpio(id){
+    const target=document.getElementById(id),label=printLabels[id];if(!target||!label)return;
+    const report=target.cloneNode(true);report.classList.add('active','print-target');
+    report.querySelectorAll('.acct-subhead,.acct-actions,.date-filter-bar,.acct-warn-dismiss,.toast').forEach(el=>el.remove());
+    report.querySelectorAll('button,input,select,textarea').forEach(el=>el.remove());
+    let output=window.open('','_blank');
+    if(!output){document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('print-target',s===target));document.body.classList.add('printing-report');document.title='DAYMAR - '+label;requestAnimationFrame(()=>window.print());return;}
+    const styles=[...document.querySelectorAll('style')].map(s=>s.outerHTML).join('\n');
+    const links=[...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.outerHTML).join('\n');
+    output.document.open();output.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAYMAR · ${label}</title>${links}${styles}<style>
+      body.pdf-export-page{min-height:0!important;background:#fff!important;color:#17202a!important;font-size:10pt!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      @page{size:auto;margin:0!important}
+      body.pdf-export-page main.pdf-export-main{width:100%!important;max-width:none!important;margin:0!important;padding:14mm!important}
+      body.pdf-export-page .acct-section{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+      body.pdf-export-page .acct-print-head{display:block!important}
+      body.pdf-export-page .acct-subhead,body.pdf-export-page .acct-actions,body.pdf-export-page .date-filter-bar{display:none!important}
+      body.pdf-export-page .acct-panel,body.pdf-export-page .acct-kpi{break-inside:avoid;box-shadow:none}
+      body.pdf-export-page .acct-table{width:100%;min-width:0!important;border-collapse:collapse}
+      @media print{body.pdf-export-page{background:#fff!important}.acct-print-head{display:block!important}.acct-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+    </style></head><body class="pdf-export-page"><main class="pdf-export-main">${report.outerHTML}</main></body></html>`);output.document.close();output.document.title='DAYMAR · '+label;
+    const print=()=>{if(output.closed)return;output.focus();output.print();};
+    const fontReady=output.document.fonts?.ready; if(fontReady&&typeof fontReady.then==='function')Promise.race([fontReady,new Promise(resolve=>setTimeout(resolve,1500))]).then(()=>setTimeout(print,150));else setTimeout(print,300);
+  }
   function limpiarModoImpresion(){document.body.classList.remove('printing-report');document.querySelectorAll('main>section.print-target').forEach(s=>s.classList.remove('print-target'));document.title='DAYMAR · Control financiero';}
   window.addEventListener('afterprint',limpiarModoImpresion);
-  document.addEventListener('click',e=>{const p=e.target.closest('[data-print]');if(p){const target=document.getElementById(p.dataset.print);if(!target)return;document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('print-target',s===target));document.body.classList.add('printing-report');document.title='DAYMAR - '+(printLabels[p.dataset.print]||'Reporte financiero');requestAnimationFrame(()=>window.print());}});
+  document.addEventListener('click',e=>{const p=e.target.closest('[data-print]');if(p)imprimirReporteLimpio(p.dataset.print);});
 
   function reportRows(){
     const start=from('daymarStart'),end=from('daymarEnd');

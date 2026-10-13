@@ -500,6 +500,21 @@
       .product-card:hover { transform: none; }
       .form-input, .form-select { font-size: 16px !important; }
     }
+
+    /* Venta múltiple: respeta los colores y componentes existentes. */
+    [hidden] { display: none !important; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .multiple-sale-bar { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; background:var(--purple-soft); border:1px solid var(--purple); border-radius:var(--radius); padding:1rem; margin-bottom:1rem; }
+    .multiple-sale-bar > div { flex:1; min-width:220px; }
+    .multiple-sale-bar p, .multiple-sale-note { font-size:0.8125rem; color:var(--text-secondary); }
+    .multiple-sale-note { background:var(--bg); border-radius:var(--radius-sm); padding:0.875rem; margin:0.875rem 0; }
+    .multiple-sale-check { display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; font-weight:600; cursor:pointer; margin-bottom:0.35rem; }
+    .multiple-sale-check input { width:20px; height:20px; accent-color:var(--purple); }
+    .multiple-sale-item { display:grid; grid-template-columns:minmax(180px,1fr) 100px 95px 70px; align-items:center; gap:0.75rem; border-bottom:1px solid var(--border); padding:0.875rem 0; }
+    .multiple-sale-meta { color:var(--text-secondary); font-size:0.75rem; margin-top:0.25rem; }
+    .multiple-sale-item label { color:var(--text-secondary); font-size:0.75rem; }
+    #multiSaleCODConfig, #multiSaleDeliveryConfig, #multiSalePaymentConfig { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; margin:0.875rem 0; }
+    @media(max-width:600px) { .multiple-sale-item { grid-template-columns:1fr 90px; } .multiple-sale-item > div { grid-column:1 / -1; } .multiple-sale-item button { grid-column:2; } .multiple-sale-bar .btn { flex:1; } }
   </style>
 <base target="_self">
 </head>
@@ -517,6 +532,7 @@
         <span class="badge badge-warning" id="pendingBadge" style="display:none;" onclick="togglePendingPanel()"><i class="fa-solid fa-clock"></i><span id="pendingCount">0</span></span>
         <span class="badge badge-orange" id="pendingPaymentBadge" style="display:none;" onclick="togglePendingPanel()"><i class="fa-solid fa-money-bill-wave"></i><span id="pendingPaymentCount">0</span></span>
         <span class="badge badge-purple" id="dailySalesBadge" style="display:none;" onclick="toggleDailySalesPanel()"><i class="fa-solid fa-calendar-day"></i><span id="dailySalesCount">0</span></span>
+        <button type="button" class="btn btn-purple" id="btnMultipleSale" onclick="toggleMultipleSaleMode()" aria-pressed="false" title="Venta múltiple"><i class="fa-solid fa-list-check"></i><span>Venta múltiple</span></button>
         <button class="btn btn-orange" onclick="openFastSaleModal()" title="Venta Rapida"><i class="fa-solid fa-bolt"></i><span>Venta Rapida</span></button>
         <button class="btn btn-icon" onclick="startCameraScan()" title="Escanear"><i class="fa-solid fa-camera"></i></button>
         <button class="btn" id="usbBtn" onclick="toggleUSBReader()"><i class="fa-solid fa-plug"></i><span>USB</span></button>
@@ -551,6 +567,59 @@
 
     <div class="goto-row">
       <label>Ir a fila:</label><input type="number" class="form-input" id="goToRow" min="1" placeholder="#"><button class="btn" onclick="goToRow()">Ir</button><button class="btn" onclick="clearAllFilters()">Limpiar filtros</button>
+    </div>
+
+    <section class="multiple-sale-bar" id="multipleSaleBar" hidden aria-label="Selección de venta múltiple">
+      <div><strong>Venta múltiple</strong><p>Marca productos en la tabla o en las tarjetas. Puedes cambiar de búsqueda sin perder la selección.</p></div>
+      <strong id="multipleSaleSummary" aria-live="polite">0 productos · $0.00</strong>
+      <button type="button" class="btn" onclick="clearMultipleSaleSelection()">Vaciar selección</button>
+      <button type="button" class="btn btn-success" id="btnCheckoutMultiple" onclick="openMultipleSaleModal()" disabled>Revisar y vender</button>
+    </section>
+    <div class="modal-overlay" id="multipleSaleModal">
+      <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="multipleSaleTitle">
+        <div class="modal-header"><h3 class="modal-title" id="multipleSaleTitle">Confirmar venta múltiple</h3><button class="modal-close" type="button" onclick="closeMultipleSaleModal()" aria-label="Cerrar">×</button></div>
+        <div class="modal-body">
+          <div id="multipleSaleItems"></div>
+          <p class="multiple-sale-note">Los precios ya incluyen el descuento. El envío, la comisión fija, el seguro y el abono se ingresan para todo el pedido, no por producto; se reparten proporcionalmente para conservar los reportes y pendientes actuales.</p>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label" for="multiSalePayment">Método de pago</label><select class="form-select" id="multiSalePayment" onchange="updateMultipleSaleCalculations()"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></div>
+            <div class="form-group"><label class="form-label" for="multiSaleType">Tipo de venta</label><select class="form-select" id="multiSaleType" onchange="setMultipleSaleType()"><option value="immediate">Venta inmediata</option><option value="cod">Contra entrega (COD)</option><option value="pending_delivery">Pendiente de entrega</option><option value="pending_payment">Pendiente de cobro</option></select></div>
+          </div>
+          <input type="checkbox" id="multiSaleIsCOD" hidden><input type="checkbox" id="multiSaleIsPendingDelivery" hidden><input type="checkbox" id="multiSaleIsPendingPayment" hidden>
+          <div id="multiSaleCODConfig" hidden>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label" for="multiSaleWhoPays">Quién paga la comisión</label><select class="form-select" id="multiSaleWhoPays" onchange="updateMultipleSaleCalculations()"><option value="client">Paga el cliente</option><option value="we">Pagamos nosotros</option></select></div>
+              <div class="form-group"><label class="form-label" for="multiSaleShipping">Envío del pedido ($)</label><input type="number" class="form-input" id="multiSaleShipping" min="0" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+              <div class="form-group"><label class="form-label" for="multiSaleCommissionType">Tipo de comisión</label><select class="form-select" id="multiSaleCommissionType" onchange="updateMultipleSaleCalculations()"><option value="percentage">Porcentaje (%)</option><option value="fixed">Monto fijo del pedido ($)</option></select></div>
+              <div class="form-group"><label class="form-label" for="multiSaleCommission">Comisión (% o $ según el tipo)</label><input type="number" class="form-input" id="multiSaleCommission" min="0" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+              <div class="form-group"><label class="form-label" for="multiSaleInsurance">Seguro del pedido ($)</label><input type="number" class="form-input" id="multiSaleInsurance" min="0" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+            </div>
+          </div>
+          <div id="multiSaleDeliveryConfig" hidden>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label" for="multiSaleDeliveryShipping">Envío del pedido ($)</label><input type="number" class="form-input" id="multiSaleDeliveryShipping" min="0" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+              <div class="form-group"><label class="form-label" for="multiSaleDeliveryCommission">Comisión (%)</label><input type="number" class="form-input" id="multiSaleDeliveryCommission" min="0" max="100" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+            </div>
+          </div>
+          <div id="multiSalePaymentConfig" hidden>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label" for="multiSaleClientName">Nombre del cliente</label><input type="text" class="form-input" id="multiSaleClientName" oninput="updateMultipleSaleCalculations()"></div>
+              <div class="form-group"><label class="form-label" for="multiSalePaidAmount">Abono total del cliente ($)</label><input type="number" class="form-input" id="multiSalePaidAmount" min="0" step="0.01" oninput="updateMultipleSaleCalculations()"></div>
+            </div>
+          </div>
+          <div class="calculation-box" aria-live="polite">
+            <div class="calc-row"><span>Subtotal de productos:</span><strong id="multiCalcSubtotal">$0.00</strong></div>
+            <div class="calc-row"><span>Envío:</span><span id="multiCalcShipping">$0.00</span></div>
+            <div class="calc-row"><span>Comisión:</span><span id="multiCalcCommission">$0.00</span></div>
+            <div class="calc-row"><span>Seguro:</span><span id="multiCalcInsurance">$0.00</span></div>
+            <div class="calc-row total"><span>TOTAL DEL PEDIDO:</span><strong id="multiCalcTotal">$0.00</strong></div>
+            <div class="calc-row" id="multiCalcPaidRow" hidden><span>Abonado:</span><span id="multiCalcPaid">$0.00</span></div>
+            <div class="calc-row" id="multiCalcPendingRow" hidden><span>Saldo pendiente:</span><strong id="multiCalcPending">$0.00</strong></div>
+          </div>
+          <p id="multiSaleError" role="alert" style="color:var(--danger);margin-top:0.75rem;"></p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn" onclick="closeMultipleSaleModal()">Cancelar</button><button type="button" class="btn btn-success" id="btnConfirmMultipleSale" onclick="processMultipleSale()">Confirmar todos los productos</button></div>
+      </div>
     </div>
 
     <!-- PANEL DE REPORTE DE VENTAS POR DIA -->
@@ -902,7 +971,7 @@
           </div>
 
           <!-- Tipo de venta -->
-          <div class="toggle-row" id="fastSaleCODToggle" onclick="toggleFastSaleCOD()">
+          <div class="toggle-row" id="fastSaleCODToggle" onclick="if(event.target === this) { document.getElementById('fastSaleIsCOD').checked = !document.getElementById('fastSaleIsCOD').checked; toggleFastSaleCOD(); }">
             <input type="checkbox" id="fastSaleIsCOD" onchange="toggleFastSaleCOD()">
             <label for="fastSaleIsCOD" style="margin:0;cursor:pointer;font-weight:500;"><i class="fa-solid fa-truck-fast" style="color:var(--success);"></i> Contra Entrega (COD)</label>
           </div>
@@ -922,7 +991,7 @@
           </div>
 
           <!-- Pendiente de Entrega -->
-          <div class="toggle-row" id="fastSalePendingDeliveryToggle" onclick="toggleFastSalePendingDelivery()">
+          <div class="toggle-row" id="fastSalePendingDeliveryToggle" onclick="if(event.target === this) { document.getElementById('fastSaleIsPendingDelivery').checked = !document.getElementById('fastSaleIsPendingDelivery').checked; toggleFastSalePendingDelivery(); }">
             <input type="checkbox" id="fastSaleIsPendingDelivery" onchange="toggleFastSalePendingDelivery()">
             <label for="fastSaleIsPendingDelivery" style="margin:0;cursor:pointer;font-weight:500;"><i class="fa-solid fa-box-open" style="color:var(--purple);"></i> Pendiente de Entrega</label>
           </div>
@@ -934,7 +1003,7 @@
           </div>
 
           <!-- Pendiente de Cobro -->
-          <div class="toggle-row pending-payment" id="fastSalePendingPaymentToggle" onclick="toggleFastSalePendingPayment()">
+          <div class="toggle-row pending-payment" id="fastSalePendingPaymentToggle" onclick="if(event.target === this) { document.getElementById('fastSaleIsPendingPayment').checked = !document.getElementById('fastSaleIsPendingPayment').checked; toggleFastSalePendingPayment(); }">
             <input type="checkbox" id="fastSaleIsPendingPayment" onchange="toggleFastSalePendingPayment()">
             <label for="fastSaleIsPendingPayment" style="margin:0;cursor:pointer;font-weight:500;"><i class="fa-solid fa-money-bill-wave" style="color:#f97316;"></i> Pendiente de Cobro</label>
           </div>
@@ -950,14 +1019,13 @@
             <div class="calc-row"><span>Subtotal:</span><span id="fastCalcSubtotal">$0.00</span></div>
             <div class="calc-row" id="fastCalcShippingRow" style="display:none;"><span>Envio:</span><span id="fastCalcShipping">$0.00</span></div>
             <div class="calc-row" id="fastCalcCommissionRow" style="display:none;"><span>Comision:</span><span id="fastCalcCommission">$0.00</span></div>
+            <div class="calc-row" id="fastCalcInsuranceRow" hidden><span>Seguro:</span><span id="fastCalcInsurance">$0.00</span></div>
             <div class="calc-row total"><span>TOTAL:</span><span id="fastCalcTotal">$0.00</span></div>
+            <div class="calc-row" id="fastCalcPaidRow" hidden><span>Abonado:</span><span id="fastCalcPaid">$0.00</span></div>
+            <div class="calc-row" id="fastCalcPendingRow" hidden><span>Saldo pendiente:</span><span id="fastCalcPending">$0.00</span></div>
           </div>
 
-          <!-- Checkbox para pasar a venta.html -->
-          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);">
-            <input type="checkbox" id="fastSaleSendToVenta" style="width:20px;height:20px;accent-color:var(--info;" checked>
-            <label for="fastSaleSendToVenta" style="margin:0;cursor:pointer;font-size:0.875rem;"><i class="fa-solid fa-share-from-square" style="color:var(--info);"></i> Enviar producto a la pagina de Ventas (venta.html)</label>
-          </div>
+          <p class="multiple-sale-note">Las ventas pagadas aparecen automáticamente en venta.html, una sola vez. Los pedidos COD, pendientes de entrega y pendientes de cobro se conservan en su lista hasta completarse.</p>
         </div>
       </div>
       <div class="modal-footer"><button class="btn" onclick="closeFastSaleModal()">Cancelar</button><button class="btn btn-orange" onclick="processFastSale()"><i class="fa-solid fa-bolt"></i> Confirmar Venta Rapida</button></div>
@@ -1011,7 +1079,7 @@
               </div>
             </div>
 
-            <div class="toggle-row" id="pendingDeliveryToggle" onclick="togglePendingDelivery()">
+            <div class="toggle-row" id="pendingDeliveryToggle" onclick="if(event.target === this) { document.getElementById('isPendingDelivery').checked = !document.getElementById('isPendingDelivery').checked; togglePendingDelivery(); }">
               <input type="checkbox" id="isPendingDelivery" onchange="togglePendingDelivery()">
               <label for="isPendingDelivery" style="margin:0;cursor:pointer;font-weight:500;"><i class="fa-solid fa-box-open" style="color:var(--purple);"></i> Venta Pendiente de Entrega</label>
             </div>
@@ -1035,7 +1103,7 @@
               </div>
             </div>
 
-            <div class="toggle-row pending-payment" id="pendingPaymentToggle" onclick="togglePendingPayment()">
+            <div class="toggle-row pending-payment" id="pendingPaymentToggle" onclick="if(event.target === this) { document.getElementById('isPendingPayment').checked = !document.getElementById('isPendingPayment').checked; togglePendingPayment(); }">
               <input type="checkbox" id="isPendingPayment" onchange="togglePendingPayment()">
               <label for="isPendingPayment" style="margin:0;cursor:pointer;font-weight:500;"><i class="fa-solid fa-money-bill-wave" style="color:#f97316;"></i> Venta Pendiente de Cobro</label>
             </div>
@@ -1622,7 +1690,7 @@ function showNotification(message, type = 'success') {
   const container = document.getElementById('notificationContainer'); 
   const notif = document.createElement('div'); 
   notif.className = `notification ${type}`; 
-  notif.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check' : type === 'error' ? 'xmark' : 'exclamation'}"></i> ${message}`; 
+  notif.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check' : type === 'error' ? 'xmark' : 'exclamation'}"></i> ${saleEscape(message)}`; 
   container.appendChild(notif); 
   setTimeout(() => notif.remove(), 3000); 
 }
@@ -1773,7 +1841,8 @@ async function getProductImages(code) {
 
   const urls = [];
   try {
-    const storedCount = Number(await localforage.getItem(`img_count_${code}`)) || 0;
+    const rawCount = Number(await localforage.getItem(`img_count_${code}`));
+    const storedCount = Number.isFinite(rawCount) && rawCount > 0 ? Math.min(100, Math.floor(rawCount)) : 0;
     const maxImages = storedCount > 0 ? storedCount : 50;
 
     // Formato de varias imágenes: img_<codigo>_0, img_<codigo>_1, etc.
@@ -1854,7 +1923,7 @@ function updateCategories() {
   const categories = [...new Set(inventory.map(i => i.category).filter(Boolean))].sort(); 
   const select = document.getElementById('categoryFilter'); 
   const current = select.value; 
-  select.innerHTML = '<option value="">Todas las categorias</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join(''); 
+  select.innerHTML = '<option value="">Todas las categorias</option>' + categories.map(c => `<option value="${saleEscape(c)}">${saleEscape(c)}</option>`).join(''); 
   select.value = current; 
 }
 function updateStats() { 
@@ -1975,7 +2044,7 @@ async function renderTable(items, startIdx) {
           barcodeUrl = barcodes[item.barcode], 
           dateStr = formatDate(item.date); 
     return `<tr id="row-${displayIdx}" data-index="${realIdx}">
-      <td>${displayIdx}</td>
+      <td>${multipleSaleCheckbox(item)}${displayIdx}</td>
       <td>${renderInventoryImageGallery(imageUrls, 'table')}</td>
       <td>${highlightText(item.name, document.getElementById('searchInput').value)}</td>
       <td>${barcodeUrl ? `<img src="${barcodeUrl}" class="cell-barcode" onclick="openBarcodeModal('${barcodeUrl}', '${item.barcode}')" alt="">` : '<span style="color:var(--text-secondary);">N/A</span>'}</td>
@@ -1984,7 +2053,7 @@ async function renderTable(items, startIdx) {
       <td><strong>${formatCurrency(finalPrice)}</strong></td>
       <td>${dateStr}</td>
       <td class="cell-stock ${isLowStock ? 'low' : ''}">${item.quantity || 0}</td>
-      <td>${item.category || 'N/A'}</td>
+      <td>${saleEscape(item.category || 'N/A')}</td>
       <td><div class="cell-actions">
         <button class="btn btn-sm btn-success" onclick="openSaleModal(${realIdx})"><i class="fa-solid fa-cart-plus"></i></button>
         <button class="btn btn-sm" onclick="requestPassword('price', ${realIdx})"><i class="fa-solid fa-tag"></i></button>
@@ -2011,11 +2080,12 @@ async function renderCards(items, startIdx) {
     return `<div class="product-card" id="card-${startIdx + idx + 1}" data-index="${realIdx}">
       ${renderInventoryImageGallery(imageUrls, 'cards')}
       <div class="card-content">
+        ${multipleSaleCheckbox(item)}
         <div class="card-title">${highlightText(item.name, document.getElementById('searchInput').value)}</div>
         ${Number(item.discount) > 0 ? `<div style="margin-bottom:0.45rem;"><span class="discount-badge"><i class="fa-solid fa-percent"></i> ${Number(item.discount)}% de descuento</span></div>` : ''}
         <div class="card-meta">
           <span><i class="fa-solid fa-barcode"></i> ${item.barcode || 'N/A'}</span>
-          <span><i class="fa-solid fa-layer-group"></i> ${item.category || 'N/A'}</span>
+          <span><i class="fa-solid fa-layer-group"></i> ${saleEscape(item.category || 'N/A')}</span>
           <span><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
           <span class="${isLowStock ? 'cell-stock low' : ''}"><i class="fa-solid fa-box"></i> Stock: ${item.quantity || 0}</span>
         </div>
@@ -2066,10 +2136,11 @@ function goToRow() {
     } else { showNotification('Fila fuera de rango', 'warning'); } 
   }, 100); 
 }
-function highlightText(text, search) { 
-  if (!search || !text) return text || ''; 
-  const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); 
-  return String(text).replace(regex, '<mark>$1</mark>'); 
+function highlightText(text, search) {
+  const value = String(text || '');
+  if (!search) return saleEscape(value);
+  const regex = new RegExp(`(${String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return value.split(regex).map((part, index) => index % 2 ? '<mark>' + saleEscape(part) + '</mark>' : saleEscape(part)).join('');
 }
 
 function openImage(src) { document.getElementById('overlayImage').src = src; document.getElementById('imageOverlay').classList.add('active'); }
@@ -2132,6 +2203,7 @@ function closeFastSaleModal() {
 }
 
 function resetFastSaleForm() {
+  document.getElementById('fastSaleImageInput').value = '';
   document.getElementById('fastSaleName').value = '';
   document.getElementById('fastSaleBarcode').value = '';
   document.getElementById('fastSalePrice').value = '';
@@ -2243,186 +2315,358 @@ function fastSaleSelectWhoPays(who) {
 }
 
 function updateFastSaleCalculations() {
-  const price = parseFloat(document.getElementById('fastSalePrice').value) || 0;
-  const qty = parseInt(document.getElementById('fastSaleQty').value) || 1;
-  const subtotal = price * qty;
-
-  let shipping = 0, commission = 0, insurance = 0, total = subtotal;
-
-  const isCOD = document.getElementById('fastSaleIsCOD').checked;
-  const isPendingDelivery = document.getElementById('fastSaleIsPendingDelivery').checked;
-
-  if (isCOD) {
-    shipping = parseFloat(document.getElementById('fastSaleShipping').value) || 0;
-    const commissionType = document.getElementById('fastSaleCommissionType').value;
-    const commissionValue = parseFloat(document.getElementById('fastSaleCommission').value) || 0;
-    insurance = parseFloat(document.getElementById('fastSaleInsurance').value) || 0;
-    document.getElementById('fastSaleCommissionLabel').textContent = commissionType === 'percentage' ? 'Comision (%)' : 'Comision ($)';
-
-    if (commissionType === 'percentage') commission = (subtotal * commissionValue) / 100;
-    else commission = commissionValue;
-
-    total = fastSaleWhoPays === 'client' 
-      ? subtotal + shipping + commission + insurance 
-      : (subtotal - commission) + shipping + insurance;
-
-    document.getElementById('fastCalcShippingRow').style.display = 'flex';
-    document.getElementById('fastCalcCommissionRow').style.display = 'flex';
-    document.getElementById('fastCalcShipping').textContent = formatCurrency(shipping);
-    document.getElementById('fastCalcCommission').textContent = formatCurrency(commission);
-  } else if (isPendingDelivery) {
-    shipping = parseFloat(document.getElementById('fastSaleDeliveryShipping').value) || 0;
-    const commissionPercent = parseFloat(document.getElementById('fastSaleDeliveryCommission').value) || 0;
-    commission = (subtotal * commissionPercent) / 100;
-    total = subtotal + shipping + commission;
-
-    document.getElementById('fastCalcShippingRow').style.display = 'flex';
-    document.getElementById('fastCalcCommissionRow').style.display = 'flex';
-    document.getElementById('fastCalcShipping').textContent = formatCurrency(shipping);
-    document.getElementById('fastCalcCommission').textContent = formatCurrency(commission);
-  } else {
-    document.getElementById('fastCalcShippingRow').style.display = 'none';
-    document.getElementById('fastCalcCommissionRow').style.display = 'none';
-  }
-
-  document.getElementById('fastCalcSubtotal').textContent = formatCurrency(subtotal);
-  document.getElementById('fastCalcTotal').textContent = formatCurrency(total > 0 ? total : 0);
+  try {
+    const options = readSaleOptions('fastSale');
+    const price = saleNumber('fastSalePrice'), quantity = saleNumber('fastSaleQty', 1);
+    const calc = calculateSaleOrder([{ price, quantity }], options);
+    const extra = ['cod', 'pending_delivery'].includes(options.type);
+    document.getElementById('fastSaleCommissionLabel').textContent = options.commissionType === 'percentage' ? 'Comisión (%)' : 'Comisión ($)';
+    document.getElementById('fastCalcShippingRow').style.display = extra ? 'flex' : 'none';
+    document.getElementById('fastCalcCommissionRow').style.display = extra ? 'flex' : 'none';
+    document.getElementById('fastCalcInsuranceRow').hidden = options.type !== 'cod';
+    document.getElementById('fastCalcPaidRow').hidden = options.type !== 'pending_payment';
+    document.getElementById('fastCalcPendingRow').hidden = options.type !== 'pending_payment';
+    for (const key of ['Subtotal','Shipping','Commission','Insurance','Total','Paid','Pending']) {
+      document.getElementById('fastCalc' + key).textContent = formatCurrency(calc[key.toLowerCase()] / 100);
+    }
+  } catch (error) { document.getElementById('fastCalcTotal').textContent = 'Revisa los valores'; }
 }
 
+// Registro único: las ventas pagadas van a soldInventory; los pendientes a su propia lista.
+let saleCommitBusy = false;
+let multipleSaleMode = false;
+const multipleSaleSelection = new Map();
+
+function newSaleId() {
+  return window.crypto?.randomUUID ? window.crypto.randomUUID() : 'SALE_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+}
+function saleCents(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100);
+}
+function saleMoney(value) { return saleCents(value) / 100; }
+function saleEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function saleNumber(id, fallback = 0) {
+  const raw = document.getElementById(id).value.trim();
+  const number = raw === '' ? fallback : Number(raw);
+  if (!Number.isFinite(number) || number < 0) throw new Error('Revisa los importes: deben ser números válidos y no negativos.');
+  return number;
+}
+function readSaleOptions(prefix) {
+  const fast = prefix === 'fastSale';
+  const id = suffix => prefix + suffix;
+  const type = document.getElementById(id('IsCOD')).checked ? 'cod'
+    : document.getElementById(id('IsPendingDelivery')).checked ? 'pending_delivery'
+    : document.getElementById(id('IsPendingPayment')).checked ? 'pending_payment' : 'immediate';
+  const options = { type, paymentMethod: fast ? fastSalePaymentMethod : document.getElementById(id('Payment')).value,
+    whoPays: fast ? fastSaleWhoPays : document.getElementById(id('WhoPays')).value,
+    shipping: 0, commissionType: 'percentage', commissionValue: 0, insurance: 0, paidAmount: 0, clientName: '' };
+  if (type === 'cod') {
+    options.shipping = saleNumber(id('Shipping'));
+    options.commissionType = document.getElementById(id('CommissionType')).value;
+    options.commissionValue = saleNumber(id('Commission'));
+    options.insurance = saleNumber(id('Insurance'));
+  } else if (type === 'pending_delivery') {
+    options.shipping = saleNumber(id('DeliveryShipping'));
+    options.commissionValue = saleNumber(id('DeliveryCommission'));
+  } else if (type === 'pending_payment') {
+    options.clientName = document.getElementById(id('ClientName')).value.trim();
+    options.paidAmount = saleNumber(id('PaidAmount'));
+  }
+  if (!['cash','transfer'].includes(options.paymentMethod)) throw new Error('Selecciona un método de pago válido.');
+  if (options.commissionType === 'percentage' && options.commissionValue > 100) throw new Error('La comisión porcentual no puede superar el 100%.');
+  return options;
+}
+function calculateSaleOrder(lines, options, validate = false) {
+  const amounts = lines.map(line => {
+    if (!Number.isInteger(line.quantity) || line.quantity < 1) throw new Error('La cantidad debe ser un entero mayor o igual a 1.');
+    if (!Number.isFinite(line.price) || line.price < 0) throw new Error('Precio inválido.');
+    return saleCents(line.price * line.quantity);
+  });
+  const subtotal = amounts.reduce((sum, value) => sum + value, 0);
+  if (!Number.isSafeInteger(subtotal)) throw new Error('El importe es demasiado grande.');
+  const shipping = saleCents(options.shipping), insurance = saleCents(options.insurance);
+  const commission = ['cod','pending_delivery'].includes(options.type)
+    ? options.commissionType === 'fixed' ? saleCents(options.commissionValue) : Math.round(subtotal * options.commissionValue / 100) : 0;
+  const total = options.type === 'cod'
+    ? subtotal + shipping + insurance + (options.whoPays === 'we' ? -commission : commission)
+    : subtotal + shipping + commission;
+  const paid = saleCents(options.paidAmount);
+  if (total < 0) throw new Error('La comisión no puede producir un total negativo.');
+  if (validate && options.type === 'pending_payment') {
+    if (!options.clientName) throw new Error('Debes ingresar el nombre del cliente.');
+    if (paid < 0 || paid >= subtotal) throw new Error('El abono debe ser mayor o igual a cero y menor que el total.');
+  }
+  return { amounts, subtotal, shipping, insurance, commission, total, paid, pending: Math.max(0, subtotal - paid) };
+}
+// Reparto en centavos: conserva exactamente el total del pedido, sin repetir gastos ni abonos.
+function allocateSaleCents(total, weights) {
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const effectiveWeights = sum ? weights : weights.map(() => 1);
+  const divisor = sum || weights.length;
+  const values = effectiveWeights.map(weight => Math.floor(total * weight / divisor));
+  const fractions = effectiveWeights.map((weight, index) => ({ index, fraction: total * weight / divisor - values[index] }));
+  fractions.sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  let remainder = total - values.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < remainder; i++) values[fractions[i % fractions.length].index]++;
+  return values;
+}
+function createSaleRecords(lines, options, orderId, now) {
+  const calc = calculateSaleOrder(lines, options, true);
+  const ships = allocateSaleCents(calc.shipping, calc.amounts);
+  const commissions = allocateSaleCents(calc.commission, calc.amounts);
+  const insurances = allocateSaleCents(calc.insurance, calc.amounts);
+  const paid = allocateSaleCents(calc.paid, calc.amounts);
+  return lines.map((line, index) => {
+    const item = line.item;
+    const pricing = line.pricing || getProductPricing(item);
+    const record = {
+      idVenta: newSaleId(), orderId, isMultipleSale: lines.length > 1,
+      name: item.name, code: item.code, barcode: item.barcode || '', category: item.category || '', description: item.description || '',
+      price: line.price, originalPrice: pricing.originalPrice, finalPrice: line.price, discount: pricing.discount,
+      quantity: line.quantity, total: calc.amounts[index] / 100, date: now, soldAt: now,
+      seller: 'Sistema', paymentMethod: options.paymentMethod, saleType: options.type,
+      imageDataUrl: item.imageDataUrl || '', isFastSale: !!item.isFastSale
+    };
+    if (options.type === 'cod') Object.assign(record, {
+      isCOD: true, codShipping: ships[index] / 100, codCommissionType: options.commissionType,
+      codCommission: options.commissionType === 'fixed' ? commissions[index] / 100 : options.commissionValue,
+      codCommissionAmount: commissions[index] / 100, codInsurance: insurances[index] / 100,
+      whoPaysCommission: options.whoPays,
+      totalToCollect: (calc.amounts[index] + ships[index] + insurances[index] + (options.whoPays === 'we' ? -commissions[index] : commissions[index])) / 100,
+      netEarnings: (calc.amounts[index] - (options.whoPays === 'we' ? commissions[index] : 0)) / 100
+    });
+    else if (options.type === 'pending_delivery') Object.assign(record, {
+      isPendingDelivery: true, deliveryShipping: ships[index] / 100, deliveryCommissionPercent: options.commissionValue,
+      deliveryCommissionAmount: commissions[index] / 100,
+      totalToCollect: (calc.amounts[index] + ships[index] + commissions[index]) / 100, deliveryStatus: 'pending'
+    });
+    else if (options.type === 'pending_payment') Object.assign(record, {
+      isPendingPayment: true, clientName: options.clientName, paidAmount: paid[index] / 100,
+      pendingAmount: (calc.amounts[index] - paid[index]) / 100,
+      paymentStatus: paid[index] === calc.amounts[index] ? 'paid' : 'partial',
+      status: paid[index] === calc.amounts[index] ? 'paid' : 'pending'
+    });
+    else record.status = 'paid';
+    return record;
+  });
+}
+function persistSaleBatch(records, updatedInventory = null) {
+  const keys = { immediate: 'soldInventory', cod: 'pendingInventory', pending_delivery: 'pendingDeliveryInventory', pending_payment: 'pendingPaymentInventory' };
+  const updates = new Map();
+  for (const record of records) {
+    const key = record.saleType === 'pending_payment' && record.paymentStatus === 'paid' ? 'soldInventory' : keys[record.saleType];
+    if (!updates.has(key)) {
+      const stored = localStorage.getItem(key);
+      const list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) throw new Error('La lista de ventas guardada no es válida. No se modificaron los datos.');
+      updates.set(key, list);
+    }
+    const list = updates.get(key);
+    if (!list.some(existing => existing.idVenta === record.idVenta)) list.push(record);
+  }
+  if (updatedInventory) updates.set('inventory', updatedInventory);
+  const snapshots = new Map([...updates.keys()].map(key => [key, localStorage.getItem(key)]));
+  try {
+    for (const [key, value] of updates) localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    for (const [key, value] of snapshots) {
+      try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (restoreError) { console.error('Error restaurando almacenamiento', restoreError); }
+    }
+    throw new Error('No se pudo guardar la venta. Revisa el espacio de almacenamiento del navegador; no vuelvas a confirmar sin comprobar los datos.');
+  }
+}
+function setSaleBusy(busy) {
+  saleCommitBusy = busy;
+  document.querySelectorAll('#saleModal .modal-footer button, #fastSaleModal .modal-footer button, #multipleSaleModal .modal-footer button').forEach(button => button.disabled = busy);
+}
 function processFastSale() {
-  playSuccessSound();
-
-  const name = document.getElementById('fastSaleName').value.trim();
-  const price = parseFloat(document.getElementById('fastSalePrice').value) || 0;
-  const qty = parseInt(document.getElementById('fastSaleQty').value) || 1;
-
-  if (!name) { showNotification('El nombre del producto es obligatorio', 'error'); return; }
-  if (price <= 0) { showNotification('El precio debe ser mayor a cero', 'error'); return; }
-
-  const barcode = document.getElementById('fastSaleBarcode').value.trim();
-  const category = document.getElementById('fastSaleCategory').value.trim();
-  const description = document.getElementById('fastSaleDesc').value.trim();
-  const subtotal = price * qty;
-
-  const isCOD = document.getElementById('fastSaleIsCOD').checked;
-  const isPendingDelivery = document.getElementById('fastSaleIsPendingDelivery').checked;
-  const isPendingPayment = document.getElementById('fastSaleIsPendingPayment').checked;
-
-  // Generar codigo unico para el producto
-  const code = 'FAST_' + Date.now().toString(36).toUpperCase();
-  const now = new Date().toISOString();
-
-  // Crear el objeto venta
-  let saleRecord = {
-    name, code, barcode: barcode || '',
-    price, originalPrice: price, finalPrice: price, discount: 0, quantity: qty, total: subtotal,
-    date: now, seller: 'Sistema',
-    category: category || 'Venta Rapida',
-    description: description || '',
-    paymentMethod: fastSalePaymentMethod,
-    imageDataUrl: fastSaleImageDataUrl || '',
-    isFastSale: true
-  };
-
-  if (isCOD) {
-    const shipping = parseFloat(document.getElementById('fastSaleShipping').value) || 0;
-    const commissionType = document.getElementById('fastSaleCommissionType').value;
-    const commissionValue = parseFloat(document.getElementById('fastSaleCommission').value) || 0;
-    const insurance = parseFloat(document.getElementById('fastSaleInsurance').value) || 0;
-
-    let commission = 0;
-    if (commissionType === 'percentage') commission = (subtotal * commissionValue) / 100;
-    else commission = commissionValue;
-
-    const totalToCollect = fastSaleWhoPays === 'client' 
-      ? subtotal + shipping + commission + insurance 
-      : (subtotal - commission) + shipping + insurance;
-
-    const pending = readStorageArray('pendingInventory');
-    pending.push({
-      ...saleRecord,
-      isCOD: true,
-      codShipping: shipping,
-      codCommissionType: commissionType,
-      codCommission: commissionValue,
-      codCommissionAmount: commission,
-      codInsurance: insurance,
-      whoPaysCommission: fastSaleWhoPays,
-      totalToCollect: totalToCollect,
-      netEarnings: fastSaleWhoPays === 'client' ? subtotal : (subtotal - commission)
-    });
-    localStorage.setItem('pendingInventory', JSON.stringify(pending));
-    showNotification('Venta rapida COD guardada. Total a cobrar: ' + formatCurrency(totalToCollect), 'success');
-
-  } else if (isPendingDelivery) {
-    const shipping = parseFloat(document.getElementById('fastSaleDeliveryShipping').value) || 0;
-    const commissionPercent = parseFloat(document.getElementById('fastSaleDeliveryCommission').value) || 0;
-    const commission = (subtotal * commissionPercent) / 100;
-    const total = subtotal + shipping + commission;
-
-    const pendingDelivery = readStorageArray('pendingDeliveryInventory');
-    pendingDelivery.push({
-      ...saleRecord,
-      isPendingDelivery: true,
-      deliveryShipping: shipping,
-      deliveryCommissionPercent: commissionPercent,
-      deliveryCommissionAmount: commission,
-      totalToCollect: total,
-      deliveryStatus: 'pending'
-    });
-    localStorage.setItem('pendingDeliveryInventory', JSON.stringify(pendingDelivery));
-    showNotification('Venta rapida pendiente de entrega registrada. Total: ' + formatCurrency(total), 'success');
-
-  } else if (isPendingPayment) {
-    const clientName = document.getElementById('fastSaleClientName').value.trim();
-    const paidAmount = parseFloat(document.getElementById('fastSalePaidAmount').value) || 0;
-
-    if (!clientName) { showNotification('Debe ingresar el nombre del cliente', 'error'); return; }
-    if (paidAmount < 0 || paidAmount >= subtotal) { showNotification('El monto abonado debe ser mayor o igual a cero y menor que el total', 'error'); return; }
-
-    const pendingPayment = readStorageArray('pendingPaymentInventory');
-    pendingPayment.push({
-      ...saleRecord,
-      originalPrice: price,
-      isPendingPayment: true,
-      clientName: clientName,
-      paidAmount: paidAmount,
-      pendingAmount: subtotal - paidAmount,
-      paymentStatus: 'partial'
-    });
-    localStorage.setItem('pendingPaymentInventory', JSON.stringify(pendingPayment));
-    showNotification(`Venta rapida pendiente de cobro registrada. Cliente: ${clientName}`, 'success');
-
-  } else {
-    // Venta inmediata - guardar en soldInventory
-    const sales = readStorageArray('soldInventory');
-    sales.push({
-      ...saleRecord,
-      saleType: 'immediate',
-      status: 'paid'
-    });
-    localStorage.setItem('soldInventory', JSON.stringify(sales));
-    showNotification(`Venta rapida registrada (${fastSalePaymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'})`, 'success');
-  }
-
-  // Enviar a venta.html si el checkbox esta marcado
-  const sendToVenta = document.getElementById('fastSaleSendToVenta').checked;
-  if (sendToVenta) {
-    const fastSaleProducts = JSON.parse(localStorage.getItem('fastSaleProducts') || '[]');
-    fastSaleProducts.push({
-      name, code, barcode: barcode || '', price, originalPrice: price, finalPrice: price, discount: 0, quantity: qty, total: subtotal,
-      category: category || 'Venta Rapida', description: description || '',
-      paymentMethod: fastSalePaymentMethod, date: now,
-      imageDataUrl: fastSaleImageDataUrl || ''
-    });
-    localStorage.setItem('fastSaleProducts', JSON.stringify(fastSaleProducts));
-    showNotification('Producto enviado a venta.html', 'success');
-  }
-
-  closeFastSaleModal();
-  updateStats();
-  ensureKioscoMode();
+  if (saleCommitBusy || !document.getElementById('fastSaleModal').classList.contains('active')) return;
+  setSaleBusy(true);
+  try {
+    const name = document.getElementById('fastSaleName').value.trim();
+    const price = saleNumber('fastSalePrice');
+    const quantity = saleNumber('fastSaleQty');
+    if (!name) throw new Error('El nombre del producto es obligatorio.');
+    if (price <= 0) throw new Error('El precio debe ser mayor a cero.');
+    const item = { name, code: 'FAST_' + newSaleId(), barcode: document.getElementById('fastSaleBarcode').value.trim(),
+      category: document.getElementById('fastSaleCategory').value.trim() || 'Venta Rapida',
+      description: document.getElementById('fastSaleDesc').value.trim(),
+      imageDataUrl: fastSaleImageDataUrl || '', price, originalPrice: price, finalPrice: price, discount: 0, isFastSale: true };
+    const options = readSaleOptions('fastSale');
+    const records = createSaleRecords([{ item, price, quantity }], options, newSaleId(), new Date().toISOString());
+    persistSaleBatch(records);
+    // No escribir en fastSaleProducts: venta.html ya comparte soldInventory.
+    playSuccessSound();
+    closeFastSaleModal();
+    updateStats();
+    showNotification('Venta rápida registrada una sola vez. ' + (options.type === 'immediate' ? 'Disponible en venta.html.' : 'Disponible en Pedidos Pendientes.'), 'success');
+  } catch (error) { showNotification(error.message, 'error'); }
+  finally { setSaleBusy(false); }
 }
+
+function toggleMultipleSaleMode() {
+  if (saleCommitBusy) return;
+  multipleSaleMode = !multipleSaleMode;
+  document.getElementById('btnMultipleSale').classList.toggle('active', multipleSaleMode);
+  document.getElementById('btnMultipleSale').setAttribute('aria-pressed', String(multipleSaleMode));
+  document.getElementById('multipleSaleBar').hidden = !multipleSaleMode;
+  renderInventory();
+  updateMultipleSaleSummary();
+}
+function multipleSaleCheckbox(item) {
+  if (!multipleSaleMode) return '';
+  const index = inventory.indexOf(item);
+  const checked = multipleSaleSelection.has(String(item.code));
+  return `<label class="multiple-sale-check"><input type="checkbox" data-multiple-index="${index}" aria-label="Seleccionar ${saleEscape(item.name)}" ${checked ? 'checked' : ''} ${toNumber(item.quantity) < 1 ? 'disabled' : ''} onchange="toggleMultipleSaleProduct(${index}, this.checked)"> Vender</label>`;
+}
+function toggleMultipleSaleProduct(index, selected) {
+  const item = inventory[index];
+  if (!item) return;
+  if (!item.code || inventory.filter(other => String(other.code) === String(item.code)).length !== 1) {
+    showNotification('El producto necesita un código interno único para venderse en grupo.', 'error');
+    renderInventory(); return;
+  }
+  const code = String(item.code);
+  if (selected && toNumber(item.quantity) >= 1) {
+    if (!multipleSaleSelection.has(code)) multipleSaleSelection.set(code, 1);
+  } else multipleSaleSelection.delete(code);
+  syncMultipleSaleChecks(); updateMultipleSaleSummary();
+}
+function syncMultipleSaleChecks() {
+  document.querySelectorAll('[data-multiple-index]').forEach(input => {
+    const item = inventory[Number(input.dataset.multipleIndex)];
+    input.checked = !!item && multipleSaleSelection.has(String(item.code));
+  });
+}
+function clearMultipleSaleSelection() {
+  multipleSaleSelection.clear(); syncMultipleSaleChecks(); updateMultipleSaleSummary();
+  if (document.getElementById('multipleSaleModal').classList.contains('active')) renderMultipleSaleItems();
+}
+function getMultipleSaleLines(source = inventory) {
+  return [...multipleSaleSelection].map(([code, quantity]) => {
+    const matches = source.filter(item => String(item.code) === code);
+    if (matches.length !== 1) throw new Error('Un producto seleccionado cambió o ya no existe. Revisa la selección.');
+    const item = matches[0], pricing = getProductPricing(item);
+    return { item, quantity, price: saleMoney(pricing.finalPrice), pricing };
+  });
+}
+function updateMultipleSaleSummary() {
+  let lines = [];
+  try { lines = getMultipleSaleLines(); } catch (error) { /* Se valida nuevamente al confirmar. */ }
+  const units = lines.reduce((sum, line) => sum + line.quantity, 0);
+  const subtotal = lines.reduce((sum, line) => sum + saleCents(line.price * line.quantity), 0) / 100;
+  document.getElementById('multipleSaleSummary').textContent = `${multipleSaleSelection.size} productos · ${units} unidades · ${formatCurrency(subtotal)}`;
+  document.getElementById('btnCheckoutMultiple').disabled = !multipleSaleSelection.size;
+}
+function openMultipleSaleModal() {
+  if (!multipleSaleSelection.size) { showNotification('Marca al menos un producto.', 'warning'); return; }
+  for (const suffix of ['Shipping','Commission','Insurance','DeliveryShipping','DeliveryCommission','PaidAmount','ClientName']) document.getElementById('multiSale' + suffix).value = '';
+  document.getElementById('multiSalePayment').value = 'cash';
+  document.getElementById('multiSaleWhoPays').value = 'client';
+  document.getElementById('multiSaleCommissionType').value = 'percentage';
+  document.getElementById('multiSaleType').value = 'immediate';
+  setMultipleSaleType();
+  renderMultipleSaleItems();
+  document.getElementById('multipleSaleModal').classList.add('active');
+}
+function closeMultipleSaleModal() {
+  if (saleCommitBusy) return;
+  document.getElementById('multipleSaleModal').classList.remove('active'); ensureKioscoMode();
+}
+function setMultipleSaleType() {
+  const type = document.getElementById('multiSaleType').value;
+  document.getElementById('multiSaleIsCOD').checked = type === 'cod';
+  document.getElementById('multiSaleIsPendingDelivery').checked = type === 'pending_delivery';
+  document.getElementById('multiSaleIsPendingPayment').checked = type === 'pending_payment';
+  document.getElementById('multiSaleCODConfig').hidden = type !== 'cod';
+  document.getElementById('multiSaleDeliveryConfig').hidden = type !== 'pending_delivery';
+  document.getElementById('multiSalePaymentConfig').hidden = type !== 'pending_payment';
+  updateMultipleSaleCalculations();
+}
+function renderMultipleSaleItems() {
+  const container = document.getElementById('multipleSaleItems');
+  container.replaceChildren();
+  for (const [code, quantity] of multipleSaleSelection) {
+    const item = inventory.find(product => String(product.code) === code);
+    if (!item) continue;
+    const row = document.createElement('div'); row.className = 'multiple-sale-item';
+    const info = document.createElement('div');
+    const title = document.createElement('strong'); title.textContent = item.name;
+    const meta = document.createElement('div'); meta.className = 'multiple-sale-meta';
+    const price = saleMoney(getProductPricing(item).finalPrice);
+    meta.textContent = `Precio final: ${formatCurrency(price)} · Stock: ${item.quantity} · ${item.barcode || item.code}`;
+    info.append(title, meta);
+    const label = document.createElement('label'); label.textContent = 'Cantidad';
+    const input = document.createElement('input'); input.type = 'number'; input.className = 'form-input'; input.min = '1'; input.step = '1'; input.max = String(item.quantity); input.value = quantity;
+    input.setAttribute('aria-label', 'Cantidad de ' + item.name);
+    input.addEventListener('input', () => {
+      const next = Number(input.value);
+      const valid = Number.isInteger(next) && next >= 1 && next <= toNumber(item.quantity);
+      input.setCustomValidity(valid ? '' : 'Cantidad inválida o stock insuficiente.');
+      multipleSaleSelection.set(code, next);
+      subtotal.textContent = formatCurrency(price * (Number.isFinite(next) ? next : 0));
+      updateMultipleSaleSummary(); updateMultipleSaleCalculations();
+    });
+    label.appendChild(input);
+    const subtotal = document.createElement('strong'); subtotal.textContent = formatCurrency(price * quantity);
+    const remove = document.createElement('button'); remove.className = 'btn btn-sm'; remove.type = 'button'; remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => { multipleSaleSelection.delete(code); syncMultipleSaleChecks(); updateMultipleSaleSummary(); renderMultipleSaleItems(); });
+    row.append(info, label, subtotal, remove); container.appendChild(row);
+  }
+  updateMultipleSaleCalculations();
+}
+function updateMultipleSaleCalculations() {
+  const button = document.getElementById('btnConfirmMultipleSale');
+  try {
+    const lines = getMultipleSaleLines();
+    const options = readSaleOptions('multiSale');
+    const calc = calculateSaleOrder(lines, options);
+    document.getElementById('multiCalcSubtotal').textContent = formatCurrency(calc.subtotal / 100);
+    document.getElementById('multiCalcShipping').textContent = formatCurrency(calc.shipping / 100);
+    document.getElementById('multiCalcCommission').textContent = formatCurrency(calc.commission / 100) + (options.type === 'cod' && options.whoPays === 'we' ? ' (se descuenta)' : '');
+    document.getElementById('multiCalcInsurance').textContent = formatCurrency(calc.insurance / 100);
+    document.getElementById('multiCalcTotal').textContent = formatCurrency(calc.total / 100);
+    document.getElementById('multiCalcPaid').textContent = formatCurrency(calc.paid / 100);
+    document.getElementById('multiCalcPending').textContent = formatCurrency(calc.pending / 100);
+    document.getElementById('multiCalcPaidRow').hidden = options.type !== 'pending_payment';
+    document.getElementById('multiCalcPendingRow').hidden = options.type !== 'pending_payment';
+    document.getElementById('multiSaleError').textContent = '';
+    button.disabled = !lines.length || saleCommitBusy;
+  } catch (error) { document.getElementById('multiSaleError').textContent = error.message; button.disabled = true; }
+}
+function processMultipleSale() {
+  if (saleCommitBusy || !document.getElementById('multipleSaleModal').classList.contains('active')) return;
+  setSaleBusy(true);
+  try {
+    if (!multipleSaleSelection.size) throw new Error('Selecciona al menos un producto.');
+    // Leer stock y precios actuales, no los índices de la tabla ni una copia anterior.
+    const stored = localStorage.getItem('inventory');
+    const latest = JSON.parse(stored || '[]');
+    if (!Array.isArray(latest)) throw new Error('El inventario guardado no es válido.');
+    const lines = getMultipleSaleLines(latest);
+    const displayed = getMultipleSaleLines();
+    lines.forEach((line, index) => {
+      if (line.price !== displayed[index].price) throw new Error('Cambió el precio de un producto en otra página. Recarga el inventario y revisa el total.');
+      if (!Number.isInteger(line.quantity) || line.quantity < 1) throw new Error('La cantidad debe ser un entero mayor o igual a 1.');
+      if (line.quantity > toNumber(line.item.quantity)) throw new Error('Stock insuficiente: ' + line.item.name);
+    });
+    const options = readSaleOptions('multiSale');
+    const records = createSaleRecords(lines, options, newSaleId(), new Date().toISOString());
+    lines.forEach(line => line.item.quantity = toNumber(line.item.quantity) - line.quantity);
+    persistSaleBatch(records, latest);
+    inventory = latest;
+    multipleSaleSelection.clear();
+    document.getElementById('multipleSaleModal').classList.remove('active');
+    applyFilters(); updateStats(); updateMultipleSaleSummary();
+    playSuccessSound();
+    showNotification('Venta múltiple registrada: ' + records.length + ' productos en un solo pedido.', 'success');
+    ensureKioscoMode();
+  } catch (error) { document.getElementById('multiSaleError').textContent = error.message; showNotification(error.message, 'error'); }
+  finally { setSaleBusy(false); updateMultipleSaleCalculations(); }
+}
+
 
 // ===== FIN VENTA RAPIDA =====
 
@@ -2527,6 +2771,8 @@ function saveSaleChangesOnly() {
 }
 
 async function openSaleModal(index) { 
+  if (multipleSaleMode) { toggleMultipleSaleProduct(index, true); return; }
+  if (!inventory[index]) { showNotification('Producto no encontrado', 'error'); return; }
   playBeep();
   resetSaleLockState();
   currentSaleIndex = index; 
@@ -2731,6 +2977,7 @@ function updateSaleCalculations() {
 }
 
 function processSale() { 
+  if (!document.getElementById('saleModal').classList.contains('active')) return;
   playSuccessSound();
   const item = inventory.find(product => product.code === currentSaleCode) || inventory[currentSaleIndex];
   if (!item) { showNotification('Producto no encontrado. Vuelve a abrir la venta.', 'error'); return; }
@@ -3084,7 +3331,7 @@ async function loadPendingList() {
         const barcodeUrl = p.barcode ? generateBarcodeDataUrl(p.barcode) : null;
         const saleDate = p.date ? new Date(p.date).toLocaleDateString('es-ES') : 'N/A';
         return `<tr>
-          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
+          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${saleEscape(p.name)}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
           <td>${p.quantity}</td>
           <td>${formatCurrency(p.price)}</td>
           <td>${formatCurrency(p.codShipping || 0)}</td>
@@ -3127,7 +3374,7 @@ async function loadPendingList() {
         const saleDate = p.date ? new Date(p.date).toLocaleDateString('es-ES') : 'N/A';
 
         return `<tr>
-          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
+          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${saleEscape(p.name)}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
           <td>${p.quantity}</td>
           <td>${formatCurrency(p.price)}</td>
           <td><span class="badge ${p.paymentMethod === 'cash' ? 'badge-success' : 'badge-purple'}">${methodText}</span></td>
@@ -3170,8 +3417,8 @@ async function loadPendingList() {
         const saleDate = p.date ? new Date(p.date).toLocaleDateString('es-ES') : 'N/A';
 
         return `<tr>
-          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${p.name}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
-          <td><strong>${p.clientName}</strong></td>
+          <td><div style="display:flex;align-items:center;gap:0.75rem;">${imgUrl ? `<img src="${imgUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="openImage('${imgUrl}')">` : '<div style="width:40px;height:40px;background:var(--border-light);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'}<div><strong>${saleEscape(p.name)}</strong><br><small style="color:var(--text-secondary);">${p.code}</small>${barcodeUrl ? `<br><img src="${barcodeUrl}" style="height:20px;margin-top:2px;cursor:pointer;" onclick="openBarcodeModal('${barcodeUrl}', '${p.barcode}')">` : ''}<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${saleDate}</small></div></div></td>
+          <td><strong>${saleEscape(p.clientName)}</strong></td>
           <td>${p.quantity}</td>
           <td>${formatCurrency(p.originalPrice)}</td>
           <td><span style="color:var(--success);font-weight:600;">${formatCurrency(p.paidAmount)}</span></td>
@@ -3230,22 +3477,47 @@ function closePaymentConfirmModal() {
   ensureKioscoMode();
 }
 
+// Finalizar un pendiente escribe venta y lista pendiente como una sola operación recuperable.
+function readSaleArrayStrict(key) {
+  const raw = localStorage.getItem(key);
+  const value = raw ? JSON.parse(raw) : [];
+  if (!Array.isArray(value)) throw new Error('La lista ' + key + ' no es válida. No se modificaron los datos.');
+  return value;
+}
+function commitCompletedPending(key, pending, completed) {
+  const sales = readSaleArrayStrict('soldInventory');
+  if (!completed.idVenta) completed.idVenta = 'LEGACY_' + JSON.stringify([key, completed.code, completed.date]);
+  const exists = sales.some(item => item.idVenta === completed.idVenta ||
+    (item.saleType === completed.saleType && String(item.code) === String(completed.code) && item.date === completed.date));
+  if (!exists) sales.push(completed);
+  const oldSales = localStorage.getItem('soldInventory'), oldPending = localStorage.getItem(key);
+  try {
+    localStorage.setItem('soldInventory', JSON.stringify(sales));
+    localStorage.setItem(key, JSON.stringify(pending));
+  } catch (error) {
+    try {
+      if (oldSales === null) localStorage.removeItem('soldInventory'); else localStorage.setItem('soldInventory', oldSales);
+      if (oldPending === null) localStorage.removeItem(key); else localStorage.setItem(key, oldPending);
+    } catch (restoreError) { console.error('No se pudo restaurar el pendiente', restoreError); }
+    throw new Error('No se pudo completar el pendiente. Revisa el almacenamiento antes de reintentar.');
+  }
+}
+
 function confirmPaymentPending() {
   if (!pendingPaymentKey) return;
   showLoading(true);
   try {
-    const pending = readStorageArray('pendingInventory');
+    const pending = readSaleArrayStrict('pendingInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const itemIndex = findPendingIndex(pending, pendingPaymentKey.code, pendingPaymentKey.date);
     const item = pending[itemIndex];
     if (!item) { showNotification('Pedido no encontrado', 'error'); return; }
 
-    const sales = readStorageArray('soldInventory');
     const finalTotal = toNumber(item.totalToCollect, toNumber(item.price) * toNumber(item.quantity));
     const productTotal = toNumber(item.price) * toNumber(item.quantity);
     const netEarnings = toNumber(item.netEarnings, item.whoPaysCommission === 'client' ? productTotal : productTotal - toNumber(item.codCommissionAmount));
 
-    sales.push({
+    const completed = {
       ...item,
       price: getSaleUnitPrice(item),
       originalPrice: toNumber(item.originalPrice, item.price),
@@ -3264,11 +3536,10 @@ function confirmPaymentPending() {
       paidDate: new Date().toISOString(),
       saleType: 'cod',
       paymentMethod: item.paymentMethod || 'cash'
-    });
+    };
 
-    writeStorageArray('soldInventory', sales);
     pending.splice(itemIndex, 1);
-    writeStorageArray('pendingInventory', pending);
+    commitCompletedPending('pendingInventory', pending, completed);
     closePaymentConfirmModal();
     loadPendingList();
     updateStats();
@@ -3316,7 +3587,7 @@ function openGlobalPendingDeleteMenu() {
     const completed = pendingRecordIsCompleted(pendingActiveTab, record);
     const label = pendingDeleteMenuRecordLabel(pendingActiveTab, record);
     const identity = encodeURIComponent(JSON.stringify({ type: pendingActiveTab, code: String(record.code ?? ''), date: String(record.date ?? ''), completed }));
-    options.push(`<button type="button" class="pending-delete-option" data-delete-record-id="${pendingDeleteMenuRecordId(pendingActiveTab, record, index)}" onclick="selectGlobalPendingDeleteOption('${identity}')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>${record.name || 'Registro'}</strong><small>${label}${record.clientName ? ` · Cliente: ${record.clientName}` : ''} · ${record.date ? new Date(record.date).toLocaleDateString('es-ES') : 'Sin fecha'}${completed ? ' · No devuelve stock' : ' · Devuelve stock'}</small></span></button>`);
+    options.push(`<button type="button" class="pending-delete-option" data-delete-record-id="${pendingDeleteMenuRecordId(pendingActiveTab, record, index)}" onclick="selectGlobalPendingDeleteOption('${identity}')"><span class="option-icon"><i class="fa-solid fa-trash-can"></i></span><span class="option-copy"><strong>${saleEscape(record.name || 'Registro')}</strong><small>${label}${record.clientName ? ` · Cliente: ${saleEscape(record.clientName)}` : ''} · ${record.date ? new Date(record.date).toLocaleDateString('es-ES') : 'Sin fecha'}${completed ? ' · No devuelve stock' : ' · Devuelve stock'}</small></span></button>`);
   });
 
   document.getElementById('pendingDeleteMenuTitle').innerHTML = `<i class="fa-solid fa-trash-can"></i> ${config.label}`;
@@ -3672,7 +3943,7 @@ function confirmDeliveryPending() {
   if (!pendingDeliveryKey) return;
   showLoading(true);
   try {
-    const pending = readStorageArray('pendingDeliveryInventory');
+    const pending = readSaleArrayStrict('pendingDeliveryInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const itemIndex = findPendingIndex(pending, pendingDeliveryKey.code, pendingDeliveryKey.date);
     const item = pending[itemIndex];
@@ -3681,16 +3952,14 @@ function confirmDeliveryPending() {
     item.deliveryStatus = 'delivered';
     item.deliveredDate = new Date().toISOString();
 
-    const sales = readStorageArray('soldInventory');
-    sales.push({
+    const completed = {
       ...item,
       status: 'delivered',
       saleType: 'pending_delivery',
       total: toNumber(item.totalToCollect, toNumber(item.price) * toNumber(item.quantity))
-    });
+    };
 
-    writeStorageArray('soldInventory', sales);
-    writeStorageArray('pendingDeliveryInventory', pending);
+    commitCompletedPending('pendingDeliveryInventory', pending, completed);
 
     closeDeliveryConfirmModal();
     loadPendingList();
@@ -4181,7 +4450,7 @@ function confirmCompletePayment() {
   if (!currentCompletePaymentKey) return;
   showLoading(true);
   try {
-    const pending = readStorageArray('pendingPaymentInventory');
+    const pending = readSaleArrayStrict('pendingPaymentInventory');
     pending.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     const itemIndex = findPendingIndex(pending, currentCompletePaymentKey.code, currentCompletePaymentKey.date);
     const item = pending[itemIndex];
@@ -4194,23 +4463,21 @@ function confirmCompletePayment() {
     item.paidAmount = toNumber(item.paidAmount) + pendingAmount;
     item.pendingAmount = 0;
 
-    const sales = readStorageArray('soldInventory');
-    sales.push({
+    const completed = {
       ...item,
       status: 'paid',
       saleType: 'pending_payment',
       total: toNumber(item.total, toNumber(item.price) * toNumber(item.quantity)),
       finalTotal: toNumber(item.total, toNumber(item.price) * toNumber(item.quantity))
-    });
+    };
 
-    writeStorageArray('soldInventory', sales);
     pending.splice(itemIndex, 1);
-    writeStorageArray('pendingPaymentInventory', pending);
+    commitCompletedPending('pendingPaymentInventory', pending, completed);
 
     closeCompletePaymentModal();
     loadPendingList();
     updateStats();
-    showNotification(`Pago completado. Cliente: ${item.clientName}. Total: ${formatCurrency(item.total)}`, 'success');
+    showNotification(`Pago completado. Cliente: ${saleEscape(item.clientName)}. Total: ${formatCurrency(item.total)}`, 'success');
   } catch (error) {
     console.error('Error al confirmar pago', error);
     showNotification('Error al confirmar pago', 'error');
@@ -4261,6 +4528,7 @@ function stopCameraScan() {
 function handleScannedProduct(index) {
   const item = inventory[index];
   if (!item || !item.barcode) return;
+  if (multipleSaleMode) { toggleMultipleSaleProduct(index, true); return; }
 
   // 1. Colocar el barcode en el filtro
   document.getElementById('barcodeFilter').value = item.barcode;
@@ -4501,7 +4769,7 @@ async function loadDailySales() {
           }
         </td>
         <td>
-          <strong>${s.name}</strong><br>
+          <strong>${saleEscape(s.name)}</strong><br>
           <small style="color:var(--text-secondary);">${s.code}</small>
         </td>
         <td>
@@ -4699,7 +4967,7 @@ async function renderSalesHistoryTable(filteredSales) {
           '<div style="width:60px;height:60px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'
         }
       </td>
-      <td><strong>${s.name}</strong><br><small style="color:var(--text-secondary);">${s.code}</small></td>
+      <td><strong>${saleEscape(s.name)}</strong><br><small style="color:var(--text-secondary);">${s.code}</small></td>
       <td>
         ${s.barcodeUrl ?
           `<img src="${s.barcodeUrl}" style="height:50px;cursor:pointer;" onclick="openBarcodeModal('${s.barcodeUrl}', '${s.barcode}')">` :
@@ -4962,12 +5230,12 @@ async function renderDailyReportTable(filteredSales) {
       </td>
       <td>
         ${s.imgUrl ?
-          `<img src="${s.imgUrl}" class="product-img" onclick="openImage('${s.imgUrl}')" alt="${s.name}">` :
+          `<img src="${s.imgUrl}" class="product-img" onclick="openImage('${s.imgUrl}')" alt="${saleEscape(s.name)}">` :
           '<div style="width:60px;height:60px;background:var(--border-light);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:0.625rem;">Sin img</div>'
         }
       </td>
       <td class="product-cell">
-        <div class="name">${s.name}</div>
+        <div class="name">${saleEscape(s.name)}</div>
         <div class="code"><i class="fa-solid fa-barcode"></i> ${s.code}</div>
       </td>
       <td>

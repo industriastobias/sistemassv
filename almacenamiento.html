@@ -510,11 +510,17 @@
     .multiple-sale-note { background:var(--bg); border-radius:var(--radius-sm); padding:0.875rem; margin:0.875rem 0; }
     .multiple-sale-check { display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; font-weight:600; cursor:pointer; margin-bottom:0.35rem; }
     .multiple-sale-check input { width:20px; height:20px; accent-color:var(--purple); }
-    .multiple-sale-item { display:grid; grid-template-columns:minmax(180px,1fr) 100px 95px 70px; align-items:center; gap:0.75rem; border-bottom:1px solid var(--border); padding:0.875rem 0; }
+    .multiple-sale-item { display:grid; grid-template-columns:minmax(64px,auto) minmax(180px,1fr) 100px 95px 70px; align-items:center; gap:0.75rem; border-bottom:1px solid var(--border); padding:0.875rem 0; }
+    .multiple-sale-product-images { display:flex; flex-wrap:wrap; gap:4px; max-width:144px; align-items:center; }
+    .multiple-sale-product-images img { width:44px; height:44px; object-fit:cover; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; }
+    .multiple-sale-image-count { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:22px; padding:0 5px; border-radius:9999px; background:var(--accent-soft); color:var(--accent-hover); font-size:0.6875rem; font-weight:700; }
+    .multiple-sale-image-empty { width:52px; height:52px; display:flex; align-items:center; justify-content:center; background:var(--border-light); color:var(--text-secondary); border-radius:var(--radius-sm); font-size:0.625rem; text-align:center; }
+    .multiple-sale-info { min-width:0; }
     .multiple-sale-meta { color:var(--text-secondary); font-size:0.75rem; margin-top:0.25rem; }
     .multiple-sale-item label { color:var(--text-secondary); font-size:0.75rem; }
     #multiSaleCODConfig, #multiSaleDeliveryConfig, #multiSalePaymentConfig { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem; margin:0.875rem 0; }
-    @media(max-width:600px) { .multiple-sale-item { grid-template-columns:1fr 90px; } .multiple-sale-item > div { grid-column:1 / -1; } .multiple-sale-item button { grid-column:2; } .multiple-sale-bar .btn { flex:1; } }
+    @media(max-width:600px) { .multiple-sale-item { grid-template-columns:64px minmax(0,1fr) 90px; } .multiple-sale-product-images { grid-column:1; grid-row:1 / span 3; } .multiple-sale-info { grid-column:2 / -1; } .multiple-sale-item label { grid-column:2; grid-row:2; } .multiple-sale-subtotal { grid-column:3; grid-row:2; } .multiple-sale-remove { grid-column:3; grid-row:3; } .multiple-sale-bar .btn { flex:1; } }
+    .camera-scan-header { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:1rem; cursor:move; touch-action:none; user-select:none; }
   </style>
 <base target="_self">
 </head>
@@ -1663,6 +1669,7 @@ const CONFIG = { PASSWORD_EDIT: 'KLOHESV', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DEL
 let inventory = [], filteredInventory = [], currentPage = 1, pageSize = parseInt(localStorage.getItem('pageSize')) || CONFIG.PAGE_SIZE_DEFAULT;
 let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentSaleCode = null, currentPriceIndex = -1, currentPriceCode = null, currentStockIndex = -1, currentStockCode = null, currentEditPendingIndex = -1;
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
+let cameraDragCleanup = null, lastCameraScanValue = '';
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]'), currentBarcodeUrl = '';
 let pendingDeleteIndex = -1, pendingPaymentIndex = -1, pendingDeliveryIndex = -1;
 let pendingDeleteKey = null, pendingPaymentKey = null, pendingDeliveryKey = null;
@@ -2592,7 +2599,28 @@ function renderMultipleSaleItems() {
     const item = inventory.find(product => String(product.code) === code);
     if (!item) continue;
     const row = document.createElement('div'); row.className = 'multiple-sale-item';
-    const info = document.createElement('div');
+    const images = document.createElement('div'); images.className = 'multiple-sale-product-images';
+    const imageEmpty = document.createElement('div'); imageEmpty.className = 'multiple-sale-image-empty'; imageEmpty.textContent = 'Sin imagen';
+    images.appendChild(imageEmpty);
+    getProductImages(item.code).then(urls => {
+      if (!images.isConnected) return;
+      images.replaceChildren();
+      if (!urls.length) { images.appendChild(imageEmpty); return; }
+      urls.slice(0, 3).forEach((url, imageIndex) => {
+        const image = document.createElement('img');
+        image.src = url; image.alt = `${item.name} — imagen ${imageIndex + 1}`;
+        image.title = 'Ver imagen';
+        image.addEventListener('click', () => openImage(url));
+        images.appendChild(image);
+      });
+      if (urls.length > 3) {
+        const count = document.createElement('span'); count.className = 'multiple-sale-image-count';
+        count.textContent = `+${urls.length - 3}`; count.title = `${urls.length} imágenes disponibles`;
+        images.appendChild(count);
+      }
+    }).catch(() => {});
+
+    const info = document.createElement('div'); info.className = 'multiple-sale-info';
     const title = document.createElement('strong'); title.textContent = item.name;
     const meta = document.createElement('div'); meta.className = 'multiple-sale-meta';
     const price = saleMoney(getProductPricing(item).finalPrice);
@@ -2610,10 +2638,10 @@ function renderMultipleSaleItems() {
       updateMultipleSaleSummary(); updateMultipleSaleCalculations();
     });
     label.appendChild(input);
-    const subtotal = document.createElement('strong'); subtotal.textContent = formatCurrency(price * quantity);
-    const remove = document.createElement('button'); remove.className = 'btn btn-sm'; remove.type = 'button'; remove.textContent = 'Quitar';
+    const subtotal = document.createElement('strong'); subtotal.className = 'multiple-sale-subtotal'; subtotal.textContent = formatCurrency(price * quantity);
+    const remove = document.createElement('button'); remove.className = 'btn btn-sm multiple-sale-remove'; remove.type = 'button'; remove.textContent = 'Quitar';
     remove.addEventListener('click', () => { multipleSaleSelection.delete(code); syncMultipleSaleChecks(); updateMultipleSaleSummary(); renderMultipleSaleItems(); });
-    row.append(info, label, subtotal, remove); container.appendChild(row);
+    row.append(images, info, label, subtotal, remove); container.appendChild(row);
   }
   updateMultipleSaleCalculations();
 }
@@ -4490,25 +4518,67 @@ function confirmCompletePayment() {
 function startCameraScan() { 
   if (html5QrCode) return; 
   lastScannedBarcode = '';
+  lastCameraScanValue = '';
   const reader = document.createElement('div'); 
   reader.id = 'qrReader'; 
-  reader.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:1rem;border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);z-index:2000;'; 
-  reader.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><strong>Escanear codigo</strong><button onclick="stopCameraScan()" class="btn btn-sm"><i class="fa-solid fa-xmark"></i> Cancelar</button></div><div id="readerContainer" style="width:300px;height:200px;"></div>`; 
+  reader.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(340px,calc(100vw - 24px));background:white;padding:1rem;border-radius:12px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);z-index:2000;'; 
+  reader.innerHTML = `<div class="camera-scan-header"><strong>Escanear código</strong><button onclick="stopCameraScan()" class="btn btn-sm"><i class="fa-solid fa-xmark"></i> Cancelar</button></div><div id="readerContainer" style="width:100%;min-height:200px;"></div>`; 
   document.body.appendChild(reader); 
+  const dragHandle = reader.querySelector('.camera-scan-header');
+  let dragging = false, dragPointerId = null, dragOffsetX = 0, dragOffsetY = 0;
+  const onPointerDown = event => {
+    if (event.target.closest('button')) return;
+    const rect = reader.getBoundingClientRect();
+    dragging = true; dragPointerId = event.pointerId;
+    dragOffsetX = event.clientX - rect.left; dragOffsetY = event.clientY - rect.top;
+    reader.style.left = `${rect.left}px`; reader.style.top = `${rect.top}px`; reader.style.transform = 'none';
+    try { dragHandle.setPointerCapture(event.pointerId); } catch (error) {}
+    event.preventDefault();
+  };
+  const onPointerMove = event => {
+    if (!dragging || event.pointerId !== dragPointerId) return;
+    const maxLeft = Math.max(8, window.innerWidth - reader.offsetWidth - 8);
+    const maxTop = Math.max(8, window.innerHeight - reader.offsetHeight - 8);
+    reader.style.left = `${Math.max(8, Math.min(maxLeft, event.clientX - dragOffsetX))}px`;
+    reader.style.top = `${Math.max(8, Math.min(maxTop, event.clientY - dragOffsetY))}px`;
+  };
+  const onPointerUp = event => {
+    if (event.pointerId !== dragPointerId) return;
+    dragging = false; dragPointerId = null;
+    try { if (dragHandle.hasPointerCapture(event.pointerId)) dragHandle.releasePointerCapture(event.pointerId); } catch (error) {}
+  };
+  dragHandle.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+  cameraDragCleanup = () => {
+    dragHandle.removeEventListener('pointerdown', onPointerDown);
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
   html5QrCode = new Html5Qrcode('readerContainer'); 
   html5QrCode.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 150 } }, (decodedText) => { 
     // Buscar producto por codigo de barras
-    const foundIndex = inventory.findIndex(p => p.barcode && p.barcode.trim() === decodedText.trim()); 
+    const barcode = decodedText.trim();
+    if (multipleSaleMode && barcode === lastCameraScanValue) return;
+    const foundIndex = inventory.findIndex(p => p.barcode && p.barcode.trim() === barcode); 
     if (foundIndex === -1) { 
       playScanErrorSound();
       showNotification('Producto no existente', 'error'); 
       return; 
     } 
     playScanSuccessSound();
-    lastScannedBarcode = decodedText.trim();
+    lastScannedBarcode = barcode;
+    lastCameraScanValue = barcode;
+    if (multipleSaleMode) {
+      handleScannedProduct(foundIndex);
+      showNotification('Producto agregado: ' + inventory[foundIndex].name, 'success');
+      return;
+    }
     stopCameraScan();
     // Filtrar tabla para mostrar solo el producto escaneado
-    document.getElementById('barcodeFilter').value = decodedText.trim();
+    document.getElementById('barcodeFilter').value = barcode;
     applyFilters();
     // Abrir modal de venta directamente
     openSaleModal(foundIndex);
@@ -4518,9 +4588,13 @@ function startCameraScan() {
 
 function stopCameraScan() { 
   if (html5QrCode) { 
+    if (cameraDragCleanup) { cameraDragCleanup(); cameraDragCleanup = null; }
     html5QrCode.stop().then(() => { 
       html5QrCode = null; 
       document.getElementById('qrReader')?.remove(); 
+    }).catch(() => {
+      html5QrCode = null;
+      document.getElementById('qrReader')?.remove();
     }); 
   } 
 }

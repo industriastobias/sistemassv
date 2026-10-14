@@ -1777,6 +1777,159 @@
   <img id="imgModalImg" src="" alt="Imagen ampliada">
 </div>
 
+<!-- DAYMAR_IMPORTACION_CORREGIDA -->
+<script>
+/* DAYMAR-SHOP: cargar este archivo ANTES del script principal de venta.html.
+   <script src="venta-integracion.js"><\/script>
+   Conserva el diseño y las funciones de venta.html; evita la doble importación.
+*/
+(function () {
+  'use strict';
+  const keys = ['soldInventory', 'fastSaleProducts', 'pendingInventory', 'pendingDeliveryInventory', 'pendingPaymentInventory'];
+  const raw = new Map(keys.map(key => [key, localStorage.getItem(key)]));
+  function read(key) {
+    const value = raw.get(key);
+    if (!value) return [];
+    const list = JSON.parse(value);
+    if (!Array.isArray(list)) throw new Error('La lista ' + key + ' no es válida.');
+    return list;
+  }
+  const string = value => String(value ?? '');
+  function stamp(item) { return string(item.date || item.soldAt); }
+  function operationKey(item) {
+    // Los códigos FAST_ se generan para una operación, no para un SKU reutilizable.
+    if (!string(item.code) || !stamp(item)) return null;
+    return JSON.stringify([string(item.code), stamp(item), string(item.name), Number(item.quantity),
+      Number(item.finalPrice ?? item.price), Number(item.total), item.paymentMethod || 'cash']);
+  }
+  function sameIdentity(a, b) {
+    if (string(a.code).startsWith('FAST_') && string(a.code) === string(b.code) && stamp(a) && stamp(a) === stamp(b)) return true;
+    if (a.idVenta && b.idVenta) return string(a.idVenta) === string(b.idVenta);
+    const first = operationKey(a), second = operationKey(b);
+    return !!first && first === second;
+  }
+  function newId() {
+    return window.crypto?.randomUUID ? window.crypto.randomUUID() : 'SALE_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+  }
+  try {
+    const originalSales = read('soldInventory');
+    const queue = read('fastSaleProducts');
+    const pending = ['pendingInventory','pendingDeliveryInventory','pendingPaymentInventory'].flatMap(read);
+    let salesChanged = false;
+    const sales = [];
+    const fastSeen = new Map();
+    let duplicated = 0;
+    for (const item of originalSales) {
+      const activePending = pending.some(record =>
+        (record.isCOD || record.deliveryStatus === 'pending' || record.paymentStatus === 'partial') &&
+        string(record.code) === string(item.code) && stamp(record) === stamp(item));
+      if (string(item.code).startsWith('FAST_') && stamp(item) && activePending &&
+          !item.paidDate && !item.completedDate && !item.deliveredDate) {
+        // La importación antigua marcaba como paid productos que todavía no se completaron.
+        // No tocar ventas con evidencia explícita de finalización.
+        salesChanged = true; continue;
+      }
+      const key = string(item.code).startsWith('FAST_') ? operationKey(item) : null;
+      if (key && fastSeen.has(key)) {
+        // Solo se consolidan duplicados exactos de la misma operación rápida.
+        const existing = fastSeen.get(key);
+        const retainedId = existing.idVenta || item.idVenta;
+        const retainedStatus = existing.status || item.status;
+        const retainedType = existing.saleType || item.saleType;
+        for (const [field, value] of Object.entries(item)) {
+          if (existing[field] === undefined || existing[field] === null || existing[field] === '') existing[field] = value;
+        }
+        if (retainedId) existing.idVenta = retainedId;
+        if (retainedStatus) existing.status = retainedStatus;
+        if (retainedType) existing.saleType = retainedType;
+        salesChanged = true; duplicated++;
+      } else {
+        const copy = { ...item };
+        sales.push(copy);
+        if (key) fastSeen.set(key, copy);
+      }
+    }
+    let imported = 0, skipped = 0;
+    for (const item of queue) {
+      const pendingMatch = pending.some(record => sameIdentity(record, item) ||
+        (item.code && stamp(item) && string(record.code) === string(item.code) && stamp(record) === stamp(item)));
+      const isPending = item.isCOD || item.isPendingDelivery || item.isPendingPayment ||
+        ['cod','pending_delivery','pending_payment'].includes(item.saleType);
+      const completed = item.status === 'paid' || item.paymentStatus === 'paid' || item.deliveryStatus === 'delivered';
+      if (pendingMatch || (isPending && !completed) || sales.some(record => sameIdentity(record, item))) {
+        skipped++; continue;
+      }
+      sales.push({ ...item, idVenta: item.idVenta || newId(), discount: Number(item.discount) || 0,
+        saleType: item.saleType || 'immediate', status: item.status || 'paid',
+        soldAt: item.soldAt || item.date || new Date().toISOString() });
+      salesChanged = true; imported++;
+    }
+    if (salesChanged || raw.get('fastSaleProducts') !== null) {
+      // Respaldo antes de modificar: permite recuperar cualquier registro consolidado.
+      const backupKey = 'daymar_backup_importacion_' + Date.now() + '_' + newId();
+      localStorage.setItem(backupKey, JSON.stringify({ version: 1, date: new Date().toISOString(),
+        reason: 'Corrección de importación duplicada de venta rápida',
+        soldInventory: raw.get('soldInventory'), fastSaleProducts: raw.get('fastSaleProducts') }));
+      try {
+        if (salesChanged) localStorage.setItem('soldInventory', JSON.stringify(sales));
+        // El importador original encontrará una cola vacía y no insertará nuevamente.
+        localStorage.removeItem('fastSaleProducts');
+      } catch (error) {
+        for (const key of ['soldInventory','fastSaleProducts']) {
+          try { if (raw.get(key) === null) localStorage.removeItem(key); else localStorage.setItem(key, raw.get(key)); }
+          catch (restoreError) { console.error('No se pudo restaurar ' + key, restoreError); }
+        }
+        throw error;
+      }
+      console.info('DAYMAR-SHOP: importación verificada.', { imported, skipped, duplicated, backupKey });
+    }
+  } catch (error) {
+    console.error('DAYMAR-SHOP: se detuvo la importación para proteger los datos.', error);
+    // integrar_venta.py agrega esta condición al importador anterior.
+    // En instalación manual, reemplazar ese importador por el bloque indicado en la guía.
+    // Nunca borrar ni sobrescribir una cola si no pudo respaldarse.
+    window.daymarVentasImportacionBloqueada = true;
+    alert('No se pudo verificar la importación de ventas. Revisa el almacenamiento del navegador y sus respaldos antes de continuar.');
+  }
+  // Las ventas rápidas ya contienen la imagen; los productos de inventario pueden usar img_<code>_0.
+  const imageUrls = new Map();
+  async function correctedLoadCardImage(card, item) {
+    let img = card.querySelector('img');
+    const wrapper = card.querySelector('.card-image-wrapper');
+    if (!wrapper) return;
+    if (!img) {
+      img = document.createElement('img'); img.alt = item.name || ''; img.loading = 'lazy';
+      wrapper.prepend(img);
+    }
+    try {
+      let src = typeof item.imageDataUrl === 'string' && /^data:image\//i.test(item.imageDataUrl) ? item.imageDataUrl : '';
+      if (!src) src = imageUrls.get(String(item.code)) || '';
+      if (!src) {
+        const blob = await localforage.getItem('img_' + item.code + '_0') || await localforage.getItem('img_' + item.code);
+        if (blob) { src = URL.createObjectURL(blob); imageUrls.set(String(item.code), src); }
+      }
+      wrapper.querySelectorAll('[data-no-image], .fa-image').forEach(icon => icon.remove());
+      if (src) {
+        img.src = src;
+        img.onclick = () => window.abrirImgModal(src);
+      } else {
+        img.remove();
+        const icon = document.createElement('i'); icon.className = 'fa-solid fa-image'; icon.dataset.noImage = 'true';
+        icon.style.cssText = 'font-size:2rem;color:var(--border);'; wrapper.prepend(icon);
+      }
+    } catch (error) { console.error('No se pudo cargar la imagen', error); }
+  }
+  window.daymarLoadCardImage = correctedLoadCardImage;
+  // DOMContentLoaded ocurre después de la definición de las funciones del script principal.
+  window.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.loadCardImage === 'function') {
+      window.loadCardImage = correctedLoadCardImage;
+      if (typeof window.loadSoldInventory === 'function') window.loadSoldInventory();
+    }
+  }, { once: true });
+})();
+
+</script>
 <script>
   // ========== FUNCIONES DE SEGURIDAD ==========
   
@@ -1819,6 +1972,7 @@
 
   // Importa los productos que almacenamiento.html dejó preparados para venta.html.
   function importarProductosDesdeAlmacenamiento() {
+    if (window.daymarVentasImportacionBloqueada) return;
     const queued = safeJSONParse(localStorage.getItem('fastSaleProducts'), []);
     if (!Array.isArray(queued) || queued.length === 0) return;
 
@@ -2298,6 +2452,7 @@
   }
 
   async function loadSoldInventory() {
+    if (window.daymarLoadCardImage) loadCardImage = window.daymarLoadCardImage;
     showSpinner();
     try {
       rowsPerPage = parseInt((dom.rowsPerPage || document.getElementById('rowsPerPage')).value, 10);

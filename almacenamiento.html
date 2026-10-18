@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -651,7 +648,6 @@
 .btn{font-weight:600}
 .search-panel,.table-container{border-radius:3px!important}
 .notification{color:#fff}
-/* ===== Detalle de producto ===== */
 #inventoryTable tr[data-index],#cardsView .product-card[data-index]{cursor:pointer}
 .pd-grid{display:grid;grid-template-columns:240px 1fr;gap:16px}
 .pd-img{width:100%;height:240px;object-fit:contain;background:var(--bg);border:1px solid var(--border);cursor:zoom-in;display:block}
@@ -666,6 +662,10 @@
 .pd-desc p{margin-top:2px;white-space:pre-wrap;line-height:1.5}
 .pd-barcode{display:block;margin-top:10px;max-width:100%;cursor:pointer}
 @media(max-width:700px){.pd-grid{grid-template-columns:1fr}}
+/* ===== Bloqueo del fondo mientras hay un modal abierto ===== */
+.modal-overlay,.image-overlay,.barcode-large-overlay{overscroll-behavior:contain}
+.modal-body,.modal{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:hidden!important}
 </style>
 <base target="_self">
 </head>
@@ -1222,16 +1222,7 @@
             <img src="" alt="" class="sale-product-image" id="saleProductImage">
             <div class="sale-barcode"><img src="" alt="" id="saleBarcodeImage" onclick="openBarcodeLargeFromModal()"><div class="sale-barcode-text" id="saleBarcodeText"></div></div>
             <div style="background:var(--bg);padding:1rem;border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;"><span style="color:var(--text-secondary);">Precio:</span><strong id="saleDisplayPrice">$0</strong></div><div id="saleDisplayDiscount" style="display:none;justify-content:space-between;margin-bottom:0.5rem;"><span style="color:var(--text-secondary);">Descuento:</span><strong class="discount-badge" id="saleDiscountValue"></strong></div><div style="display:flex;justify-content:space-between;"><span style="color:var(--text-secondary);">Stock:</span><strong id="saleDisplayStock">0</strong></div></div>
-            <div class="form-row" style="margin-top:0.75rem;">
-              <div class="form-group">
-                <label class="form-label">Editar Stock</label>
-                <input type="number" class="form-input" id="saleStockEdit" min="0" oninput="updateSaleStockDisplay()">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Editar Precio Unit.</label>
-                <input type="number" class="form-input" id="salePriceEdit" min="0" step="0.01" oninput="updateSalePriceDisplay()">
-              </div>
-            </div>
+            <input type="hidden" id="saleStockEdit"><input type="hidden" id="salePriceEdit">
           </div>
           <div class="sale-form">
             <div class="form-row">
@@ -1322,7 +1313,7 @@
       </div>
       <div class="modal-footer sale-modal-footer-unlocked" id="saleModalFooterUnlocked">
         <button class="btn" onclick="closeSaleModal()"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-        <button class="btn btn-primary" onclick="saveSaleChangesOnly()"><i class="fa-solid fa-floppy-disk"></i> Guardar Cambios</button>
+        <button class="btn btn-primary" onclick="saveSaleChangesOnly()"><i class="fa-solid fa-floppy-disk"></i> Guardar precio sin vender</button>
         <button class="btn btn-success" onclick="processSale()"><i class="fa-solid fa-check"></i> Confirmar Venta</button>
       </div>
     </div>
@@ -1857,7 +1848,7 @@ function playSoftClick() {
   } catch (e) { /* Silently fail */ }
 }
 
-const CONFIG = { PASSWORD_EDIT: 'KLOHESV', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DELAY: 150, PAGE_SIZE_DEFAULT: 5000 };
+const CONFIG = { PASSWORD_EDIT: 'Daymarsv', BARCODE_CACHE_SIZE: 500, DEBOUNCE_DELAY: 150, PAGE_SIZE_DEFAULT: 5000 };
 let inventory = [], filteredInventory = [], currentPage = 1, pageSize = parseInt(localStorage.getItem('pageSize')) || CONFIG.PAGE_SIZE_DEFAULT;
 let currentView = localStorage.getItem('preferredView') || 'table', currentSaleIndex = -1, currentSaleCode = null, currentPriceIndex = -1, currentPriceCode = null, currentStockIndex = -1, currentStockCode = null, currentEditPendingIndex = -1;
 let whoPays = 'client', usbReaderActive = false, usbBuffer = '', html5QrCode = null, barcodeCache = new Map(), imageCache = new Map();
@@ -3028,7 +3019,7 @@ function saveSaleChangesOnly() {
 
   // El campo de venta contiene el precio final. Al guardar cambios se convierte
   // de nuevo al precio original para que el descuento no se acumule.
-  const priceEditVal = parseFloat(document.getElementById('salePriceEdit').value);
+  const priceEditVal = parseFloat(document.getElementById('salePrice').value);
   if (!isNaN(priceEditVal) && priceEditVal >= 0) {
     setProductFinalPrice(item, priceEditVal);
   }
@@ -4949,7 +4940,7 @@ function handleUSBKey(e) {
   } 
 }
 
-function ensureKioscoMode() { /* desactivado: ya no vuelve a entrar solo a pantalla completa */ }
+function ensureKioscoMode() { /* desactivado */ }
 
 function toggleKiosco() { 
   if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); } 
@@ -5692,9 +5683,41 @@ document.getElementById('inventoryTable').addEventListener('click', manejarClicD
 document.getElementById('cardsView').addEventListener('click', manejarClicDetalle);
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  const otro = document.querySelector('#imageOverlay.active, #barcodeLargeOverlay.active');
-  if (otro) return;
+  if (document.querySelector('#imageOverlay.active, #barcodeLargeOverlay.active')) return;
   if (document.getElementById('productDetailModal').classList.contains('active')) cerrarDetalleProducto();
+});
+
+// ============================================
+// FONDO BLOQUEADO MIENTRAS HAY UN MODAL ABIERTO
+// ============================================
+(function () {
+  const SEL = '.modal-overlay.active, .image-overlay.active, .barcode-large-overlay.active';
+  let bloqueado = false, scrollY = 0;
+  function sincronizar() {
+    const hay = !!document.querySelector(SEL);
+    if (hay && !bloqueado) {
+      scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.style.top = (-scrollY) + 'px';
+      document.body.classList.add('modal-abierto');
+      bloqueado = true;
+    } else if (!hay && bloqueado) {
+      document.body.classList.remove('modal-abierto');
+      document.body.style.top = '';
+      window.scrollTo(0, scrollY);
+      bloqueado = false;
+    }
+  }
+  new MutationObserver(sincronizar).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+  const dentro = t => t.closest && t.closest('.modal, .multiple-sale-dialog, .barcode-large-content, #overlayImage');
+  document.addEventListener('touchmove', e => { if (bloqueado && !dentro(e.target)) e.preventDefault(); }, { passive: false });
+  document.addEventListener('wheel', e => { if (bloqueado && !dentro(e.target)) e.preventDefault(); }, { passive: false });
+  sincronizar();
+})();
+
+// El precio unitario del formulario actualiza el recuadro de precio
+document.getElementById('salePrice').addEventListener('input', () => {
+  const v = parseFloat(document.getElementById('salePrice').value);
+  if (!isNaN(v) && v >= 0) document.getElementById('saleDisplayPrice').textContent = formatCurrency(v);
 });
 
 </script>

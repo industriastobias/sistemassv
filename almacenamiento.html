@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -662,10 +665,13 @@
 .pd-desc p{margin-top:2px;white-space:pre-wrap;line-height:1.5}
 .pd-barcode{display:block;margin-top:10px;max-width:100%;cursor:pointer}
 @media(max-width:700px){.pd-grid{grid-template-columns:1fr}}
-/* ===== Bloqueo del fondo mientras hay un modal abierto ===== */
 .modal-overlay,.image-overlay,.barcode-large-overlay{overscroll-behavior:contain}
 .modal-body,.modal{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:hidden!important}
+/* ===== Paginacion tambien en vista de tarjetas ===== */
+#paginationCards{margin-top:12px;border:1px solid var(--border)}
+#paginationCards:empty{display:none}
+#cardsView[style*="display: none"] + #paginationCards,#cardsView[style*="display:none"] + #paginationCards{display:none!important}
 </style>
 <base target="_self">
 </head>
@@ -1101,6 +1107,7 @@ body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:h
 
     <div class="table-container" id="tableView"><table class="data-table"><thead><tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Barcode</th><th>Precio</th><th>Desc.</th><th>Final</th><th>Fecha</th><th>Stock</th><th>Categoria</th><th>Acciones</th></tr></thead><tbody id="inventoryTable"></tbody></table><div class="empty-state" id="emptyState" style="display:none;"><i class="fa-solid fa-box-open"></i><p>No se encontraron productos</p></div><div class="pagination" id="pagination"></div></div>
     <div class="cards-grid" id="cardsView" style="display:none;"></div>
+    <div class="pagination" id="paginationCards"></div>
   </main>
 
   <!-- ===== MODAL VENTA RÁPIDA ===== -->
@@ -5713,12 +5720,31 @@ document.addEventListener('keydown', e => {
   document.addEventListener('wheel', e => { if (bloqueado && !dentro(e.target)) e.preventDefault(); }, { passive: false });
   sincronizar();
 })();
-
-// El precio unitario del formulario actualiza el recuadro de precio
 document.getElementById('salePrice').addEventListener('input', () => {
   const v = parseFloat(document.getElementById('salePrice').value);
   if (!isNaN(v) && v >= 0) document.getElementById('saleDisplayPrice').textContent = formatCurrency(v);
 });
+
+// ============================================
+// PAGINACION TAMBIEN EN VISTA DE TARJETAS
+// ============================================
+(function () {
+  const original = renderPagination;
+  renderPagination = function (totalPages) {
+    original(totalPages);
+    const a = document.getElementById('pagination'), b = document.getElementById('paginationCards');
+    if (a && b) b.innerHTML = a.innerHTML;
+  };
+  const cambiar = changePage;
+  changePage = function (direccion) {
+    const antes = currentPage;
+    cambiar(direccion);
+    if (currentView === 'cards' && currentPage !== antes) {
+      const c = document.getElementById('cardsView');
+      if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+})();
 
 </script>
 </body>

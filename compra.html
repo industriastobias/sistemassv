@@ -5096,7 +5096,7 @@ function categoriaPorTexto(t) {
 }
 
 function parsearFila(band, ignorar) {
-  const s = [...band].sort((a, b) => Math.round(a.x / 6) - Math.round(b.x / 6) || b.y - a.y);
+  const s = [...band].sort((a, b) => a.x - b.x || b.y - a.y);
   let skuItem = null, code = null;
   for (const it of s) {
     const m = (it.s.match(REGEX_CODIGO) || []).find(c => !ignorar.has(c));
@@ -5104,19 +5104,42 @@ function parsearFila(band, ignorar) {
   }
   if (!skuItem) return null;
   const variante = skuItem.s.includes('|') ? skuItem.s.split('|').slice(1).join(' ').trim() : '';
-  const txt = s.map(i => i.s).join(' ');
-  const usd = [...txt.matchAll(/(?:USD|US\$)\s*([\d.,]+)/g)].map(m => parseFloat(m[1].replace(/,/g, '')));
+
+  // Precio de venta (columna "VENTA $x"), si el PDF la trae
+  let venta = 0, ventaItem = null, ventaNum = null;
+  ventaItem = s.find(i => /^VENTA/i.test(i.s)) || null;
+  if (ventaItem) {
+    const m = ventaItem.s.match(/VENTA\s*:?\s*\$?\s*(\d[\d,]*\.?\d*)/i);
+    if (m) venta = parseFloat(m[1].replace(/,/g, ''));
+    else {
+      ventaNum = s.filter(i => i !== ventaItem && /^\$?\s*\d[\d,]*\.\d{1,2}$/.test(i.s) && Math.abs(i.x - ventaItem.x) < 45)
+                  .sort((a, b) => Math.abs(a.x - ventaItem.x) - Math.abs(b.x - ventaItem.x))[0] || null;
+      if (ventaNum) venta = parseFloat(ventaNum.s.replace(/[$,\s]/g, ''));
+    }
+  }
+
+  // Montos en USD ordenados por su posicion real (izquierda a derecha)
+  const montos = [];
+  s.forEach(i => {
+    if (i === ventaItem || i === ventaNum) return;
+    const m = i.s.match(/^(?:USD|US\$|\$)?\s*(\d[\d,]*\.\d{1,2})$/);
+    if (m) montos.push({ x: i.x, v: parseFloat(m[1].replace(/,/g, '')) });
+  });
+  montos.sort((a, b) => a.x - b.x);
+  const costo = montos.length > 1 ? montos[1].v : (montos[0] ? montos[0].v : 0);
+
   const ints = s.filter(i => /^\d+$/.test(i.s)).sort((a, b) => a.x - b.x).map(i => parseInt(i.s, 10));
   const enviada = ints.length >= 3 ? ints[ints.length - 2] : (ints[0] || 0);
-  const costo = usd.length > 1 ? usd[1] : (usd[0] || 0);
+
   const kSku = Math.round(skuItem.x / 6), cl = {};
   s.forEach(i => {
-    if (/^\d+$/.test(i.s) || /^(USD|US\$)?\s*[\d.,]*$/.test(i.s) || Math.round(i.x / 6) === kSku) return;
+    if (i === ventaItem || i === ventaNum) return;
+    if (/^\d+$/.test(i.s) || /^(USD|US\$|\$)?\s*[\d.,]*$/.test(i.s) || Math.round(i.x / 6) === kSku) return;
     const k = Math.round(i.x / 6);
     (cl[k] = cl[k] || []).push(i.s);
   });
   const desc = Object.values(cl).map(a => a.join(' ')).sort((a, b) => b.length - a.length)[0] || variante;
-  return { code, nombre: (desc || code).slice(0, 80), desc: [desc, variante].filter(Boolean).join(' - ') || code, enviada, costo };
+  return { code, nombre: (desc || code).slice(0, 80), desc: [desc, variante].filter(Boolean).join(' - ') || code, enviada, costo, venta };
 }
 
 async function importarPDF(evt) {
@@ -5124,7 +5147,7 @@ async function importarPDF(evt) {
   evt.target.value = '';
   if (!file) return;
   if (loteTemporal.length && !confirm('Reemplazar el lote actual?')) return;
-  const extra = parseFloat(prompt('Costo extra TOTAL (envio + cargos) en USD para repartir entre los productos. Pon 0 si no aplica:', '0')) || 0;
+  const extra = parseFloat(prompt('Costo extra TOTAL (envio + cargos) en USD para repartir entre los productos. Pon 0 si el PDF ya trae el costo real:', '0')) || 0;
   const omitir = (prompt('Codigos a OMITIR (separados por coma), por ejemplo empaque o cajas. Deja vacio si ninguno:', '') || '')
     .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
   document.getElementById('loadingOverlay').classList.add('show');
@@ -5164,6 +5187,7 @@ async function importarPDF(evt) {
       filas.push(fila);
     }
     const utiles = filas.filter(f => f.enviada > 0 && !omitir.includes(f.code.toUpperCase()));
+    console.table(utiles.map(f => ({ code: f.code, enviada: f.enviada, costo: f.costo, venta: f.venta })));
     const totalCosto = utiles.reduce((s, f) => s + f.costo * f.enviada, 0) || 1;
     const factor = 1 + extra / totalCosto;
     loteTemporal = [];
@@ -5185,7 +5209,7 @@ async function importarPDF(evt) {
         description: f.desc, category: categoria, addedAt: new Date().toISOString(), tipoCompra: 'lote'
       });
       datos.push({
-        name: f.nombre, price: +(costo * 1.6).toFixed(2), quantity: f.enviada, barcode, valorReal: costo,
+        name: f.nombre, price: f.venta || +(costo * 1.6).toFixed(2), quantity: f.enviada, barcode, valorReal: costo,
         porcentaje: 60, fechaCompra: fechaActualGlobal, description: f.desc, category: categoria
       });
     }
@@ -5201,6 +5225,49 @@ async function importarPDF(evt) {
     showToast('Error leyendo el PDF: ' + e.message, 'error');
   }
 }
+
+// ============================================
+// CAMBIAR IMAGEN DE CADA PRODUCTO EN EL EDITOR DE LOTE
+// ============================================
+async function cambiarImagenLote(i, file, imgEl) {
+  if (!file || !file.type.startsWith('image/')) { showToast('Selecciona una imagen', 'warning'); return; }
+  try {
+    const comp = await imageCompressor.compressForStorage(file);
+    await guardarImagenesProducto(loteTemporal[i].code, [comp]);
+    if (imgEl.dataset.objectUrl) URL.revokeObjectURL(imgEl.dataset.objectUrl);
+    const url = URL.createObjectURL(comp);
+    imgEl.src = url;
+    imgEl.dataset.objectUrl = url;
+    showToast('Imagen actualizada', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast('No se pudo cambiar la imagen', 'error');
+  }
+}
+
+function agregarBotonesCambiarImagen() {
+  loteTemporal.forEach((p, i) => {
+    const img = document.getElementById(`loteImg${i}`);
+    if (!img || img.dataset.btnImg) return;
+    img.dataset.btnImg = '1';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:0.5rem 1rem 0;display:flex;';
+    wrap.innerHTML = '<button type="button" class="btn btn-secondary" style="flex:1;font-size:0.75rem;padding:0.4rem;"><i class="fa-solid fa-image"></i> Cambiar imagen</button><input type="file" accept="image/*" style="display:none">';
+    const btn = wrap.querySelector('button'), inp = wrap.querySelector('input');
+    btn.onclick = () => inp.click();
+    inp.onchange = () => { cambiarImagenLote(i, inp.files[0], img); inp.value = ''; };
+    img.insertAdjacentElement('afterend', wrap);
+  });
+}
+
+// Agrega el boton "Cambiar imagen" cada vez que se abre el editor de lote
+(function () {
+  const original = mostrarEditorLote;
+  mostrarEditorLote = function (prev) {
+    original(prev);
+    agregarBotonesCambiarImagen();
+  };
+})();
 
 </script>
 

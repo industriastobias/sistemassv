@@ -651,6 +651,21 @@
 .btn{font-weight:600}
 .search-panel,.table-container{border-radius:3px!important}
 .notification{color:#fff}
+/* ===== Detalle de producto ===== */
+#inventoryTable tr[data-index],#cardsView .product-card[data-index]{cursor:pointer}
+.pd-grid{display:grid;grid-template-columns:240px 1fr;gap:16px}
+.pd-img{width:100%;height:240px;object-fit:contain;background:var(--bg);border:1px solid var(--border);cursor:zoom-in;display:block}
+.pd-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pd-thumbs img{width:46px;height:46px;object-fit:cover;border:1px solid var(--border);cursor:pointer}
+.pd-nombre{font-size:16px;font-weight:700}
+.pd-codigo{font-family:monospace;color:var(--text-secondary);margin-bottom:8px}
+.pd-tabla{width:100%;border-collapse:collapse}
+.pd-tabla td{padding:4px 6px;border-bottom:1px solid var(--border-light);font-size:13px}
+.pd-tabla td:first-child{color:var(--text-secondary);width:46%}
+.pd-desc{margin-top:10px}
+.pd-desc p{margin-top:2px;white-space:pre-wrap;line-height:1.5}
+.pd-barcode{display:block;margin-top:10px;max-width:100%;cursor:pointer}
+@media(max-width:700px){.pd-grid{grid-template-columns:1fr}}
 </style>
 <base target="_self">
 </head>
@@ -1356,7 +1371,25 @@
   </div>
 
   <!-- Description Modal -->
-  <div class="modal-overlay" id="descriptionModal" onclick="if(event.target===this) event.stopPropagation()">
+  <div class="modal-overlay" id="productDetailModal" onclick="if(event.target===this) cerrarDetalleProducto()">
+    <div class="modal modal-lg">
+      <div class="modal-header"><h3 class="modal-title"><i class="fa-solid fa-circle-info"></i> Detalle del producto</h3><button class="modal-close" onclick="cerrarDetalleProducto()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="modal-body" style="overflow-y:auto;max-height:calc(90vh - 150px);">
+        <div class="pd-grid">
+          <div><img id="pdImagen" class="pd-img" alt=""><div id="pdMiniaturas" class="pd-thumbs"></div></div>
+          <div>
+            <div class="pd-nombre" id="pdNombre"></div>
+            <div class="pd-codigo" id="pdCodigo"></div>
+            <table class="pd-tabla" id="pdTabla"></table>
+            <div class="pd-desc"><strong>Descripcion</strong><p id="pdDescripcion"></p></div>
+            <img id="pdBarcode" class="pd-barcode" alt="">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn" onclick="cerrarDetalleProducto()">Cerrar</button><button class="btn btn-success" id="pdVender"><i class="fa-solid fa-cart-plus"></i> Vender</button></div>
+    </div>
+  </div>
+<div class="modal-overlay" id="descriptionModal" onclick="if(event.target===this) event.stopPropagation()">
     <div class="modal">
       <div class="modal-header"><h3 class="modal-title"><i class="fa-solid fa-file-lines"></i> Descripcion</h3><button class="modal-close" onclick="closeDescriptionModal()"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="modal-body"><div id="descriptionContent" style="line-height:1.7;color:var(--text-secondary);white-space:pre-wrap;"></div></div>
@@ -2262,6 +2295,7 @@ async function renderCards(items, startIdx) {
             <button class="btn btn-sm btn-success" onclick="openSaleModal(${realIdx})"><i class="fa-solid fa-cart-plus"></i></button>
             <button class="btn btn-sm" onclick="requestPassword('price', ${realIdx})"><i class="fa-solid fa-tag"></i></button>
             <button class="btn btn-sm" onclick="requestPassword('stock', ${realIdx})"><i class="fa-solid fa-box"></i></button>
+            <button class="btn btn-sm" onclick="openDescriptionModal(${realIdx})" title="Descripcion"><i class="fa-solid fa-eye"></i></button>
           </div>
         </div>
       </div>
@@ -5602,6 +5636,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ============================================
+// DETALLE DE PRODUCTO (clic en una fila o tarjeta)
+// ============================================
+function pdUsd(n) { return '$' + Number(n || 0).toFixed(2); }
+async function abrirDetalleProducto(idx) {
+  const item = inventory[idx];
+  if (!item) return;
+  const pr = getProductPricing(item);
+  const qty = Number(item.quantity) || 0, costo = Number(item.valorReal) || 0;
+  const gan = costo ? pr.finalPrice - costo : null;
+  const margen = (costo && pr.finalPrice) ? (gan / pr.finalPrice) * 100 : null;
+  const filas = [
+    ['Categoria', item.category || 'N/A'],
+    ['Stock', qty + ' unid.' + (item.stockMin ? ' (minimo ' + item.stockMin + ')' : '')],
+    ['Precio', pdUsd(pr.originalPrice)],
+    ['Descuento', pr.discount + '%'],
+    ['Precio final', pdUsd(pr.finalPrice)],
+    ['Costo', costo ? pdUsd(costo) : '-'],
+    ['Ganancia por unidad', gan === null ? '-' : pdUsd(gan)],
+    ['Margen', margen === null ? '-' : margen.toFixed(1) + '%'],
+    ['Valor del stock (precio final)', pdUsd(pr.finalPrice * qty)],
+    ['Fecha', formatDate(item.date)],
+    ['Codigo de barras', item.barcode || 'N/A']
+  ];
+  document.getElementById('pdNombre').textContent = item.name || '';
+  document.getElementById('pdCodigo').textContent = 'SKU: ' + (item.code || '');
+  document.getElementById('pdTabla').innerHTML = filas.map(f => `<tr><td>${saleEscape(f[0])}</td><td>${saleEscape(f[1])}</td></tr>`).join('');
+  document.getElementById('pdDescripcion').textContent = item.description || 'Sin descripcion disponible.';
+  const bc = document.getElementById('pdBarcode');
+  const bcUrl = item.barcode ? generateBarcodeDataUrl(item.barcode) : '';
+  if (bcUrl) { bc.src = bcUrl; bc.style.display = 'block'; bc.onclick = () => openBarcodeModal(bcUrl, item.barcode); }
+  else { bc.removeAttribute('src'); bc.style.display = 'none'; }
+  const img = document.getElementById('pdImagen'), min = document.getElementById('pdMiniaturas');
+  img.removeAttribute('src'); min.innerHTML = '';
+  document.getElementById('pdVender').onclick = () => { cerrarDetalleProducto(); openSaleModal(idx); };
+  document.getElementById('productDetailModal').classList.add('active');
+  try {
+    const urls = (await getProductImages(item.code) || []).filter(Boolean);
+    if (urls.length) { img.src = urls[0]; img.onclick = () => openImage(img.src); }
+    if (urls.length > 1) urls.forEach(u => { const t = document.createElement('img'); t.src = u; t.onclick = () => { img.src = u; }; min.appendChild(t); });
+  } catch (e) { console.warn('No se pudieron cargar las imagenes', e); }
+}
+function cerrarDetalleProducto() { document.getElementById('productDetailModal').classList.remove('active'); }
+function manejarClicDetalle(e) {
+  if (typeof multipleSaleMode !== 'undefined' && multipleSaleMode) return;
+  if (e.target.closest('button, a, input, label, select, textarea, img, .multiple-sale-check')) return;
+  const el = e.target.closest('tr[data-index], .product-card[data-index]');
+  if (!el) return;
+  const idx = parseInt(el.dataset.index, 10);
+  if (!isNaN(idx)) abrirDetalleProducto(idx);
+}
+document.getElementById('inventoryTable').addEventListener('click', manejarClicDetalle);
+document.getElementById('cardsView').addEventListener('click', manejarClicDetalle);
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const otro = document.querySelector('#imageOverlay.active, #barcodeLargeOverlay.active');
+  if (otro) return;
+  if (document.getElementById('productDetailModal').classList.contains('active')) cerrarDetalleProducto();
+});
+
 </script>
 </body>
 </html>

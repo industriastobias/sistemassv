@@ -5,7 +5,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sistema de Descuentos</title>
-  <style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
 :root{--bg:#eef1f5;--surface:#fff;--surface-hover:#f5f8fc;--border:#d5dbe3;--text:#1b2430;--text-secondary:#46546a;--text-muted:#6b7a90;--accent:#0b5cad;--accent-hover:#084a8c;--accent-light:#e3eefa;--success:#1b7f3b;--success-light:#e5f4ea;--danger:#b42318;--danger-light:#fdeceb;--warning:#a15c00;--warning-light:#fff3dc;--info:#0b6aa2;--info-light:#e1eef7}
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px}
@@ -16,9 +17,18 @@ body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--tex
 .jump a:hover{color:#fff;border-bottom-color:#fff}
 .top-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
 #currentTime{color:#9fb0c6;font-size:12px}
-.kiosk-btn,.kiosk-exit-btn{height:28px;padding:0 12px;border:1px solid #6b7a90;background:transparent;color:#fff;border-radius:4px;font:inherit;font-size:12px;cursor:pointer}
-.kiosk-btn:hover{background:#243247}
+.kiosk-btn,.kiosk-exit-btn,.menu-btn{height:28px;padding:0 12px;border:1px solid #6b7a90;background:transparent;color:#fff;border-radius:4px;font:inherit;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.kiosk-btn:hover,.menu-btn:hover,.menu-btn[aria-expanded="true"]{background:#243247}
 .kiosk-exit-btn{display:none;background:var(--danger);border-color:var(--danger)}
+.menu-wrap{position:relative}
+.menu-dropdown{display:none;position:absolute;top:calc(100% + 10px);right:0;width:min(250px,92vw);max-height:calc(100vh - 66px);overflow-y:auto;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:60}
+.menu-dropdown.show{display:block}
+.menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;color:var(--text);text-decoration:none;border-bottom:1px solid #eef1f5;font-size:13px}
+.menu-item:last-child{border-bottom:0}
+.menu-item i{width:18px;text-align:center;color:var(--text-muted)}
+.menu-item:hover{background:var(--surface-hover)}
+.menu-item.actual{background:var(--accent-light);color:var(--accent);font-weight:700}
+.menu-item.actual i{color:var(--accent)}
 .shell{max-width:1500px;margin:0 auto;padding:16px 20px 24px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--border);border-radius:4px;margin-bottom:14px}
 .stat-card{padding:12px 16px;border-right:1px solid var(--border)}
@@ -26,6 +36,8 @@ body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--tex
 .stat-label{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
 .stat-value{font-size:22px;font-weight:700;margin:2px 0}
 .stat-change{font-size:12px;color:var(--text-muted)}
+.col-main{min-width:0}
+.filters{flex-wrap:wrap}
 .workspace{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
 .col-side{position:sticky;top:60px;max-height:calc(100vh - 72px);overflow-y:auto;display:flex;flex-direction:column;gap:12px}
 .panel{background:#fff;border:1px solid var(--border);border-radius:4px;padding:12px}
@@ -138,10 +150,10 @@ th.sorted-desc::after{content:" \25BC";font-size:9px}
 .bottom-nav-items{display:flex}
 .bottom-nav-item{flex:1;border:0;background:none;padding:12px 0;font:inherit;font-size:12px;color:var(--text-secondary);cursor:pointer}
 .bottom-nav-item.active{color:var(--accent);font-weight:700;box-shadow:inset 0 2px 0 var(--accent)}
-@media(max-width:1100px){.workspace{grid-template-columns:1fr}.col-side{position:static;max-height:none;overflow:visible}}
-@media(max-width:768px){.jump{display:none}.bottom-nav{display:block}.shell{padding:12px 12px 72px}.stats{grid-template-columns:1fr 1fr}.stat-card:nth-child(2){border-right:0}.stat-card:nth-child(-n+2){border-bottom:1px solid var(--border)}#currentTime{display:none}.filters-grid{grid-template-columns:1fr}}
-body.kiosk-mode .col-side,body.kiosk-mode .jump,body.kiosk-mode .bottom-nav{display:none!important}
-body.kiosk-mode .workspace{grid-template-columns:1fr}
+@media(max-width:1100px){.workspace{grid-template-columns:minmax(0,1fr)}.col-side{position:static;max-height:none;overflow:visible}}
+@media(max-width:768px){.jump{display:none}.topbar{padding:0 12px;gap:12px}.bottom-nav{display:block}.shell{padding:12px 12px 72px}.stats{grid-template-columns:1fr 1fr}.stat-card:nth-child(2){border-right:0}.stat-card:nth-child(-n+2){border-bottom:1px solid var(--border)}#currentTime{display:none}.filters-grid{grid-template-columns:1fr}}
+body.kiosk-mode .col-side,body.kiosk-mode .jump,body.kiosk-mode .bottom-nav,body.kiosk-mode .menu-wrap{display:none!important}
+body.kiosk-mode .workspace{grid-template-columns:minmax(0,1fr)}
 body.kiosk-mode .kiosk-btn{display:none}
 body.kiosk-mode .kiosk-exit-btn{display:inline-flex;align-items:center}
 </style>
@@ -154,6 +166,24 @@ body.kiosk-mode .kiosk-exit-btn{display:inline-flex;align-items:center}
     <span id="currentTime"></span>
     <button class="kiosk-btn" onclick="enterKioskMode()" data-tooltip="Pantalla completa">Modo Kiosco</button>
     <button class="kiosk-exit-btn" onclick="exitKioskMode()" data-tooltip="Salir del modo kiosco">Salir Kiosco</button>
+    <div class="menu-wrap">
+      <button type="button" class="menu-btn" id="menuToggle" onclick="toggleMenu(event)" aria-haspopup="true" aria-expanded="false" aria-controls="menuDropdown"><i class="fa-solid fa-bars"></i> Menú</button>
+      <div class="menu-dropdown" id="menuDropdown">
+      <a href="menu.html" target="_self" class="menu-item"><i class="fa-solid fa-house"></i> INICIO</a>
+      <a href="compra.html" target="_self" class="menu-item"><i class="fa-solid fa-cart-plus"></i> Compra</a>
+      <a href="almacenamiento.html" target="_self" class="menu-item"><i class="fa-solid fa-warehouse"></i> Almacenamiento</a>
+      <a href="lista.html" target="_self" class="menu-item"><i class="fa-solid fa-dollar-sign"></i> Finanzas</a>
+      <a href="inventario.html" target="_self" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventario</a>
+      <a href="gastos.html" target="_self" class="menu-item"><i class="fa-solid fa-book"></i> Catálogo</a>
+      <a href="clientes.html" target="_self" class="menu-item"><i class="fa-solid fa-users"></i> Clientes</a>
+      <a href="descuentos.html" target="_self" class="menu-item actual" aria-current="page"><i class="fa-solid fa-percent"></i> Descuentos</a>
+      <a href="facturas.html" target="_self" class="menu-item"><i class="fa-solid fa-file-invoice"></i> Facturas</a>
+      <a href="traslados.html" target="_self" class="menu-item"><i class="fa-solid fa-truck-fast"></i> Cotización</a>
+      <a href="venta.html" target="_self" class="menu-item"><i class="fa-solid fa-cash-register"></i> Venta</a>
+      <a href="Verificasion.html" target="_self" class="menu-item"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+      <a href="electronica.html" target="_self" class="menu-item"><i class="fa-solid fa-bolt"></i> Electrónica</a>
+      </div>
+    </div>
   </div>
 </header>
 <div class="shell">
@@ -1433,8 +1463,25 @@ function closeModal() {
 // Iniciar
 init();
 
-// Ayuda emergente simple a partir de data-tooltip
 document.addEventListener('mouseover', e => { const t = e.target.closest && e.target.closest('[data-tooltip]'); if (t && !t.title) t.title = t.dataset.tooltip; });
+
+// ============================================
+// MENU DE NAVEGACION ENTRE SISTEMAS
+// ============================================
+function cerrarMenu() {
+  const m = document.getElementById('menuDropdown'), b = document.getElementById('menuToggle');
+  if (!m) return;
+  m.classList.remove('show');
+  if (b) b.setAttribute('aria-expanded', 'false');
+}
+function toggleMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('menuDropdown'), b = document.getElementById('menuToggle');
+  const abierto = m.classList.toggle('show');
+  b.setAttribute('aria-expanded', String(abierto));
+}
+document.addEventListener('click', e => { if (!e.target.closest('.menu-wrap')) cerrarMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenu(); });
 </script>
 </body>
 </html>

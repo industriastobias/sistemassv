@@ -2551,6 +2551,11 @@
             <i class="fa-solid fa-file-import" style="font-size: 1.5rem;"></i>
             <span>Importar ZIP</span>
           </button>
+          <button class="btn btn-secondary" onclick="document.getElementById('pdfFile').click()" style="padding: 1rem; justify-content: center; flex-direction: column; gap: 0.5rem; height: auto;">
+            <i class="fa-solid fa-file-pdf" style="font-size: 1.5rem; color: var(--accent);"></i>
+            <span>Importar PDF</span>
+          </button>
+          <input type="file" id="pdfFile" accept=".pdf" style="display:none" onchange="importarPDF(event)">
         </div>
         
         <input type="file" id="importFile" accept=".zip" style="display:none" onchange="importFromZip(event)">
@@ -5038,6 +5043,165 @@ function initApp() {
     iniciarKioscoGuardian();
   }
 }
+
+// ============================================
+// IMPORTAR PDF -> EDITOR DE LOTE (no guarda hasta "Guardar Lote Completo")
+// ============================================
+const PDFJS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const REGEX_CODIGO = /[A-Z]{1,4}\d{5,}[A-Z0-9-]*/g;
+
+function cargarPdfJs() {
+  return new Promise((res, rej) => {
+    if (window.pdfjsLib) return res();
+    const s = document.createElement('script');
+    s.src = PDFJS_SRC;
+    s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; res(); };
+    s.onerror = () => rej(new Error('No se pudo cargar pdf.js (revisa tu internet)'));
+    document.head.appendChild(s);
+  });
+}
+
+async function rectsImagenes(page) {
+  const ops = await page.getOperatorList(), O = pdfjsLib.OPS;
+  const mult = (A, B) => [A[0]*B[0]+A[1]*B[2], A[0]*B[1]+A[1]*B[3], A[2]*B[0]+A[3]*B[2],
+    A[2]*B[1]+A[3]*B[3], A[4]*B[0]+A[5]*B[2]+B[4], A[4]*B[1]+A[5]*B[3]+B[5]];
+  let ctm = [1, 0, 0, 1, 0, 0]; const st = [], out = [];
+  ops.fnArray.forEach((fn, i) => {
+    const a = ops.argsArray[i];
+    if (fn === O.save) st.push(ctm.slice());
+    else if (fn === O.restore) ctm = st.pop() || [1, 0, 0, 1, 0, 0];
+    else if (fn === O.transform) ctm = mult(a, ctm);
+    else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject || fn === O.paintJpegXObject) {
+      const xs = [ctm[4], ctm[4]+ctm[0], ctm[4]+ctm[2], ctm[4]+ctm[0]+ctm[2]];
+      const ys = [ctm[5], ctm[5]+ctm[1], ctm[5]+ctm[3], ctm[5]+ctm[1]+ctm[3]];
+      out.push({ x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) });
+    }
+  });
+  return out.filter(r => (r.x1 - r.x0) > 20 && (r.y1 - r.y0) > 20).sort((a, b) => b.y1 - a.y1);
+}
+
+function categoriaPorTexto(t) {
+  t = String(t || '').toLowerCase();
+  if (/reloj|watch/.test(t)) return 'Relojes';
+  if (/pulsera|bracelet/.test(t)) return 'Pulseras';
+  if (/collar|necklace/.test(t)) return 'Collares';
+  if (/anillo|\bring\b/.test(t)) return 'Anillos';
+  if (/pendiente|arete|earring|piercing/.test(t)) return 'Aritos';
+  if (/billetera|wallet/.test(t)) return 'Billeteras';
+  if (/cartera|bolso|bag/.test(t)) return 'Carteras';
+  if (/lente|gafa|sunglass/.test(t)) return 'Lentes de sol';
+  if (/choker/.test(t)) return 'Chokers';
+  return 'General';
+}
+
+function parsearFila(band, ignorar) {
+  const s = [...band].sort((a, b) => Math.round(a.x / 6) - Math.round(b.x / 6) || b.y - a.y);
+  let skuItem = null, code = null;
+  for (const it of s) {
+    const m = (it.s.match(REGEX_CODIGO) || []).find(c => !ignorar.has(c));
+    if (m) { skuItem = it; code = m; break; }
+  }
+  if (!skuItem) return null;
+  const variante = skuItem.s.includes('|') ? skuItem.s.split('|').slice(1).join(' ').trim() : '';
+  const txt = s.map(i => i.s).join(' ');
+  const usd = [...txt.matchAll(/(?:USD|US\$)\s*([\d.,]+)/g)].map(m => parseFloat(m[1].replace(/,/g, '')));
+  const ints = s.filter(i => /^\d+$/.test(i.s)).sort((a, b) => a.x - b.x).map(i => parseInt(i.s, 10));
+  const enviada = ints.length >= 3 ? ints[ints.length - 2] : (ints[0] || 0);
+  const costo = usd.length > 1 ? usd[1] : (usd[0] || 0);
+  const kSku = Math.round(skuItem.x / 6), cl = {};
+  s.forEach(i => {
+    if (/^\d+$/.test(i.s) || /^(USD|US\$)?\s*[\d.,]*$/.test(i.s) || Math.round(i.x / 6) === kSku) return;
+    const k = Math.round(i.x / 6);
+    (cl[k] = cl[k] || []).push(i.s);
+  });
+  const desc = Object.values(cl).map(a => a.join(' ')).sort((a, b) => b.length - a.length)[0] || variante;
+  return { code, nombre: (desc || code).slice(0, 80), desc: [desc, variante].filter(Boolean).join(' - ') || code, enviada, costo };
+}
+
+async function importarPDF(evt) {
+  const file = evt.target.files[0];
+  evt.target.value = '';
+  if (!file) return;
+  if (loteTemporal.length && !confirm('Reemplazar el lote actual?')) return;
+  const extra = parseFloat(prompt('Costo extra TOTAL (envio + cargos) en USD para repartir entre los productos. Pon 0 si no aplica:', '0')) || 0;
+  const omitir = (prompt('Codigos a OMITIR (separados por coma), por ejemplo empaque o cajas. Deja vacio si ninguno:', '') || '')
+    .split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
+  document.getElementById('loadingOverlay').classList.add('show');
+  try {
+    await cargarPdfJs();
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const bandas = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p), vp = page.getViewport({ scale: 3 });
+      const canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      const rects = await rectsImagenes(page);
+      const tc = await page.getTextContent();
+      const items = tc.items.filter(i => i.str.trim()).map(i => ({ s: i.str.trim(), x: i.transform[4], y: i.transform[5] }));
+      for (const r of rects) {
+        const [a, b, c, d] = vp.convertToViewportRectangle([r.x0, r.y0, r.x1, r.y1]);
+        const x = Math.min(a, c), y = Math.min(b, d), w = Math.abs(c - a), h = Math.abs(d - b);
+        const crop = document.createElement('canvas');
+        crop.width = w; crop.height = h;
+        crop.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+        bandas.push({ items: items.filter(i => i.y >= r.y0 && i.y <= r.y1), crop });
+      }
+    }
+    // Ignorar tokens que se repiten en casi todas las filas (ej. numero de orden)
+    const freq = {};
+    bandas.forEach(bd => {
+      const vistos = new Set(bd.items.flatMap(i => i.s.match(REGEX_CODIGO) || []));
+      vistos.forEach(c => { freq[c] = (freq[c] || 0) + 1; });
+    });
+    const ignorar = new Set(bandas.length >= 3 ? Object.keys(freq).filter(c => freq[c] >= bandas.length * 0.5) : []);
+    const filas = [];
+    for (const bd of bandas) {
+      const fila = parsearFila(bd.items, ignorar);
+      if (!fila) continue;
+      fila.blob = await new Promise(res => bd.crop.toBlob(res, 'image/jpeg', 0.9));
+      filas.push(fila);
+    }
+    const utiles = filas.filter(f => f.enviada > 0 && !omitir.includes(f.code.toUpperCase()));
+    const totalCosto = utiles.reduce((s, f) => s + f.costo * f.enviada, 0) || 1;
+    const factor = 1 + extra / totalCosto;
+    loteTemporal = [];
+    const datos = [];
+    for (const f of utiles) {
+      let code = f.code;
+      if (inventory.some(i => i.code === code) || loteTemporal.some(i => i.code === code)) {
+        code = code + '-' + Math.floor(100 + Math.random() * 900);
+      }
+      const comp = await imageCompressor.compressForStorage(f.blob);
+      await guardarImagenesProducto(code, [comp]);
+      const costo = +(f.costo * factor).toFixed(2);
+      const barcode = generarCodigoBarras().toString();
+      const categoria = categoriaPorTexto(f.nombre + ' ' + f.desc);
+      loteTemporal.push({
+        id: (crypto.randomUUID ? crypto.randomUUID() : `pdf-${Date.now()}-${loteTemporal.length}`),
+        name: f.nombre, code, barcode, price: 0, valorReal: costo, fechaCompra: fechaActualGlobal,
+        discount: 0, quantity: f.enviada, stockUnits: f.enviada, unitType: 'unidad', lotCount: 0, unitsPerLot: 0,
+        description: f.desc, category: categoria, addedAt: new Date().toISOString(), tipoCompra: 'lote'
+      });
+      datos.push({
+        name: f.nombre, price: +(costo * 1.6).toFixed(2), quantity: f.enviada, barcode, valorReal: costo,
+        porcentaje: 60, fechaCompra: fechaActualGlobal, description: f.desc, category: categoria
+      });
+    }
+    document.getElementById('loadingOverlay').classList.remove('show');
+    if (!loteTemporal.length) { showToast('No se encontraron productos en el PDF', 'warning'); return; }
+    localStorage.removeItem('loteTemporalData');
+    showToast(`${loteTemporal.length} productos leidos. Revisa y edita antes de guardar`, 'success');
+    mostrarEditorLote(datos);
+    for (let i = 0; i < loteTemporal.length; i++) calcSugLote(i);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loadingOverlay').classList.remove('show');
+    showToast('Error leyendo el PDF: ' + e.message, 'error');
+  }
+}
+
 </script>
 
 </div>

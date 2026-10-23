@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     :root { 
       --bg: #f3f4f6; 
@@ -754,6 +755,7 @@ body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:h
       <div class="config-buttons">
         <button class="btn btn-config" id="btnDailyReport" onclick="toggleDailyReportPanel()" title="Reporte por Dia"><i class="fa-solid fa-chart-bar"></i><span class="mobile-hide"> Reporte</span></button>
         <button class="btn btn-config" id="btnSalesHistory" onclick="toggleSalesHistoryPanel()" title="Historial de Ventas"><i class="fa-solid fa-chart-line"></i><span class="mobile-hide"> Historial</span></button>
+        <button class="btn btn-config" id="btnExportExcel" onclick="exportInventoryExcel()" title="Descargar inventario en Excel con fotos"><i class="fa-solid fa-file-excel"></i><span class="mobile-hide"> Excel</span></button>
       </div>
     </div>
   </header>
@@ -5801,6 +5803,78 @@ document.getElementById('salePrice').addEventListener('input', () => {
   };
 })();
 
+</script>
+<script>
+async function exportInventoryExcel() {
+  const btn = document.getElementById('btnExportExcel');
+  try {
+    if (typeof ExcelJS === 'undefined') { showNotification('No se pudo cargar ExcelJS. Revisa tu conexión a internet.', 'error'); return; }
+    if (!inventory || !inventory.length) { showNotification('No hay productos en el inventario para exportar.', 'error'); return; }
+    if (btn) btn.disabled = true;
+    document.getElementById('loadingOverlay').classList.add('active');
+    const toJpeg = async (url) => {
+      const blob = await (await fetch(url)).blob();
+      const bmp = await createImageBitmap(blob);
+      const max = 120, k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(bmp, 0, 0, w, h);
+      return { base64: c.toDataURL('image/jpeg', 0.85), w, h };
+    };
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Inventario');
+    ws.columns = [
+      { header: 'Imagen', key: 'img', width: 20 },
+      { header: 'Producto', key: 'name', width: 34 },
+      { header: 'Código', key: 'code', width: 16 },
+      { header: 'Código de barras', key: 'barcode', width: 20 },
+      { header: 'Categoría', key: 'category', width: 18 },
+      { header: 'Cantidad', key: 'quantity', width: 10 },
+      { header: 'Stock mínimo', key: 'stockMin', width: 13 },
+      { header: 'Precio', key: 'price', width: 12 },
+      { header: 'Descuento %', key: 'discount', width: 12 },
+      { header: 'Precio final', key: 'finalPrice', width: 12 },
+      { header: 'Descripción', key: 'description', width: 40 }
+    ];
+    const head = ws.getRow(1); head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+    head.alignment = { vertical: 'middle', horizontal: 'center' }; head.height = 24;
+    for (let i = 0; i < inventory.length; i++) {
+      const it = inventory[i];
+      const row = ws.addRow({
+        img: '', name: it.name || '', code: it.code || '', barcode: it.barcode || '', category: it.category || '',
+        quantity: Number(it.quantity) || 0, stockMin: Number(it.stockMin) || 0,
+        price: Number(it.originalPrice ?? it.price) || 0, discount: Number(it.discount) || 0,
+        finalPrice: Number(it.finalPrice ?? it.price) || 0, description: it.description || ''
+      });
+      row.height = 95; row.alignment = { vertical: 'middle', wrapText: true };
+      ['price', 'finalPrice'].forEach(k => { row.getCell(k).numFmt = '"$"#,##0.00'; });
+      let src = null;
+      try { const urls = await getProductImages(it.code); src = urls[0] || null; } catch (e) {}
+      if (!src && it.imageDataUrl) src = it.imageDataUrl;
+      if (src) {
+        try {
+          const im = await toJpeg(src);
+          const id = wb.addImage({ base64: im.base64, extension: 'jpeg' });
+          ws.addImage(id, { tl: { col: 0.1, row: i + 1.1 }, ext: { width: im.w * 0.75, height: im.h * 0.75 } });
+        } catch (e) {}
+      }
+    }
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = 'inventario-daymar-shop-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    showNotification('Inventario exportado a Excel.', 'success');
+  } catch (e) {
+    console.error(e); showNotification('Error al exportar a Excel.', 'error');
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('active');
+    if (btn) btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>

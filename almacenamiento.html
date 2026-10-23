@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     :root { 
       --bg: #f3f4f6; 
@@ -672,53 +673,6 @@ body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:h
 #paginationCards{margin-top:12px;border:1px solid var(--border)}
 #paginationCards:empty{display:none}
 #cardsView[style*="display: none"] + #paginationCards,#cardsView[style*="display:none"] + #paginationCards{display:none!important}
-/* ===== BARRA SUPERIOR: botones reducidos y del mismo tamaño ===== */
-.header-actions .btn,
-.header-actions .badge,
-.config-buttons .btn {
-  height: 30px !important;
-  min-height: 30px !important;
-  min-width: 30px !important;
-  padding: 0 8px !important;
-  font-size: 12px !important;
-  line-height: 1 !important;
-  box-sizing: border-box !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-}
-
-.header-actions .btn.btn-icon,
-.header-actions .header-icon-action {
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
-  padding: 0 !important;
-  flex: 0 0 30px !important;
-  font-size: 12px !important;
-}
-
-.header-actions .badge {
-  height: 30px !important;
-  padding: 0 8px !important;
-}
-
-.config-buttons .btn {
-  padding: 0 10px !important;
-}
-
-@media (max-width: 600px) {
-  .header-actions .header-icon-action {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px !important;
-    min-height: 30px !important;
-    flex-basis: 30px !important;
-    border-radius: 3px !important;
-  }
-}
 </style>
 <base target="_self">
 </head>
@@ -746,6 +700,7 @@ body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:h
       <div class="config-buttons">
         <button class="btn btn-config" id="btnDailyReport" onclick="toggleDailyReportPanel()" title="Reporte por Dia"><i class="fa-solid fa-chart-bar"></i><span class="mobile-hide"> Reporte</span></button>
         <button class="btn btn-config" id="btnSalesHistory" onclick="toggleSalesHistoryPanel()" title="Historial de Ventas"><i class="fa-solid fa-chart-line"></i><span class="mobile-hide"> Historial</span></button>
+        <button class="btn btn-config" id="btnExportExcel" onclick="exportInventoryExcel()" title="Exportar inventario a Excel con fotos"><i class="fa-solid fa-file-excel"></i><span class="mobile-hide"> Excel</span></button>
       </div>
     </div>
   </header>
@@ -5793,6 +5748,76 @@ document.getElementById('salePrice').addEventListener('input', () => {
   };
 })();
 
+</script>
+<script>
+/* ===== Exportar inventario a Excel con fotos ===== */
+async function exportInventoryExcel() {
+  const btn = document.getElementById('btnExportExcel');
+  if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar la librería de Excel. Revisa tu conexión a internet.'); return; }
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('inventory') || '[]'); } catch (e) {}
+  if (!Array.isArray(items) || !items.length) { alert('No hay productos para exportar.'); return; }
+  if (btn) btn.disabled = true;
+  const MAX_PHOTOS = 3, PX = 110;
+  const toJpegBase64 = async (url) => {
+    try {
+      const blob = await (await fetch(url)).blob();
+      const bmp = await createImageBitmap(blob);
+      const c = document.createElement('canvas'); c.width = PX; c.height = PX;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, PX, PX);
+      const r = Math.min(PX / bmp.width, PX / bmp.height);
+      const w = bmp.width * r, h = bmp.height * r;
+      g.drawImage(bmp, (PX - w) / 2, (PX - h) / 2, w, h);
+      return c.toDataURL('image/jpeg', 0.8);
+    } catch (e) { return null; }
+  };
+  try {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Inventario');
+    ws.columns = [
+      { header: 'Foto 1', key: 'f1', width: 18 }, { header: 'Foto 2', key: 'f2', width: 18 }, { header: 'Foto 3', key: 'f3', width: 18 },
+      { header: 'Código', key: 'code', width: 16 }, { header: 'Código de barras', key: 'barcode', width: 20 },
+      { header: 'Producto', key: 'name', width: 30 }, { header: 'Categoría', key: 'category', width: 18 },
+      { header: 'Descripción', key: 'description', width: 36 }, { header: 'Precio original', key: 'originalPrice', width: 15 },
+      { header: 'Descuento', key: 'discount', width: 12 }, { header: 'Precio final', key: 'price', width: 14 },
+      { header: 'Cantidad', key: 'quantity', width: 10 }, { header: 'Stock mínimo', key: 'stockMin', width: 13 },
+      { header: 'Valor en stock', key: 'total', width: 15 }, { header: 'Fecha', key: 'date', width: 20 }
+    ];
+    const head = ws.getRow(1); head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+    head.alignment = { vertical: 'middle', horizontal: 'center' }; head.height = 24;
+    const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i] || {};
+      const price = num(it.finalPrice ?? it.price);
+      const row = ws.addRow({
+        code: it.code || '', barcode: it.barcode || '', name: it.name || '', category: it.category || '',
+        description: it.description || '', originalPrice: num(it.originalPrice ?? it.price), discount: it.discount || 0,
+        price: price, quantity: num(it.quantity), stockMin: num(it.stockMin), total: price * num(it.quantity),
+        date: it.date ? new Date(it.date).toLocaleString() : ''
+      });
+      row.height = 88; row.alignment = { vertical: 'middle', wrapText: true };
+      let urls = [];
+      try { urls = (await getProductImages(it.code) || []).filter(Boolean).slice(0, MAX_PHOTOS); } catch (e) {}
+      for (let k = 0; k < urls.length; k++) {
+        const b64 = await toJpegBase64(urls[k]);
+        if (!b64) continue;
+        const id = wb.addImage({ base64: b64, extension: 'jpeg' });
+        ws.addImage(id, { tl: { col: k + 0.08, row: i + 1.06 }, ext: { width: 108, height: 108 } });
+      }
+    }
+    ['I', 'K', 'N'].forEach(c => ws.getColumn(c).numFmt = '"$"#,##0.00');
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = 'DAYMAR-SHOP_inventario_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) {
+    alert('Error al generar el Excel: ' + (e && e.message ? e.message : e));
+  } finally { if (btn) btn.disabled = false; }
+}
 </script>
 </body>
 </html>

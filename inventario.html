@@ -1050,12 +1050,12 @@ function wrapText(pdf, text, maxWidth, fontSize) {
   return lines;
 }
 
-// Hoja A4 (210 × 297 mm), 5 columnas × 8 filas = 40 etiquetas
-const LABEL_COLS = 5;
-const LABEL_ROWS = 8;
-const LABEL_W = 30;      // ancho de cada etiqueta, en mm
-const LABEL_H = 34;      // alto de cada etiqueta, en mm
-const LABEL_GAP_X = 2;   // separación horizontal, en mm
+// Etiquetas: tamaño original (45 × 27 mm), 4 columnas × 10 filas = 40 por hoja A4
+const LABEL_COLS = 4;
+const LABEL_ROWS = 10;
+const LABEL_W = 45;      // ancho de cada etiqueta, en mm
+const LABEL_H = 27;      // alto de cada etiqueta, en mm
+const LABEL_GAP_X = 3;   // separación horizontal, en mm
 const LABEL_GAP_Y = 2;   // separación vertical, en mm
 
 function wrapLabelLines(pdf, text, maxWidth, fontSize) {
@@ -1081,62 +1081,62 @@ function drawBarcodeLabel(pdf, item, x, y) {
   const finalPrice = (price * (1 - discount / 100)).toFixed(2);
 
   pdf.setDrawColor(190, 196, 203);
-  pdf.setLineWidth(0.12);
-  pdf.roundedRect(x, y, LABEL_W, LABEL_H, 0.6, 0.6, 'S');
+  pdf.setLineWidth(0.2);
+  pdf.roundedRect(x, y, LABEL_W, LABEL_H, 1, 1, 'S');
 
-  // DAYMAR: vertical, centrado en la etiqueta, más grueso
+  // DAYMAR: vertical, centrado de arriba a abajo, color vino ciruela (#662D42)
   const brandLetters = ['D', 'A', 'Y', 'M', 'A', 'R'];
-  const brandFont = 5.2;
-  const brandStep = 2.1;
+  const brandFont = 7;
+  const brandStep = 3.1;
   const capHeight = brandFont * 0.353 * 0.72;
   const brandBlock = (brandLetters.length - 1) * brandStep + capHeight;
   const brandStartY = y + (LABEL_H - brandBlock) / 2 + capHeight;
 
   pdf.setFont(undefined, 'bold');
   pdf.setFontSize(brandFont);
-  pdf.setTextColor(102, 45, 66);   // #662D42 vino ciruela
-  pdf.setDrawColor(102, 45, 66);   // mismo color para el contorno
-  pdf.setLineWidth(0.18);          // grosor del contorno
+  pdf.setTextColor(102, 45, 66);
+  pdf.setDrawColor(102, 45, 66);
+  pdf.setLineWidth(0.15);
   brandLetters.forEach((letter, i) => {
-    pdf.text(letter, x + 1.1, brandStartY + i * brandStep, { renderingMode: 'fillThenStroke' });
+    pdf.text(letter, x + 2.2, brandStartY + i * brandStep, { renderingMode: 'fillThenStroke' });
   });
 
   pdf.setDrawColor(165, 171, 179);
-  pdf.setLineWidth(0.12);
-  pdf.line(x + 3.9, y + 1.2, x + 3.9, y + LABEL_H - 1.2);
+  pdf.setLineWidth(0.2);
+  pdf.line(x + 7.5, y + 2, x + 7.5, y + LABEL_H - 2);
 
-  const textX = x + 5.3;
-  const textW = LABEL_W - 6.8;
-  let fs = 3.8;
+  const textX = x + 9;
+  const textW = LABEL_W - 11;
+  let fs = 6;
   let lines = wrapLabelLines(pdf, item.name, textW, fs);
   if (lines.length > 2) {
-    fs = 3.3;
+    fs = 5;
     lines = wrapLabelLines(pdf, item.name, textW, fs);
   }
   if (lines.length > 2) {
     lines = lines.slice(0, 2);
-    lines[1] = `${lines[1].slice(0, 16)}…`;
+    lines[1] = `${lines[1].slice(0, 19)}…`;
   }
   pdf.setFontSize(fs);
   pdf.setFont(undefined, 'normal');
   pdf.setTextColor(35, 45, 57);
-  lines.forEach((line, i) => pdf.text(line, textX, y + 2.6 + i * 1.5));
+  lines.forEach((line, i) => pdf.text(line, textX, y + 4.5 + i * 2.4));
 
-  pdf.setFontSize(5);
+  pdf.setFontSize(8);
   pdf.setFont(undefined, 'bold');
   pdf.setTextColor(16, 32, 50);
-  pdf.text(`$${finalPrice}`, textX, y + 7.6);
+  pdf.text(`$${finalPrice}`, textX, y + 11.4);
 
   try {
     const canvas = document.createElement('canvas');
     JsBarcode(canvas, item.barcode, {
-      format: 'CODE128', width: 1, height: 40, displayValue: false, margin: 0
+      format: 'CODE128', width: 1.1, height: 36, displayValue: false, margin: 0
     });
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', textX, y + 8.5, textW, 4.4);
-    pdf.setFontSize(2.9);
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', textX, y + 13.4, textW, 7.2);
+    pdf.setFontSize(5);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(70, 70, 70);
-    pdf.text(String(item.barcode), textX + textW / 2, y + 15.6, { align: 'center' });
+    pdf.text(String(item.barcode), textX + textW / 2, y + 24, { align: 'center' });
   } catch (error) {
     console.error('Error generando código de barras para:', item.name, error);
   }
@@ -1191,7 +1191,7 @@ async function downloadSingleBarcodeLabel(index) {
     return;
   }
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [LABEL_W, LABEL_H] });
+  const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: [LABEL_W, LABEL_H] });
   drawBarcodeLabel(pdf, item, 0, 0);
   pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
 }

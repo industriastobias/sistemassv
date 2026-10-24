@@ -178,6 +178,25 @@
     .dm-empty i{font-size:3rem;margin-bottom:var(--dm-space-md);opacity:0.5;}
     .dm-empty p{font-size:1rem;}
     mark{background:#fde047;padding:0 2px;border-radius:2px;color:var(--dm-text);}
+
+    .dm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:10001;padding:16px;}
+    .dm-modal-box{background:var(--dm-surface);color:var(--dm-text);border-radius:var(--dm-radius-lg);width:100%;max-width:760px;max-height:90vh;overflow:auto;box-shadow:var(--dm-shadow-lg);}
+    .dm-modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--dm-border);}
+    .dm-modal-head h3{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .dm-modal-close{width:36px;height:36px;border:1px solid var(--dm-border);background:var(--dm-elevated);color:var(--dm-text);border-radius:var(--dm-radius);cursor:pointer;font-size:1.25rem;line-height:1;}
+    .dm-modal-body{display:grid;grid-template-columns:260px 1fr;gap:20px;padding:18px;}
+    @media(max-width:640px){.dm-modal-body{grid-template-columns:1fr;}}
+    .dm-detail-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:var(--dm-radius);border:1px solid var(--dm-border);background:var(--dm-elevated);}
+    .dm-detail-title{font-size:1.05rem;font-weight:700;}
+    .dm-detail-sku{font-family:monospace;font-size:0.75rem;color:var(--dm-text-muted);margin:4px 0 12px;}
+    .dm-detail-table{width:100%;border-collapse:collapse;font-size:0.875rem;}
+    .dm-detail-table td{padding:7px 4px;border-bottom:1px solid var(--dm-border-light);}
+    .dm-detail-table td:first-child{color:var(--dm-text-secondary);width:45%;}
+    .dm-detail-desc{margin-top:14px;}
+    .dm-detail-desc strong{display:block;font-size:0.875rem;margin-bottom:4px;}
+    .dm-detail-desc p{font-size:0.8125rem;color:var(--dm-text-secondary);}
+    .dm-detail-barcode{background:#fff;padding:8px;border-radius:var(--dm-radius);margin-top:14px;text-align:center;}
+    .dm-detail-barcode svg{max-width:100%;height:60px;}
   </style>
 <base target="_self">
 </head>
@@ -319,6 +338,16 @@
     <div id="problemProductsContainer"></div>
   </div>
 </main>
+
+<div id="detailModal" class="dm-modal" onclick="if(event.target===this)closeDetail()">
+  <div class="dm-modal-box">
+    <div class="dm-modal-head">
+      <h3><i class="fa fa-info-circle"></i> Detalle del producto</h3>
+      <button class="dm-modal-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="dm-modal-body" id="detailBody"></div>
+  </div>
+</div>
 
 <div id="printArea" style="display:none;"></div>
 <div id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src="" alt="Imagen ampliada"/></div>
@@ -868,10 +897,76 @@ function renderTable(){
   generateExecutiveReports();
 }
 
-function viewItem(index){
-  alert(`Detalles:
+function escHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
-${JSON.stringify(filtered[index],null,2)}`);
+function viewItem(index){
+  const item = filtered[index];
+  if(!item) return;
+
+  const price = parseFloat(item.price) || 0;
+  const disc = parseFloat(item.discount) || 0;
+  const finalPrice = price * (1 - disc/100);
+  const qty = parseInt(item.quantity) || 0;
+  const money = v => `$${v.toFixed(2)}`;
+
+  const cost = parseFloat(item.cost ?? item.costo);
+  const hasCost = Number.isFinite(cost);
+  const profit = hasCost ? finalPrice - cost : null;
+  const margin = hasCost && finalPrice > 0 ? (profit / finalPrice) * 100 : null;
+  const dateRaw = item.fecha ?? item.date ?? item.createdAt;
+  const dateText = dateRaw ? new Date(dateRaw).toLocaleString('es-SV') : '-';
+
+  const rows = [
+    ['Categoría', escHtml(item.category)],
+    ['Stock', `${qty} unid.`],
+    ['Precio', money(price)],
+    ['Descuento', disc > 0 ? `${disc}%` : '0%'],
+    ['Precio final', money(finalPrice)],
+    ['Costo', hasCost ? money(cost) : '-'],
+    ['Ganancia por unidad', hasCost ? money(profit) : '-'],
+    ['Margen', hasCost ? `${margin.toFixed(1)}%` : '-'],
+    ['Valor del stock (precio final)', money(finalPrice * qty)],
+    ['Fecha', escHtml(dateText)],
+    ['Código de barras', escHtml(item.barcode || '-')]
+  ];
+
+  document.getElementById('detailBody').innerHTML = `
+    <div>
+      <img id="detailImg" class="dm-detail-img" src="" alt="${escHtml(item.name)}"/>
+    </div>
+    <div>
+      <div class="dm-detail-title">${escHtml(item.name).toUpperCase()}</div>
+      <div class="dm-detail-sku">SKU: ${escHtml(item.code)}</div>
+      <table class="dm-detail-table">
+        ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+      </table>
+      <div class="dm-detail-desc">
+        <strong>Descripción</strong>
+        <p>${item.description ? escHtml(item.description) : 'Sin descripción disponible.'}</p>
+      </div>
+      ${item.barcode ? `<div class="dm-detail-barcode"><svg id="detailBarcode"></svg></div>` : ''}
+    </div>
+  `;
+
+  if (item.barcode) {
+    try {
+      JsBarcode('#detailBarcode', item.barcode, {
+        format: 'CODE128', width: 2, height: 60, displayValue: false, margin: 0
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  localforage.getItem(`img_${item.code}`).then(blob => {
+    if (blob) document.getElementById('detailImg').src = URL.createObjectURL(blob);
+  });
+
+  document.getElementById('detailModal').style.display = 'flex';
+}
+
+function closeDetail(){
+  document.getElementById('detailModal').style.display = 'none';
 }
 
 function wrapText(pdf, text, maxWidth, fontSize) {
@@ -896,65 +991,79 @@ function wrapText(pdf, text, maxWidth, fontSize) {
   return lines;
 }
 
-async function downloadSingleBarcodeLabel(index) {
-  const item = filtered[index];
-  if (!item || !item.barcode) {
-    alert('Este producto no tiene código de barras');
-    return;
-  }
+const LABEL_W = 35;
+const LABEL_H = 20;
 
-  const { jsPDF } = window.jspdf;
-  const labelWidth = 45;
-  const labelHeight = 27;
-  const pdf = new jsPDF('p', 'mm', [labelWidth, labelHeight]);
-  const rawPrice = parseFloat(item.price) || 0;
-  const finalPrice = (rawPrice * (1 - (parseFloat(item.discount) || 0) / 100)).toFixed(2);
-
-  // Se conserva el diseño DAYMAR vertical, con proporciones ajustadas al formato compacto.
-  pdf.setFontSize(7);
-  pdf.setFont(undefined, 'bold');
-  pdf.setTextColor(0, 0, 0);
-  ['D', 'A', 'Y', 'M', 'A', 'R'].forEach((letter, index) => {
-    pdf.text(letter, 2.2, 5.1 + index * 3.25);
+function wrapLabelLines(pdf, text, maxWidth, fontSize) {
+  pdf.setFontSize(fontSize);
+  const words = String(text || 'Producto').split(/\s+/);
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    const candidate = current ? `${current} ${word}` : word;
+    if (pdf.getTextWidth(candidate) <= maxWidth) current = candidate;
+    else {
+      if (current) lines.push(current);
+      current = word;
+    }
   });
-  pdf.setDrawColor(165, 165, 165);
-  pdf.setLineWidth(0.2);
-  pdf.line(7.5, 2, 7.5, 25);
+  if (current) lines.push(current);
+  return lines;
+}
 
-  const contentX = 9;
-  const contentWidth = 34;
-  let nameFont = 6;
-  let nameLines = wrapText(pdf, String(item.name || 'Producto'), contentWidth, nameFont);
-  if (nameLines.length > 2) {
-    nameFont = 5;
-    nameLines = wrapText(pdf, String(item.name || 'Producto'), contentWidth, nameFont);
-  }
-  if (nameLines.length > 2) {
-    nameLines = nameLines.slice(0, 2);
-    nameLines[1] = `${nameLines[1].slice(0, 19)}…`;
-  }
-  pdf.setFontSize(nameFont);
-  pdf.setFont(undefined, 'normal');
-  nameLines.forEach((line, lineIndex) => pdf.text(line, contentX, 4.5 + lineIndex * 2.4));
+function drawBarcodeLabel(pdf, item, x, y) {
+  const price = parseFloat(item.price) || 0;
+  const discount = parseFloat(item.discount) || 0;
+  const finalPrice = (price * (1 - discount / 100)).toFixed(2);
 
-  pdf.setFontSize(8);
+  pdf.setDrawColor(190, 196, 203);
+  pdf.setLineWidth(0.15);
+  pdf.roundedRect(x, y, LABEL_W, LABEL_H, 0.8, 0.8, 'S');
+
   pdf.setFont(undefined, 'bold');
-  pdf.text(`$${finalPrice}`, contentX, 11.4);
+  pdf.setFontSize(5);
+  pdf.setTextColor(22, 38, 59);
+  ['D', 'A', 'Y', 'M', 'A', 'R'].forEach((letter, i) => {
+    pdf.text(letter, x + 1.6, y + 3.4 + i * 2.1);
+  });
 
-  const canvas = document.createElement('canvas');
+  pdf.setDrawColor(165, 171, 179);
+  pdf.line(x + 5, y + 1.5, x + 5, y + LABEL_H - 1.5);
+
+  const textX = x + 6.5;
+  const textW = LABEL_W - 8;
+  let fs = 4.5;
+  let lines = wrapLabelLines(pdf, item.name, textW, fs);
+  if (lines.length > 2) {
+    fs = 4;
+    lines = wrapLabelLines(pdf, item.name, textW, fs);
+  }
+  if (lines.length > 2) {
+    lines = lines.slice(0, 2);
+    lines[1] = `${lines[1].slice(0, 18)}…`;
+  }
+  pdf.setFontSize(fs);
+  pdf.setFont(undefined, 'normal');
+  pdf.setTextColor(35, 45, 57);
+  lines.forEach((line, i) => pdf.text(line, textX, y + 3.2 + i * 1.8));
+
+  pdf.setFontSize(6);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(16, 32, 50);
+  pdf.text(`$${finalPrice}`, textX, y + 9.2);
+
   try {
+    const canvas = document.createElement('canvas');
     JsBarcode(canvas, item.barcode, {
-      format: 'CODE128', width: 1.1, height: 36, displayValue: false, margin: 0
+      format: 'CODE128', width: 1, height: 40, displayValue: false, margin: 0
     });
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', contentX, 13.4, contentWidth, 7.2);
-    pdf.setFontSize(5);
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', textX, y + 10.4, textW, 5);
+    pdf.setFontSize(3.8);
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(70, 70, 70);
-    pdf.text(String(item.barcode), contentX + contentWidth / 2, 24, { align: 'center' });
-    pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
+    pdf.text(String(item.barcode), textX + textW / 2, y + 18, { align: 'center' });
   } catch (error) {
-    alert('Error al generar el código de barras');
-    console.error(error);
+    console.error('Error generando código de barras para:', item.name, error);
   }
 }
 
@@ -973,104 +1082,42 @@ function generateBarcodeLabelsForItems(products, fileName, confirmationMessage =
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const cols = 4;
-  const rows = 9;
-  const labelsPerPage = cols * rows;
-  const labelWidth = 45;
-  const labelHeight = 27;
-  const marginX = 6;
-  const marginY = 9;
+  const cols = 5;
+  const rows = 13;
   const gapX = 2;
   const gapY = 2;
+  const marginX = (210 - (cols * LABEL_W + (cols - 1) * gapX)) / 2;
+  const marginY = (297 - (rows * LABEL_H + (rows - 1) * gapY)) / 2;
+  const labelsPerPage = cols * rows;
   let labelCount = 0;
-
-  const wrapLabelText = (text, maxWidth, fontSize) => {
-    pdf.setFontSize(fontSize);
-    const words = String(text || 'Producto').split(/\\s+/);
-    const lines = [];
-    let currentLine = '';
-    words.forEach(word => {
-      const candidate = currentLine ? `${currentLine} ${word}` : word;
-      if (pdf.getTextWidth(candidate) <= maxWidth) currentLine = candidate;
-      else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-    if (currentLine) lines.push(currentLine);
-    return lines;
-  };
-
-  const drawLabel = (item, x, y) => {
-    const price = parseFloat(item.price) || 0;
-    const discount = parseFloat(item.discount) || 0;
-    const finalPrice = (price * (1 - discount / 100)).toFixed(2);
-
-    pdf.setDrawColor(190, 196, 203);
-    pdf.setLineWidth(0.2);
-    pdf.roundedRect(x, y, labelWidth, labelHeight, 1, 1, 'S');
-
-    pdf.setFontSize(7);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(22, 38, 59);
-    ['D', 'A', 'Y', 'M', 'A', 'R'].forEach((letter, index) => {
-      pdf.text(letter, x + 2.2, y + 5.1 + index * 3.25);
-    });
-    pdf.setDrawColor(165, 171, 179);
-    pdf.line(x + 7.5, y + 2, x + 7.5, y + labelHeight - 2);
-
-    const textX = x + 9;
-    const textWidth = labelWidth - 11;
-    let fontSize = 6;
-    let lines = wrapLabelText(item.name, textWidth, fontSize);
-    if (lines.length > 2) {
-      fontSize = 5;
-      lines = wrapLabelText(item.name, textWidth, fontSize);
-    }
-    if (lines.length > 2) {
-      lines = lines.slice(0, 2);
-      lines[1] = `${lines[1].slice(0, 19)}…`;
-    }
-    pdf.setFontSize(fontSize);
-    pdf.setFont(undefined, 'normal');
-    pdf.setTextColor(35, 45, 57);
-    lines.forEach((line, index) => pdf.text(line, textX, y + 4.5 + index * 2.4));
-
-    pdf.setFontSize(8);
-    pdf.setFont(undefined, 'bold');
-    pdf.setTextColor(16, 32, 50);
-    pdf.text(`$${finalPrice}`, textX, y + 11.4);
-
-    try {
-      const canvas = document.createElement('canvas');
-      JsBarcode(canvas, item.barcode, {
-        format: 'CODE128', width: 1.1, height: 36, displayValue: false, margin: 0
-      });
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', textX, y + 13.4, textWidth, 7.2);
-      pdf.setFontSize(5);
-      pdf.setFont(undefined, 'normal');
-      pdf.setTextColor(70, 70, 70);
-      pdf.text(String(item.barcode), textX + textWidth / 2, y + 24, { align: 'center' });
-    } catch (error) {
-      console.error('Error generando código de barras para:', item.name, error);
-    }
-  };
 
   productsWithBarcode.forEach(item => {
     const stock = Number.parseInt(item.quantity, 10) || 0;
     for (let unit = 0; unit < stock; unit++) {
       if (labelCount > 0 && labelCount % labelsPerPage === 0) pdf.addPage();
-      const pagePosition = labelCount % labelsPerPage;
-      const col = pagePosition % cols;
-      const row = Math.floor(pagePosition / cols);
-      const x = marginX + col * (labelWidth + gapX);
-      const y = marginY + row * (labelHeight + gapY);
-      drawLabel(item, x, y);
+      const pos = labelCount % labelsPerPage;
+      const col = pos % cols;
+      const row = Math.floor(pos / cols);
+      const x = marginX + col * (LABEL_W + gapX);
+      const y = marginY + row * (LABEL_H + gapY);
+      drawBarcodeLabel(pdf, item, x, y);
       labelCount++;
     }
   });
 
   pdf.save(fileName);
+}
+
+async function downloadSingleBarcodeLabel(index) {
+  const item = filtered[index];
+  if (!item || !item.barcode) {
+    alert('Este producto no tiene código de barras');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: [LABEL_W, LABEL_H] });
+  drawBarcodeLabel(pdf, item, 0, 0);
+  pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
 }
 
 async function downloadBarcodeLabelsPDF() {

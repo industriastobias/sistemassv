@@ -1053,10 +1053,10 @@ function wrapText(pdf, text, maxWidth, fontSize) {
 // Hoja A4 (210 × 297 mm), 5 columnas × 8 filas = 40 etiquetas
 const LABEL_COLS = 5;
 const LABEL_ROWS = 8;
-const PAGE_MARGIN = 5;   // margen mínimo de la hoja, en mm
-const LABEL_GAP = 1;     // separación entre etiquetas, en mm
-const LABEL_W = (210 - PAGE_MARGIN * 2 - LABEL_GAP * (LABEL_COLS - 1)) / LABEL_COLS;
-const LABEL_H = (297 - PAGE_MARGIN * 2 - LABEL_GAP * (LABEL_ROWS - 1)) / LABEL_ROWS;
+const LABEL_W = 30;      // ancho de cada etiqueta, en mm
+const LABEL_H = 34;      // alto de cada etiqueta, en mm
+const LABEL_GAP_X = 2;   // separación horizontal, en mm
+const LABEL_GAP_Y = 2;   // separación vertical, en mm
 
 function wrapLabelLines(pdf, text, maxWidth, fontSize) {
   pdf.setFontSize(fontSize);
@@ -1158,6 +1158,13 @@ function generateBarcodeLabelsForItems(products, fileName, confirmationMessage =
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
   const labelsPerPage = LABEL_COLS * LABEL_ROWS;
+
+  // Centra la cuadrícula dentro de la hoja
+  const gridW = LABEL_COLS * LABEL_W + (LABEL_COLS - 1) * LABEL_GAP_X;
+  const gridH = LABEL_ROWS * LABEL_H + (LABEL_ROWS - 1) * LABEL_GAP_Y;
+  const startX = (210 - gridW) / 2;
+  const startY = (297 - gridH) / 2;
+
   let labelCount = 0;
 
   productsWithBarcode.forEach(item => {
@@ -1167,8 +1174,8 @@ function generateBarcodeLabelsForItems(products, fileName, confirmationMessage =
       const pos = labelCount % labelsPerPage;
       const col = pos % LABEL_COLS;
       const row = Math.floor(pos / LABEL_COLS);
-      const x = PAGE_MARGIN + col * (LABEL_W + LABEL_GAP);
-      const y = PAGE_MARGIN + row * (LABEL_H + LABEL_GAP);
+      const x = startX + col * (LABEL_W + LABEL_GAP_X);
+      const y = startY + row * (LABEL_H + LABEL_GAP_Y);
       drawBarcodeLabel(pdf, item, x, y);
       labelCount++;
     }
@@ -1184,7 +1191,7 @@ async function downloadSingleBarcodeLabel(index) {
     return;
   }
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: [LABEL_W, LABEL_H] });
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: [LABEL_W, LABEL_H] });
   drawBarcodeLabel(pdf, item, 0, 0);
   pdf.save(`etiqueta_${item.code}_${item.barcode}.pdf`);
 }

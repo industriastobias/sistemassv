@@ -440,6 +440,8 @@ const categories = [
   'Collares', 'General', 'Lentes de sol', 'Otros', 'Pulseras', 'Relojes'
 ];
 
+const ALL_KEY = '__ALL__';
+
 const qs = (s) => document.querySelector(s);
 const qsa = (s) => document.querySelectorAll(s);
 
@@ -486,26 +488,6 @@ function init() {
       exitKioskMode();
     }
   });
-  
-  // Sample data
-  if (inv.length === 0) {
-    const sample = [
-      { code: 'ACC001', name: 'Pinza para cabello dorada', barcode: '7501234567890', price: 15.99, quantity: 25, category: 'Accesorios para el cabello', createdAt: new Date().toISOString() },
-      { code: 'ANI001', name: 'Anillo plata 925', barcode: '7501234567891', price: 45.50, quantity: 12, category: 'Anillos', createdAt: new Date().toISOString() },
-      { code: 'ARI001', name: 'Aritos de perla', barcode: '7501234567892', price: 28.00, quantity: 8, category: 'Aritos', createdAt: new Date().toISOString() },
-      { code: 'BIL001', name: 'Billetera de cuero', barcode: '7501234567893', price: 35.00, quantity: 30, category: 'Billeteras', createdAt: new Date().toISOString() },
-      { code: 'CAR001', name: 'Cartera mediana negra', barcode: '7501234567894', price: 89.99, quantity: 15, category: 'Carteras', createdAt: new Date().toISOString() },
-      { code: 'CAS001', name: 'Case AirPods Pro', barcode: '7501234567895', price: 12.50, quantity: 50, category: 'Case audífonos', createdAt: new Date().toISOString() },
-      { code: 'TEL001', name: 'Case iPhone 15', barcode: '7501234567896', price: 18.00, quantity: 22, category: 'Case teléfonos', createdAt: new Date().toISOString() },
-      { code: 'CHO001', name: 'Choker gótico', barcode: '7501234567897', price: 22.00, quantity: 5, category: 'Chokers', createdAt: new Date().toISOString() },
-      { code: 'COL001', name: 'Collar corazón', barcode: '7501234567898', price: 55.00, quantity: 18, category: 'Collares', createdAt: new Date().toISOString() },
-      { code: 'LEN001', name: 'Lentes de sol aviador', barcode: '7501234567899', price: 120.00, quantity: 7, category: 'Lentes de sol', createdAt: new Date().toISOString() },
-      { code: 'PUL001', name: 'Pulsera de cuentas', barcode: '7501234567900', price: 18.50, quantity: 35, category: 'Pulseras', createdAt: new Date().toISOString() },
-      { code: 'REL001', name: 'Reloj analógico dorado', barcode: '7501234567901', price: 150.00, quantity: 10, category: 'Relojes', createdAt: new Date().toISOString() }
-    ];
-    inv.push(...sample);
-    save();
-  }
   
   // Aplicar descuentos de categorías al iniciar
   applyCategoryDiscountsToProducts();
@@ -622,6 +604,24 @@ function loadKioskMode() {
 // ============================================
 // DESCUENTOS POR CATEGORÍA
 // ============================================
+
+// Devuelve los productos que cubre una entrada (una categoría o todas)
+function getTargetItems(key) {
+  return key === ALL_KEY ? inv : inv.filter(i => i.category === key);
+}
+
+// Asigna a cada producto el descuento que le corresponde según las entradas guardadas.
+// Prioridad: categoría específica > "Todas las categorías". Sin entrada, quita el descuento.
+function applyDiscountsFor(items) {
+  items.forEach(item => {
+    const d = categoryDiscounts[item.category] !== undefined
+      ? categoryDiscounts[item.category]
+      : categoryDiscounts[ALL_KEY];
+    if (d !== undefined) item.discount = d;
+    else delete item.discount;
+  });
+}
+
 function applyCategoryDiscount() {
   const selected = qs('#categoryDiscountSelect').value;
   const discount = parseFloat(qs('#categoryDiscountValue').value);
@@ -636,59 +636,47 @@ function applyCategoryDiscount() {
     return;
   }
 
-  const isAll = selected === '__ALL__';
-  const targets = isAll ? categories : [selected];
-
-  // Guardar el descuento de cada categoría objetivo
-  targets.forEach(cat => {
-    categoryDiscounts[cat] = discount;
-  });
+  if (selected === ALL_KEY) {
+    // Una sola entrada general; reemplaza las categorías individuales
+    categoryDiscounts = { [ALL_KEY]: discount };
+  } else {
+    categoryDiscounts[selected] = discount;
+  }
   localStorage.setItem('categoryDiscounts', JSON.stringify(categoryDiscounts));
 
-  // Aplicar a los productos de esas categorías
-  let appliedCount = 0;
-  inv.forEach(item => {
-    if (targets.includes(item.category)) {
-      item.discount = discount;
-      appliedCount++;
-    }
-  });
+  const targets = getTargetItems(selected);
+  targets.forEach(item => { item.discount = discount; });
+  // Las categorías específicas siguen teniendo prioridad sobre la general
+  applyDiscountsFor(targets);
 
   save();
   renderCategoryDiscounts();
   filterAndRender();
 
-  // Limpiar formulario
   qs('#categoryDiscountSelect').value = '';
   qs('#categoryDiscountValue').value = '';
 
-  const msg = isAll
-    ? `Descuento del ${discount}% aplicado a todas las categorías (${appliedCount} productos)`
-    : `Descuento del ${discount}% aplicado a ${appliedCount} productos de "${selected}"`;
+  const msg = selected === ALL_KEY
+    ? `Descuento del ${discount}% aplicado a todas las categorías (${targets.length} productos)`
+    : `Descuento del ${discount}% aplicado a ${targets.length} productos de "${selected}"`;
   showToast(msg, 'success');
 }
 
-function removeCategoryDiscount(category) {
-  if (!confirm(`¿Quitar el descuento de la categoría "${category}"?`)) return;
-  
-  // Eliminar descuento de la categoría
-  delete categoryDiscounts[category];
+function removeCategoryDiscount(key) {
+  const label = key === ALL_KEY ? 'todas las categorías' : `la categoría "${key}"`;
+  if (!confirm(`¿Quitar el descuento de ${label}?`)) return;
+
+  delete categoryDiscounts[key];
   localStorage.setItem('categoryDiscounts', JSON.stringify(categoryDiscounts));
-  
-  // Quitar descuento de los productos de esa categoría
-  let removedCount = 0;
-  inv.forEach(item => {
-    if (item.category === category && item.discount > 0) {
-      delete item.discount;
-      removedCount++;
-    }
-  });
-  
+
+  const targets = getTargetItems(key);
+  applyDiscountsFor(targets);
+
   save();
   renderCategoryDiscounts();
   filterAndRender();
-  
-  showToast(`Descuento removido de ${removedCount} productos de "${category}"`, 'success');
+
+  showToast(`Descuento removido de ${label}`, 'success');
 }
 
 function removeAllCategoryDiscounts() {
@@ -696,93 +684,98 @@ function removeAllCategoryDiscounts() {
     showToast('No hay descuentos por categoría para quitar', 'error');
     return;
   }
-  
+
   if (!confirm('¿Quitar todos los descuentos por categoría?')) return;
-  
-  // Quitar todos los descuentos
-  Object.keys(categoryDiscounts).forEach(category => {
-    inv.forEach(item => {
-      if (item.category === category) {
-        delete item.discount;
-      }
-    });
+
+  Object.keys(categoryDiscounts).forEach(key => {
+    getTargetItems(key).forEach(item => delete item.discount);
   });
-  
+
   categoryDiscounts = {};
   localStorage.setItem('categoryDiscounts', JSON.stringify(categoryDiscounts));
-  
+
   save();
   renderCategoryDiscounts();
   filterAndRender();
-  
+
   showToast('Todos los descuentos por categoría han sido removidos', 'success');
 }
 
 function renderCategoryDiscounts() {
   const container = qs('#categoryList');
-  const categoryKeys = Object.keys(categoryDiscounts);
-  
-  if (categoryKeys.length === 0) {
+  const keys = Object.keys(categoryDiscounts);
+
+  if (keys.length === 0) {
     container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay descuentos aplicados por categoría</span>';
     return;
   }
-  
-  container.innerHTML = categoryKeys.map(category => {
-    const discount = categoryDiscounts[category];
-    const productCount = inv.filter(i => i.category === category).length;
-    
+
+  // La entrada general va primero
+  keys.sort((a, b) => (a === ALL_KEY ? -1 : b === ALL_KEY ? 1 : 0));
+
+  container.innerHTML = keys.map(key => {
+    const discount = categoryDiscounts[key];
+    const isAll = key === ALL_KEY;
+    const name = isAll ? 'Todas las categorías' : key;
+    const productCount = getTargetItems(key).length;
+
     return `
       <div class="category-item has-discount">
-        <span class="category-name">${category}</span>
+        <span class="category-name">${name}</span>
         <span class="category-discount-badge">${discount}% OFF</span>
         <span style="color: var(--text-muted); font-size: 11px;">(${productCount} productos)</span>
         <div class="category-actions">
-          <button class="category-btn category-btn-edit" onclick="editCategoryDiscount('${category}')" title="Editar">Editar</button>
-          <button class="category-btn category-btn-remove" onclick="removeCategoryDiscount('${category}')" title="Quitar">Quitar</button>
+          <button class="category-btn category-btn-edit" onclick="editCategoryDiscount('${key}')" title="Editar">Editar</button>
+          <button class="category-btn category-btn-remove" onclick="removeCategoryDiscount('${key}')" title="Quitar">Quitar</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-function editCategoryDiscount(category) {
-  const currentDiscount = categoryDiscounts[category];
-  const newDiscount = prompt(`Editar descuento para "${category}":`, currentDiscount);
-  
-  if (newDiscount === null) return; // Cancelado
-  
+function editCategoryDiscount(key) {
+  const name = key === ALL_KEY ? 'Todas las categorías' : key;
+  const newDiscount = prompt(`Editar descuento para "${name}":`, categoryDiscounts[key]);
+
+  if (newDiscount === null) return;
+
   const discount = parseFloat(newDiscount);
   if (isNaN(discount) || discount < 0 || discount > 100) {
     showToast('Ingresa un descuento válido (0-100)', 'error');
     return;
   }
-  
-  // Actualizar descuento
-  categoryDiscounts[category] = discount;
+
+  categoryDiscounts[key] = discount;
   localStorage.setItem('categoryDiscounts', JSON.stringify(categoryDiscounts));
-  
-  // Aplicar nuevo descuento a los productos
-  inv.forEach(item => {
-    if (item.category === category) {
-      item.discount = discount;
-    }
-  });
-  
+
+  const targets = getTargetItems(key);
+  targets.forEach(item => { item.discount = discount; });
+  applyDiscountsFor(targets);
+
   save();
   renderCategoryDiscounts();
   filterAndRender();
-  
-  showToast(`Descuento de "${category}" actualizado a ${discount}%`, 'success');
+
+  showToast(`Descuento de "${name}" actualizado a ${discount}%`, 'success');
 }
 
 function applyCategoryDiscountsToProducts() {
-  // Aplicar descuentos guardados a los productos al cargar
-  Object.keys(categoryDiscounts).forEach(category => {
-    const discount = categoryDiscounts[category];
+  // Migración: si las 14 categorías tienen el mismo descuento, unificarlas en una entrada general
+  const values = categories.map(c => categoryDiscounts[c]);
+  const keysCount = Object.keys(categoryDiscounts).length;
+  if (keysCount === categories.length && values.every(v => v !== undefined && v === values[0])) {
+    categoryDiscounts = { [ALL_KEY]: values[0] };
+    localStorage.setItem('categoryDiscounts', JSON.stringify(categoryDiscounts));
+  }
+
+  // Primero la general, luego las específicas (que tienen prioridad)
+  if (categoryDiscounts[ALL_KEY] !== undefined) {
+    inv.forEach(item => { item.discount = categoryDiscounts[ALL_KEY]; });
+  }
+  Object.keys(categoryDiscounts).forEach(key => {
+    if (key === ALL_KEY) return;
     inv.forEach(item => {
-      if (item.category === category) {
-        item.discount = discount;
-      }
+      if (item.category === key) item.discount = categoryDiscounts[key];
     });
   });
   save();

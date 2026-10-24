@@ -734,6 +734,17 @@ body.modal-abierto{position:fixed!important;left:0;right:0;width:100%;overflow:h
 .cards-grid .product-card { display: flex !important; flex-direction: column !important; height: 100% !important; }
 .cards-grid .product-card .card-content { display: flex !important; flex-direction: column !important; flex: 1 1 auto !important; }
 .cards-grid .product-card .card-footer { margin-top: auto !important; }
+
+/* ===== MENÚ LATERAL: más reducido y transparente ===== */
+.side-menu { width: 170px !important; right: -190px !important; padding: 0.75rem !important; background: rgba(255,255,255,0.72) !important; -webkit-backdrop-filter: blur(8px) !important; backdrop-filter: blur(8px) !important; }
+.side-menu.active { right: 0 !important; }
+.side-menu h3 { font-size: 0.9rem !important; margin-bottom: 0.5rem !important; }
+.side-menu a { padding: 0.4rem 0.5rem !important; font-size: 0.75rem !important; gap: 0.5rem !important; margin-bottom: 0.125rem !important; }
+
+/* ===== VENTANA DE CONTRASEÑA: mensaje por acción ===== */
+#passwordModal .password-context { display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; margin-bottom: 0.75rem; border-radius: 6px; background: var(--accent-soft); color: var(--accent-hover); font-size: 0.8125rem; font-weight: 600; }
+#passwordModal .password-context.danger { background: #fdecec; color: #8e1b1b; }
+#passwordModal .password-context i { font-size: 1.1rem; width: 1.25rem; text-align: center; }
 </style>
 <base target="_self">
 </head>
@@ -5879,6 +5890,33 @@ async function exportInventoryExcel() {
     if (btn) btn.disabled = false;
   }
 }
+</script>
+<script>
+(function () {
+  const info = {
+    price: ['fa-tag', 'Editar precio', 'Vas a cambiar el precio de este producto.', false],
+    stock: ['fa-box', 'Editar stock', 'Vas a cambiar la cantidad en stock de este producto.', false],
+    unlockSaleFields: ['fa-lock-open', 'Desbloquear campos de venta', 'Vas a poder editar el precio y los datos de esta venta.', false],
+    deletePending: ['fa-trash-can', 'Eliminar pedido pendiente', 'Vas a eliminar este pedido pendiente.', true],
+    deleteDeliveryPending: ['fa-trash-can', 'Eliminar pedido pendiente de entrega', 'Vas a eliminar este pedido pendiente de entrega.', true],
+    deletePaymentPending: ['fa-trash-can', 'Eliminar pedido pendiente de pago', 'Vas a eliminar este pedido pendiente de pago.', true],
+    deleteAllDeliveryPending: ['fa-trash-can', 'Eliminar todos los pedidos de entrega', 'Vas a eliminar todos los pedidos pendientes de entrega.', true],
+    deletePendingHistory: ['fa-clock-rotate-left', 'Limpiar historial de pendientes', 'Vas a limpiar el historial de pedidos pendientes.', true],
+    deletePendingMenuRecord: ['fa-trash-can', 'Eliminar registro pendiente', 'Vas a eliminar este registro pendiente.', true]
+  };
+  const original = requestPassword;
+  requestPassword = function (action, index) {
+    original(action, index);
+    const modal = document.getElementById('passwordModal');
+    const title = modal.querySelector('.modal-title');
+    const text = modal.querySelector('.modal-body > p');
+    const d = info[action] || ['fa-lock', 'Acceso restringido', 'Esta acción requiere contraseña.', false];
+    title.innerHTML = '<i class="fa-solid ' + d[0] + '"></i> ' + d[1];
+    text.className = 'password-context' + (d[3] ? ' danger' : '');
+    text.removeAttribute('style');
+    text.innerHTML = '<i class="fa-solid ' + d[0] + '"></i><span>' + d[2] + ' Ingresa la contraseña para continuar:</span>';
+  };
+})();
 </script>
 </body>
 </html>

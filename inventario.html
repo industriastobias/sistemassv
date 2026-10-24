@@ -1010,14 +1010,25 @@ function drawBarcodeLabel(pdf, item, x, y) {
   pdf.setLineWidth(0.12);
   pdf.roundedRect(x, y, LABEL_W, LABEL_H, 0.6, 0.6, 'S');
 
+  // DAYMAR: vertical, centrado en la etiqueta, más grueso
+  const brandLetters = ['D', 'A', 'Y', 'M', 'A', 'R'];
+  const brandFont = 5.2;
+  const brandStep = 2.1;
+  const capHeight = brandFont * 0.353 * 0.72;
+  const brandBlock = (brandLetters.length - 1) * brandStep + capHeight;
+  const brandStartY = y + (LABEL_H - brandBlock) / 2 + capHeight;
+
   pdf.setFont(undefined, 'bold');
-  pdf.setFontSize(4.2);
-  pdf.setTextColor(102, 45, 66); // #662D42 vino ciruela
-  ['D', 'A', 'Y', 'M', 'A', 'R'].forEach((letter, i) => {
-    pdf.text(letter, x + 1.2, y + 2.9 + i * 1.8);
+  pdf.setFontSize(brandFont);
+  pdf.setTextColor(102, 45, 66);   // #662D42 vino ciruela
+  pdf.setDrawColor(102, 45, 66);   // mismo color para el contorno
+  pdf.setLineWidth(0.18);          // grosor del contorno (más grueso)
+  brandLetters.forEach((letter, i) => {
+    pdf.text(letter, x + 1.1, brandStartY + i * brandStep, { renderingMode: 'fillThenStroke' });
   });
 
   pdf.setDrawColor(165, 171, 179);
+  pdf.setLineWidth(0.12);
   pdf.line(x + 3.9, y + 1.2, x + 3.9, y + LABEL_H - 1.2);
 
   const textX = x + 5.3;
@@ -1072,8 +1083,8 @@ function generateBarcodeLabelsForItems(products, fileName, confirmationMessage =
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const cols = 6;
-  const rows = 15;
+  const cols = 5;   // 5 columnas
+  const rows = 8;   // 8 filas  →  40 etiquetas por página
   const gapX = 2;
   const gapY = 2;
   const marginX = (210 - (cols * LABEL_W + (cols - 1) * gapX)) / 2;

@@ -13,6 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     :root { 
       --bg: #f3f4f6; 
@@ -776,6 +777,7 @@ body:has(.modal-overlay.active) #qrReader { top: auto !important; left: auto !im
         <button class="btn btn-config" id="btnDailyReport" onclick="toggleDailyReportPanel()" title="Reporte por Dia"><i class="fa-solid fa-chart-bar"></i><span class="mobile-hide"> Reporte</span></button>
         <button class="btn btn-config" id="btnSalesHistory" onclick="toggleSalesHistoryPanel()" title="Historial de Ventas"><i class="fa-solid fa-chart-line"></i><span class="mobile-hide"> Historial</span></button>
         <button class="btn btn-config" id="btnExportExcel" onclick="exportInventoryExcel()" title="Descargar inventario en Excel con fotos"><i class="fa-solid fa-file-excel"></i><span class="mobile-hide"> Excel</span></button>
+        <button class="btn btn-config" id="btnExportZipNuevo" onclick="exportZipSistemaNuevo()" title="Descargar ZIP para pasar todo al sistema nuevo"><i class="fa-solid fa-file-zipper"></i><span class="mobile-hide"> ZIP sistema nuevo</span></button>
       </div>
     </div>
   </header>
@@ -5923,6 +5925,51 @@ async function exportInventoryExcel() {
     text.innerHTML = '<i class="fa-solid ' + d[0] + '"></i><span>' + d[2] + ' Ingresa la contraseña para continuar:</span>';
   };
 })();
+</script>
+<script>
+/* ===== Exportar ZIP para el sistema nuevo (DAYMARSV): productos + fotos + pendientes de cobro ===== */
+async function exportZipSistemaNuevo() {
+  const btn = document.getElementById('btnExportZipNuevo');
+  try {
+    if (typeof JSZip === 'undefined') { showNotification('No se pudo cargar JSZip. Revisa tu conexión a internet.', 'error'); return; }
+    const inv = (typeof inventory !== 'undefined' && Array.isArray(inventory)) ? inventory : readStorageArray('inventory');
+    const pagos = readStorageArray('pendingPaymentInventory').filter(p => p && p.paymentStatus !== 'paid');
+    if (!inv.length && !pagos.length) { showNotification('No hay productos ni pendientes para exportar.', 'error'); return; }
+    if (btn) btn.disabled = true;
+    document.getElementById('loadingOverlay').classList.add('active');
+    const zip = new JSZip();
+    zip.file('inventory.json', JSON.stringify(inv, null, 2));
+    zip.file('pendientes.json', JSON.stringify({ pendingPaymentInventory: pagos }, null, 2));
+    const folder = zip.folder('images');
+    const extDe = t => /png/.test(t) ? 'png' : /webp/.test(t) ? 'webp' : 'jpg';
+    for (const it of inv) {
+      const code = it && it.code; if (!code) continue;
+      try {
+        const rawCount = Number(await localforage.getItem('img_count_' + code));
+        const max = Number.isFinite(rawCount) && rawCount > 0 ? Math.min(100, Math.floor(rawCount)) : 50;
+        let n = 0;
+        for (let i = 0; i < max; i++) {
+          const blob = await localforage.getItem('img_' + code + '_' + i);
+          if (blob) { n++; folder.file(code + '_' + n + '.' + extDe(blob.type || ''), blob); }
+          else if (!(rawCount > 0)) break;
+        }
+        if (!n) { const legacy = await localforage.getItem('img_' + code); if (legacy) folder.file(code + '_1.' + extDe(legacy.type || ''), legacy); }
+      } catch (e) {}
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sistema-anterior-' + new Date().toISOString().slice(0, 10) + '.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    showNotification('ZIP listo: ' + inv.length + ' productos y ' + pagos.length + ' pendientes de cobro.', 'success');
+  } catch (e) {
+    console.error(e); showNotification('Error al generar el ZIP.', 'error');
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('active');
+    if (btn) btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>

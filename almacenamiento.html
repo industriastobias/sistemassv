@@ -5942,18 +5942,28 @@ async function exportZipSistemaNuevo() {
     zip.file('pendientes.json', JSON.stringify({ pendingPaymentInventory: pagos }, null, 2));
     const folder = zip.folder('images');
     const extDe = t => /png/.test(t) ? 'png' : /webp/.test(t) ? 'webp' : 'jpg';
+    const safe = c => String(c).replace(/[\\/:*?"<>|\s]/g, '-');
+    const comoBlob = async v => {
+      if (!v) return null;
+      if (typeof v === 'string') { try { return v.startsWith('data:') ? await (await fetch(v)).blob() : null; } catch (e) { return null; } }
+      return v instanceof Blob ? v : null;
+    };
+    let conFoto = 0;
     for (const it of inv) {
       const code = it && it.code; if (!code) continue;
+      const nom = safe(code);
       try {
         const rawCount = Number(await localforage.getItem('img_count_' + code));
         const max = Number.isFinite(rawCount) && rawCount > 0 ? Math.min(100, Math.floor(rawCount)) : 50;
         let n = 0;
         for (let i = 0; i < max; i++) {
-          const blob = await localforage.getItem('img_' + code + '_' + i);
-          if (blob) { n++; folder.file(code + '_' + n + '.' + extDe(blob.type || ''), blob); }
+          const blob = await comoBlob(await localforage.getItem('img_' + code + '_' + i));
+          if (blob) { n++; folder.file(nom + '_' + n + '.' + extDe(blob.type || ''), blob); }
           else if (!(rawCount > 0)) break;
         }
-        if (!n) { const legacy = await localforage.getItem('img_' + code); if (legacy) folder.file(code + '_1.' + extDe(legacy.type || ''), legacy); }
+        if (!n) { const legacy = await comoBlob(await localforage.getItem('img_' + code)); if (legacy) { n++; folder.file(nom + '_1.' + extDe(legacy.type || ''), legacy); } }
+        if (!n && it.imageDataUrl) { const b = await comoBlob(it.imageDataUrl); if (b) { n++; folder.file(nom + '_1.' + extDe(b.type || ''), b); } }
+        if (n) conFoto++;
       } catch (e) {}
     }
     const blob = await zip.generateAsync({ type: 'blob' });
@@ -5962,7 +5972,7 @@ async function exportZipSistemaNuevo() {
     a.download = 'sistema-anterior-' + new Date().toISOString().slice(0, 10) + '.zip';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    showNotification('ZIP listo: ' + inv.length + ' productos y ' + pagos.length + ' pendientes de cobro.', 'success');
+    showNotification('ZIP listo: ' + inv.length + ' productos (' + conFoto + ' con foto) y ' + pagos.length + ' pendientes de cobro.', 'success');
   } catch (e) {
     console.error(e); showNotification('Error al generar el ZIP.', 'error');
   } finally {

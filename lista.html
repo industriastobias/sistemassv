@@ -130,6 +130,7 @@ body.menu-open{overflow:hidden}
         <input type="date" id="fechaFin" onchange="filtrarDashboardPorFecha()">
       </div>
       <button class="btn-filter" onclick="limpiarFiltrosFecha()">Limpiar Filtros</button>
+      <button class="btn-filter" onclick="exportTodoExcel()" title="Descarga todo lo de Finanzas en un solo Excel">📥 Descargar TODO en Excel</button>
       <span id="rangoInfo" style="margin-left: auto; font-size: 0.875rem; color: var(--text-secondary);"></span>
     </div>
 
@@ -1140,6 +1141,34 @@ document.addEventListener('click', e => {
     }
   }
 });
+
+function exportTodoExcel() {
+  try {
+    const rd = (k, f) => { try { return JSON.parse(localStorage.getItem(k) || 'null') || f; } catch (e) { return f; } };
+    const T = id => (document.getElementById(id) || {}).textContent || '';
+    const hoja = (rows) => XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Sin datos': '' }]);
+    const wb = XLSX.utils.book_new();
+    const resumen = [['Total Ingresos','totalIngresos'],['Gastos desde Ingresos','totalGastosDesdeIngresos'],['Ingreso Neto','ingresoNeto'],['Gastos Operativos','totalGastos'],['Inversión Total','inversionTotal'],['Deudas por Pagar','totalDeudas'],['Balance Final','balance']]
+      .map(([n, id]) => ({ Concepto: n, Monto: T(id).trim() }));
+    resumen.push({ Concepto: '(Resumen tal como se ve en pantalla ahora; el rango de fechas del filtro puede cambiarlo)', Monto: '' });
+    XLSX.utils.book_append_sheet(wb, hoja(resumen), 'Resumen');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('ingresos', [])), 'Ingresos');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('gastos', [])), 'Gastos operativos');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('gastosDesdeIngresos', [])), 'Gastos desde ingresos');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('cuentas', [])), 'Cuentas');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('proveedores', [])), 'Proveedores');
+    XLSX.utils.book_append_sheet(wb, hoja(rd('soldInventory', [])), 'Ventas');
+    const bal = rd('daymar_balance_inputs_v1', null), bank = rd('daymar_bank_settings_v1', null);
+    if (bal) XLSX.utils.book_append_sheet(wb, hoja([bal]), 'Balance (datos)');
+    if (bank) XLSX.utils.book_append_sheet(wb, hoja([bank]), 'Banco (datos)');
+    const f = 'finanzas-sistema-viejo-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    XLSX.writeFile(wb, f);
+    mostrarToast('Descargado: ' + f, 'success');
+  } catch (e) {
+    console.error(e);
+    mostrarToast('Error al exportar el Excel completo', 'error');
+  }
+}
 
 function exportExcel(key, filename) {
   try {
